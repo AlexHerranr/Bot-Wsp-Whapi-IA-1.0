@@ -1,0 +1,23 @@
+[2025-06-30T21:35:32.260Z] [INFO] THREAD_PERSIST [threadPersistence.ts]: Directorio creado: tmp/backups
+[2025-06-30T21:35:32.308Z] [INFO] THREAD_PERSIST [threadPersistence.ts]: No se encontró archivo de threads, iniciando vacío
+[2025-06-30T21:35:32.309Z] [INFO] THREAD_PERSIST [threadPersistence.ts]: Auto-guardado optimizado configurado cada 5 minutos
+[2025-06-30T21:35:53.482Z] [INFO] AI_PROCESSING [groqAi.js]: Procesando 2 mensajes agrupados con OpenAI Assistant
+[2025-06-30T21:35:53.485Z] [INFO] THREAD_DEBUG [groqAi.js]: Sistema tiene 0 threads total
+[2025-06-30T21:35:53.486Z] [INFO] THREAD_DEBUG [groqAi.js]: Búsqueda de thread para 573003913251: NO ENCONTRADO
+[2025-06-30T21:35:53.486Z] [INFO] THREAD_MANAGER [groqAi.js]: Creando nuevo thread para 573003913251
+[2025-06-30T21:35:54.940Z] [INFO] THREAD_PERSIST [threadPersistence.ts]: Thread creado para 573003913251: thread_iGJlkyZND0iuKp5h7J1d0QY1
+[2025-06-30T21:35:54.942Z] [SUCCESS] THREAD_CREATION [groqAi.js]: Nuevo thread creado para 573003913251: thread_iGJlkyZND0iuKp5h7J1d0QY1
+[2025-06-30T21:35:54.943Z] [INFO] OPENAI_REQUEST [groqAi.js]: Enviando mensaje a thread thread_iGJlkyZND0iuKp5h7J1d0QY1 para usuario 573003913251
+[2025-06-30T21:35:55.716Z] [INFO] THREAD_PERSIST [threadPersistence.ts]: Thread actualizado para 573003913251: thread_iGJlkyZND0iuKp5h7J1d0QY1
+[2025-06-30T21:35:55.717Z] [INFO] OPENAI_RUN [groqAi.js]: Creando run para thread thread_iGJlkyZND0iuKp5h7J1d0QY1...
+[2025-06-30T21:35:56.791Z] [INFO] OPENAI_RUN [groqAi.js]: Run creado: run_F0n7Ug3ClyZcodzJ54Y8QiZX con estado: queued
+[2025-06-30T21:36:00.078Z] [SUCCESS] OPENAI_COMPLETE [groqAi.js]: Respuesta obtenida en 6.6s (89 caracteres)
+[2025-06-30T21:36:00.081Z] [SUCCESS] AI_RESPONSE [groqAi.js]: Respuesta generada en 6.6s: "¡Hola! ¿En qué puedo ayudarte hoy con respecto a la reserva de apartamentos en C..."
+[2025-06-30T21:40:32.318Z] [SUCCESS] THREAD_PERSIST [threadPersistence.ts]: 1 threads guardados
+[2025-06-30T21:40:32.318Z] [INFO] THREAD_PERSIST [threadPersistence.ts]: Auto-guardado ejecutado (había cambios pendientes)
+[2025-06-30T21:45:35.038Z] [SUCCESS] THREAD_PERSIST [threadPersistence.ts]: 1 threads cargados desde archivo
+[2025-06-30T21:45:35.113Z] [INFO] THREAD_DEBUG [threadPersistence.ts]: Thread cargado: 573003913251 -> thread_iGJlkyZND0iuKp5h7J1d0QY1 (1 mensajes)
+[2025-06-30T21:45:35.113Z] [INFO] THREAD_PERSIST [threadPersistence.ts]: Auto-guardado optimizado configurado cada 5 minutos
+[2025-06-30T21:45:35.162Z] [INFO] THREAD_PERSIST [threadPersistence.ts]: Thread actualizado para 573003913251: thread_iGJlkyZND0iuKp5h7J1d0QY1
+[2025-06-30T21:45:35.162Z] [SUCCESS] MIGRATION [groqAi.js]: 1 threads migrados al sistema avanzado
+[2025-06-30T21:45:35.167Z] [SUCCESS] THREAD_PERSIST [threadPersistence.ts]: 1 threads guardados

@@ -1,0 +1,6 @@
+--- Bot Simple iniciado 2025-06-30T21:45:35.172Z ---
+[16:45:35,173] MAIN: Iniciando bot en puerto 3008
+[16:45:54,369] [3251] MSG_IN: "Hola"
+[16:45:54,371] [3251] BUFFER_NEW: Nuevo buffer creado
+[16:45:54,372] [3251] BUFFER_ADD: Mensaje añadido al buffer. Total: 1
+[16:45:54,374] [3251] TIMER_SET: Temporizador de inactividad (6s) iniciado
