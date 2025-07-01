@@ -1,341 +1,343 @@
-# Roadmap de Funcionalidades - Bot TeAlquilamos
+# 🚀 ROADMAP DE DESARROLLO - TEALQUILAMOS BOT
 
-## 🎯 Visión General
+## 🎯 RETOS Y NUEVAS IMPLEMENTACIONES
+*Documento dedicado exclusivamente a funcionalidades pendientes organizadas por prioridad*
 
-Transformar el bot de un simple respondedor a un asistente hotelero completo que gestione todo el ciclo de vida del huésped, desde el primer contacto hasta post-estadía.
+---
 
-## 📊 Estado Actual vs Potencial
+## 🔥 PRIORIDAD ALTA - Funcionalidades Core
 
-### Lo que teníamos con BuilderBot:
-- ❌ Solo mensajes de texto
-- ❌ Sin persistencia real
-- ❌ Sin gestión de grupos
-- ❌ Sin multimedia avanzada
-- ❌ Sin análisis de datos
+### 1. 🔀 Pruebas de Conversaciones Simultáneas - EN PROGRESO
+**Objetivo**: Verificar que el bot maneja múltiples usuarios reales escribiendo al mismo tiempo.
 
-### Lo que podemos hacer con Whapi:
-- ✅ Gestión completa de reservas
-- ✅ Grupos automáticos por familia
-- ✅ Marketing via Stories
-- ✅ Catálogo visual de habitaciones
-- ✅ Seguimiento post-estadía
-- ✅ Analytics en tiempo real
+**🧪 Plan de pruebas REALES**:
+1. Coordinar 3-5 personas para escribir al bot simultáneamente
+2. Verificar buffering independiente por usuario en logs
+3. Comprobar threads separados por usuario 
+4. Validar tiempos de respuesta bajo carga real
+5. Probar edge cases: mensajes rápidos del mismo usuario
 
-## 🚀 Funcionalidades por Implementar
+**📋 Escenarios críticos**:
+- Scenario A: Múltiples usuarios nuevos escribiendo al mismo tiempo
+- Scenario B: Usuario existente (Alexander) + usuarios nuevos simultáneos  
+- Scenario C: Flood de mensajes rápidos de un solo usuario
+- Scenario D: Mensajes largos vs mensajes cortos simultáneos
+- Scenario E: Usuarios con nombres especiales/emojis
 
-### 1. Function Calling para Disponibilidad de Habitaciones 🏨 [PRIORITARIO]
+**🎯 Criterios de éxito**:
+- ✅ Cada usuario mantiene su propio buffer (logs claros por usuario)
+- ✅ Threads independientes sin mezcla de conversaciones
+- ✅ Respuestas enviadas al usuario correcto
+- ✅ Logs súper simples permiten seguir múltiples conversaciones
+- ✅ Performance estable bajo carga real
 
-**Objetivo:** Responder consultas de disponibilidad con datos reales en tiempo real.
+---
 
-**Arquitectura:**
+### 2. 📚 Sistema de Contexto Histórico Whapi - CRÍTICO
+**Problema**: Clientes nuevos (sin thread) pero con historial previo en Whapi pierden contexto conversacional.
+
+**🎯 Objetivo**: Para clientes nuevos, extraer mensajes históricos de Whapi y enviarlos agrupados a OpenAI.
+
+**🔍 Implementación requerida**:
+```javascript
+// Estructura del contexto agrupado para OpenAI
+const contextPayload = {
+    clientName: "Alexander",
+    historicalContext: [
+        {from: "client", message: "Hola, busco apartamento"},
+        {from: "agent", message: "Perfecto, ¿en qué zona?"},
+        {from: "client", message: "Zona norte, 2 habitaciones"}
+    ],
+    currentMessage: "Sigues con apartamentos disponibles?"
+};
 ```
-Usuario → WhatsApp → Bot → OpenAI Assistant → Function Call → n8n → Beds24/Google Sheets → Respuesta
-```
 
-**Implementación en OpenAI Assistant:**
-```json
-{
-  "name": "check_availability",
-  "description": "Consulta disponibilidad de habitaciones para fechas específicas",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "check_in": {
-        "type": "string",
-        "description": "Fecha de entrada (YYYY-MM-DD)"
-      },
-      "check_out": {
-        "type": "string",
-        "description": "Fecha de salida (YYYY-MM-DD)"
-      },
-      "guests": {
-        "type": "integer",
-        "description": "Número de huéspedes"
-      },
-      "room_type": {
-        "type": "string",
-        "description": "Tipo de habitación solicitada",
-        "enum": ["standard", "deluxe", "suite", "cualquiera"]
-      }
-    },
-    "required": ["check_in", "check_out", "guests"]
-  }
+**📋 Pasos técnicos**:
+1. Detectar cliente nuevo (sin thread existente)
+2. Llamar Whapi History API - `GET /messages/{chat_id}?limit=20`
+3. Filtrar y organizar mensajes por orden cronológico
+4. Formatear para OpenAI con contexto del sistema
+5. Enviar agrupado similar a sincronización manual:
+   ```
+   [CONTEXTO HISTÓRICO]: Cliente Alexander
+   [CONVERSACIÓN PREVIA]: {historial formateado}
+   [MENSAJE ACTUAL]: {mensaje nuevo}
+   ```
+
+**🎯 Beneficios esperados**:
+- ✅ Clientes nuevos obtienen respuestas contextualizadas
+- ✅ No pierden historial al asignar thread nuevo
+- ✅ Mejor experiencia de usuario
+- ✅ Aprovecha data existente en Whapi
+
+**📊 Métricas de éxito**:
+- Tiempo adicional de carga ≤2s
+- Calidad de respuestas contextualizadas
+- Reducción de preguntas repetitivas del bot
+
+**🔧 Consideraciones técnicas**:
+- **Rate limits**: Whapi History API limits
+- **Context window**: No sobrecargar OpenAI (max 20 mensajes)
+- **Performance**: Cache opcional para evitar llamadas repetidas
+- **Error handling**: Manejar chats sin historial
+
+---
+
+### 3. 🤖 Sistema de Function Calling - PRIORITARIO
+**Objetivo**: Implementar funciones externas que OpenAI puede ejecutar en nuestro servidor para operaciones críticas del negocio.
+
+**🔧 Funciones críticas a implementar**:
+
+#### **📞 escalate_to_human(reason, context)**
+**Casos de uso**:
+- Cliente confirma reserva → `reason: "complete_booking"`
+- Problemas complejos → `reason: "technical_issue"`
+- Quejas serias → `reason: "complaint"`
+- Grupos 8+ apartamentos → `reason: "large_group"`
+
+**Implementación**:
+```javascript
+async function escalateToHuman(reason, context) {
+    // 1. Notificar agente disponible
+    // 2. Transferir contexto completo
+    // 3. Enviar mensaje a grupo específico (mantenimiento/reservas)
+    // 4. Crear ticket en sistema interno
 }
 ```
 
-**Handler en el Bot (src/handlers/availability-handler.js):**
+#### **🏠 check_availability(dates, apartment_type)**
+**Objetivo**: Verificar disponibilidad compleja en tiempo real
+- Llamada a API n8n para consultar base de datos
+- Respuesta inmediata con opciones disponibles
+- Precios actualizados según temporada
+
+#### **⏰ send_reminder(type, booking_id, message)**
+**Tipos de recordatorios**:
+- `checkout_reminder` - 1 día antes checkout
+- `checkin_info` - Día de llegada
+- `payment_due` - Recordatorio de pago pendiente
+- `welcome_message` - Post check-in
+
+#### **💰 notify_payment_received(amount, method)**
+**Objetivo**: Confirmar recepción de pagos automáticamente
+- Validar monto recibido vs esperado
+- Notificar a grupos de administración
+- Actualizar estado de reserva
+- Enviar confirmación al cliente
+
+**🎯 Integración con WhatsApp Groups**:
+- **Grupo Mantenimiento**: Issues técnicos, escalaciones
+- **Grupo Reservas**: Confirmaciones, pagos, check-ins
+- **Grupo Administración**: Reportes, métricas
+
+**📋 Implementación técnica**:
 ```javascript
-export async function checkAvailability(params) {
-  // Llamar webhook n8n
-  const response = await fetch(process.env.N8N_WEBHOOK_URL + '/check-availability', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params)
-  });
-  
-  const availability = await response.json();
-  
-  // Formato de respuesta para OpenAI
-  return {
-    available: availability.rooms.length > 0,
-    rooms: availability.rooms.map(room => ({
-      type: room.name,
-      price: room.price_per_night,
-      capacity: room.max_guests,
-      amenities: room.amenities
-    })),
-    total_nights: availability.total_nights,
-    suggested_alternatives: availability.alternatives
-  };
-}
-```
-
-**Workflow n8n:**
-1. Recibe webhook con parámetros
-2. Consulta Beds24 API o Google Sheets
-3. Procesa disponibilidad y precios
-4. Calcula alternativas si no hay disponibilidad
-5. Retorna JSON estructurado
-
-**Ejemplos de conversación:**
-```
-Usuario: "¿Tienen habitaciones del 15 al 20 de julio?"
-Bot: [Function Call → check_availability]
-Bot: "¡Sí! Para esas fechas tenemos disponibles:
-- Habitación Deluxe Vista Mar: $280.000/noche
-- Suite Familiar: $450.000/noche
-¿Cuántas personas serían?"
-
-Usuario: "Somos 4 personas"
-Bot: "Perfecto, la Suite Familiar es ideal para 4 personas. 
-Total 5 noches: $2.250.000. ¿Desea que reserve?"
-```
-
-### 2. Sistema de Memoria Inteligente 🧠
-**Endpoints relevantes:**
-- `GET /chats` - Historial completo
-- `POST /labels` - Clasificación de huéspedes
-
-**Implementación:**
-```javascript
-// Estructura de perfil enriquecido
-{
-  id: "573001234567",
-  nombre: "Juan Pérez",
-  etiquetas: ["VIP", "Frecuente"],
-  preferencias: {
-    habitacion: "Vista al mar",
-    piso: "Alto",
-    almohadas: "Firmes"
-  },
-  historial: [
+// Estructura function calling para OpenAI
+const functions = [
     {
-      fecha: "2024-06-15",
-      habitacion: "501",
-      duracion: 5,
-      gastoTotal: 850000,
-      satisfaccion: 9.5
+        name: "escalate_to_human",
+        description: "Escalar conversación a agente humano",
+        parameters: {
+            type: "object",
+            properties: {
+                reason: {
+                    type: "string",
+                    enum: ["complete_booking", "technical_issue", "complaint", "large_group"]
+                },
+                context: { type: "string" }
+            }
+        }
+    },
+    {
+        name: "check_availability",
+        description: "Verificar disponibilidad de apartamentos",
+        parameters: {
+            type: "object",
+            properties: {
+                dates: { type: "string" },
+                apartment_type: { type: "string" }
+            }
+        }
     }
-  ],
-  familia: ["María Pérez", "Juanito Pérez"],
-  observaciones: "Alérgico a mariscos, celebró aniversario"
-}
+    // ... más funciones
+];
 ```
 
-**Beneficio:** La IA puede decir "Bienvenido de vuelta Sr. Pérez, ¿le gustaría la habitación 501 con vista al mar como la última vez?"
+**🚀 Beneficios empresariales**:
+- ✅ Automatización de procesos críticos
+- ✅ Respuesta inmediata a consultas complejas
+- ✅ Escalación inteligente a agentes
+- ✅ Integración con sistemas existentes (n8n)
+- ✅ Notificaciones automáticas a grupos especializados
 
-### 2. Grupos Automáticos por Reserva 👨‍👩‍👧‍👦
-**Endpoints relevantes:**
-- `POST /groups` - Crear grupo familiar
-- `POST /groups/{GroupID}/participants` - Añadir miembros
+---
 
-**Caso de uso:**
-1. Familia reserva 2 habitaciones
-2. Bot crea grupo "Familia Pérez - Junio 2024"
-3. Añade a todos los miembros automáticamente
-4. Comparte info de check-in, wifi, actividades
+### 4. 🚀 Optimización de Performance Multi-Usuario
+**Objetivo**: Garantizar estabilidad con 5-10 usuarios simultáneos escribiendo.
 
-**Código ejemplo:**
+**🔧 Áreas de optimización**:
+- **Memory management**: Limitar size de buffers, limpiar Maps antiguos
+- **API rate limits**: Manejar límites OpenAI/Whapi con queues
+- **Error recovery**: Reintentos automáticos con backoff exponencial
+- **Resource monitoring**: CPU/Memory usage tracking
+
+**📊 Benchmarks objetivo**:
+- **5 usuarios simultáneos**: <3s respuesta promedio
+- **10 usuarios simultáneos**: <5s respuesta promedio  
+- **Memory usage**: <500MB RAM con 10 usuarios activos
+- **Error rate**: <1% fallos en condiciones normales
+
+---
+
+## 🔧 PRIORIDAD MEDIA - Mejoras UX
+
+### 5. 📱 Dashboard de Monitoreo en Tiempo Real
+**Objetivo**: Interface web para observar conversaciones activas.
+
+**🎨 Funcionalidades planeadas**:
+- Lista de usuarios activos con timestamps
+- Estado de buffers (esperando/procesando) por usuario
+- Métricas de performance en tiempo real
+- Logs en tiempo real con filtros por usuario/tipo
+- Alertas para errores o performance issues
+
+**🔧 Stack técnico sugerido**:
+- **Frontend**: React + Socket.io para tiempo real
+- **Backend**: Endpoint `/dashboard` que expone métricas
+- **Websockets**: Para updates en vivo
+- **Filtros**: Por usuario, tipo de evento, tiempo
+
+### 6. 🛡️ Sistema de Moderación y Filtros
+**Objetivo**: Detectar y manejar contenido inapropiado o spam.
+
+**🔍 Componentes**:
+- **Filtro de palabras prohibidas**: Lista configurable
+- **Rate limiting por usuario**: Max N mensajes por minuto
+- **Detección de spam automatizado**: Patrones repetitivos
+- **Escalación a agentes humanos**: Casos complejos
+- **Blacklist temporal**: Usuarios problemáticos
+
+**⚙️ Configuración sugerida**:
 ```javascript
-async function crearGrupoReserva(reserva) {
-  const grupo = await whapi.createGroup({
-    subject: `${reserva.apellido} - ${reserva.fechaInicio}`,
-    participants: reserva.telefonos
-  });
-  
-  await whapi.sendMessage(grupo.id, 
-    `¡Bienvenidos! Este es su grupo privado para la estadía...`
-  );
-}
+const moderationConfig = {
+    maxMessagesPerMinute: 10,
+    spamPatterns: [/(.)\1{4,}/g, /[A-Z]{8,}/g],
+    bannedWords: ["spam", "test", "flooding"],
+    autoEscalateKeywords: ["urgente", "problema", "error"]
+};
 ```
 
-### 3. Catálogo Visual de Habitaciones 🏨
-**Endpoints relevantes:**
-- `POST /business/products` - Crear habitaciones como productos
-- `POST /business/catalogs` - Enviar catálogo completo
+### 7. 📊 Analytics y Métricas de Uso
+**Objetivo**: Insights sobre comportamiento de usuarios y performance del bot.
 
-**Implementación:**
-- Cada habitación es un "producto"
-- Fotos profesionales
-- Precio por noche
-- Amenidades listadas
-- Disponibilidad en tiempo real
+**📈 Métricas a trackear**:
+- **Usuarios**: Activos por hora/día, nuevos vs recurrentes
+- **Conversaciones**: Duración promedio, mensajes por sesión  
+- **Performance**: Tiempo respuesta IA, success rate, errores
+- **Contenido**: Tipos de consultas más frecuentes
+- **Agentes**: Tasa de intervención manual vs automática
 
-**Flujo:**
-```
-Usuario: "Muéstrame habitaciones disponibles"
-Bot: [Envía catálogo interactivo]
-Usuario: [Selecciona habitación]
-Bot: "Excelente elección, ¿para qué fechas?"
-```
+**📊 Dashboard de analytics**:
+- Gráficos de usuarios activos en tiempo real
+- Heatmap de horarios pico de actividad
+- Top 10 consultas más frecuentes
+- Métricas de satisfacción (si es posible implementar)
 
-### 4. Stories Automatizadas para Marketing 📱
-**Endpoints relevantes:**
-- `POST /stories/send/media` - Publicar promociones
-- `GET /stories` - Analytics de vistas
+---
 
-**Estrategia:**
-- Lunes: Promoción semana
-- Miércoles: Destacar amenidad
-- Viernes: Oferta fin de semana
-- Tracking de engagement
+## 🎯 PRIORIDAD BAJA - Features Avanzadas
 
-**Automatización:**
-```javascript
-cron.schedule('0 9 * * 1', async () => {
-  await whapi.postStory({
-    media: 'promo-lunes.jpg',
-    caption: '🏖️ 20% OFF esta semana en habitaciones vista al mar!'
-  });
-});
-```
+### 8. 🤖 Sistema de Handoff Inteligente
+**Objetivo**: Transferir automáticamente a agente humano en casos complejos.
 
-### 5. Sistema de Etiquetas Inteligente 🏷️
-**Endpoints relevantes:**
-- `POST /labels` - Crear categorías
-- `POST /labels/{LabelID}/{ContactID}` - Asignar
+**🧠 Triggers de handoff automático**:
+- **Dominio**: Consultas fuera del ámbito inmobiliario
+- **Emocional**: Frustración o enojo detectado en el lenguaje
+- **Complejidad**: Solicitudes que requieren documentación legal
+- **Escalation**: Cliente solicita explícitamente hablar con humano
+- **Loops**: Bot no puede resolver después de 3 intentos
 
-**Etiquetas sugeridas:**
-```
-- 🌟 VIP (>5 estadías)
-- 💼 Corporativo
-- 👨‍👩‍👧 Familiar
-- 🎂 Cumpleañero
-- ⚠️ Requiere atención especial
-- 🚫 Lista negra
-```
+**🔄 Flujo de handoff**:
+1. **Detección automática** del trigger
+2. **Notificación al agente** disponible
+3. **Contexto transferido** completo a agente
+4. **Bot en modo silencioso** hasta handoff reverso
+5. **Sincronización posterior** cuando agente termine
 
-**Integración con IA:**
-```javascript
-const contexto = await getContactLabels(userId);
-if (contexto.includes('VIP')) {
-  prompt += "[CONTEXTO: Cliente VIP - Trato preferencial]";
-}
-```
+### 9. 🎯 Personalización de Respuestas por Cliente
+**Objetivo**: Adaptar tone y contenido según perfil del cliente.
 
-### 6. Encuestas Post-Estadía 📊
-**Endpoints relevantes:**
-- `POST /messages/poll` - Enviar encuesta
+**👤 Factores de personalización**:
+- **Historial**: Tipo de propiedades consultadas anteriormente
+- **Presupuesto**: Rango de precios mencionado
+- **Formalidad**: Estilo de lenguaje del cliente (formal/casual)
+- **Urgencia**: Frecuencia de consultas y keywords de urgencia
+- **Preferencias**: Ubicaciones, características mencionadas
 
-**Flujo automatizado:**
-```
-[1 día después del checkout]
-Bot: "¿Cómo fue su experiencia?"
-- ⭐⭐⭐⭐⭐ Excelente
-- ⭐⭐⭐⭐ Muy buena
-- ⭐⭐⭐ Buena
-- ⭐⭐ Regular
-- ⭐ Mala
+**🎨 Adaptaciones de respuesta**:
+- **Tone**: Formal vs casual según cliente
+- **Contenido**: Propiedades relevantes al perfil
+- **Frecuencia**: Clientes VIP reciben respuestas prioritarias
+- **Formato**: Información detallada vs resumida según preferencia
 
-[Si responde 4-5 estrellas]
-Bot: "¡Nos alegra! ¿Le gustaría dejar una reseña en Google?"
+### 10. 📄 Integración con CRM/Database
+**Objetivo**: Sincronizar leads y conversaciones con sistema de gestión inmobiliaria.
 
-[Si responde 1-3 estrellas]
-Bot: "Lamentamos eso. ¿Podría decirnos qué podemos mejorar?"
-```
+**🔗 Integraciones planificadas**:
+- **Base de datos de propiedades**: Consultas en tiempo real
+- **Sistema de leads**: Auto-creación de leads calificados
+- **Calendar**: Agendamiento automático de citas de visitas
+- **Documentos**: Generación automática de pre-contratos
+- **CRM sync**: Bidireccional con Salesforce/HubSpot
 
-### 7. Gestión de Documentos 📄
-**Endpoints relevantes:**
-- `POST /messages/document` - Enviar PDFs
+**📋 Flujo de integración**:
+1. **Lead qualification**: Bot identifica leads calificados
+2. **CRM creation**: Auto-crear registro en CRM
+3. **Property matching**: Sugerir propiedades desde DB
+4. **Follow-up automation**: Recordatorios y seguimientos
+5. **Report generation**: Analytics exportables a CRM
 
-**Automatizaciones:**
-- Factura automática post-checkout
-- Guía de la ciudad en PDF
-- Menú del restaurante
-- Protocolo COVID actualizado
+---
 
-### 8. Ubicación en Tiempo Real 📍
-**Endpoints relevantes:**
-- `POST /messages/live_location` - Compartir ubicación
+## 📅 TIMELINE SUGERIDO
 
-**Casos de uso:**
-- Shuttle del hotel compartiendo ubicación
-- Guiar desde aeropuerto
-- Mostrar lugares cercanos de interés
+### Semana 1-2: 
+- ✅ Pruebas conversaciones simultáneas
+- ✅ Implementación contexto histórico (crítico)
+- ✅ **Sistema Function Calling** (PRIORITARIO)
 
-### 9. Lista Negra Automática 🚫
-**Endpoints relevantes:**
-- `PUT /blacklist/{ContactID}` - Bloquear
+### Semana 3-4:
+- ✅ Optimización performance multi-usuario
+- ✅ Dashboard básico de monitoreo
 
-**Triggers automáticos:**
-- 3 no-shows sin aviso
-- Comportamiento abusivo reportado
-- Intento de estafa detectado
+### Mes 2:
+- Sistema de moderación y filtros
+- Analytics básicos de uso
 
-### 10. Integración con Newsletters 📰
-**Endpoints relevantes:**
-- `POST /newsletters` - Crear boletín del hotel
-- `POST /newsletters/{ID}/subscription` - Suscribir huéspedes
+### Mes 3+:
+- Features avanzadas según prioridad de negocio
+- Integraciones con sistemas externos
 
-**Contenido:**
-- Eventos mensuales
-- Nuevas amenidades
-- Ofertas exclusivas para suscriptores
+---
 
-## 💰 Beneficios Esperados
+## 🎯 **CRITERIOS DE PRIORIZACIÓN**
 
-### Impacto Operativo:
-- **Automatización:** Reducción significativa de tareas manuales
-- **Disponibilidad:** Respuestas 24/7 sin personal adicional
-- **Precisión:** Eliminación de errores en disponibilidad y precios
-- **Escalabilidad:** Manejo de múltiples consultas simultáneas
+### **🔥 ALTA - Funcionalidades que afectan core del negocio**:
+- Impacto directo en experiencia del cliente
+- Problemas críticos que causan pérdida de contexto
+- Estabilidad y performance del sistema
 
-## 🔗 Integraciones Futuras
+### **🔧 MEDIA - Mejoras significativas de UX**:
+- Herramientas para operadores/agentes
+- Prevención de problemas futuros
+- Insights para optimización
 
-### Con n8n:
-- Sincronización con PMS (Beds24)
-- Conexión con pasarela de pagos
-- Integración con Google Calendar
-- Webhooks a CRM
+### **🎯 BAJA - Features diferenciadores**:
+- Ventajas competitivas
+- Automatización avanzada
+- Integraciones con terceros
 
-### Con servicios externos:
-- Google My Business (reseñas)
-- TripAdvisor (ratings)
-- Booking.com (disponibilidad)
-- Servicios de limpieza
+---
 
-## 🚧 Consideraciones Técnicas
-
-### Escalabilidad:
-- Cache de respuestas frecuentes
-- CDN para imágenes del catálogo
-- Base de datos indexada correctamente
-- Límites de rate para usuarios
-
-### Seguridad:
-- Encriptación de datos sensibles
-- Backups automáticos diarios
-- Logs de auditoría
-- Cumplimiento GDPR/LOPD
-
-### Monitoreo:
-- Alertas de errores críticos
-- Dashboard en tiempo real
-- Reportes semanales automáticos
-- A/B testing de respuestas
-
-## 🎉 Visión Final
-
-Un asistente que conoce a cada huésped por nombre, anticipa sus necesidades, gestiona grupos familiares, envía documentos importantes, publica contenido atractivo, y convierte cada interacción en una oportunidad de venta, todo mientras el equipo humano se enfoca en brindar experiencias memorables en persona.
-
-**El futuro del hospitality es conversacional, personalizado y automatizado.**
+*Última actualización: 2025-06-30*
+*Estado: Roadmap completo con 10 retos priorizados y detalles técnicos*

@@ -1,5 +1,17 @@
 # 📚 Índice de Documentación - Bot WhatsApp TeAlquilamos
 
+## 🚀 ROADMAP.md - Retos y Desarrollo Futuro ⭐ NUEVO
+- **Prioridad Alta**: Pruebas multi-usuario, contexto histórico Whapi, **Function Calling** ⭐ CRÍTICO, optimización performance
+- **Prioridad Media**: Dashboard tiempo real, sistema moderación, analytics
+- **Prioridad Baja**: Handoff inteligente, personalización, integración CRM
+- Timeline de desarrollo y criterios de priorización
+
+## 📋 PROGRESO-BOT.md - Estado Actual y Funcionalidades ⭐ NUEVO
+- **Estado Production Ready**: Thread persistence, sincronización manual, UI optimizada
+- **20 Funcionalidades**: Sistema buffering, logs dual, colores profesionales, multi-usuario
+- **Avances Recientes**: Sincronización manual agentes, optimización masiva UI (7→2 líneas)
+- **Sistema Timeouts**: Evolución a 8s fijos (simple y predecible)
+
 ## 1. README.md - Documentación Principal
 
 ### 1.1 Migración de BuilderBot a Whapi
@@ -187,16 +199,19 @@ BotWhatsApp-TeAlquilamos/
 ## 6. Orden de Lectura Recomendado
 
 1. **Para nuevos desarrolladores:**
-   - README.md → MIGRATION_GUIDE.md → FEATURE_ROADMAP.md
+   - README.md → PROGRESO-BOT.md → ROADMAP.md
 
-2. **Para implementar function calling:**
+2. **Para entender el estado actual:**
+   - PROGRESO-BOT.md → Funcionalidades implementadas
+
+3. **Para planificar desarrollo futuro:**
+   - ROADMAP.md → Retos por prioridad → Timeline
+
+4. **Para implementar function calling (legacy):**
    - ASSISTANT_CONFIG.md → availability-handler.js → function-handler.js
 
-3. **Para implementar nuevas funciones:**
-   - FEATURE_ROADMAP.md → Sección específica de la función
+5. **Para migración técnica (legacy):**
+   - MIGRATION_GUIDE.md → Troubleshooting
 
-4. **Para resolver problemas:**
-   - MIGRATION_GUIDE.md → Sección Troubleshooting
-
-5. **Para entender el contexto:**
-   - README.md → Sección de mejoras y posibilidades
+6. **Para entender funcionalidades legacy:**
+   - FEATURE_ROADMAP.md → Casos de uso específicos

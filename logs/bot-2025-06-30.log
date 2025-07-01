@@ -5653,3 +5653,312 @@
 [2025-07-01T03:59:17.335Z] [INFO] DEBUG_FILE [app.ts]: Archivo de debug legacy inicializado | {"path":"./whatsapp-sync-debug.log","debugMode":true}
 [2025-07-01T03:59:17.335Z] [SUCCESS] CONFIG [app.ts]: Configuración validada correctamente | {"port":"3008","hasAssistantId":true,"hasWhapiToken":true,"whapiUrl":"https://gate.whapi.cloud/","debugMode":true}
 [2025-07-01T03:59:17.340Z] [SUCCESS] SERVER_START [app.ts]: Bot con sincronización manual iniciado exitosamente | {"port":"3008","clientTimeout":"8000ms","manualTimeout":"8000ms","features":["client_grouping","manual_sync","bot_message_filtering"],"debugMode":true,"loadedThreads":{"totalThreads":1,"activeThreads":1},"botTracking":true,"manualBuffering":true}
+[2025-07-01T04:42:21.798Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:42:21.800Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:42:21.801Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:42:21.801Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:42:21.801Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "Hola" | {"userName":"Alexander","preview":"Hola"}
+[2025-07-01T04:42:21.802Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_created para 573003913251 | {}
+[2025-07-01T04:42:21.802Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 1) | {"total":1}
+[2025-07-01T04:42:21.803Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:42:21.803Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T03:24:55.350Z","previousThreads":[]}}
+[2025-07-01T04:42:21.804Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T03:24:55.350Z"}
+[2025-07-01T04:42:21.804Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"Hola","bufferCount":1,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:42:21.804Z"}
+[2025-07-01T04:42:24.651Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:42:24.652Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:42:24.652Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:42:24.652Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:42:24.652Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "Que tal cómo va rodo" | {"userName":"Alexander","preview":"Que tal cómo va rodo"}
+[2025-07-01T04:42:24.652Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 2) | {"total":2}
+[2025-07-01T04:42:24.653Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:42:24.653Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T03:24:55.350Z","previousThreads":[]}}
+[2025-07-01T04:42:24.653Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T03:24:55.350Z"}
+[2025-07-01T04:42:24.653Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"Que tal cómo va rodo","bufferCount":2,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:42:24.653Z"}
+[2025-07-01T04:42:28.651Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:42:28.652Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:42:28.652Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:42:28.652Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:42:28.652Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "Que te cuentas" | {"userName":"Alexander","preview":"Que te cuentas"}
+[2025-07-01T04:42:28.652Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 3) | {"total":3}
+[2025-07-01T04:42:28.652Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:42:28.652Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T03:24:55.350Z","previousThreads":[]}}
+[2025-07-01T04:42:28.653Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T03:24:55.350Z"}
+[2025-07-01T04:42:28.653Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"Que te cuentas","bufferCount":3,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:42:28.653Z"}
+[2025-07-01T04:42:36.655Z] [INFO] TIMER [app.ts]: Timeout completado, procesando mensajes | {"shortUserId":"573003913251","messageCount":3,"timeoutCompletedAt":"2025-07-01T04:42:36.655Z"}
+[2025-07-01T04:42:36.657Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:42:36.658Z] [INFO] MESSAGE_BUFFER [app.ts]: processing_combined_messages para 573003913251 (total: 3) | {"total":3}
+[2025-07-01T04:42:36.658Z] [INFO] MESSAGE_PROCESS [app.ts]: Procesando mensajes agrupados | {"userId":"573003913251","shortUserId":"573003913251","chatId":"573003913251@s.whatsapp.net","messageCount":3,"totalLength":42,"preview":"Hola\n\nQue tal cómo va rodo\n\nQue te cuentas..."}
+[2025-07-01T04:42:36.659Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:42:36.659Z] [INFO] USER_DEBUG [app.ts]: UserJid para búsqueda: "573003913251" | {"originalFormat":"573003913251","cleanedFormat":"573003913251","chatId":"573003913251@s.whatsapp.net","userName":"Alexander"}
+[2025-07-01T04:42:36.660Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:42:36.660Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T03:24:55.350Z","previousThreads":[]}}
+[2025-07-01T04:42:36.660Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T03:24:55.350Z"}
+[2025-07-01T04:42:36.661Z] [INFO] THREAD_CHECK [app.ts]: Thread encontrado: thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"userJid":"573003913251","shortUserId":"573003913251","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","totalThreads":1}
+[2025-07-01T04:42:36.661Z] [SUCCESS] THREAD_REUSE [app.ts]: Reutilizando thread existente para 573003913251 (Alexander) | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","userJid":"573003913251","cleanedId":"573003913251"}
+[2025-07-01T04:42:36.661Z] [INFO] OPENAI_REQUEST [app.ts]: adding_message para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:42:38.440Z] [INFO] OPENAI_REQUEST [app.ts]: message_added para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:42:38.440Z] [DEBUG] MESSAGE_DETAIL [app.ts]: Mensaje agregado al thread | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageLength":42,"messagePreview":"Hola\n\nQue tal cómo va rodo\n\nQue te cuentas"}
+[2025-07-01T04:42:38.441Z] [INFO] OPENAI_REQUEST [app.ts]: creating_run para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:42:40.359Z] [INFO] OPENAI_REQUEST [app.ts]: run_started para 573003913251 | {"threadId":"run_Ym87jlQ9z75SkXAEU9WvjKN6"}
+[2025-07-01T04:42:43.088Z] [INFO] OPENAI_REQUEST [app.ts]: retrieving_messages para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:42:43.362Z] [SUCCESS] AI_PROCESSING [app.ts]: Respuesta obtenida para 573003913251 en 6429ms | {"duration":6429,"userName":"Alexander"}
+[2025-07-01T04:42:43.362Z] [INFO] OPENAI_RESPONSE [app.ts]: Respuesta obtenida para 573003913251 | {"responseLength":155,"preview":"¡Hola, Alexander! Todo bien por aquí. Estoy aquí para ayudarte con cualquier pregunta que tengas sob...","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageCount":20,"userName":"Alexander"}
+[2025-07-01T04:42:43.366Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251@s.whatsapp.net","cleaned":"573003913251"}
+[2025-07-01T04:42:43.367Z] [INFO] WHATSAPP_SEND [app.ts]: Enviando mensaje a 573003913251 | {"chatId":"573003913251@s.whatsapp.net","messageLength":155,"preview":"¡Hola, Alexander! Todo bien por aquí. Estoy aquí para ayudarte con cualquier pregunta que tengas sob..."}
+[2025-07-01T04:42:47.387Z] [DEBUG] BOT_MESSAGE_TRACKED [app.ts]: Mensaje del bot registrado para tracking anti-duplicación | {"shortUserId":"573003913251","messageId":"PsrDCNJuB6dRWTY-wMiFabHYIw","messageLength":155,"timestamp":"2025-07-01T04:42:47.387Z"}
+[2025-07-01T04:42:47.387Z] [INFO] WHATSAPP_OUT [app.ts]: 573003913251: "¡Hola, Alexander! Todo bien por aquí. Estoy aquí p..." | {"userName":"Usuario","preview":"¡Hola, Alexander! Todo bien por aquí. Estoy aquí p..."}
+[2025-07-01T04:42:47.387Z] [SUCCESS] WHATSAPP_SEND [app.ts]: Mensaje enviado exitosamente | {"shortUserId":"573003913251","messageLength":155,"messageId":"PsrDCNJuB6dRWTY-wMiFabHYIw","responseTime":0}
+[2025-07-01T04:42:47.387Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_cleared para 573003913251 | {}
+[2025-07-01T04:42:48.281Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:42:48.281Z] [DEBUG] BOT_MESSAGE_FILTERED [app.ts]: Mensaje del bot ignorado: PsrDCNJuB6dRWTY-wMiFabHYIw
+[2025-07-01T04:42:48.955Z] [WARNING] WEBHOOK [app.ts]: Webhook recibido sin mensajes válidos | {"body":{"statuses":[{"id":"PsrDCNJuB6dRWTY-wMiFabHYIw","code":2,"status":"sent","recipient_id":"573003913251@s.whatsapp.net","timestamp":"1751344969"}],"event":{"type":"statuses","event":"post"},"channel_id":"PUNISH-5CJRX"}}
+[2025-07-01T04:42:49.235Z] [WARNING] WEBHOOK [app.ts]: Webhook recibido sin mensajes válidos | {"body":{"statuses":[{"id":"PsrDCNJuB6dRWTY-wMiFabHYIw","code":3,"status":"delivered","recipient_id":"573003913251@s.whatsapp.net","timestamp":"1751344970"}],"event":{"type":"statuses","event":"post"},"channel_id":"PUNISH-5CJRX"}}
+[2025-07-01T04:43:48.239Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:43:48.239Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:43:48.240Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:43:48.240Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:43:48.240Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "Que te cuentas" | {"userName":"Alexander","preview":"Que te cuentas"}
+[2025-07-01T04:43:48.240Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_created para 573003913251 | {}
+[2025-07-01T04:43:48.240Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 1) | {"total":1}
+[2025-07-01T04:43:48.241Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:43:48.241Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:42:38.426Z","previousThreads":[]}}
+[2025-07-01T04:43:48.241Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:42:38.426Z"}
+[2025-07-01T04:43:48.241Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"Que te cuentas","bufferCount":1,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:43:48.241Z"}
+[2025-07-01T04:43:53.450Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:43:53.450Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:43:53.450Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:43:53.451Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:43:53.451Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "Cuantame que ofreces" | {"userName":"Alexander","preview":"Cuantame que ofreces"}
+[2025-07-01T04:43:53.451Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 2) | {"total":2}
+[2025-07-01T04:43:53.451Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:43:53.451Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:42:38.426Z","previousThreads":[]}}
+[2025-07-01T04:43:53.452Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:42:38.426Z"}
+[2025-07-01T04:43:53.452Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"Cuantame que ofreces","bufferCount":2,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:43:53.452Z"}
+[2025-07-01T04:44:01.455Z] [INFO] TIMER [app.ts]: Timeout completado, procesando mensajes | {"shortUserId":"573003913251","messageCount":2,"timeoutCompletedAt":"2025-07-01T04:44:01.455Z"}
+[2025-07-01T04:44:01.455Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:44:01.455Z] [INFO] MESSAGE_BUFFER [app.ts]: processing_combined_messages para 573003913251 (total: 2) | {"total":2}
+[2025-07-01T04:44:01.455Z] [INFO] MESSAGE_PROCESS [app.ts]: Procesando mensajes agrupados | {"userId":"573003913251","shortUserId":"573003913251","chatId":"573003913251@s.whatsapp.net","messageCount":2,"totalLength":36,"preview":"Que te cuentas\n\nCuantame que ofreces..."}
+[2025-07-01T04:44:01.456Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:44:01.456Z] [INFO] USER_DEBUG [app.ts]: UserJid para búsqueda: "573003913251" | {"originalFormat":"573003913251","cleanedFormat":"573003913251","chatId":"573003913251@s.whatsapp.net","userName":"Alexander"}
+[2025-07-01T04:44:01.456Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:44:01.456Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:42:38.426Z","previousThreads":[]}}
+[2025-07-01T04:44:01.456Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:42:38.426Z"}
+[2025-07-01T04:44:01.456Z] [INFO] THREAD_CHECK [app.ts]: Thread encontrado: thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"userJid":"573003913251","shortUserId":"573003913251","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","totalThreads":1}
+[2025-07-01T04:44:01.457Z] [SUCCESS] THREAD_REUSE [app.ts]: Reutilizando thread existente para 573003913251 (Alexander) | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","userJid":"573003913251","cleanedId":"573003913251"}
+[2025-07-01T04:44:01.457Z] [INFO] OPENAI_REQUEST [app.ts]: adding_message para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:44:01.922Z] [INFO] OPENAI_REQUEST [app.ts]: message_added para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:44:01.923Z] [DEBUG] MESSAGE_DETAIL [app.ts]: Mensaje agregado al thread | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageLength":36,"messagePreview":"Que te cuentas\n\nCuantame que ofreces"}
+[2025-07-01T04:44:01.923Z] [INFO] OPENAI_REQUEST [app.ts]: creating_run para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:44:03.347Z] [INFO] OPENAI_REQUEST [app.ts]: run_started para 573003913251 | {"threadId":"run_zXjgM5e3ZP6vMq8QveeWyGPu"}
+[2025-07-01T04:44:07.595Z] [INFO] OPENAI_REQUEST [app.ts]: retrieving_messages para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:44:07.849Z] [SUCCESS] AI_PROCESSING [app.ts]: Respuesta obtenida para 573003913251 en 6139ms | {"duration":6139,"userName":"Alexander"}
+[2025-07-01T04:44:07.850Z] [INFO] OPENAI_RESPONSE [app.ts]: Respuesta obtenida para 573003913251 | {"responseLength":407,"preview":"Ofrecemos una variedad de apartamentos en Cartagena, ideales para diferentes preferencias y presupue...","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageCount":20,"userName":"Alexander"}
+[2025-07-01T04:44:07.850Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251@s.whatsapp.net","cleaned":"573003913251"}
+[2025-07-01T04:44:07.850Z] [INFO] WHATSAPP_SEND [app.ts]: Enviando mensaje a 573003913251 | {"chatId":"573003913251@s.whatsapp.net","messageLength":407,"preview":"Ofrecemos una variedad de apartamentos en Cartagena, ideales para diferentes preferencias y presupue..."}
+[2025-07-01T04:44:11.496Z] [DEBUG] BOT_MESSAGE_TRACKED [app.ts]: Mensaje del bot registrado para tracking anti-duplicación | {"shortUserId":"573003913251","messageId":"Pspk_7ZQU8IHtHs-wE6FabHYIw","messageLength":407,"timestamp":"2025-07-01T04:44:11.496Z"}
+[2025-07-01T04:44:11.496Z] [INFO] WHATSAPP_OUT [app.ts]: 573003913251: "Ofrecemos una variedad de apartamentos en Cartagen..." | {"userName":"Usuario","preview":"Ofrecemos una variedad de apartamentos en Cartagen..."}
+[2025-07-01T04:44:11.496Z] [SUCCESS] WHATSAPP_SEND [app.ts]: Mensaje enviado exitosamente | {"shortUserId":"573003913251","messageLength":407,"messageId":"Pspk_7ZQU8IHtHs-wE6FabHYIw","responseTime":0}
+[2025-07-01T04:44:11.496Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_cleared para 573003913251 | {}
+[2025-07-01T04:44:12.265Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:44:12.265Z] [DEBUG] BOT_MESSAGE_FILTERED [app.ts]: Mensaje del bot ignorado: Pspk_7ZQU8IHtHs-wE6FabHYIw
+[2025-07-01T04:44:12.395Z] [WARNING] WEBHOOK [app.ts]: Webhook recibido sin mensajes válidos | {"body":{"statuses":[{"id":"Pspk_7ZQU8IHtHs-wE6FabHYIw","code":3,"status":"delivered","recipient_id":"573003913251@s.whatsapp.net","timestamp":"1751345053"}],"event":{"type":"statuses","event":"post"},"channel_id":"PUNISH-5CJRX"}}
+[2025-07-01T04:45:51.244Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:45:51.244Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:45:51.244Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:45:51.245Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:45:51.245Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "Okeyy" | {"userName":"Alexander","preview":"Okeyy"}
+[2025-07-01T04:45:51.245Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_created para 573003913251 | {}
+[2025-07-01T04:45:51.245Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 1) | {"total":1}
+[2025-07-01T04:45:51.245Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:45:51.246Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:44:01.922Z","previousThreads":[]}}
+[2025-07-01T04:45:51.246Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:44:01.922Z"}
+[2025-07-01T04:45:51.246Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"Okeyy","bufferCount":1,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:45:51.246Z"}
+[2025-07-01T04:45:57.909Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:45:57.910Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:45:57.910Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:45:57.910Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:45:57.910Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "De cuantas alcobas tienes" | {"userName":"Alexander","preview":"De cuantas alcobas tienes"}
+[2025-07-01T04:45:57.911Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 2) | {"total":2}
+[2025-07-01T04:45:57.911Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:45:57.911Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:44:01.922Z","previousThreads":[]}}
+[2025-07-01T04:45:57.911Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:44:01.922Z"}
+[2025-07-01T04:45:57.911Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"De cuantas alcobas tienes","bufferCount":2,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:45:57.911Z"}
+[2025-07-01T04:46:05.918Z] [INFO] TIMER [app.ts]: Timeout completado, procesando mensajes | {"shortUserId":"573003913251","messageCount":2,"timeoutCompletedAt":"2025-07-01T04:46:05.918Z"}
+[2025-07-01T04:46:05.919Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:05.919Z] [INFO] MESSAGE_BUFFER [app.ts]: processing_combined_messages para 573003913251 (total: 2) | {"total":2}
+[2025-07-01T04:46:05.919Z] [INFO] MESSAGE_PROCESS [app.ts]: Procesando mensajes agrupados | {"userId":"573003913251","shortUserId":"573003913251","chatId":"573003913251@s.whatsapp.net","messageCount":2,"totalLength":32,"preview":"Okeyy\n\nDe cuantas alcobas tienes..."}
+[2025-07-01T04:46:05.919Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:05.920Z] [INFO] USER_DEBUG [app.ts]: UserJid para búsqueda: "573003913251" | {"originalFormat":"573003913251","cleanedFormat":"573003913251","chatId":"573003913251@s.whatsapp.net","userName":"Alexander"}
+[2025-07-01T04:46:05.920Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:05.920Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:44:01.922Z","previousThreads":[]}}
+[2025-07-01T04:46:05.920Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:44:01.922Z"}
+[2025-07-01T04:46:05.920Z] [INFO] THREAD_CHECK [app.ts]: Thread encontrado: thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"userJid":"573003913251","shortUserId":"573003913251","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","totalThreads":1}
+[2025-07-01T04:46:05.920Z] [SUCCESS] THREAD_REUSE [app.ts]: Reutilizando thread existente para 573003913251 (Alexander) | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","userJid":"573003913251","cleanedId":"573003913251"}
+[2025-07-01T04:46:05.921Z] [INFO] OPENAI_REQUEST [app.ts]: adding_message para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:46:06.524Z] [INFO] OPENAI_REQUEST [app.ts]: message_added para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:46:06.524Z] [DEBUG] MESSAGE_DETAIL [app.ts]: Mensaje agregado al thread | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageLength":32,"messagePreview":"Okeyy\n\nDe cuantas alcobas tienes"}
+[2025-07-01T04:46:06.524Z] [INFO] OPENAI_REQUEST [app.ts]: creating_run para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:46:07.858Z] [INFO] OPENAI_REQUEST [app.ts]: run_started para 573003913251 | {"threadId":"run_nQ0wUmJZ3elIIRBSutIHOS6H"}
+[2025-07-01T04:46:10.487Z] [INFO] OPENAI_REQUEST [app.ts]: retrieving_messages para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:46:10.716Z] [SUCCESS] AI_PROCESSING [app.ts]: Respuesta obtenida para 573003913251 en 4567ms | {"duration":4567,"userName":"Alexander"}
+[2025-07-01T04:46:10.716Z] [INFO] OPENAI_RESPONSE [app.ts]: Respuesta obtenida para 573003913251 | {"responseLength":148,"preview":"Tenemos apartamentos de 1 y 2 alcobas disponibles. Si te interesa alguna en particular, puedo darte ...","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageCount":20,"userName":"Alexander"}
+[2025-07-01T04:46:10.716Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251@s.whatsapp.net","cleaned":"573003913251"}
+[2025-07-01T04:46:10.716Z] [INFO] WHATSAPP_SEND [app.ts]: Enviando mensaje a 573003913251 | {"chatId":"573003913251@s.whatsapp.net","messageLength":148,"preview":"Tenemos apartamentos de 1 y 2 alcobas disponibles. Si te interesa alguna en particular, puedo darte ..."}
+[2025-07-01T04:46:14.224Z] [DEBUG] BOT_MESSAGE_TRACKED [app.ts]: Mensaje del bot registrado para tracking anti-duplicación | {"shortUserId":"573003913251","messageId":"PsohLvIZHLMGmaM-wOOFabHYIw","messageLength":148,"timestamp":"2025-07-01T04:46:14.224Z"}
+[2025-07-01T04:46:14.225Z] [INFO] WHATSAPP_OUT [app.ts]: 573003913251: "Tenemos apartamentos de 1 y 2 alcobas disponibles...." | {"userName":"Usuario","preview":"Tenemos apartamentos de 1 y 2 alcobas disponibles...."}
+[2025-07-01T04:46:14.225Z] [SUCCESS] WHATSAPP_SEND [app.ts]: Mensaje enviado exitosamente | {"shortUserId":"573003913251","messageLength":148,"messageId":"PsohLvIZHLMGmaM-wOOFabHYIw","responseTime":0}
+[2025-07-01T04:46:14.225Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_cleared para 573003913251 | {}
+[2025-07-01T04:46:15.007Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:46:15.007Z] [DEBUG] BOT_MESSAGE_FILTERED [app.ts]: Mensaje del bot ignorado: PsohLvIZHLMGmaM-wOOFabHYIw
+[2025-07-01T04:46:15.247Z] [WARNING] WEBHOOK [app.ts]: Webhook recibido sin mensajes válidos | {"body":{"statuses":[{"id":"PsohLvIZHLMGmaM-wOOFabHYIw","code":3,"status":"delivered","recipient_id":"573003913251@s.whatsapp.net","timestamp":"1751345176"}],"event":{"type":"statuses","event":"post"},"channel_id":"PUNISH-5CJRX"}}
+[2025-07-01T04:46:22.513Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:46:22.514Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:46:22.514Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:22.514Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:46:22.514Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "2 alcobas" | {"userName":"Alexander","preview":"2 alcobas"}
+[2025-07-01T04:46:22.514Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_created para 573003913251 | {}
+[2025-07-01T04:46:22.514Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 1) | {"total":1}
+[2025-07-01T04:46:22.515Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:22.515Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:46:06.523Z","previousThreads":[]}}
+[2025-07-01T04:46:22.515Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:46:06.523Z"}
+[2025-07-01T04:46:22.515Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"2 alcobas","bufferCount":1,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:46:22.515Z"}
+[2025-07-01T04:46:26.211Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:46:26.211Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:46:26.211Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:26.211Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:46:26.211Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "Muéstrame las opciones" | {"userName":"Alexander","preview":"Muéstrame las opciones"}
+[2025-07-01T04:46:26.212Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 2) | {"total":2}
+[2025-07-01T04:46:26.212Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:26.212Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:46:06.523Z","previousThreads":[]}}
+[2025-07-01T04:46:26.212Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:46:06.523Z"}
+[2025-07-01T04:46:26.212Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"Muéstrame las opciones","bufferCount":2,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:46:26.212Z"}
+[2025-07-01T04:46:34.219Z] [INFO] TIMER [app.ts]: Timeout completado, procesando mensajes | {"shortUserId":"573003913251","messageCount":2,"timeoutCompletedAt":"2025-07-01T04:46:34.219Z"}
+[2025-07-01T04:46:34.219Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:34.219Z] [INFO] MESSAGE_BUFFER [app.ts]: processing_combined_messages para 573003913251 (total: 2) | {"total":2}
+[2025-07-01T04:46:34.220Z] [INFO] MESSAGE_PROCESS [app.ts]: Procesando mensajes agrupados | {"userId":"573003913251","shortUserId":"573003913251","chatId":"573003913251@s.whatsapp.net","messageCount":2,"totalLength":33,"preview":"2 alcobas\n\nMuéstrame las opciones..."}
+[2025-07-01T04:46:34.220Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:34.220Z] [INFO] USER_DEBUG [app.ts]: UserJid para búsqueda: "573003913251" | {"originalFormat":"573003913251","cleanedFormat":"573003913251","chatId":"573003913251@s.whatsapp.net","userName":"Alexander"}
+[2025-07-01T04:46:34.220Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:46:34.221Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:46:06.523Z","previousThreads":[]}}
+[2025-07-01T04:46:34.221Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:46:06.523Z"}
+[2025-07-01T04:46:34.221Z] [INFO] THREAD_CHECK [app.ts]: Thread encontrado: thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"userJid":"573003913251","shortUserId":"573003913251","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","totalThreads":1}
+[2025-07-01T04:46:34.221Z] [SUCCESS] THREAD_REUSE [app.ts]: Reutilizando thread existente para 573003913251 (Alexander) | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","userJid":"573003913251","cleanedId":"573003913251"}
+[2025-07-01T04:46:34.221Z] [INFO] OPENAI_REQUEST [app.ts]: adding_message para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:46:36.653Z] [INFO] OPENAI_REQUEST [app.ts]: message_added para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:46:36.654Z] [DEBUG] MESSAGE_DETAIL [app.ts]: Mensaje agregado al thread | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageLength":33,"messagePreview":"2 alcobas\n\nMuéstrame las opciones"}
+[2025-07-01T04:46:36.654Z] [INFO] OPENAI_REQUEST [app.ts]: creating_run para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:46:38.479Z] [INFO] OPENAI_REQUEST [app.ts]: run_started para 573003913251 | {"threadId":"run_kBmy1c6ljHMG3qYDED7bmVLo"}
+[2025-07-01T04:46:43.374Z] [INFO] OPENAI_REQUEST [app.ts]: retrieving_messages para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:46:43.565Z] [SUCCESS] AI_PROCESSING [app.ts]: Respuesta obtenida para 573003913251 en 9154ms | {"duration":9154,"userName":"Alexander"}
+[2025-07-01T04:46:43.566Z] [INFO] OPENAI_RESPONSE [app.ts]: Respuesta obtenida para 573003913251 | {"responseLength":387,"preview":"Los apartamentos de 2 alcobas disponibles son:\n\n1. **Apartamento A**: $500.000 por noche\n   - Capaci...","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageCount":20,"userName":"Alexander"}
+[2025-07-01T04:46:43.566Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251@s.whatsapp.net","cleaned":"573003913251"}
+[2025-07-01T04:46:43.566Z] [INFO] WHATSAPP_SEND [app.ts]: Enviando mensaje a 573003913251 | {"chatId":"573003913251@s.whatsapp.net","messageLength":387,"preview":"Los apartamentos de 2 alcobas disponibles son:\n\n1. **Apartamento A**: $500.000 por noche\n   - Capaci..."}
+[2025-07-01T04:46:47.091Z] [DEBUG] BOT_MESSAGE_TRACKED [app.ts]: Mensaje del bot registrado para tracking anti-duplicación | {"shortUserId":"573003913251","messageId":"PsogjZSt4bBh.zQ-wBKFabHYIw","messageLength":387,"timestamp":"2025-07-01T04:46:47.091Z"}
+[2025-07-01T04:46:47.092Z] [INFO] WHATSAPP_OUT [app.ts]: 573003913251: "Los apartamentos de 2 alcobas disponibles son:
+
+1...." | {"userName":"Usuario","preview":"Los apartamentos de 2 alcobas disponibles son:\n\n1...."}
+[2025-07-01T04:46:47.092Z] [SUCCESS] WHATSAPP_SEND [app.ts]: Mensaje enviado exitosamente | {"shortUserId":"573003913251","messageLength":387,"messageId":"PsogjZSt4bBh.zQ-wBKFabHYIw","responseTime":0}
+[2025-07-01T04:46:47.092Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_cleared para 573003913251 | {}
+[2025-07-01T04:46:47.939Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:46:47.939Z] [DEBUG] BOT_MESSAGE_FILTERED [app.ts]: Mensaje del bot ignorado: PsogjZSt4bBh.zQ-wBKFabHYIw
+[2025-07-01T04:46:48.159Z] [WARNING] WEBHOOK [app.ts]: Webhook recibido sin mensajes válidos | {"body":{"statuses":[{"id":"PsogjZSt4bBh.zQ-wBKFabHYIw","code":3,"status":"delivered","recipient_id":"573003913251@s.whatsapp.net","timestamp":"1751345208"}],"event":{"type":"statuses","event":"post"},"channel_id":"PUNISH-5CJRX"}}
+[2025-07-01T04:47:03.601Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:47:03.602Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:47:03.602Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:47:03.602Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:47:03.602Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "Pásame fotos a ver" | {"userName":"Alexander","preview":"Pásame fotos a ver"}
+[2025-07-01T04:47:03.602Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_created para 573003913251 | {}
+[2025-07-01T04:47:03.602Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 1) | {"total":1}
+[2025-07-01T04:47:03.602Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:47:03.603Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:46:36.653Z","previousThreads":[]}}
+[2025-07-01T04:47:03.603Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:46:36.653Z"}
+[2025-07-01T04:47:03.603Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"Pásame fotos a ver","bufferCount":1,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:47:03.603Z"}
+[2025-07-01T04:47:11.607Z] [INFO] TIMER [app.ts]: Timeout completado, procesando mensajes | {"shortUserId":"573003913251","messageCount":1,"timeoutCompletedAt":"2025-07-01T04:47:11.607Z"}
+[2025-07-01T04:47:11.607Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:47:11.607Z] [INFO] MESSAGE_BUFFER [app.ts]: processing_combined_messages para 573003913251 (total: 1) | {"total":1}
+[2025-07-01T04:47:11.607Z] [INFO] MESSAGE_PROCESS [app.ts]: Procesando mensajes agrupados | {"userId":"573003913251","shortUserId":"573003913251","chatId":"573003913251@s.whatsapp.net","messageCount":1,"totalLength":18,"preview":"Pásame fotos a ver..."}
+[2025-07-01T04:47:11.608Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:47:11.608Z] [INFO] USER_DEBUG [app.ts]: UserJid para búsqueda: "573003913251" | {"originalFormat":"573003913251","cleanedFormat":"573003913251","chatId":"573003913251@s.whatsapp.net","userName":"Alexander"}
+[2025-07-01T04:47:11.608Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:47:11.608Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:46:36.653Z","previousThreads":[]}}
+[2025-07-01T04:47:11.608Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:46:36.653Z"}
+[2025-07-01T04:47:11.608Z] [INFO] THREAD_CHECK [app.ts]: Thread encontrado: thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"userJid":"573003913251","shortUserId":"573003913251","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","totalThreads":1}
+[2025-07-01T04:47:11.608Z] [SUCCESS] THREAD_REUSE [app.ts]: Reutilizando thread existente para 573003913251 (Alexander) | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","userJid":"573003913251","cleanedId":"573003913251"}
+[2025-07-01T04:47:11.608Z] [INFO] OPENAI_REQUEST [app.ts]: adding_message para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:47:12.040Z] [INFO] OPENAI_REQUEST [app.ts]: message_added para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:47:12.040Z] [DEBUG] MESSAGE_DETAIL [app.ts]: Mensaje agregado al thread | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageLength":18,"messagePreview":"Pásame fotos a ver"}
+[2025-07-01T04:47:12.040Z] [INFO] OPENAI_REQUEST [app.ts]: creating_run para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:47:13.471Z] [INFO] OPENAI_REQUEST [app.ts]: run_started para 573003913251 | {"threadId":"run_VlPiUJNk8LT9YtJlZi84ilru"}
+[2025-07-01T04:47:17.875Z] [INFO] OPENAI_REQUEST [app.ts]: retrieving_messages para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:47:18.199Z] [SUCCESS] AI_PROCESSING [app.ts]: Respuesta obtenida para 573003913251 en 6267ms | {"duration":6267,"userName":"Alexander"}
+[2025-07-01T04:47:18.199Z] [INFO] OPENAI_RESPONSE [app.ts]: Respuesta obtenida para 573003913251 | {"responseLength":236,"preview":"Lo siento, no puedo enviar fotos directamente. Sin embargo, puedo describirte los apartamentos y sus...","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageCount":20,"userName":"Alexander"}
+[2025-07-01T04:47:18.199Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251@s.whatsapp.net","cleaned":"573003913251"}
+[2025-07-01T04:47:18.200Z] [INFO] WHATSAPP_SEND [app.ts]: Enviando mensaje a 573003913251 | {"chatId":"573003913251@s.whatsapp.net","messageLength":236,"preview":"Lo siento, no puedo enviar fotos directamente. Sin embargo, puedo describirte los apartamentos y sus..."}
+[2025-07-01T04:47:21.697Z] [DEBUG] BOT_MESSAGE_TRACKED [app.ts]: Mensaje del bot registrado para tracking anti-duplicación | {"shortUserId":"573003913251","messageId":"PsoFJ.ymQTFfRBc-wEWFabHYIw","messageLength":236,"timestamp":"2025-07-01T04:47:21.697Z"}
+[2025-07-01T04:47:21.698Z] [INFO] WHATSAPP_OUT [app.ts]: 573003913251: "Lo siento, no puedo enviar fotos directamente. Sin..." | {"userName":"Usuario","preview":"Lo siento, no puedo enviar fotos directamente. Sin..."}
+[2025-07-01T04:47:21.698Z] [SUCCESS] WHATSAPP_SEND [app.ts]: Mensaje enviado exitosamente | {"shortUserId":"573003913251","messageLength":236,"messageId":"PsoFJ.ymQTFfRBc-wEWFabHYIw","responseTime":0}
+[2025-07-01T04:47:21.698Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_cleared para 573003913251 | {}
+[2025-07-01T04:47:22.538Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:47:22.538Z] [DEBUG] BOT_MESSAGE_FILTERED [app.ts]: Mensaje del bot ignorado: PsoFJ.ymQTFfRBc-wEWFabHYIw
+[2025-07-01T04:47:23.582Z] [WARNING] WEBHOOK [app.ts]: Webhook recibido sin mensajes válidos | {"body":{"statuses":[{"id":"PsoFJ.ymQTFfRBc-wEWFabHYIw","code":2,"status":"sent","recipient_id":"573003913251@s.whatsapp.net","timestamp":"1751345243"}],"event":{"type":"statuses","event":"post"},"channel_id":"PUNISH-5CJRX"}}
+[2025-07-01T04:47:23.668Z] [WARNING] WEBHOOK [app.ts]: Webhook recibido sin mensajes válidos | {"body":{"statuses":[{"id":"PsoFJ.ymQTFfRBc-wEWFabHYIw","code":3,"status":"delivered","recipient_id":"573003913251@s.whatsapp.net","timestamp":"1751345244"}],"event":{"type":"statuses","event":"post"},"channel_id":"PUNISH-5CJRX"}}
+[2025-07-01T04:51:37.760Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:51:37.761Z] [DEBUG] NAME_EXTRACTION [app.ts]: Nombre limpiado | {"original":"Alexander -","cleaned":"Alexander"}
+[2025-07-01T04:51:37.761Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:51:37.761Z] [INFO] WEBHOOK_USER [app.ts]: Usuario detectado: 573003913251 | {"originalChatId":"573003913251@s.whatsapp.net","userId":"573003913251","shortUserId":"573003913251","rawName":"Alexander -","cleanName":"Alexander"}
+[2025-07-01T04:51:37.761Z] [INFO] WHATSAPP_IN [app.ts]: 573003913251: "Hagale" | {"userName":"Alexander","preview":"Hagale"}
+[2025-07-01T04:51:37.762Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_created para 573003913251 | {}
+[2025-07-01T04:51:37.762Z] [INFO] MESSAGE_BUFFER [app.ts]: message_added para 573003913251 (total: 1) | {"total":1}
+[2025-07-01T04:51:37.762Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:51:37.763Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:47:12.039Z","previousThreads":[]}}
+[2025-07-01T04:51:37.763Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:47:12.039Z"}
+[2025-07-01T04:51:37.774Z] [INFO] CONVERSATION_FLOW [app.ts]: Cliente escribiendo | {"shortUserId":"573003913251","clientMessage":"Hagale","bufferCount":1,"timeoutSeconds":8,"hasActiveThread":true,"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","timestamp":"2025-07-01T04:51:37.774Z"}
+[2025-07-01T04:51:45.783Z] [INFO] TIMER [app.ts]: Timeout completado, procesando mensajes | {"shortUserId":"573003913251","messageCount":1,"timeoutCompletedAt":"2025-07-01T04:51:45.783Z"}
+[2025-07-01T04:51:45.783Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:51:45.783Z] [INFO] MESSAGE_BUFFER [app.ts]: processing_combined_messages para 573003913251 (total: 1) | {"total":1}
+[2025-07-01T04:51:45.784Z] [INFO] MESSAGE_PROCESS [app.ts]: Procesando mensajes agrupados | {"userId":"573003913251","shortUserId":"573003913251","chatId":"573003913251@s.whatsapp.net","messageCount":1,"totalLength":6,"preview":"Hagale..."}
+[2025-07-01T04:51:45.784Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:51:45.784Z] [INFO] USER_DEBUG [app.ts]: UserJid para búsqueda: "573003913251" | {"originalFormat":"573003913251","cleanedFormat":"573003913251","chatId":"573003913251@s.whatsapp.net","userName":"Alexander"}
+[2025-07-01T04:51:45.784Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251","cleaned":"573003913251"}
+[2025-07-01T04:51:45.784Z] [DEBUG] THREAD_LOOKUP [app.ts]: Búsqueda de thread | {"userJid":"573003913251","cleanedId":"573003913251","found":true,"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","threadInfo":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","createdAt":"2025-06-30T21:35:54.940Z","lastActivity":"2025-07-01T04:47:12.039Z","previousThreads":[]}}
+[2025-07-01T04:51:45.785Z] [INFO] THREAD_GET [app.ts]: Thread encontrado para 573003913251 (Alexander): thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:47:12.039Z"}
+[2025-07-01T04:51:45.785Z] [INFO] THREAD_CHECK [app.ts]: Thread encontrado: thread_iGJlkyZND0iuKp5h7J1d0QY1 | {"userJid":"573003913251","shortUserId":"573003913251","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","totalThreads":1}
+[2025-07-01T04:51:45.785Z] [SUCCESS] THREAD_REUSE [app.ts]: Reutilizando thread existente para 573003913251 (Alexander) | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","userJid":"573003913251","cleanedId":"573003913251"}
+[2025-07-01T04:51:45.785Z] [INFO] OPENAI_REQUEST [app.ts]: adding_message para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:51:46.458Z] [INFO] OPENAI_REQUEST [app.ts]: message_added para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:51:46.458Z] [DEBUG] MESSAGE_DETAIL [app.ts]: Mensaje agregado al thread | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageLength":6,"messagePreview":"Hagale"}
+[2025-07-01T04:51:46.458Z] [INFO] OPENAI_REQUEST [app.ts]: creating_run para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:51:47.467Z] [INFO] OPENAI_REQUEST [app.ts]: run_started para 573003913251 | {"threadId":"run_RxXEmmcmX0pI4Qvcn4WD6GvC"}
+[2025-07-01T04:51:51.177Z] [INFO] OPENAI_REQUEST [app.ts]: retrieving_messages para 573003913251 | {"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1"}
+[2025-07-01T04:51:51.511Z] [SUCCESS] AI_PROCESSING [app.ts]: Respuesta obtenida para 573003913251 en 5393ms | {"duration":5393,"userName":"Alexander"}
+[2025-07-01T04:51:51.511Z] [INFO] OPENAI_RESPONSE [app.ts]: Respuesta obtenida para 573003913251 | {"responseLength":226,"preview":"Parece que hubo un problema al intentar escalar la conversación. Pero no te preocupes, puedo ofrecer...","threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","messageCount":20,"userName":"Alexander"}
+[2025-07-01T04:51:51.511Z] [DEBUG] USER_ID_EXTRACTION [app.ts]: Extrayendo ID de usuario | {"original":"573003913251@s.whatsapp.net","cleaned":"573003913251"}
+[2025-07-01T04:51:51.512Z] [INFO] WHATSAPP_SEND [app.ts]: Enviando mensaje a 573003913251 | {"chatId":"573003913251@s.whatsapp.net","messageLength":226,"preview":"Parece que hubo un problema al intentar escalar la conversación. Pero no te preocupes, puedo ofrecer..."}
+[2025-07-01T04:51:55.321Z] [DEBUG] BOT_MESSAGE_TRACKED [app.ts]: Mensaje del bot registrado para tracking anti-duplicación | {"shortUserId":"573003913251","messageId":"PspRdniSHKMORg0-wMqFabHYIw","messageLength":226,"timestamp":"2025-07-01T04:51:55.321Z"}
+[2025-07-01T04:51:55.321Z] [INFO] WHATSAPP_OUT [app.ts]: 573003913251: "Parece que hubo un problema al intentar escalar la..." | {"userName":"Usuario","preview":"Parece que hubo un problema al intentar escalar la..."}
+[2025-07-01T04:51:55.321Z] [SUCCESS] WHATSAPP_SEND [app.ts]: Mensaje enviado exitosamente | {"shortUserId":"573003913251","messageLength":226,"messageId":"PspRdniSHKMORg0-wMqFabHYIw","responseTime":0}
+[2025-07-01T04:51:55.321Z] [INFO] MESSAGE_BUFFER [app.ts]: buffer_cleared para 573003913251 | {}
+[2025-07-01T04:51:56.130Z] [INFO] WEBHOOK [app.ts]: Procesando 1 mensajes del webhook
+[2025-07-01T04:51:56.131Z] [DEBUG] BOT_MESSAGE_FILTERED [app.ts]: Mensaje del bot ignorado: PspRdniSHKMORg0-wMqFabHYIw
+[2025-07-01T04:51:56.887Z] [WARNING] WEBHOOK [app.ts]: Webhook recibido sin mensajes válidos | {"body":{"statuses":[{"id":"PspRdniSHKMORg0-wMqFabHYIw","code":2,"status":"sent","recipient_id":"573003913251@s.whatsapp.net","timestamp":"1751345517"}],"event":{"type":"statuses","event":"post"},"channel_id":"PUNISH-5CJRX"}}
+[2025-07-01T04:51:57.247Z] [WARNING] WEBHOOK [app.ts]: Webhook recibido sin mensajes válidos | {"body":{"statuses":[{"id":"PspRdniSHKMORg0-wMqFabHYIw","code":3,"status":"delivered","recipient_id":"573003913251@s.whatsapp.net","timestamp":"1751345518"}],"event":{"type":"statuses","event":"post"},"channel_id":"PUNISH-5CJRX"}}
+[2025-07-01T04:52:47.395Z] [DEBUG] BOT_MESSAGE_CLEANUP [app.ts]: ID limpiado del tracking | {"messageId":"PsrDCNJuB6dRWTY-wMiFabHYIw","cleanupAfterMinutes":10}
+[2025-07-01T04:54:11.502Z] [DEBUG] BOT_MESSAGE_CLEANUP [app.ts]: ID limpiado del tracking | {"messageId":"Pspk_7ZQU8IHtHs-wE6FabHYIw","cleanupAfterMinutes":10}
+[2025-07-01T04:55:10.902Z] [SUCCESS] LOGGER_INIT [unknown.ts]: Sistema de logging detallado inicializado | {"logDir":"logs","bufferInterval":100,"maxBufferSize":50,"currentFile":"logs\\bot-2025-06-30.log"}
+[2025-07-01T04:55:11.008Z] [SUCCESS] OPENAI_INIT [app.ts]: SDK de OpenAI inicializado correctamente
+[2025-07-01T04:55:11.012Z] [INFO] APP_INIT [app.ts]: Iniciando servidor bot TeAlquilamos | {"port":"3008","timestamp":"2025-07-01T04:55:11.012Z"}
+[2025-07-01T04:55:11.013Z] [SUCCESS] THREADS_LOADED [app.ts]: Threads cargados desde archivo | {"totalThreads":1,"activeThreads":1,"timestamp":"2025-07-01T04:55:11.012Z"}
+[2025-07-01T04:55:11.013Z] [INFO] THREADS_INFO [app.ts]: 1 threads activos en el sistema | {"activeThreads":1,"totalThreads":1}
+[2025-07-01T04:55:11.014Z] [DEBUG] THREADS_DETAIL [app.ts]: Threads cargados detalladamente | {"threads":{"573003913251":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:51:46.457Z","createdAt":"2025-06-30T21:35:54.940Z","previousThreads":0}}}
+[2025-07-01T04:55:11.015Z] [INFO] DEBUG_FILE [app.ts]: Archivo de debug legacy inicializado | {"path":"./whatsapp-sync-debug.log","debugMode":true}
+[2025-07-01T04:55:11.015Z] [SUCCESS] CONFIG [app.ts]: Configuración validada correctamente | {"port":"3008","hasAssistantId":true,"hasWhapiToken":true,"whapiUrl":"https://gate.whapi.cloud/","debugMode":true}
+[2025-07-01T04:55:11.022Z] [SUCCESS] SERVER_START [app.ts]: Bot con sincronización manual iniciado exitosamente | {"port":"3008","clientTimeout":"8000ms","manualTimeout":"8000ms","features":["client_grouping","manual_sync","bot_message_filtering"],"debugMode":true,"loadedThreads":{"totalThreads":1,"activeThreads":1},"botTracking":true,"manualBuffering":true}
+[2025-07-01T04:55:11.889Z] [SUCCESS] LOGGER_INIT [unknown.ts]: Sistema de logging detallado inicializado | {"logDir":"logs","bufferInterval":100,"maxBufferSize":50,"currentFile":"logs\\bot-2025-06-30.log"}
+[2025-07-01T04:55:11.921Z] [SUCCESS] OPENAI_INIT [app.ts]: SDK de OpenAI inicializado correctamente
+[2025-07-01T04:55:11.924Z] [INFO] APP_INIT [app.ts]: Iniciando servidor bot TeAlquilamos | {"port":"3008","timestamp":"2025-07-01T04:55:11.924Z"}
+[2025-07-01T04:55:11.925Z] [SUCCESS] THREADS_LOADED [app.ts]: Threads cargados desde archivo | {"totalThreads":1,"activeThreads":1,"timestamp":"2025-07-01T04:55:11.925Z"}
+[2025-07-01T04:55:11.925Z] [INFO] THREADS_INFO [app.ts]: 1 threads activos en el sistema | {"activeThreads":1,"totalThreads":1}
+[2025-07-01T04:55:11.926Z] [DEBUG] THREADS_DETAIL [app.ts]: Threads cargados detalladamente | {"threads":{"573003913251":{"threadId":"thread_iGJlkyZND0iuKp5h7J1d0QY1","chatId":"573003913251@s.whatsapp.net","userName":"Alexander","lastActivity":"2025-07-01T04:51:46.457Z","createdAt":"2025-06-30T21:35:54.940Z","previousThreads":0}}}
+[2025-07-01T04:55:11.927Z] [INFO] DEBUG_FILE [app.ts]: Archivo de debug legacy inicializado | {"path":"./whatsapp-sync-debug.log","debugMode":true}
+[2025-07-01T04:55:11.927Z] [SUCCESS] CONFIG [app.ts]: Configuración validada correctamente | {"port":"3008","hasAssistantId":true,"hasWhapiToken":true,"whapiUrl":"https://gate.whapi.cloud/","debugMode":true}
+[2025-07-01T04:55:11.934Z] [SUCCESS] SERVER_START [app.ts]: Bot con sincronización manual iniciado exitosamente | {"port":"3008","clientTimeout":"8000ms","manualTimeout":"8000ms","features":["client_grouping","manual_sync","bot_message_filtering"],"debugMode":true,"loadedThreads":{"totalThreads":1,"activeThreads":1},"botTracking":true,"manualBuffering":true}
