@@ -4,9 +4,10 @@ import { enhancedLog } from '../core/index.js';
 
 interface ThreadRecord {
     threadId: string;
+    chatId: string;        // WhatsApp chat ID completo (con @s.whatsapp.net)
+    userName: string;      // Nombre del usuario
     createdAt: string;
     lastActivity: string;
-    messageCount: number;
     previousThreads?: string[]; // IDs de threads anteriores
 }
 
@@ -15,7 +16,7 @@ export class ThreadPersistenceManager {
     private readonly THREADS_FILE = 'tmp/threads.json';
     private readonly BACKUP_DIR = 'tmp/backups';
     private readonly SAVE_INTERVAL = 30000; // 30 segundos
-    private readonly MAX_MESSAGES_PER_THREAD = 1000; // Límite para rotar
+    // Eliminado: Ya no contamos mensajes
     
     constructor() {
         this.threads = new Map();
@@ -52,7 +53,7 @@ export class ThreadPersistenceManager {
                 // LOG DE DEBUG: Mostrar threads cargados
                 for (const [userId, record] of this.threads.entries()) {
                     enhancedLog('info', 'THREAD_DEBUG', 
-                        `Thread cargado: ${userId} -> ${record.threadId} (${record.messageCount} mensajes)`);
+                        `Thread cargado: ${userId} (${record.userName || 'Sin nombre'}) -> ${record.threadId}`);
                 }
                 
                 // Verificar integridad
@@ -73,6 +74,7 @@ export class ThreadPersistenceManager {
     // Validar threads cargados
     private validateThreads() {
         let removed = 0;
+        let migrated = 0;
         
         for (const [userId, record] of this.threads.entries()) {
             if (!record.threadId || !record.createdAt) {
@@ -81,11 +83,26 @@ export class ThreadPersistenceManager {
                 enhancedLog('warning', 'THREAD_PERSIST', 
                     `Thread inválido removido para usuario ${userId}`);
             }
+            
+            // Migrar threads antiguos sin chatId o userName
+            if (!record.chatId) {
+                record.chatId = `${userId}@s.whatsapp.net`;
+                record.userName = record.userName || 'Usuario';
+                migrated++;
+                enhancedLog('info', 'THREAD_PERSIST', 
+                    `Thread migrado para ${userId}: agregado chatId y userName`);
+            }
         }
         
         if (removed > 0) {
             enhancedLog('info', 'THREAD_PERSIST', 
                 `${removed} threads inválidos removidos`);
+        }
+        
+        if (migrated > 0) {
+            enhancedLog('info', 'THREAD_PERSIST', 
+                `${migrated} threads migrados a nueva estructura`);
+            this.saveThreads(); // Guardar inmediatamente después de migrar
         }
     }
     
@@ -203,15 +220,16 @@ export class ThreadPersistenceManager {
         return this.threads.get(userId) || null;
     }
     
-    // Guardar o actualizar thread
-    setThread(userId: string, threadId: string, messageCount: number = 0) {
+    // Guardar o actualizar thread con información completa
+    setThread(userId: string, threadId: string, chatId?: string, userName?: string) {
         const existing = this.threads.get(userId);
         
         const record: ThreadRecord = {
             threadId,
+            chatId: chatId || existing?.chatId || `${userId}@s.whatsapp.net`,
+            userName: userName || existing?.userName || 'Usuario',
             createdAt: existing?.createdAt || new Date().toISOString(),
             lastActivity: new Date().toISOString(),
-            messageCount: existing ? existing.messageCount + 1 : messageCount,
             previousThreads: existing?.previousThreads || []
         };
         
@@ -221,57 +239,17 @@ export class ThreadPersistenceManager {
         this.markAsChanged();
         
         enhancedLog('info', 'THREAD_PERSIST', 
-            `Thread ${existing ? 'actualizado' : 'creado'} para ${userId}: ${threadId}`);
-        
-        // Verificar si necesita rotación
-        if (record.messageCount >= this.MAX_MESSAGES_PER_THREAD) {
-            enhancedLog('warning', 'THREAD_PERSIST', 
-                `Usuario ${userId} alcanzó límite de mensajes (${record.messageCount}/${this.MAX_MESSAGES_PER_THREAD})`);
-        }
+            `Thread ${existing ? 'actualizado' : 'creado'} para ${userId} (${record.userName}): ${threadId}`);
     }
     
-    // Verificar si un thread necesita rotación
-    needsRotation(userId: string): boolean {
-        const record = this.threads.get(userId);
-        return record ? record.messageCount >= this.MAX_MESSAGES_PER_THREAD : false;
-    }
-    
-    // Rotar thread (marcar el actual como antiguo)
-    rotateThread(userId: string, newThreadId: string) {
-        const record = this.threads.get(userId);
-        if (!record) return;
-        
-        // Guardar thread anterior
-        if (!record.previousThreads) {
-            record.previousThreads = [];
-        }
-        record.previousThreads.push(record.threadId);
-        
-        // Actualizar con nuevo thread
-        record.threadId = newThreadId;
-        record.createdAt = new Date().toISOString();
-        record.lastActivity = new Date().toISOString();
-        record.messageCount = 0;
-        
-        this.threads.set(userId, record);
-        
-        // Rotación es crítica, guardar inmediatamente
-        this.saveThreads();
-        
-        enhancedLog('success', 'THREAD_PERSIST', 
-            `Thread rotado para ${userId}. Nuevo: ${newThreadId}. Threads anteriores: ${record.previousThreads.length}`);
-    }
+    // Eliminado: Sistema de rotación de threads (ya no contamos mensajes)
     
     // Obtener estadísticas
     getStats() {
         const now = new Date();
         let activeThreads = 0;
-        let threadsNeedingRotation = 0;
-        let totalMessages = 0;
         
         for (const [userId, record] of this.threads.entries()) {
-            totalMessages += record.messageCount;
-            
             // Thread activo = usado en los últimos 7 días
             const lastActivity = new Date(record.lastActivity);
             const daysSinceActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24);
@@ -279,21 +257,11 @@ export class ThreadPersistenceManager {
             if (daysSinceActivity <= 7) {
                 activeThreads++;
             }
-            
-            if (this.needsRotation(userId)) {
-                threadsNeedingRotation++;
-            }
         }
         
         return {
             totalThreads: this.threads.size,
-            activeThreads,
-            threadsNeedingRotation,
-            totalMessages,
-            averageMessagesPerThread: this.threads.size > 0 
-                ? Math.round(totalMessages / this.threads.size) 
-                : 0,
-            maxMessagesPerThread: this.MAX_MESSAGES_PER_THREAD
+            activeThreads
         };
     }
     
@@ -309,14 +277,35 @@ export class ThreadPersistenceManager {
         return {
             userId,
             threadId: record.threadId,
+            chatId: record.chatId,
+            userName: record.userName,
             createdAt: record.createdAt,
             lastActivity: record.lastActivity,
-            messageCount: record.messageCount,
             previousThreads: record.previousThreads || [],
             daysSinceActivity: Math.floor(daysSinceActivity),
-            needsRotation: this.needsRotation(userId),
             isActive: daysSinceActivity <= 7
         };
+    }
+    
+    // Obtener todos los userIds con threads
+    getAllUserIds(): string[] {
+        return Array.from(this.threads.keys());
+    }
+    
+    // Obtener información de todos los threads (para debug)
+    getAllThreadsInfo(): Record<string, any> {
+        const result: Record<string, any> = {};
+        for (const [userId, record] of this.threads.entries()) {
+            result[userId] = {
+                threadId: record.threadId,
+                chatId: record.chatId,
+                userName: record.userName,
+                lastActivity: record.lastActivity,
+                createdAt: record.createdAt,
+                previousThreads: record.previousThreads?.length || 0
+            };
+        }
+        return result;
     }
 }
 

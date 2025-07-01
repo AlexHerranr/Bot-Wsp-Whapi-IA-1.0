@@ -30,9 +30,16 @@ export class WhapiProvider extends ProviderClass {
         console.log(`[WhapiProvider] Configurando Webhook con URL: ${webhookUrl}`);
         try {
             await axios.patch(`${this.apiUrl}/settings`, {
-                webhooks: [{ url: webhookUrl, events: [{ type: "message", method: "post" }], mode: "method" }]
+                webhooks: [{ 
+                    url: webhookUrl, 
+                    events: [
+                        { type: "message", method: "post" },
+                        { type: "presences", method: "post" }
+                    ], 
+                    mode: "method" 
+                }]
             }, { headers: this.getHeaders() });
-            console.log('[WhapiProvider] Webhook configurado exitosamente.');
+            console.log('[WhapiProvider] Webhook configurado exitosamente con eventos: message, presences');
         } catch (error) {
             const errorMsg = error.response?.data || error.message;
             console.error('[WhapiProvider] Error al configurar webhook:', errorMsg);
