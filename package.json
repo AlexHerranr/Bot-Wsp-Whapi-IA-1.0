@@ -6,7 +6,6 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/app.ts",
-    "dev:simple": "tsx --watch simple-app.ts",
     "dev:all": "concurrently -k -n BOT,NGROK -c green,cyan \"npm run dev\" \"ngrok http 3008 --domain=actual-bobcat-handy.ngrok-free.app\"",
     "build": "rollup -c",
     "start": "node dist/app.js",

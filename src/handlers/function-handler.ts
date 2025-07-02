@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { whapiLabels } from '../utils/whapi/index.js';
 import { enhancedLog } from '../utils/core/index.js';
+import { handleAvailabilityCheck } from './integrations/beds24-availability.js';
 
 export class FunctionHandler {
   private n8nWebhook = process.env.N8N_WEBHOOK_URL;
@@ -31,25 +32,25 @@ export class FunctionHandler {
   }
 
   /**
-   * Manejar consulta de disponibilidad (conexión con n8n)
+   * Manejar consulta de disponibilidad (directa con Beds24)
    */
   private async handleCheckAvailability(args: any): Promise<any> {
-    if (!this.n8nWebhook) {
-      enhancedLog('error', 'FUNCTION_HANDLER', 'N8N_WEBHOOK_URL no está definida');
-      return { error: 'La URL del webhook de n8n no está configurada.' };
-    }
-
     try {
-      const response = await axios.post(this.n8nWebhook, {
-        action: 'check_availability',
-        ...args
-      });
+      // Usar el handler directo de Beds24
+      const result = await handleAvailabilityCheck(args);
       
-      enhancedLog('success', 'FUNCTION_HANDLER', `Respuesta de n8n para disponibilidad: ${JSON.stringify(response.data)}`);
-      return response.data;
+      enhancedLog('success', 'FUNCTION_HANDLER', `Consulta de disponibilidad Beds24 completada`);
+      
+      return {
+        success: true,
+        data: result
+      };
     } catch (error) {
-      enhancedLog('error', 'FUNCTION_HANDLER', `Error llamando a n8n: ${error.response?.data || error.message}`);
-      return { error: 'Hubo un error al consultar la disponibilidad.' };
+      enhancedLog('error', 'FUNCTION_HANDLER', `Error en disponibilidad Beds24: ${error.message}`);
+      return { 
+        success: false,
+        error: 'Hubo un error al consultar la disponibilidad en tiempo real.' 
+      };
     }
   }
 

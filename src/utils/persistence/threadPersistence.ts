@@ -307,6 +307,42 @@ export class ThreadPersistenceManager {
         }
         return result;
     }
+
+    // 🆕 Obtener todos los threads (para limpieza)
+    getAllThreads(): Record<string, ThreadRecord> {
+        const result: Record<string, ThreadRecord> = {};
+        for (const [userId, record] of this.threads.entries()) {
+            result[userId] = record;
+        }
+        return result;
+    }
+
+    // 🆕 Eliminar thread específico
+    removeThread(userId: string): boolean {
+        const existed = this.threads.has(userId);
+        this.threads.delete(userId);
+        
+        if (existed) {
+            this.markAsChanged();
+            enhancedLog('info', 'THREAD_PERSIST', 
+                `Thread removido para usuario ${userId}`);
+        }
+        
+        return existed;
+    }
+
+    // 🆕 Limpiar todos los threads
+    clearAllThreads(): void {
+        const count = this.threads.size;
+        this.threads.clear();
+        this.markAsChanged();
+        
+        enhancedLog('warning', 'THREAD_PERSIST', 
+            `Todos los threads limpiados (${count} eliminados)`);
+        
+        // Guardar inmediatamente después de limpiar
+        this.saveThreads();
+    }
 }
 
 // Exportar instancia singleton

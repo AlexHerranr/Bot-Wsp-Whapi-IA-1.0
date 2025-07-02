@@ -273,6 +273,48 @@ const getThreadId = (jid) => {
     return threadId;
 };
 
+// --- Función para obtener contexto temporal actual ---
+const getCurrentTimeContext = (): string => {
+    const now = new Date();
+    
+    // Ajustar a zona horaria de Colombia (UTC-5)
+    const colombiaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    
+    // Calcular mañana correctamente
+    const tomorrow = new Date(colombiaTime);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const year = colombiaTime.getFullYear();
+    const month = String(colombiaTime.getMonth() + 1).padStart(2, '0');
+    const day = String(colombiaTime.getDate()).padStart(2, '0');
+    const hours = String(colombiaTime.getHours()).padStart(2, '0');
+    const minutes = String(colombiaTime.getMinutes()).padStart(2, '0');
+    
+    const tomorrowYear = tomorrow.getFullYear();
+    const tomorrowMonth = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const tomorrowDay = String(tomorrow.getDate()).padStart(2, '0');
+    
+    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    
+    const dayName = dayNames[colombiaTime.getDay()];
+    const monthName = monthNames[colombiaTime.getMonth()];
+    
+    return `=== CONTEXTO TEMPORAL ACTUAL ===
+FECHA: ${dayName}, ${day} de ${monthName} de ${year} (${year}-${month}-${day})
+HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
+
+INTERPRETACIÓN FECHAS RELATIVAS:
+- "hoy" = ${year}-${month}-${day}
+- "mañana" = ${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}
+- Cuando solo mencionen día/mes sin año, usar ${year}
+- SIEMPRE usa año ${year} o posterior, NUNCA años anteriores
+=== FIN CONTEXTO ===
+
+`;
+};
+
 // --- Procesamiento OpenAI (Simple) ---
 const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = null) => {
     const shortUserId = getShortUserId(userJid);
@@ -319,11 +361,143 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
             });
         }
         
-        // Agregar mensaje del usuario
+        // 🔧 CRÍTICO: Verificar y cancelar runs activos ANTES de agregar mensaje
+        logInfo('RUN_CHECK_START', `Verificando runs activos antes de agregar mensaje`, {
+            shortUserId,
+            threadId
+        });
+        
+        // 🔧 MEJORADO: Verificar y cancelar runs activos con mejor error handling
+        let retryCount = 0;
+        const maxRetries = 3;
+        let activeRunHandled = false;
+        
+        while (!activeRunHandled && retryCount < maxRetries) {
+            try {
+                const existingRuns = await openai.beta.threads.runs.list(threadId, { limit: 5 });
+                const activeRuns = existingRuns.data.filter(r => 
+                    ['queued', 'in_progress', 'requires_action'].includes(r.status)
+                );
+                
+                if (activeRuns.length > 0) {
+                    logWarning('ACTIVE_RUNS_DETECTED', `${activeRuns.length} run(s) activo(s) detectado(s), cancelando`, {
+                        shortUserId,
+                        activeRuns: activeRuns.map(r => ({
+                            id: r.id,
+                            status: r.status,
+                            created_at: r.created_at,
+                            expires_at: r.expires_at
+                        })),
+                        threadId,
+                        retryAttempt: retryCount + 1
+                    });
+                    
+                    // Cancelar todos los runs activos en paralelo
+                    const cancelPromises = activeRuns.map(async (activeRun) => {
+                        try {
+                            await openai.beta.threads.runs.cancel(threadId, activeRun.id);
+                            logSuccess('ACTIVE_RUN_CANCELLED', `Run cancelado: ${activeRun.id}`, {
+                                shortUserId,
+                                runId: activeRun.id,
+                                previousStatus: activeRun.status,
+                                threadId
+                            });
+                            return { success: true, runId: activeRun.id };
+                        } catch (cancelError) {
+                            logError('RUN_CANCEL_ERROR', `Error cancelando run ${activeRun.id}`, {
+                                shortUserId,
+                                runId: activeRun.id,
+                                error: cancelError.message,
+                                errorCode: cancelError.status,
+                                threadId
+                            });
+                            return { success: false, runId: activeRun.id, error: cancelError.message };
+                        }
+                    });
+                    
+                    const cancelResults = await Promise.all(cancelPromises);
+                    const successfulCancellations = cancelResults.filter(r => r.success).length;
+                    
+                    logInfo('RUN_CANCELLATION_SUMMARY', `Cancelación completada: ${successfulCancellations}/${activeRuns.length} exitosas`, {
+                        shortUserId,
+                        totalRuns: activeRuns.length,
+                        successful: successfulCancellations,
+                        threadId,
+                        retryAttempt: retryCount + 1
+                    });
+                    
+                    // Esperar más tiempo para que las cancelaciones tomen efecto
+                    const waitTime = Math.min(2000 + (retryCount * 1000), 5000); // 2s, 3s, 4s max
+                    logInfo('RUN_CANCEL_WAIT', `Esperando ${waitTime}ms para que las cancelaciones tomen efecto`, {
+                        shortUserId,
+                        waitTime,
+                        retryAttempt: retryCount + 1
+                    });
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    
+                    // Verificar si realmente se cancelaron
+                    const verificationRuns = await openai.beta.threads.runs.list(threadId, { limit: 5 });
+                    const stillActiveRuns = verificationRuns.data.filter(r => 
+                        ['queued', 'in_progress', 'requires_action'].includes(r.status)
+                    );
+                    
+                    if (stillActiveRuns.length > 0) {
+                        logWarning('RUNS_STILL_ACTIVE', `${stillActiveRuns.length} run(s) siguen activos después de cancelación`, {
+                            shortUserId,
+                            stillActiveRuns: stillActiveRuns.map(r => ({
+                                id: r.id,
+                                status: r.status,
+                                created_at: r.created_at
+                            })),
+                            threadId,
+                            retryAttempt: retryCount + 1
+                        });
+                        retryCount++;
+                        continue; // Reintentar
+                    }
+                }
+                
+                activeRunHandled = true;
+                
+            } catch (listError) {
+                logError('RUN_LIST_ERROR', `Error listando runs existentes`, {
+                    shortUserId,
+                    error: listError.message,
+                    errorCode: listError.status,
+                    threadId,
+                    retryAttempt: retryCount + 1
+                });
+                retryCount++;
+                
+                if (retryCount >= maxRetries) {
+                    logError('RUN_CLEANUP_FAILED', `Falló limpieza de runs después de ${maxRetries} intentos`, {
+                        shortUserId,
+                        threadId,
+                        finalError: listError.message
+                    });
+                    return 'Lo siento, hay un problema técnico con la conversación. Por favor intenta de nuevo en unos momentos.';
+                }
+                
+                // Esperar antes de reintentar
+                await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            }
+        }
+        
+        if (!activeRunHandled) {
+            logError('RUN_CLEANUP_TIMEOUT', `No se pudo limpiar runs activos después de ${maxRetries} intentos`, {
+                shortUserId,
+                threadId,
+                maxRetries
+            });
+            return 'Lo siento, hay un problema técnico con la conversación. Por favor intenta de nuevo en unos momentos.';
+        }
+        
+        // ✅ AHORA SÍ: Agregar mensaje del usuario con contexto temporal
         logOpenAIRequest(shortUserId, 'adding_message', threadId);
+        const messageWithTimeContext = getCurrentTimeContext() + userMsg;
         await openai.beta.threads.messages.create(threadId, {
             role: 'user',
-            content: userMsg
+            content: messageWithTimeContext
         });
         
         // Actualizar actividad del thread
@@ -361,15 +535,323 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
             }
         }
         
-        const duration = Date.now() - startTime;
+        let duration = Date.now() - startTime;
+        
+        // 🎯 MEJORADO: Manejo de Function Calling con mejores prácticas OpenAI
+        if (run.status === 'requires_action') {
+            const toolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
+            
+            if (!toolCalls || toolCalls.length === 0) {
+                logError('FUNCTION_CALLING_NO_TOOLS', `Run requires_action pero sin tool_calls`, {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    required_action: run.required_action
+                });
+                return 'Lo siento, hubo un problema procesando la consulta. Por favor intenta de nuevo.';
+            }
+            
+            logInfo('FUNCTION_CALLING_START', `OpenAI requiere ejecutar ${toolCalls.length} función(es)`, {
+                shortUserId,
+                threadId,
+                runId: run.id,
+                toolCallsCount: toolCalls.length,
+                functions: toolCalls.map(tc => ({
+                    id: tc.id,
+                    name: tc.function.name,
+                    argsLength: tc.function.arguments.length
+                })),
+                expires_at: run.expires_at
+            });
+            
+            try {
+                // 🔧 MEJORADO: Procesamiento paralelo de tool calls con mejor error handling
+                const toolOutputPromises = toolCalls.map(async (toolCall, index) => {
+                    const startTime = Date.now();
+                    
+                    if (toolCall.type !== 'function') {
+                        logWarning('FUNCTION_CALL_SKIP', `Tool call tipo '${toolCall.type}' no soportado`, {
+                            shortUserId,
+                            toolCallId: toolCall.id,
+                            type: toolCall.type,
+                            index
+                        });
+                        return {
+                            tool_call_id: toolCall.id,
+                            output: JSON.stringify({ 
+                                error: `Tool call tipo '${toolCall.type}' no soportado`,
+                                success: false 
+                            })
+                        };
+                    }
+                    
+                    const functionName = toolCall.function.name;
+                    let functionArgs;
+                    
+                    try {
+                        functionArgs = JSON.parse(toolCall.function.arguments);
+                    } catch (parseError) {
+                        logError('FUNCTION_ARGS_PARSE_ERROR', `Error parseando argumentos para ${functionName}`, {
+                            shortUserId,
+                            functionName,
+                            toolCallId: toolCall.id,
+                            rawArgs: toolCall.function.arguments,
+                            parseError: parseError.message
+                        });
+                        return {
+                            tool_call_id: toolCall.id,
+                            output: JSON.stringify({ 
+                                error: 'Error parseando argumentos de la función',
+                                success: false 
+                            })
+                        };
+                    }
+                    
+                    logInfo('FUNCTION_EXECUTION_START', `Ejecutando función ${functionName} [${index + 1}/${toolCalls.length}]`, {
+                        shortUserId,
+                        functionName,
+                        args: functionArgs,
+                        toolCallId: toolCall.id,
+                        index: index + 1,
+                        total: toolCalls.length
+                    });
+                    
+                    try {
+                        // Ejecutar la función usando FunctionHandler
+                        const { FunctionHandler } = await import('./handlers/function-handler.js');
+                        const functionHandler = new FunctionHandler();
+                        const result = await functionHandler.handleFunction(functionName, functionArgs);
+                        
+                        const executionTime = Date.now() - startTime;
+                        
+                        // 🔧 MEJORADO: Formateo robusto del resultado
+                        let formattedResult;
+                        if (typeof result === 'string') {
+                            formattedResult = result;
+                        } else if (result && typeof result === 'object') {
+                            // Si el resultado ya tiene estructura de error/success, mantenerla
+                            formattedResult = JSON.stringify(result);
+                        } else {
+                            formattedResult = String(result || 'success');
+                        }
+                        
+                        logSuccess('FUNCTION_EXECUTION_COMPLETE', `Función ${functionName} ejecutada exitosamente`, {
+                            shortUserId,
+                            functionName,
+                            toolCallId: toolCall.id,
+                            executionTime,
+                            resultLength: formattedResult.length,
+                            resultPreview: formattedResult.substring(0, 200) + (formattedResult.length > 200 ? '...' : ''),
+                            index: index + 1,
+                            total: toolCalls.length
+                        });
+                        
+                        return {
+                            tool_call_id: toolCall.id,
+                            output: formattedResult
+                        };
+                        
+                    } catch (functionError) {
+                        const executionTime = Date.now() - startTime;
+                        
+                        logError('FUNCTION_EXECUTION_ERROR', `Error ejecutando función ${functionName}`, {
+                            shortUserId,
+                            functionName,
+                            toolCallId: toolCall.id,
+                            error: functionError.message,
+                            stack: functionError.stack,
+                            executionTime,
+                            args: functionArgs,
+                            index: index + 1,
+                            total: toolCalls.length
+                        });
+                        
+                        return {
+                            tool_call_id: toolCall.id,
+                            output: JSON.stringify({ 
+                                error: 'Error ejecutando la función',
+                                details: functionError.message,
+                                success: false 
+                            })
+                        };
+                    }
+                });
+                
+                // Esperar a que todas las funciones terminen
+                const toolOutputs = await Promise.all(toolOutputPromises);
+                
+                logInfo('FUNCTION_CALLING_OUTPUTS_READY', `Todas las funciones completadas, enviando resultados`, {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    toolOutputsCount: toolOutputs.length,
+                    outputSummary: toolOutputs.map((output, i) => ({
+                        tool_call_id: output.tool_call_id,
+                        outputLength: output.output.length,
+                        isError: output.output.includes('"error"') || output.output.includes('"success":false')
+                    }))
+                });
+                
+                // 🔧 MEJORADO: Envío con timeout y retry
+                let submitAttempts = 0;
+                const maxSubmitAttempts = 3;
+                let submitSuccess = false;
+                
+                while (!submitSuccess && submitAttempts < maxSubmitAttempts) {
+                    try {
+                        submitAttempts++;
+                        
+                        logInfo('FUNCTION_SUBMIT_ATTEMPT', `Enviando tool outputs [intento ${submitAttempts}/${maxSubmitAttempts}]`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            attempt: submitAttempts
+                        });
+                        
+                        run = await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+                            tool_outputs: toolOutputs
+                        });
+                        
+                        submitSuccess = true;
+                        
+                        logSuccess('FUNCTION_SUBMIT_SUCCESS', `Tool outputs enviados exitosamente`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            toolOutputsCount: toolOutputs.length,
+                            newRunStatus: run.status,
+                            attempt: submitAttempts
+                        });
+                        
+                    } catch (submitError) {
+                        logError('FUNCTION_SUBMIT_ERROR', `Error enviando tool outputs [intento ${submitAttempts}]`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            error: submitError.message,
+                            errorCode: submitError.status,
+                            attempt: submitAttempts,
+                            maxAttempts: maxSubmitAttempts
+                        });
+                        
+                        if (submitAttempts >= maxSubmitAttempts) {
+                            return 'Lo siento, hubo un problema enviando los resultados de la consulta. Por favor intenta de nuevo.';
+                        }
+                        
+                        // Esperar antes de reintentar
+                        await new Promise(resolve => setTimeout(resolve, 1000 * submitAttempts));
+                    }
+                }
+                
+                // 🔧 MEJORADO: Continuar esperando hasta completion con timeout de 10 minutos
+                const submitTime = Date.now();
+                const maxWaitTime = 10 * 60 * 1000; // 10 minutos (límite de OpenAI)
+                attempts = 0;
+                const maxWaitAttempts = Math.floor(maxWaitTime / 500); // 500ms por intento
+                
+                logInfo('FUNCTION_WAITING_COMPLETION', `Esperando completion después de function calling`, {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    currentStatus: run.status,
+                    maxWaitMinutes: 10
+                });
+                
+                while (['queued', 'in_progress'].includes(run.status) && attempts < maxWaitAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    run = await openai.beta.threads.runs.retrieve(threadId, run.id);
+                    attempts++;
+                    
+                    // Log periódico cada 30 segundos
+                    if (attempts % 60 === 0) {
+                        const waitedMinutes = Math.floor((Date.now() - submitTime) / 60000);
+                        logInfo('FUNCTION_WAITING_UPDATE', `Esperando completion: ${waitedMinutes} min transcurridos`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            currentStatus: run.status,
+                            waitedMinutes,
+                            attempts: attempts,
+                            maxWaitMinutes: 10
+                        });
+                    }
+                }
+                
+                duration = Date.now() - startTime;
+                
+                logInfo('FUNCTION_CALLING_FINAL_STATUS', `Function calling completado`, {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    finalStatus: run.status,
+                    totalDuration: duration,
+                    toolCallsCount: toolCalls.length,
+                    waitAttempts: attempts
+                });
+                
+            } catch (functionError) {
+                duration = Date.now() - startTime;
+                
+                logError('FUNCTION_CALLING_CRITICAL_ERROR', `Error crítico en function calling`, {
+                    shortUserId,
+                    error: functionError.message,
+                    stack: functionError.stack,
+                    threadId,
+                    runId: run.id,
+                    duration,
+                    toolCallsCount: toolCalls?.length || 0
+                });
+                
+                return 'Lo siento, hubo un problema ejecutando la consulta. Por favor intenta de nuevo.';
+            }
+        }
         
         if (run.status !== 'completed') {
-            logError('OPENAI_RUN', `OpenAI no completó para ${shortUserId}. Estado: ${run.status}`, { 
-                runId: run.id, 
-                threadId, 
-                attempts, 
-                duration 
-            });
+            // 🔍 LOGGING DETALLADO: Capturar TODA la información del error
+            const errorDetails = {
+                runId: run.id,
+                threadId,
+                attempts,
+                duration,
+                status: run.status,
+                // 🎯 NUEVOS CAMPOS DETALLADOS
+                created_at: run.created_at,
+                started_at: run.started_at,
+                failed_at: run.failed_at,
+                cancelled_at: run.cancelled_at,
+                expires_at: run.expires_at,
+                last_error: run.last_error,
+                incomplete_details: run.incomplete_details,
+                required_action: run.required_action,
+                usage: run.usage,
+                // 🔧 OBJETO COMPLETO DEL RUN PARA ANÁLISIS
+                full_run_object: JSON.stringify(run, null, 2)
+            };
+            
+            logError('OPENAI_RUN', `OpenAI no completó para ${shortUserId}. Estado: ${run.status}`, errorDetails);
+            
+            // 🚨 Log específico del tipo de error si existe
+            if (run.last_error) {
+                logError('OPENAI_RUN_ERROR_DETAIL', `Detalles específicos del error OpenAI`, {
+                    shortUserId,
+                    error_code: run.last_error.code,
+                    error_message: run.last_error.message,
+                    failed_at: run.failed_at,
+                    threadId,
+                    runId: run.id
+                });
+            }
+            
+            // 🔧 Log adicional para incomplete_details si existe
+            if (run.incomplete_details) {
+                logError('OPENAI_RUN_INCOMPLETE', `Run incompleto - detalles adicionales`, {
+                    shortUserId,
+                    incomplete_reason: run.incomplete_details.reason,
+                    threadId,
+                    runId: run.id
+                });
+            }
+            
             logOpenAIResponse(shortUserId, duration, false, userName);
             return 'Lo siento, hubo un problema procesando tu mensaje. Por favor intenta de nuevo.';
         }
@@ -416,62 +898,188 @@ const sendToWhatsApp = async (chatId, message) => {
     const shortUserId = getShortUserId(chatId);
     
     try {
-        logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
-            chatId,
-            messageLength: message.length,
-            preview: message.substring(0, 100) + '...'
-        });
+        // 🎯 MEJORADO: División inteligente de mensajes
+        // Dividir por doble salto de línea O por bullets/listas
+        let chunks = [];
         
-        const response = await fetch(`${WHAPI_API_URL}/messages/text?token=${WHAPI_TOKEN}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                to: chatId,
-                body: message,
-                typing_time: 3
-            })
-        });
+        // Primero intentar dividir por doble salto de línea
+        const paragraphs = message.split(/\n\n+/).map(chunk => chunk.trim()).filter(chunk => chunk.length > 0);
         
-        if (response.ok) {
-            const result = await response.json();
+        // Si hay párrafos claramente separados, usarlos
+        if (paragraphs.length > 1) {
+            chunks = paragraphs;
+        } else {
+            // Si no hay párrafos, buscar listas con bullets
+            const lines = message.split('\n');
+            let currentChunk = '';
             
-            // 🔧 TRACKING: Registrar ID del mensaje enviado por el bot
-            if (result.sent && result.message?.id) {
-                botSentMessages.add(result.message.id);
-                logDebug('BOT_MESSAGE_TRACKED', `Mensaje del bot registrado para tracking anti-duplicación`, {
-                    shortUserId: shortUserId,
-                    messageId: result.message.id,
-                    messageLength: message.length,
-                    timestamp: new Date().toISOString()
-                });
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const nextLine = lines[i + 1];
                 
-                // Limpiar después de 10 minutos para evitar que crezca infinitamente
-                setTimeout(() => {
-                    botSentMessages.delete(result.message.id);
-                    logDebug('BOT_MESSAGE_CLEANUP', `ID limpiado del tracking`, {
-                        messageId: result.message.id,
-                        cleanupAfterMinutes: 10
-                    });
-                }, 10 * 60 * 1000);
+                // Si la línea actual termina con ":" y la siguiente empieza con bullet
+                if (line.endsWith(':') && nextLine && nextLine.trim().match(/^[•\-\*]/)) {
+                    // Agregar la línea de título al chunk actual
+                    if (currentChunk) {
+                        chunks.push(currentChunk.trim());
+                    }
+                    currentChunk = line;
+                } 
+                // Si es una línea de bullet
+                else if (line.trim().match(/^[•\-\*]/)) {
+                    currentChunk += '\n' + line;
+                    
+                    // Si la siguiente línea NO es un bullet, cerrar el chunk
+                    if (!nextLine || !nextLine.trim().match(/^[•\-\*]/)) {
+                        chunks.push(currentChunk.trim());
+                        currentChunk = '';
+                    }
+                }
+                // Línea normal
+                else {
+                    if (currentChunk) {
+                        currentChunk += '\n' + line;
+                    } else {
+                        currentChunk = line;
+                    }
+                }
             }
             
-            // Solo logs técnicos (sin log en consola, ya se muestra en processUserMessage)
-            logWhatsAppMessage(shortUserId, 'OUT', message.substring(0, 50) + '...', 'Usuario');
-            logSuccess('WHATSAPP_SEND', `Mensaje enviado exitosamente`, {
-                shortUserId: shortUserId,
+            // Agregar cualquier chunk restante
+            if (currentChunk) {
+                chunks.push(currentChunk.trim());
+            }
+        }
+        
+        // Filtrar chunks vacíos y combinar chunks muy pequeños
+        chunks = chunks.filter(chunk => chunk.length > 0);
+        
+        // Si no se pudo dividir bien, usar el mensaje original
+        if (chunks.length === 0) {
+            chunks = [message];
+        }
+        
+        // Si es un mensaje corto sin párrafos, enviarlo como está
+        if (chunks.length === 1) {
+            logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
+                chatId,
                 messageLength: message.length,
-                messageId: result.message?.id,
-                responseTime: Date.now() - Date.now() // Esto se puede mejorar con un timestamp inicial
+                preview: message.substring(0, 100) + '...'
+            });
+            
+            const response = await fetch(`${WHAPI_API_URL}/messages/text?token=${WHAPI_TOKEN}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: chatId,
+                    body: message,
+                    typing_time: 3
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                
+                // 🔧 TRACKING: Registrar ID del mensaje enviado por el bot
+                if (result.sent && result.message?.id) {
+                    botSentMessages.add(result.message.id);
+                    logDebug('BOT_MESSAGE_TRACKED', `Mensaje del bot registrado para tracking anti-duplicación`, {
+                        shortUserId: shortUserId,
+                        messageId: result.message.id,
+                        messageLength: message.length,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    // Limpiar después de 10 minutos para evitar que crezca infinitamente
+                    setTimeout(() => {
+                        botSentMessages.delete(result.message.id);
+                        logDebug('BOT_MESSAGE_CLEANUP', `ID limpiado del tracking`, {
+                            messageId: result.message.id,
+                            cleanupAfterMinutes: 10
+                        });
+                    }, 10 * 60 * 1000);
+                }
+                
+                // Solo logs técnicos (sin log en consola, ya se muestra en processUserMessage)
+                logWhatsAppMessage(shortUserId, 'OUT', message.substring(0, 50) + '...', 'Usuario');
+                logSuccess('WHATSAPP_SEND', `Mensaje enviado exitosamente`, {
+                    shortUserId: shortUserId,
+                    messageLength: message.length,
+                    messageId: result.message?.id,
+                    responseTime: Date.now() - Date.now() // Esto se puede mejorar con un timestamp inicial
+                });
+                return true;
+            } else {
+                const errorText = await response.text();
+                logError('WHATSAPP_SEND', `Error enviando mensaje a ${shortUserId}`, { 
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorText
+                });
+                return false;
+            }
+        } else {
+            // 🎯 NUEVO: Enviar múltiples párrafos como mensajes separados
+            logInfo('WHATSAPP_CHUNKS', `Dividiendo mensaje largo en ${chunks.length} párrafos`, { 
+                chatId: chatId,
+                shortUserId: shortUserId,
+                totalChunks: chunks.length,
+                originalLength: message.length
+            });
+            
+            // Enviar cada chunk como mensaje independiente
+            for (let i = 0; i < chunks.length; i++) {
+                const chunk = chunks[i];
+                const isLastChunk = i === chunks.length - 1;
+                
+                logDebug('WHATSAPP_CHUNK', `Enviando párrafo ${i + 1}/${chunks.length}`, {
+                    shortUserId: shortUserId,
+                    chunkLength: chunk.length,
+                    preview: chunk.substring(0, 50) + '...'
+                });
+                
+                const response = await fetch(`${WHAPI_API_URL}/messages/text?token=${WHAPI_TOKEN}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to: chatId,
+                        body: chunk,
+                        typing_time: i === 0 ? 3 : 2 // 3s para el primer mensaje, 2s para los siguientes
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // 🔧 TRACKING: Registrar ID del mensaje enviado por el bot
+                    if (result.sent && result.message?.id) {
+                        botSentMessages.add(result.message.id);
+                        setTimeout(() => {
+                            botSentMessages.delete(result.message.id);
+                        }, 10 * 60 * 1000);
+                    }
+                } else {
+                    const errorText = await response.text();
+                    logError('WHATSAPP_CHUNK_ERROR', `Error enviando chunk ${i + 1}/${chunks.length}`, { 
+                        shortUserId: shortUserId,
+                        status: response.status,
+                        error: errorText
+                    });
+                    // Continuar con el siguiente chunk aunque falle uno
+                }
+                
+                // Delay natural entre párrafos (solo si no es el último)
+                if (!isLastChunk) {
+                    await new Promise(resolve => setTimeout(resolve, 150));
+                }
+            }
+            
+            logSuccess('WHATSAPP_CHUNKS_COMPLETE', `Todos los párrafos enviados`, {
+                shortUserId: shortUserId,
+                totalChunks: chunks.length,
+                originalLength: message.length
             });
             return true;
-        } else {
-            const errorText = await response.text();
-            logError('WHATSAPP_SEND', `Error enviando mensaje a ${shortUserId}`, { 
-                status: response.status,
-                statusText: response.statusText,
-                error: errorText
-            });
-            return false;
         }
     } catch (error) {
         logError('WHATSAPP_SEND', `Error de red enviando a ${shortUserId}`, { 
@@ -516,7 +1124,16 @@ const processUserMessage = async (userId) => {
     // 🎯 Log compacto - Resultado con preview
     const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
     const timestamp2 = getCompactTimestamp();
-    console.log(`${LOG_COLORS.TIMESTAMP}${timestamp2}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Completado (${aiDuration}s) → 💬 "${preview}"`);
+    
+    // Verificar si la respuesta será dividida en párrafos
+    const paragraphs = response.split(/\n\n+/).filter(p => p.trim().length > 0);
+    const willSplit = paragraphs.length > 1;
+    
+    if (willSplit) {
+        console.log(`${LOG_COLORS.TIMESTAMP}${timestamp2}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Completado (${aiDuration}s) → 💬 ${paragraphs.length} párrafos`);
+    } else {
+        console.log(`${LOG_COLORS.TIMESTAMP}${timestamp2}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Completado (${aiDuration}s) → 💬 "${preview}"`);
+    }
     
     // Enviar respuesta a WhatsApp
     await sendToWhatsApp(buffer.chatId, response);
@@ -691,10 +1308,10 @@ app.post('/hook', async (req, res) => {
                             });
                             
                             // 1. Agregar contexto del sistema
-                            await openai.beta.threads.messages.create(threadId, {
-                                role: 'user',
-                                content: `[NOTA DEL SISTEMA: Un agente humano (${finalBuffer.agentName}) ha respondido directamente al cliente]`
-                            });
+                                                          await openai.beta.threads.messages.create(threadId, {
+                                  role: 'user',
+                                  content: `[NOTA DEL SISTEMA: Un agente humano (${finalBuffer.agentName}) ha respondido directamente al cliente]`
+                              });
                             
                             // 2. Agregar el mensaje manual agrupado
                             await openai.beta.threads.messages.create(threadId, {
