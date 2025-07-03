@@ -606,7 +606,7 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
         hasSpecificProperty: propertyId !== null,
         hasSpecificRoom: roomId !== null
     });
-
+    
     try {
         logInfo('AVAILABILITY_HANDLER', 'Procesando consulta de disponibilidad', {
             startDate,
@@ -617,7 +617,7 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
 
         // Obtener datos combinados: disponibilidad + precios
         const result = await getAvailabilityAndPricesOptimized(startDate, endDate, propertyId, roomId);
-        
+
         // Formatear respuesta optimizada para OpenAI
         const response = formatOptimizedResponse(result, startDate, endDate);
         

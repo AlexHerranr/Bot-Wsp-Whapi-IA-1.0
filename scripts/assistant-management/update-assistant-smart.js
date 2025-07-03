@@ -23,7 +23,7 @@ async function updateAssistant() {
         });
         
         // Cargar configuración existente
-        const configPath = join(__dirname, '..', 'assistant-config.json');
+        const configPath = join(__dirname, '..', '..', 'assistant-config.json');
         let config;
         try {
             config = JSON.parse(readFileSync(configPath, 'utf8'));
@@ -36,7 +36,7 @@ async function updateAssistant() {
         console.log(`✅ Vector Store ID: ${config.vectorStore.id}`);
         
         // 2. Detectar cambios
-        const RAG_FOLDER = join(__dirname, '..', 'RAG OPEN AI ASSISTANCE');
+        const RAG_FOLDER = join(__dirname, '..', '..', 'RAG OPEN AI ASSISTANCE');
         const updates = await detectChanges(config, RAG_FOLDER);
         
         if (updates.totalChanges === 0) {
@@ -222,11 +222,15 @@ async function updateConfig(config, ragFolder) {
     
     config.lastUpdate = new Date().toISOString();
     
-    const configPath = join(__dirname, '..', 'assistant-config.json');
+    const configPath = join(__dirname, '..', '..', 'assistant-config.json');
     writeFileSync(configPath, JSON.stringify(config, null, 2));
     
     console.log('✅ Configuración actualizada');
 }
 
-// Ejecutar
-updateAssistant();
+// Si se ejecuta directamente
+if (import.meta.url === `file://${process.argv[1]}`) {
+    updateAssistant();
+}
+
+export { updateAssistant }; 

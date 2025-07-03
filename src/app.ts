@@ -877,6 +877,27 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
             userName: userName
         });
         
+        // Actualizar metadatos de contacto en threadPersistence
+        try {
+            const enhancedInfo = await getEnhancedContactInfo(shortUserId, chatId);
+            const existing = threadPersistence.getThread(shortUserId);
+            // Solo actualizar si ya existe el registro
+            if (existing) {
+                // Mantener threadId y createdAt
+                const threadId = existing.threadId;
+                const createdAt = existing.createdAt;
+                threadPersistence.setThread(shortUserId, threadId, chatId, cleanContactName(userName || 'Usuario'));
+                // Actualizar campos adicionales manualmente
+                const updated = threadPersistence.getThread(shortUserId);
+                updated.name = enhancedInfo.name;
+                updated.labels = enhancedInfo.labels;
+                updated.lastActivity = new Date().toISOString();
+                threadPersistence.saveThreads();
+            }
+        } catch (err) {
+            logWarning('CONTACT_UPDATE', 'No se pudo actualizar metadatos de contacto', { error: err.message });
+        }
+        
         return response;
         
     } catch (error) {
@@ -1308,10 +1329,10 @@ app.post('/hook', async (req, res) => {
                             });
                             
                             // 1. Agregar contexto del sistema
-                                                          await openai.beta.threads.messages.create(threadId, {
-                                  role: 'user',
-                                  content: `[NOTA DEL SISTEMA: Un agente humano (${finalBuffer.agentName}) ha respondido directamente al cliente]`
-                              });
+                            await openai.beta.threads.messages.create(threadId, {
+                                role: 'user',
+                                content: `[NOTA DEL SISTEMA: Un agente humano (${finalBuffer.agentName}) ha respondido directamente al cliente]`
+                            });
                             
                             // 2. Agregar el mensaje manual agrupado
                             await openai.beta.threads.messages.create(threadId, {
@@ -1322,7 +1343,7 @@ app.post('/hook', async (req, res) => {
                             // 3. Actualizar thread
                             const threadInfo = threadPersistence.getThread(shortClientId);
                             if (threadInfo) {
-                                threadPersistence.setThread(shortClientId, threadId, threadInfo.chatId, threadInfo.userName);
+                                threadPersistence.setThread(shortClientId, threadId, chatId, finalBuffer.agentName);
                             }
                             
                             // 🎯 Log compacto final

@@ -7,8 +7,9 @@ interface ThreadRecord {
     chatId: string;        // WhatsApp chat ID completo (con @s.whatsapp.net)
     userName: string;      // Nombre del usuario
     createdAt: string;
-    lastActivity: string;
-    previousThreads?: string[]; // IDs de threads anteriores
+    lastActivity: string;  // Última actividad del usuario
+    name?: string;         // Nombre enriquecido opcional
+    labels?: string[];     // Etiquetas opcionales
 }
 
 export class ThreadPersistenceManager {
@@ -230,7 +231,8 @@ export class ThreadPersistenceManager {
             userName: userName || existing?.userName || 'Usuario',
             createdAt: existing?.createdAt || new Date().toISOString(),
             lastActivity: new Date().toISOString(),
-            previousThreads: existing?.previousThreads || []
+            name: existing?.name,
+            labels: existing?.labels
         };
         
         this.threads.set(userId, record);
@@ -281,7 +283,8 @@ export class ThreadPersistenceManager {
             userName: record.userName,
             createdAt: record.createdAt,
             lastActivity: record.lastActivity,
-            previousThreads: record.previousThreads || [],
+            name: record.name,
+            labels: record.labels,
             daysSinceActivity: Math.floor(daysSinceActivity),
             isActive: daysSinceActivity <= 7
         };
@@ -302,7 +305,6 @@ export class ThreadPersistenceManager {
                 userName: record.userName,
                 lastActivity: record.lastActivity,
                 createdAt: record.createdAt,
-                previousThreads: record.previousThreads?.length || 0
             };
         }
         return result;

@@ -1,0 +1,119 @@
+{
+  "timestamp": "2025-07-03T02:50:32.641Z",
+  "assistant": {
+    "id": "asst_KkDuq2r9cL5EZSZa95sXkpVR",
+    "name": "TeAlquilamos Bot v2.0 - Cartagena Apartments",
+    "model": "gpt-4o"
+  },
+  "vectorStore": {
+    "id": "vs_6865eff81ccc8191bf41f50ba9e497c5",
+    "name": "TeAlquilamos-RAG-Knowledge-Base-v2",
+    "fileCount": 17
+  },
+  "uploadedFiles": [
+    {
+      "filename": "# 00_INSTRUCCIONES_DEL_ASISTENTE.txt",
+      "hash": "59a1f3e9e7f4d36cbb7456e32b0b3a78d7bc963561e49d940675336fb22afe2f",
+      "id": "updated-1751524078246",
+      "bytes": 6202
+    },
+    {
+      "filename": "# 01_MAPA_NAVEGACION.txt",
+      "hash": "66e42ed4c70373f5853bb86cc450eefa9d38524a986bf992ceb9d62d3e53bca6",
+      "id": "updated-1751524078247",
+      "bytes": 23018
+    },
+    {
+      "filename": "# 02_TARIFAS_TEMPORADAS.txt",
+      "hash": "4ecf2bafed3bb8af7ef6f7623a0473cae4a1ade8cb0b45ae40a8424446b80c9e",
+      "id": "updated-1751524078247",
+      "bytes": 13407
+    },
+    {
+      "filename": "# 03_INVENTARIO_APARTAMENTOS.txt",
+      "hash": "cd4719e1a55b636204b7fe0fa14084eec9c958f00ff9783eed39c38092967438",
+      "id": "updated-1751524078248",
+      "bytes": 16084
+    },
+    {
+      "filename": "# 04_CARGOS_SERVICIOS_TARIFARIOS.txt",
+      "hash": "69bea7a6ebc1176b31bc2e0e555d6edc381672e35594294f37232ace7a5f056e",
+      "id": "updated-1751524078248",
+      "bytes": 11300
+    },
+    {
+      "filename": "# 05_DATOS_CORPORATIVOS_CONTACTO.txt",
+      "hash": "9a284e2b7589301994c90365c4456b810f7563b8f60899fc70f002b9ccf11fe9",
+      "id": "updated-1751524078249",
+      "bytes": 10637
+    },
+    {
+      "filename": "# 06_TOURS_SERVICIOS_ADICIONALES.txt",
+      "hash": "58c1d27c31aa27179be0922fa6e5f004cd011f6c6550bfb6245830013946c264",
+      "id": "updated-1751524078249",
+      "bytes": 9534
+    },
+    {
+      "filename": "# 07_VALIDACION_APARTAMENTOS.txt",
+      "hash": "4876a7dc28caca7afbb5dfbb8ea898e212c1ee58087592ab2738d4d49bc0ec9d",
+      "id": "updated-1751524078249",
+      "bytes": 8967
+    },
+    {
+      "filename": "# 08_LLEGADAS_SALIDAS_ESPECIALES.txt",
+      "hash": "908f095204179c4ef2b7baccfa1277d47819f816aea50fcfb9f5d8acb81afceb",
+      "id": "updated-1751524078250",
+      "bytes": 10904
+    },
+    {
+      "filename": "# 09_PROTOCOLO_CONFIANZA.txt",
+      "hash": "94cdc0bcd477b9df34bdc7032a2af9f19b784202e68ead52bff5dd0feab4f45c",
+      "id": "updated-1751524078250",
+      "bytes": 11972
+    },
+    {
+      "filename": "# 10_CHECKOUT_AUTOMATIZADO.txt",
+      "hash": "d732fc2b624a00ffdf3aa0f790b380dde8a94b11f81a222c5ea7e33b452a878d",
+      "id": "updated-1751524078251",
+      "bytes": 8098
+    },
+    {
+      "filename": "# 11_RESERVAS_GRUPALES.txt",
+      "hash": "8eecce373641a6db6ddea1418ab4362f62021fe98994ff9a85455f9021830867",
+      "id": "updated-1751524078251",
+      "bytes": 7346
+    },
+    {
+      "filename": "# 12_POLITICAS_OPERATIVAS.txt",
+      "hash": "9d6a0a2d36b8f396022862c8d4cd4631fb71bde697436c30f1bc60cbcd2f2433",
+      "id": "updated-1751524078252",
+      "bytes": 12871
+    },
+    {
+      "filename": "# 13_PLANTILLAS_RESPUESTAS.txt",
+      "hash": "1d85b48536e2e7cf0afd52fe898c231f73169fa0fbb3b9b194e293de40c6d111",
+      "id": "updated-1751524078252",
+      "bytes": 9872
+    },
+    {
+      "filename": "# 14_PROTOCOLO_B2B_COLEGAS.txt",
+      "hash": "eea78094fd2f375a9bb4b86b5b8db9793cb8b294cfb27451d46b43fe9870b92d",
+      "id": "updated-1751524078253",
+      "bytes": 12917
+    },
+    {
+      "filename": "# 15_COMUNICACION_NATURAL.txt",
+      "hash": "f8a58f74c3adeb13c1065b3e27cb04bd2f973587429f478003d92979dad22c53",
+      "id": "updated-1751524078253",
+      "bytes": 12943
+    },
+    {
+      "filename": "# 16_GESTION_DISPONIBILIDAD.txt",
+      "hash": "a4aaee8d0a6e44dcb0ac5712e1432f022816d396767e49bdee86e3c70a61fd3d",
+      "id": "updated-1751524078254",
+      "bytes": 8675
+    }
+  ],
+  "lastUpdate": "2025-07-03T06:27:58.254Z",
+  "promptHash": "59a1f3e9e7f4d36cbb7456e32b0b3a78d7bc963561e49d940675336fb22afe2f"
+}

@@ -9,7 +9,9 @@
     "dev:all": "concurrently -k -n BOT,NGROK -c green,cyan \"npm run dev\" \"ngrok http 3008 --domain=actual-bobcat-handy.ngrok-free.app\"",
     "build": "rollup -c",
     "start": "node dist/app.js",
-    "test": "node scripts/development/test-env.js"
+    "test": "node scripts/development/test-env.js",
+    "assistant": "node scripts/assistant-management/assistant-cli.js",
+    "create-assistant": "node scripts/create-new-assistant-v2.js"
   },
   "keywords": [
     "whatsapp",

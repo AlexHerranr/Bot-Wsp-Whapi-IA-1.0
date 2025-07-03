@@ -240,6 +240,56 @@ GET /statuses/{MessageID} - Ver quién leyó en grupos
 ```
 **Uso potencial:** Confirmar recepción de información importante
 
+## 🤖 Sistema de Gestión del Assistant
+
+### **CLI Unificado para Gestión Profesional**
+
+El proyecto incluye un sistema completo para gestionar el assistant de OpenAI de forma eficiente:
+
+```bash
+# Ver ayuda del sistema
+npm run assistant help
+
+# Ver estado actual del assistant
+npm run assistant status
+
+# Actualizar prompt principal
+npm run assistant prompt
+
+# Agregar nuevo archivo RAG
+npm run assistant add-file "# 17_NUEVO_ARCHIVO.txt"
+
+# Actualización inteligente completa
+npm run assistant update-all
+```
+
+### **Características del Sistema:**
+
+- **🎯 CLI Unificado**: Un solo comando para todas las operaciones
+- **📊 Estado en Tiempo Real**: Ver configuración, archivos y últimas actualizaciones
+- **🔄 Actualización Inteligente**: Detecta cambios automáticamente
+- **💰 Optimización de Costos**: Solo actualiza lo que cambió
+- **📚 Documentación Completa**: Guías paso a paso para cada operación
+
+### **Estructura de Gestión:**
+```
+scripts/assistant-management/
+├── assistant-cli.js          # CLI principal
+├── update-prompt.js          # Gestión de prompts
+├── add-rag-file.js           # Archivos RAG
+├── update-functions.js       # Funciones del assistant
+└── update-assistant-smart.js # Actualización inteligente
+
+RAG OPEN AI ASSISTANCE/       # Archivos de conocimiento
+├── # 00_INSTRUCCIONES_DEL_ASISTENTE.txt # Prompt principal
+├── # 01_MAPA_NAVEGACION.txt  # Archivos RAG (17 total)
+└── ... (archivos de conocimiento)
+```
+
+**📖 Documentación completa**: [docs/ASSISTANT_MANAGEMENT.md](./docs/ASSISTANT_MANAGEMENT.md)
+
+---
+
 ## 🚀 Inicio Rápido
 
 ### Requisitos

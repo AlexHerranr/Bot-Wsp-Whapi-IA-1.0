@@ -456,4 +456,30 @@ Jul1 [6:13p] [BOT] ✅ Enviado a 🤖 OpenAI → Contexto actualizado (1 msg)
 
 *Última actualización: 2025-06-30*
 *Estado actual: Thread persistence ✅ | Sincronización manual ✅ | UI optimizada ✅ | Timeouts 8s ✅ | Sistema production-ready ✅*
-*Documentación: Roadmap de desarrollo movido a [`docs/ROADMAP.md`](./ROADMAP.md) ✅* 
+*Documentación: Roadmap de desarrollo movido a [`docs/ROADMAP.md`](./ROADMAP.md) ✅*
+
+## 🗂️ ESTRUCTURA ACTUAL DE METADATOS EN `tmp/threads.json`
+
+Cada contacto/conversación se almacena como un registro con los siguientes campos:
+
+```json
+{
+  "threadId": "...",
+  "chatId": "...",
+  "userName": "...",
+  "name": "...",
+  "createdAt": "...",
+  "lastActivity": "...",
+  "labels": ["VIP", "Cliente"]
+}
+```
+
+- **threadId**: ID del hilo/conversación en OpenAI (puede ser null si aún no existe).
+- **chatId**: ID de WhatsApp del contacto.
+- **userName**: Nombre base del usuario (extraído de WhatsApp).
+- **name**: Nombre enriquecido (puede incluir emojis, alias, etc.).
+- **createdAt**: Fecha de creación del registro.
+- **lastActivity**: Fecha/hora de la última interacción.
+- **labels**: Array de etiquetas asignadas (solo strings, sin objetos).
+
+> **Nota:** Ya no se almacena `previousThreads`, ni campos como `type`, `not_spam`, `unread`, `lastMessage`, etc. Solo los metadatos principales y útiles para la gestión de contactos y contexto conversacional. 

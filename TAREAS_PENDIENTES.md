@@ -1,123 +1,165 @@
 # 📋 TAREAS PENDIENTES - TEALQUILAMOS BOT
 
-*Fecha: 2025-07-02*
-*Estado: Sistema funcional con function calling operativo*
+*Fecha: 2025-07-03*
+*Estado: Sistema funcional con 8 features core completadas*
 
 ---
 
-## 🔥 **PRIORIDAD ALTA - IMPLEMENTAR INMEDIATAMENTE**
+## 🔥 **PRIORIDAD UNO - ENRIQUECIMIENTO DE CONTEXTO**
 
-### 📞 **1. FUNCIÓN escalate_to_human() - NUEVA**
-**📅 Timeline: 1-2 semanas**
-**🎯 Estado: ESPECIFICACIÓN COMPLETA - LISTO PARA DESARROLLO**
+### 📝 **1. Envío de Identidad y Metadatos a OpenAI**
+**📅 Timeline: Esta semana**
+**🎯 Estado: EN DESARROLLO**
 
 #### **Qué implementar:**
-- ✅ Función de escalamiento automático bot → agente humano
-- ✅ Notificación vía WhatsApp a agentes específicos  
-- ✅ Transferencia de contexto completo
-- ✅ Mapeo inteligente por especialidad
+- ✅ Enviar nombre del cliente (combinación `name` + `userName`)
+- ✅ Incluir etiquetas del contacto
+- ✅ Estructurar mensaje con formato claro
+
+#### **Formato del contexto:**
+```
+IDENTIDAD DEL CLIENTE:
+- Nombre: {name} ({userName})
+- Etiquetas: [VIP, Cliente]
+
+CONTEXTO: HISTORIAL DE CONVERSACIONES ANTERIORES
+{historial}
+
+MENSAJE ACTUAL DEL CLIENTE:
+{mensaje_actual}
+```
+
+#### **Archivos a modificar:**
+- `src/app.ts` - Función `processWithOpenAI()`
+- `src/utils/persistence/threadPersistence.ts` - Ya actualizado ✅
+
+---
+
+### 📚 **2. Historial de Chat para Usuarios Nuevos**
+**📅 Timeline: 1 semana**
+**🎯 Estado: PENDIENTE**
+
+#### **Qué implementar:**
+- 📋 Detectar usuarios sin thread registrado
+- 📋 Llamar API Whapi: `GET /chats/{ChatID}`
+- 📋 Extraer últimas 50 interacciones
+- 📋 Formatear y enviar a OpenAI
 
 #### **Archivos a crear/modificar:**
 ```
-├── src/handlers/function-handler.ts       # Agregar handleEscalateToHuman()
-├── src/config/agents.config.ts            # Mapeo de contactos agentes  
-├── src/utils/escalation-formatter.ts      # Templates de mensajes
-├── src/utils/whapi-escalation.ts          # Envío notificaciones
-└── .env                                   # Variables AGENT_RESERVAS, etc.
+├── src/utils/whapi/chat-history.ts        # Nueva función para obtener historial
+├── src/app.ts                             # Integrar en processWithOpenAI()
+└── .env                                    # Verificar WHAPI_API_URL
 ```
 
-#### **Casos de uso críticos:**
-1. **Cliente listo para reservar** → `escalate_to_human("complete_booking")`
-2. **Sin disponibilidad** → `escalate_to_human("no_availability")` 
-3. **Error técnico** → `escalate_to_human("technical_issue")`
+---
 
-#### **Documentación:**
-- ✅ Especificación técnica: `docs/ESCALATE_TO_HUMAN_SPEC.md`
-- ✅ Actualizado en roadmap: `docs/ROADMAP.md`
+## 🔥 **PRIORIDAD ALTA - SIGUIENTES PASOS**
+
+### 📞 **3. Función escalate_to_human()**
+**📅 Timeline: 1-2 semanas**
+**🎯 Estado: ESPECIFICACIÓN COMPLETA**
+
+#### **Implementación pendiente:**
+- 📋 Crear handler en `function-handler.ts`
+- 📋 Registrar función en OpenAI Assistant
+- 📋 Configurar contactos de agentes en `.env`
+- 📋 Implementar envío vía Whapi
+
+#### **Documentación lista:**
+- ✅ Especificación: `docs/ESCALATE_TO_HUMAN_SPEC.md`
+- ✅ Casos de uso documentados
+- ✅ Estructura técnica definida
+
+---
+
+### 🔀 **4. Pruebas Multi-Usuario**
+**📅 Timeline: 1 semana**
+- ⏳ Coordinar 3-5 personas simultáneas
+- ⏳ Verificar buffers independientes
+- ⏳ Medir performance bajo carga
 
 ---
 
 ## 🔧 **PRIORIDAD MEDIA - PRÓXIMAS SEMANAS**
 
-### 🔀 **2. Pruebas Multi-Usuario Reales**
-**📅 Timeline: 1 semana**
-- ⏳ Coordinar 3-5 personas escribiendo simultáneamente
-- ⏳ Verificar buffer independiente por usuario
-- ⏳ Validar performance bajo carga real
-
-### 📚 **3. Contexto Histórico Whapi**
-**📅 Timeline: 2-3 semanas**  
-- 📋 Integrar historial previo para usuarios nuevos
-- 📋 API Whapi History para recuperar conversaciones
-- 📋 Formatear contexto para OpenAI
-
-### 🛠️ **4. Actualizar Archivo 18_GESTION_DISPONIBILIDAD.txt**
-**📅 Timeline: 1 semana**
-- 📋 Eliminar jerarquía de búsqueda obsoleta
-- 📋 Corregir sintaxis function calling  
-- 📋 Actualizar formatos de fecha a YYYY-MM-DD
-
----
-
-## 🎯 **PRIORIDAD BAJA - FUTURO**
-
 ### 📱 **5. Dashboard Web de Monitoreo**
-- Interface para observar conversaciones en tiempo real
-- Métricas de escalamientos y performance
+- Interface para observar conversaciones
+- Métricas en tiempo real
+- Logs filtrados
 
 ### 🛡️ **6. Sistema de Moderación**
 - Rate limiting por usuario
-- Detección de spam automático
+- Detección de spam
+- Escalación automática
 
 ### 📊 **7. Analytics y Métricas**
 - Tracking de usuarios activos
-- Tipos de consultas más frecuentes
+- Tipos de consultas frecuentes
 - Success rate del bot
 
 ---
 
 ## ✅ **COMPLETADO RECIENTEMENTE**
 
-### 🤖 **Function Calling con Mejores Prácticas OpenAI**
-- ✅ `check_availability()` completamente funcional
+### 💬 **Mensajes por Párrafos Naturales**
+- ✅ División automática implementada
+- ✅ Delay natural entre chunks
+- ✅ **Evidencia**: Código en `src/app.ts` líneas 923-1099
+
+### 🤖 **Function Calling con Beds24**
+- ✅ `check_availability()` funcional
 - ✅ Structured outputs con `strict: true`
-- ✅ Timeout 10 minutos, retry logic robusto
+- ✅ Retry logic robusto
 - ✅ **Evidencia**: Consultas exitosas con precios reales
 
-### 🔄 **Manejo Robusto de Runs Activos**
-- ✅ Cancelación automática de runs bloqueados
-- ✅ Retry logic con esperas escalonadas
-- ✅ **Error eliminado**: `400 Can't add messages to thread while a run is active`
+### 🔄 **Thread Persistence**
+- ✅ Sistema completo implementado
+- ✅ Auto-guardado cada 5 minutos
+- ✅ Reutilización automática de threads
 
-### 🕐 **Contexto Temporal Automático**
-- ✅ Validación acepta "hoy" y futuro correctamente
-- ✅ Conversión automática "hoy 2 Jul" → `2025-07-02`
-- ✅ Zona horaria Colombia UTC-5 configurada
+### 🔧 **Sincronización Manual**
+- ✅ Agentes pueden intervenir
+- ✅ Contexto preservado en OpenAI
+- ✅ Anti-duplicación funcionando
 
-### 📱 **Mensajes por Párrafos Naturales**
-- ✅ División automática de respuestas largas
-- ✅ Delay 2.5s entre chunks para UX natural
-- ✅ **Evidencia**: Logs muestran "X párrafos" enviados
+### 📊 **Sistema de Metadatos**
+- ✅ Estructura optimizada
+- ✅ Campos innecesarios eliminados
+- ✅ Actualización automática en cada interacción
+
+### 🔄 **Manejo de Runs Activos**
+- ✅ Cancelación automática
+- ✅ Error 400 eliminado
+- ✅ Retry logic implementado
+
+### 🕐 **Contexto Temporal**
+- ✅ Fecha actual inyectada
+- ✅ Validación correcta de fechas
+- ✅ "Hoy" interpretado correctamente
+
+### 🛡️ **Error Handling**
+- ✅ Sistema robusto implementado
+- ✅ Logs estructurados
+- ✅ Validaciones completas
 
 ---
 
 ## 🚀 **PRÓXIMOS PASOS INMEDIATOS**
 
 ### **Esta Semana:**
-1. **Implementar escalate_to_human()** según especificación técnica
-2. **Configurar contactos de agentes** en variables de entorno
-3. **Registrar función en OpenAI Assistant** con structured outputs
-4. **Pruebas básicas** con escalamientos reales
+1. **Completar envío de identidad/metadatos** a OpenAI
+2. **Implementar obtención de historial** de Whapi
+3. **Pruebas con contexto enriquecido**
 
 ### **Próxima Semana:**
-1. **Pruebas con agentes reales** para validar flujo completo
-2. **Optimizar templates** de mensajes de escalamiento  
-3. **Logging y métricas** para monitoring
-4. **Comenzar pruebas multi-usuario** coordinadas
+1. **Comenzar implementación escalate_to_human()**
+2. **Configurar agentes en variables**
+3. **Pruebas multi-usuario coordinadas**
 
 ---
 
-*El objetivo es convertir al bot en un **pre-calificador inteligente** que maneja automáticamente el 90% de consultas y escala apropiadamente el 10% restante.*
+*El sistema ya tiene 8 funcionalidades core completadas y funcionando en producción. El enfoque ahora es enriquecer el contexto y completar el ciclo de atención con escalamiento inteligente.*
 
 ---
 
