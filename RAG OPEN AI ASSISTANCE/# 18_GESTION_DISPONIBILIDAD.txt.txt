@@ -1,0 +1,299 @@
+# 18_GESTION_DISPONIBILIDAD.txt
+
+**Sistema Integral de Gestión y Comunicación de Disponibilidad con Beds24**
+
+**Versión:** 3.0  
+**Responsable:** Sistema de Conocimiento  
+**Keywords:** disponibilidad, beds24, check_availability, bot, automático, function, calling  
+**Archivos relacionados:** 03_INVENTARIO_APARTAMENTOS.txt, 02_TARIFAS_TEMPORADAS.txt, 14_POLITICAS_OPERATIVAS.txt
+
+---
+
+## **PROPÓSITO DEL ARCHIVO**
+Sistema automatizado para que el bot gestione disponibilidad en tiempo real mediante integración con Beds24. Define el uso de check_availability() como única fuente de verdad y protocolos de comunicación natural con clientes.
+
+---
+
+## **1. PROTOCOLO DE VERIFICACIÓN DE DISPONIBILIDAD**
+
+### **1.1 Fuente Única de Verdad: Beds24**
+
+#### **1.1.1 Proceso Simplificado del Bot**
+```
+1. Cliente solicita fechas → Bot ejecuta check_availability()
+2. Beds24 retorna opciones disponibles con precios reales
+3. Bot comunica resultado en lenguaje natural
+4. Si no hay disponibilidad → Ofrecer alternativas o escalar
+```
+
+### **1.2 Información Requerida para Búsqueda**
+
+#### **1.2.1 Datos Esenciales**
+- **Fecha de entrada**: Formato YYYY-MM-DD
+- **Fecha de salida**: Formato YYYY-MM-DD
+- **Número de huéspedes**: Para comunicar opciones adecuadas
+
+#### **1.2.2 Conversión Automática de Fechas**
+```
+"mañana" → 2025-07-03
+"este fin de semana" → 2025-07-05 al 2025-07-07
+"15 de julio" → 2025-07-15
+DD/MM/YYYY → YYYY-MM-DD (conversión automática)
+```
+
+---
+
+## **2. FUNCTION CALLING REAL IMPLEMENTADO**
+
+### **2.1 Sintaxis Correcta de check_availability()**
+```
+check_availability("2025-07-02", "2025-07-06")
+
+PARÁMETROS:
+- startDate: String en formato "YYYY-MM-DD"
+- endDate: String en formato "YYYY-MM-DD"
+
+RETORNA:
+- Texto formateado con opciones disponibles
+- Precios reales desde Beds24
+- Información de traslados si aplica
+```
+
+### **2.2 Interpretación de Resultados Beds24**
+
+#### **2.2.1 Disponibilidad Completa**
+```
+"DISPONIBILIDAD COMPLETA" 
+→ Apartamentos sin necesidad de traslados
+→ Comunicar opciones directamente
+```
+
+#### **2.2.2 Alternativas con Traslado**
+```
+"ALTERNATIVAS CON TRASLADO"
+→ Requiere cambio de apartamento durante estadía
+→ Explicar logística del cambio claramente
+```
+
+#### **2.2.3 Sin Disponibilidad**
+```
+"No hay disponibilidad"
+→ Ofrecer fechas alternativas cercanas
+→ Si cliente insiste → escalate_to_human("no_availability")
+```
+
+#### **2.2.4 Error o Timeout**
+```
+Error en consulta → escalate_to_human("technical_issue", context)
+```
+
+---
+
+## **3. COMUNICACIÓN NATURAL DE RESULTADOS**
+
+### **3.1 Principios de Comunicación**
+- **Párrafos naturales**: Bot genera respuestas fluidas automáticamente
+- **Sin templates rígidos**: Adaptación según contexto
+- **Transparencia total**: Comunicar exactamente lo que retorna Beds24
+- **Empatía**: Especialmente cuando no hay disponibilidad
+
+### **3.2 Ejemplos de Comunicación Natural**
+
+#### **3.2.1 Con Disponibilidad**
+```
+"¡Perfecto! Tengo disponibilidad para esas fechas 😊
+
+Para 4 personas del 15 al 20 de julio, tengo estas opciones:
+
+El apartamento 1722A está disponible todas las noches a $280.000 por noche, 
+o el 814 a $250.000. Ambos son de una alcoba con vista al mar.
+
+El total incluye el cargo de limpieza. ¿Te gustaría ver fotos de alguno?"
+```
+
+#### **3.2.2 Con Traslado Necesario**
+```
+"Tengo una opción que requiere un pequeño cambio:
+
+Las primeras 3 noches en el apartamento 1722A y las últimas 2 en el 814.
+Ambos están en el mismo edificio, así que el cambio es súper sencillo.
+
+Te ayudamos con el equipaje durante el cambio. ¿Te funciona esta alternativa?"
+```
+
+#### **3.2.3 Sin Disponibilidad**
+```
+"Para esas fechas específicas no tengo disponibilidad 😕
+
+¿Podrías considerar del 22 al 27 de julio? Tengo excelentes opciones disponibles.
+O si prefieres, puedo conectarte con alguien que busque alternativas con colegas."
+```
+
+---
+
+## **4. GESTIÓN DE NO DISPONIBILIDAD**
+
+### **4.1 Proceso Simplificado**
+```
+1. check_availability() retorna "no disponible"
+2. Bot ofrece fechas alternativas cercanas automáticamente
+3. Si cliente necesita fechas específicas → escalate_to_human()
+```
+
+### **4.2 Comunicación Empática**
+```
+"Entiendo que necesitas esas fechas específicas. Lamentablemente no tengo 
+disponibilidad en nuestros apartamentos.
+
+Déjame conectarte con alguien de nuestro equipo que puede buscar opciones 
+con colegas de confianza."
+
+[EJECUTAR: escalate_to_human("no_availability", context)]
+```
+
+---
+
+## **5. FLEXIBILIZACIÓN DE FECHAS Y ALTERNATIVAS**
+
+### **5.1 Cuando No Hay Disponibilidad Exacta**
+
+#### **5.1.1 Propuesta de Fechas Cercanas**
+```
+"No tengo para el 15 de julio, pero sí disponibilidad:
+
+• Del 13 al 18 de julio - mismos precios
+• Del 17 al 22 de julio - con descuento del 10%
+
+¿Alguna de estas opciones te funciona?"
+```
+
+#### **5.1.2 Incentivos por Flexibilidad**
+- "Si puedes llegar un día antes, mantengo el mismo precio"
+- "Extendiendo una noche más, te incluyo el early check-in gratis"
+- "Entre semana los precios son más convenientes"
+
+---
+
+## **6. VALIDACIÓN DE FECHAS Y MANEJO DE ERRORES**
+
+### **6.1 Validación Automática**
+```
+ACEPTA:
+- Fechas futuras desde hoy (2025-07-02)
+- Lenguaje natural: "mañana", "próximo fin de semana"
+- Formatos DD/MM/YYYY (convierte a YYYY-MM-DD)
+
+RECHAZA:
+- Fechas pasadas con mensaje claro
+- Rangos inválidos (salida antes que entrada)
+```
+
+### **6.2 Mensajes de Error Claros**
+```
+"Las fechas parecen estar al revés. ¿Llegas el [FECHA1] y sales el [FECHA2]?"
+
+"Esa fecha ya pasó. ¿Para cuándo sería tu viaje?"
+```
+
+---
+
+## **7. CASOS ESPECIALES Y ESCALAMIENTO**
+
+### **7.1 Cuándo Escalar Automáticamente**
+```
+TRIGGERS:
+- No hay disponibilidad en fechas solicitadas
+- Error técnico en check_availability()
+- Cliente insiste después de no disponibilidad
+- Solicitudes de más de 5 apartamentos
+- Necesidades muy específicas no cubiertas
+```
+
+### **7.2 Function Calling para Escalamiento**
+```
+escalate_to_human("no_availability", {
+  "dates": {
+    "start": "2025-07-15",
+    "end": "2025-07-20"
+  },
+  "guests": 4,
+  "attempts": ["check_availability", "alternative_dates_offered"],
+  "client_response": "Necesita esas fechas específicas"
+})
+```
+
+---
+
+## **8. MANEJO DE ROTACIONES Y TRASLADOS**
+
+### **8.1 Cuando Beds24 Retorna Opciones con Traslado**
+```
+El bot recibe: "ALTERNATIVAS CON TRASLADO"
+Comunica naturalmente la logística del cambio
+No necesita gestión manual - Beds24 ya calculó las opciones
+```
+
+### **8.2 Comunicación de Traslados**
+```
+"Esta opción requiere un cambio de apartamento durante tu estadía:
+
+• Primeras 3 noches: Apartamento 1722A
+• Últimas 2 noches: Apartamento 814
+
+El cambio sería el día 18. Te ayudamos con el equipaje y el proceso es 
+muy sencillo ya que están en el mismo edificio. ¿Te funciona?"
+```
+
+---
+
+## **9. FRASES PROHIBIDAS Y TRANSFORMACIONES**
+
+### **9.1 Nunca Usar**
+❌ "No tenemos nada" 
+❌ "Está todo ocupado"
+❌ "Es imposible"
+❌ "El sistema no muestra disponibilidad"
+
+### **9.2 Siempre Reemplazar Por**
+✅ "Déjame verificar qué opciones tengo"
+✅ "Voy a buscar alternativas"
+✅ "Puedo ofrecerte estas fechas cercanas"
+✅ "Te conecto con alguien que puede ayudarte mejor"
+
+---
+
+## **10. INTEGRACIÓN Y REFERENCIAS**
+
+### **10.1 Para Información de Apartamentos**
+**CONSULTAR**: `03_INVENTARIO_APARTAMENTOS.txt`
+- Características de apartamentos mencionados
+- Enlaces de fotos WhatsApp
+
+### **10.2 Para Contexto de Temporadas**
+**CONSULTAR**: `02_TARIFAS_TEMPORADAS.txt`
+- Entender variaciones de precio
+- Temporadas alta/baja para contexto
+
+### **10.3 Para Comunicación Natural**
+**APLICAR**: `17_COMUNICACION_NATURAL.txt`
+- Humanización de respuestas
+- Tuteo y emojis estratégicos
+
+---
+
+## **NOTA ARQUITECTÓNICA CRÍTICA**
+
+Este archivo define la gestión de disponibilidad con **integración real Beds24**:
+
+**CARACTERÍSTICAS ACTUALES:**
+- ✅ **check_availability()** como única fuente de verdad
+- ✅ **Formato YYYY-MM-DD** obligatorio para fechas
+- ✅ **Sin inventario local** - Todo desde Beds24
+- ✅ **Comunicación natural** en párrafos fluidos
+- ✅ **Escalamiento inteligente** cuando necesario
+
+**ELIMINADO POR OBSOLETO:**
+- ❌ Jerarquía de búsqueda manual
+- ❌ Variables complejas no utilizadas
+- ❌ Sistema de pre-reservas no implementado
+- ❌ Templates rígidos con variables

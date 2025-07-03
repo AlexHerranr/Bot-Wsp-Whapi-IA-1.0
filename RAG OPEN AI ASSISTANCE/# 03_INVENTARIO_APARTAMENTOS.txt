@@ -1,0 +1,488 @@
+# 03_INVENTARIO_APARTAMENTOS.txt
+
+**Versión:** 3.0  
+**Responsable:** Sistema de Conocimiento  
+**Keywords:** apartamento, codigo, inventario, validacion, correccion, capacidad, enlace, whatsapp, distribución, camas  
+**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 14_POLITICAS_OPERATIVAS.txt, 18_GESTION_DISPONIBILIDAD.txt
+
+---
+
+## **PROPÓSITO DEL ARCHIVO**
+Fuente única de verdad para el inventario completo de apartamentos que el bot utiliza para atender clientes: códigos válidos, capacidades, enlaces WhatsApp, sistema de corrección automática, distribución detallada de camas y características específicas de cada unidad.
+
+---
+
+## **1. INVENTARIO OFICIAL COMPLETO**
+
+### **1.1 Apartamentos de Una Alcoba**
+
+| Código | Enlace WhatsApp | Capacidad Base Recomendado | Capacidad Máxima |
+|--------|-----------------|----------------|------------------|
+| **1317** | https://wa.me/p/6754564561280380/573023371476 | 5 personas | 6 personas |
+| **1722A** | https://wa.me/p/4700073360077195/573023371476 | 5 personas | 6 personas |
+| **1820** | https://wa.me/p/4751399241564257/573023371476 | 5 personas | 6 personas |
+| **2005A** | https://wa.me/p/7325301624148389/573023371476 | 5 personas | 6 personas |
+| **814** | https://wa.me/p/4496602113784014/573023371476 | 5 personas | 6 personas |
+| **715** | https://wa.me/p/8626205680752509/573023371476 | 5 personas | 6 personas |
+
+### **1.2 Apartaestudios**
+
+| Código | Enlace WhatsApp | Capacidad Base Recomendado | Capacidad Máxima |
+|--------|-----------------|----------------|------------------|
+| **1722B** | https://wa.me/p/4930899063598676/573023371476 | 3 personas | 4 personas |
+| **2005B** | https://wa.me/p/7170820942978042/573023371476 | 2 personas | 3 personas |
+
+**Nota:** El 2005B tiene capacidad base de 2 personas (diferente a otros estudios)
+
+### **1.3 Resumen del Inventario**
+```
+TOTAL_APARTAMENTOS: 8 unidades
+├─ ALCOBAS: 6 unidades (1317, 1722A, 1820, 2005A, 814, 715)
+└─ ESTUDIOS: 2 unidades (1722B, 2005B)
+
+NÚMEROS_VÁLIDOS_COMPLETO: [1317, 1722A, 1820, 2005A, 814, 715, 1722B, 2005B]
+```
+
+---
+
+## **2. DISTRIBUCIÓN DETALLADA DE CAMAS POR APARTAMENTO**
+
+### **2.1 Apartamentos de Una Alcoba**
+
+#### **Apartamento 715 - Piso 7**
+```
+TIPO: 1 Alcoba con vista al lago
+DISTRIBUCIÓN_CAMAS:
+├─ Alcoba: 
+│  ├─ 1 cama doble (2 personas)
+│  └─ 1 cama nido (2 personas) - cama sencilla con camita auxiliar que sale debajo
+└─ Sala: 
+   └─ 1 sofá-cama (1 persona)
+
+CAPACIDAD_DETALLADA: 5 personas cómodas, 6 con el sofacama extra
+CLIMATIZACIÓN: 1 aire acondicionado en alcoba + 2 ventiladores de techo (uno en sala, otro en alcoba)
+ENTRETENIMIENTO: 1 TV con streaming (Netflix, YouTube, TDT)
+VISTA: Vistas al lago natural "El Laguito", Bocagrande y al mar (vista combinada lago-mar)
+```
+
+#### **Apartamento 814 - Piso 8**
+```
+TIPO: 1 Alcoba con balcón y vista al mar
+DISTRIBUCIÓN_CAMAS:
+├─ Alcoba: 
+│  ├─ 1 cama doble (2 personas)
+│  └─ 1 cama sencilla (1 persona)
+└─ Sala: 
+   ├─ 1 cama sencilla (1 persona)
+   └─ 1 cama nido (2 personas)
+
+CAPACIDAD_DETALLADA: 6 personas cómodas
+CLIMATIZACIÓN: 1 aire acondicionado en alcoba + 1 ventilador en sala
+ENTRETENIMIENTO: 1 TV con Netflix y Prime Video
+VISTA: Balcón con vistas al mar
+```
+
+#### **Apartamento 1317 - Piso 13**
+```
+TIPO: 1 Alcoba con balcón y vista al mar
+DISTRIBUCIÓN_CAMAS:
+├─ Alcoba: 
+│  ├─ 1 cama doble (2 personas)
+│  └─ 1 cama nido (2 personas)
+└─ Sala: 
+   ├─ 1 sofá-cama (1 persona)
+   └─ 1 sofá-cama (1 persona)
+
+CAPACIDAD_DETALLADA: 6 personas cómodas
+CLIMATIZACIÓN: 1 aire acondicionado en alcoba + 1 ventilador en sala
+ENTRETENIMIENTO: 2 TVs + equipo de sonido
+VISTA: Balcón con vistas al mar
+SERVICIOS_EXTRA: 4 toallas, shampoo, acondicionador
+```
+
+#### **Apartamento 1722A - Piso 17**
+```
+TIPO: 1 Alcoba con balcón y vista al mar
+DISTRIBUCIÓN_CAMAS:
+├─ Alcoba: 
+│  ├─ 1 cama doble (2 personas)
+│  └─ 1 cama nido (2 personas)
+└─ Sala: 
+   ├─ 1 sofá-cama (1 persona)
+   └─ 1 sofá-cama (1 persona)
+
+CAPACIDAD_DETALLADA: 6 personas cómodas
+CLIMATIZACIÓN: 1 aire acondicionado en alcoba + 1 ventilador en sala
+ENTRETENIMIENTO: 2 TVs con Netflix, YouTube, Prime Video
+VISTA: Piso 17 con balcón y vistas al mar
+SERVICIOS_EXTRA: 2 toallas incluidas
+```
+
+#### **Apartamento 1820 - Piso 18**
+```
+TIPO: 1 Alcoba con balcón y vista al mar
+DISTRIBUCIÓN_CAMAS:
+├─ Alcoba: 
+│  ├─ 1 cama doble (2 personas)
+│  └─ Escritorio para trabajo
+└─ Sala: 
+   ├─ 1 cama nido (2 personas)
+   └─ 1 cama nido (2 personas)
+
+CAPACIDAD_DETALLADA: 6 personas cómodas
+CLIMATIZACIÓN: 2 aires acondicionados (alcoba + sala)
+ENTRETENIMIENTO: 1 TV en alcoba con Netflix, YouTube, Prime Video
+VISTA: Piso 18 con balcón amueblado y vistas al mar
+PARTICULARIDAD: Ideal para trabajo remoto (escritorio en alcoba)
+```
+
+#### **Apartamento 2005A - Piso 20**
+```
+TIPO: 1 Alcoba con balcón y vista al mar panorámica
+DISTRIBUCIÓN_CAMAS:
+├─ Alcoba: 
+│  ├─ 1 cama doble (2 personas)
+│  └─ 1 cama nido (2 personas)
+└─ Sala: 
+   ├─ 1 sofá-cama (1 persona)
+   └─ 1 sofá-cama (1 persona)
+
+CAPACIDAD_DETALLADA: 6 personas cómodas
+CLIMATIZACIÓN: 1 aire acondicionado en alcoba + 1 ventilador en sala
+ENTRETENIMIENTO: 1 TV con Netflix y Prime Video
+VISTA: Piso 20 con balcón y vistas panorámicas al mar
+PARTICULARIDAD: Ubicación premium en piso alto
+```
+
+### **2.2 Apartaestudios**
+
+#### **Apartaestudio 1722B - Piso 17**
+```
+TIPO: Estudio con vista al mar
+DISTRIBUCIÓN_CAMAS:
+└─ Espacio integrado:
+   ├─ 1 cama doble (2 personas)
+   └─ 1 cama nido (2 personas)
+
+CAPACIDAD_DETALLADA: 4 personas cómodas
+CLIMATIZACIÓN: 1 aire acondicionado
+ENTRETENIMIENTO: 1 TV con Netflix, YouTube, Prime Video
+VISTA: Piso 17 con vistas al mar
+SERVICIOS_EXTRA: 4 toallas, shampoo, acondicionador
+```
+
+#### **Apartaestudio 2005B - Piso 20**
+```
+TIPO: Estudio compacto con vista al mar
+DISTRIBUCIÓN_CAMAS:
+└─ Espacio integrado:
+   ├─ 1 cama doble (2 personas)
+   └─ 1 sofá-cama (1 persona)
+
+CAPACIDAD_DETALLADA: 3 personas cómodas
+CLIMATIZACIÓN: 1 aire acondicionado
+ENTRETENIMIENTO: 1 TV con Netflix y Prime Video
+VISTA: Piso 20 con vista panorámica al mar
+PARTICULARIDAD: Estudio más compacto, ideal para parejas
+SERVICIOS_EXTRA: Restaurantes disponibles en el edificio
+```
+
+---
+
+## **3. SISTEMA DE CORRECCIÓN AUTOMÁTICA DEL BOT**
+
+### **3.1 Correcciones Silenciosas (Aplicar Sin Notificar Error)**
+```
+MAPEO_CORRECCIONES = {
+    "17A"  → "1722A",
+    "17B"  → "1722B", 
+    "20A"  → "2005A",
+    "20B"  → "2005B"
+}
+```
+
+**REGLA:** El bot corrige estos números automáticamente sin mencionarlo al cliente.
+
+### **3.2 Números Ambiguos (Solicitar Clarificación)**
+```
+NÚMEROS_AMBIGUOS = {
+    "1722" → "¿Te refieres al 1722A (alcoba) o 1722B (estudio)?",
+    "2005" → "¿Te refieres al 2005A (alcoba) o 2005B (estudio)?",
+    "175"  → "¿Te refieres al 1722B (estudio) o 715 (alcoba)?"
+}
+```
+
+**REGLA:** El bot debe pedir clarificación antes de proceder.
+
+### **3.3 Números Similares (Sugerir Alternativa)**
+```
+NÚMEROS_SIMILARES = {
+    "816"  → "¿Te refieres al 814?",
+    "517"  → "¿Te refieres al 715?",
+    "1316" → "¿Te refieres al 1317?",
+    "1819" → "¿Te refieres al 1820?"
+}
+```
+
+**REGLA:** El bot ofrece sugerencia del número más similar.
+
+---
+
+## **4. PROTOCOLO DE VALIDACIÓN AUTOMÁTICA DEL BOT**
+
+### **4.1 Flujo de Validación Automática**
+```
+INPUT: Código mencionado por cliente
+    ↓
+PASO 1: ¿Está en CÓDIGOS_VÁLIDOS_COMPLETO?
+    ├─ SÍ → Proceder normalmente
+    └─ NO ↓
+PASO 2: ¿Está en MAPEO_CORRECCIONES?
+    ├─ SÍ → Aplicar corrección silenciosamente
+    └─ NO ↓
+PASO 3: ¿Está en CÓDIGOS_AMBIGUOS?
+    ├─ SÍ → Solicitar clarificación
+    └─ NO ↓
+PASO 4: ¿Está en CÓDIGOS_SIMILARES?
+    ├─ SÍ → Sugerir alternativa
+    └─ NO ↓
+PASO 5: Código no reconocido → Template de error
+```
+
+### **4.2 Template para Códigos No Reconocidos (Bot)**
+```
+"No encuentro el apartamento [CÓDIGO] en nuestro inventario.
+
+Los apartamentos disponibles son:
+• Alcobas: 1317, 1722A, 1820, 2005A, 814, 715  
+• Estudios: 1722B, 2005B
+
+¿Cuál de estos te interesa?"
+```
+
+### **4.3 Reglas Críticas de Aplicación para el Bot**
+```
+REGLA 1: NUNCA proceder con código no validado
+REGLA 2: SIEMPRE aplicar corrección antes de continuar
+REGLA 3: En caso de duda, solicitar clarificación al cliente
+REGLA 4: Registrar internamente correcciones aplicadas
+```
+
+---
+
+## **5. RESPUESTAS AUTOMÁTICAS A PREGUNTAS COMUNES**
+
+### **5.1 "¿Cómo dormirán X personas en el apartamento Y?"**
+
+#### **Respuesta del Bot para 6 personas:**
+- **Alcobas estándar (1317, 1722A, 2005A)**: 
+  "En este apartamento pueden dormir 6 personas cómodamente:
+  - En la alcoba: 2 en cama doble + 2 en cama nido
+  - En la sala: 1 en cada sofá-cama"
+  
+- **814**: 
+  "En el 814 duermen 6 personas así:
+  - En la alcoba: 2 en cama doble + 1 en cama sencilla
+  - En la sala: 1 en cama sencilla + 2 en cama nido"
+  
+- **1820**: 
+  "En el 1820 la distribución es:
+  - En la alcoba: 2 en cama doble
+  - En la sala: 2 en cada cama nido (total 4)
+  Todos tienen espacio cómodo"
+  
+- **715**: 
+  "En el 715 para 6 personas:
+  - En la alcoba: 2 en cama doble + 2 en cama nido
+  - En la sala: 1 en sofá-cama + 1 en colchoneta adicional que puedo conseguirte"
+
+#### **Para 4 personas:**
+- **1722B**: "En el estudio duermen 4 personas: 2 en cama doble + 2 en cama nido"
+- **Cualquier alcoba**: "Pueden usar la alcoba completa y tener la sala libre para estar"
+
+#### **Para 3 personas:**
+- **2005B**: "Perfecto para 3: 2 en cama doble + 1 en sofá-cama"
+- **Cualquier otro**: "Tengo múltiples opciones de distribución según prefieran"
+
+### **5.2 "¿Qué apartamento tiene aires acondicionados?"**
+```
+Respuesta del Bot:
+"Todos nuestros apartamentos tienen aire acondicionado 😊
+• La mayoría tiene 1 aire en la alcoba + ventiladores
+• El 1820 es especial: tiene 2 aires (alcoba + sala)
+
+```
+
+### **5.3 "¿Cuáles tienen balcón?"**
+```
+Respuesta del Bot:
+"Los apartamentos con balcón son:
+• 814, 1317, 1722A, 1820, 2005A - todos con hermosas vistas al mar
+
+Los que no tienen balcón pero sí excelentes vistas:
+• 715 - vista al lago y mar desde ventana
+• 1722B y 2005B - vistas al mar desde ventanas
+
+¿Prefieres con balcón o te da igual?"
+```
+
+---
+
+## **6. CARACTERÍSTICAS ESPECÍFICAS DE APARTAMENTOS**
+
+### **6.1 Ubicación de Tarjeteros por Apartamento**
+```
+UBICACIONES_TARJETEROS = {
+    "1317": "Entrada principal, panel derecho",
+    "1722A": "Pasillo entrada, lado izquierdo", 
+    "1722B": "Entrada principal, panel central",
+    "1820": "Junto a la puerta, lado derecho",
+    "2005A": "Pasillo entrada, panel izquierdo",
+    "2005B": "Entrada principal, lado derecho",
+    "814": "Pasillo principal, panel central",
+    "715": "Entrada directa, lado izquierdo"
+}
+```
+
+### **6.2 Servicios Comunes en Todos los Apartamentos**
+```
+SERVICIOS_INCLUIDOS:
+├─ Cocina equipada completa
+├─ Baño completo con ducha
+├─ Wi-Fi 15 Mb/s
+├─ Piscina (horarios variables)
+├─ Toallas (cantidad según ocupación)
+├─ Jabón y papel higiénico
+└─ Lavadora disponible
+
+SERVICIOS_NO_INCLUIDOS:
+├─ Lavandería (disponible en edificio con costo)
+├─ Secador de pelo
+├─ Detectores de humo y monóxido
+├─ Agua caliente
+├─ Servicio de limpieza diaria
+└─ Alimentación
+```
+
+### **6.3 Horarios de Piscina por Apartamento**
+```
+HORARIOS_PISCINA:
+├─ 715: 9:00 AM - 5:00 PM
+├─ 814: 9:00 AM - 5:30 PM  
+├─ 1317: 9:30 AM - 5:30 PM
+├─ 1722A: 9:30 AM - 5:30 PM
+├─ 1722B: 8:30 AM - 5:30 PM
+├─ 1820: 8:00 AM - 5:30 PM
+├─ 2005A: 9:30 AM - 5:30 PM
+└─ 2005B: 9:30 AM - 5:30 PM
+
+MANTENIMIENTO: Lunes (excepto lunes festivos)
+CIERRE: Durante lluvias por seguridad
+```
+
+---
+
+## **7. CASOS DE USO DOCUMENTADOS PARA EL BOT**
+
+### **7.1 Validación Exitosa**
+```
+ENTRADA CLIENTE: "Me interesa el 1722A"
+VALIDACIÓN BOT: "1722A" → NÚMERO_VÁLIDO
+TIPO: Apartamento 1 Alcoba
+CAPACIDAD: 5-6 personas
+DISTRIBUCIÓN: Alcoba (cama doble + cama nido) + Sala (2 sofás-cama)
+ENLACE: https://wa.me/p/4700073360077195/573023371476
+RESPUESTA BOT: "¡Excelente elección! El 1722A es un hermoso apartamento 
+de 1 alcoba en el piso 17 con balcón y vista al mar. 
+Perfecto para 5-6 personas. ¿Para qué fechas lo necesitas?"
+```
+
+### **7.2 Corrección Silenciosa**
+```
+ENTRADA CLIENTE: "Quiero información del 17B"  
+VALIDACIÓN BOT: "17B" → CORREGIR_A "1722B"
+TIPO: Apartaestudio
+CAPACIDAD: 3-4 personas
+DISTRIBUCIÓN: Cama doble + cama nido
+ENLACE: https://wa.me/p/4930899063598676/573023371476
+RESPUESTA BOT: "Perfecto, el apartaestudio 1722B es ideal para 3-4 personas.
+Está en el piso 17 con hermosas vistas al mar. 
+¿Te gustaría ver fotos?"
+```
+
+### **7.3 Explicación de Distribución**
+```
+ENTRADA CLIENTE: "¿Cómo dormirán 6 en el 814?"
+RESPUESTA BOT: "En el 814 pueden dormir 6 personas cómodamente así:
+- En la alcoba: 2 en cama doble + 1 en cama sencilla
+- En la sala: 1 en cama sencilla + 2 en cama nido
+Todos tienen espacio cómodo y privacidad. ¿Te interesa para tus fechas?"
+```
+
+---
+
+## **8. VARIABLES DE SISTEMA PARA EL BOT**
+
+### **8.1 Variables de Validación**
+```
+[NÚMERO_APARTAMENTO] = Número validado y corregido
+[TIPO_APARTAMENTO] = "1 Alcoba" | "Apartaestudio"
+[APARTAMENTO_VÁLIDO] = Boolean (true después de validación)
+[CORRECCIÓN_APLICADA] = Boolean (true si se aplicó corrección silenciosa)
+```
+
+### **8.2 Variables de Capacidad**
+```
+[SOBRECUPO_PERMITIDO] = Boolean (true - todos permiten hasta 2 personas adicionales)
+[PERSONAS_SOBRECUPO_MAX] = 2 (constante para todos los apartamentos)
+[CAPACIDAD_CON_SOBRECUPO] = capacidad_máxima + 2
+[COLCHONETAS_DISPONIBLES] = Boolean (true - disponibles bajo solicitud)
+```
+
+### **8.3 Variables de Distribución**
+```
+[CAMAS_ALCOBA] = Lista de camas en alcoba
+[CAMAS_SALA] = Lista de camas en sala
+[AIRES_ACONDICIONADOS] = Número de aires por apartamento
+[BALCÓN_DISPONIBLE] = Boolean por apartamento
+```
+
+---
+
+## **9. INTEGRACIÓN Y REFERENCIAS CRUZADAS**
+
+### **9.1 Para Información Complementaria**
+```
+TARIFAS POR APARTAMENTO → Ver 02_TARIFAS_TEMPORADAS.txt
+CARGOS ADICIONALES → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt  
+POLÍTICAS DE OCUPACIÓN → Ver 14_POLITICAS_OPERATIVAS.txt
+GESTIÓN DE DISPONIBILIDAD → Ver 18_GESTION_DISPONIBILIDAD.txt
+```
+
+### **9.2 Para Uso en Otros Archivos**
+```
+ESTE ARCHIVO ES CONSULTADO POR:
+- Todos los archivos que mencionen números de apartamentos
+- Sistemas de cotización que requieran validación
+- Plantillas que generen enlaces de WhatsApp
+- Procesos que calculen capacidades y sobrecupos
+- Consultas sobre distribución de camas y comodidades
+```
+
+---
+
+## **NOTA ARQUITECTÓNICA CRÍTICA**
+
+**TRANSFORMACIÓN BOT:**
+- ✅ Validación automática de códigos por el bot
+- ✅ Respuestas en primera persona natural
+- ✅ Correcciones silenciosas sin mencionar al cliente
+- ✅ Enlaces WhatsApp mantenidos para compartir fotos
+
+**NO CONTIENE:**
+- Tarifas y precios → Ver 02_TARIFAS_TEMPORADAS.txt
+- Datos corporativos → Ver 05_DATOS_CORPORATIVOS_CONTACTO.txt  
+- Servicios adicionales → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+- Políticas operativas → Ver 14_POLITICAS_OPERATIVAS.txt
+
+**ENFOQUE AMPLIADO:** Inventario completo + distribución específica para que el bot responda preguntas detalladas sobre acomodación y características de cada apartamento de forma natural y completa.

@@ -312,3 +312,62 @@ const functions = [
 
 *Última actualización: 2025-07-02*
 *Estado: Sistema funcional en producción con function calling operativo*
+
+## 🔥 PRIORIDAD ALTA - Funcionalidades Pendientes
+
+### 1. 📞 Función escalate_to_human() con Whapi - ⏳ NUEVO RETO
+**Objetivo**: Implementar escalamiento automático del bot a agentes específicos vía WhatsApp.
+
+**🎯 Funcionalidad Core:**
+- Detectar cuándo el bot necesita ayuda humana
+- Enviar notificación directa al agente apropiado
+- Transferir contexto completo de la conversación
+- Mantener experiencia fluida para el cliente
+
+**📋 Casos de Uso Críticos:**
+```javascript
+// 1. Cliente listo para reservar
+escalate_to_human("complete_booking", {
+  apartment: "2005B", 
+  dates: "2025-07-02 a 2025-07-06",
+  client: "Alexander (573003913251)"
+})
+
+// 2. Sin disponibilidad después de check_availability()
+escalate_to_human("no_availability", {
+  dates: "2025-07-02 a 2025-07-06",
+  guests: 2,
+  attempts: ["beds24_search_completed"]
+})
+
+// 3. Problema técnico
+escalate_to_human("technical_issue", {
+  error: "check_availability timeout",
+  client: "Alexander (573003913251)"
+})
+```
+
+**🔧 Implementación Técnica:**
+```javascript
+// Mapeo de contactos por especialidad
+const contactMap = {
+  "complete_booking": process.env.AGENT_RESERVAS,    // Reservas
+  "no_availability": process.env.AGENT_RESERVAS,     // Búsqueda avanzada  
+  "technical_issue": process.env.AGENT_SOPORTE,      // Soporte técnico
+  "complaint": process.env.AGENT_SUPERVISOR          // Escalamiento mayor
+};
+
+// Envío vía Whapi (POST)
+await sendToWhatsApp(targetContact, formatEscalationMessage(reason, context));
+```
+
+**📊 Beneficios Esperados:**
+- ✅ **Escalamiento inteligente**: Bot como pre-calificador de clientes
+- ✅ **Especialización**: Cada agente recibe casos de su área
+- ✅ **Contexto completo**: Agente tiene toda la información previa
+- ✅ **Respuesta rápida**: Notificación inmediata al agente apropiado
+
+**⏱️ Timeline Estimado**: 1-2 semanas
+**🎯 Prioridad**: ALTA - Completa el ciclo de atención automatizada
+
+### 2. 🔀 Pruebas de Conversaciones Simultáneas - ⏳ EN PROGRESO

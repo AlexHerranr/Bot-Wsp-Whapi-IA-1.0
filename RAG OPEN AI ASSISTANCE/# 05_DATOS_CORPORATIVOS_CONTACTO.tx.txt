@@ -1,0 +1,357 @@
+# 05_DATOS_CORPORATIVOS_CONTACTO.txt
+ 
+**Versión:** 3.0  
+**Responsable:** Sistema de Conocimiento  
+**Keywords:** empresa, corporativo, banco, pago, contacto, whatsapp, enlace, datos, oficina, bot  
+**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 04_CARGOS_SERVICIOS_TARIFARIOS.txt, 11_PROTOCOLO_CONFIANZA.txt
+
+---
+
+## **PROPÓSITO DEL ARCHIVO**
+Fuente única de verdad para toda la información corporativa, bancaria, de contacto y enlaces de recursos que el bot comparte directamente con clientes. Optimizado para comunicación automática del bot y chunks de 800 tokens según estándares OpenAI RAG.
+
+---
+
+## **1. INFORMACIÓN EMPRESARIAL OFICIAL**
+
+### **1.1 Datos Legales de la Empresa**
+```
+RAZÓN_SOCIAL: "TE ALQUILAMOS S.A.S"
+NIT: "900.890.457"
+TIPO_SOCIEDAD: "Sociedad por Acciones Simplificada"
+ACTIVIDAD_ECONÓMICA: "Alquiler temporal de apartamentos turísticos"
+```
+
+### **1.2 Dirección y Ubicación**
+```
+DIRECCIÓN_COMPLETA: "Edificio Nuevo Conquistador, Calle 1b # 3-159, Barrio Laguito"
+CIUDAD: "Cartagena de Indias"
+DEPARTAMENTO: "Bolívar"  
+PAÍS: "Colombia"
+ZONA: "Sector turístico, frente al Hotel Hilton"
+```
+
+### **1.3 Referencias de Ubicación**
+```
+PUNTO_REFERENCIA_PRINCIPAL: "Frente al Hotel Hilton"
+GOOGLE_MAPS: "https://maps.app.goo.gl/zgikQKkJb9LieAVq9"
+EDIFICIO: "Nuevo Conquistador"
+CARACTERÍSTICAS: "Frente a la playa, zona turística premium"
+```
+
+---
+
+## **2. INFORMACIÓN BANCARIA Y MÉTODOS DE PAGO**
+
+### **2.1 Cuenta Empresarial Principal**
+```
+BANCO: "Bancolombia"
+TIPO_CUENTA: "Ahorros"
+NÚMERO_CUENTA: "786-48800-796"
+TITULAR: "TE ALQUILAMOS S.A.S"
+NIT_TITULAR: "900.890.457"
+```
+
+### **2.2 Métodos de Pago Disponibles**
+
+#### **Transferencia Bancaria (Recomendado)**
+- **Desde cualquier banco**: Cuenta Bancolombia 786-48800-796
+- **Transferencias online**: Compatible con todos los bancos colombianos
+- **Transferencias internacionales**: Disponible (tiempo 1-2 días hábiles)
+
+#### **Pago Digital Nequi**
+- **Enlace instructivo**: https://wa.me/p/7249554021761502/573023371476
+- **Ventaja**: Transferencia inmediata 24/7
+- **Uso**: Principalmente clientes colombianos
+
+#### **Código QR Bancario**
+- **Enlace QR**: https://wa.me/p/25240524268871838/573023371476
+- **Función**: Escaneado desde app bancaria
+- **Conveniencia**: Pago directo sin digitación
+
+### **2.3 Recargos por Método de Pago**
+```
+TARJETAS_BOLD: +5% sobre total de reserva
+TRANSFERENCIAS_BANCARIAS: Sin recargo
+NEQUI: Sin recargo
+QR_BANCARIO: Sin recargo
+```
+
+---
+
+## **3. CONTACTOS OPERATIVOS**
+
+### **3.1 WhatsApp Principal**
+```
+NÚMERO_PRINCIPAL: "+573023371476"
+USO: Reservas, consultas generales, soporte
+HORARIO: 9:00 AM - 6:00 PM (horario oficina)
+DISPONIBILIDAD: 7 días a la semana
+```
+
+### **3.2 WhatsApp Secundario**
+```
+NÚMERO_SECUNDARIO: "+57 3003913251"  
+USO: Respaldo, soporte adicional, emergencias en los apartamentos
+FUNCIÓN: Contingencia o problemas en caso que se ignore en el principal
+```
+
+### **3.3 WhatsApp Especializado Tours**
+```
+NÚMERO_TOURS: "+57 300 830 4905"
+USO: Exclusivo para tours y actividades
+SERVICIOS: Islas del Rosario, City Tour, Chiva Rumbera
+COORDINACIÓN: Actividades complementarias al alojamiento
+```
+
+### **3.4 Oficina Física**
+```
+UBICACIÓN: "Oficina 1706"
+PISO: "Primer piso del edificio"
+REFERENCIA: "Frente a la recepción, entrando por un pasillo"
+FUNCIÓN: Entrega de llaves, check-in/check-out, soporte presencial
+HORARIO: 9:00 AM - 6:00 PM
+```
+
+### **3.5 Email Corporativo**
+```
+EMAIL_RECEPCIÓN: "copropiedadreservaconquistador@gmail.com"
+USO: Autorizaciones formales, comunicación con administración
+FUNCIÓN: Coordinación con recepción del edificio
+```
+
+---
+
+## **4. ENLACES DE RECURSOS Y SERVICIOS**
+
+### **4.1 Recursos del Edificio**
+
+#### **Piscina del Edificio**
+```
+ENLACE: "https://wa.me/p/4789424414498293/573023371476"
+CONTENIDO: Fotos y información de la piscina
+USO: Mostrar amenidades del edificio a clientes
+```
+
+### **4.2 Recursos de Pago**
+
+#### **Instrucciones Nequi**
+```
+ENLACE: "https://wa.me/p/7249554021761502/573023371476"
+CONTENIDO: Tutorial paso a paso para pagar con Nequi
+USO: Clientes que prefieren pago digital
+
+Ojo si va colocar numero de nequi en la app, debe ser el 3003913251 a Nombre de Alex** Herr*¨*
+
+Con el QR puede pagar si necesidad de colocar numero de teléfono escrito.
+
+Ojo: No Enviar a 3023371476 Escrito Manualmente
+```
+
+#### **Código QR Bancario**
+```
+ENLACE: "https://wa.me/p/25240524268871838/573023371476"
+CONTENIDO: QR para escanear desde app bancaria
+USO: Pagos rápidos sin digitación manual
+```
+
+### **4.3 Información de Ubicación**
+
+#### **Google Maps**
+```
+ENLACE: "https://maps.app.goo.gl/zgikQKkJb9LieAVq9"
+CONTENIDO: Ubicación exacta del edificio
+USO: Navegación y referencias para clientes
+```
+
+---
+
+## **5. PROTOCOLO DE VERIFICACIÓN EMPRESARIAL**
+
+### **5.1 Documentos Disponibles para Verificación**
+```
+CERTIFICADO_CÁMARA_COMERCIO: Actualizado 2025
+REGISTRO_NACIONAL_TURISMO: Vigente (RNT)
+RUT_EMPRESA: Documento tributario oficial
+```
+
+### **5.2 Verificación Online**
+```
+CÁMARA_COMERCIO: Búsqueda por NIT 900.890.457
+SUPERINTENDENCIA_SOCIEDADES: Registro empresarial público
+DIAN: Verificación tributaria
+```
+
+### **5.3 Para Solicitudes de Confianza**
+*Ver archivo 11_PROTOCOLO_CONFIANZA.txt para procedimientos completos de verificación empresarial.*
+
+---
+
+## **6. VARIABLES DE SISTEMA**
+
+### **6.1 Variables de Información Empresarial**
+```
+[RAZÓN_SOCIAL] = "TE ALQUILAMOS S.A.S"
+[NIT] = "900.890.457"
+[DIRECCIÓN] = "Edificio Nuevo Conquistador, Calle 1b # 3-159, Barrio Laguito"
+[CIUDAD] = "Cartagena de Indias, Colombia"
+```
+
+### **6.2 Variables de Contacto**
+```
+[WHATSAPP_PRINCIPAL] = "3023371476"
+[WHATSAPP_TOURS] = "3008304905"
+[OFICINA] = "1706"
+[EMAIL_RECEPCIÓN] = "copropiedadreservaconquistador@gmail.com"
+```
+
+### **6.3 Variables Bancarias**
+```
+[BANCO] = "Bancolombia"
+[TIPO_CUENTA] = "Ahorros"
+[NÚMERO_CUENTA] = "786-48800-796"
+[TITULAR_CUENTA] = "TE ALQUILAMOS S.A.S"
+```
+
+### **6.4 Variables de Enlaces**
+```
+[ENLACE_NEQUI] = "https://wa.me/p/7249554021761502/573023371476"
+[ENLACE_QR] = "https://wa.me/p/25240524268871838/573023371476"
+[ENLACE_PISCINA] = "https://wa.me/p/4789424414498293/573023371476"
+[GOOGLE_MAPS] = "https://maps.app.goo.gl/zgikQKkJb9LieAVq9"
+```
+
+---
+
+## **7. RESPUESTAS AUTOMÁTICAS DEL BOT**
+
+### **7.1 Información de Pago Estándar**
+```
+"📌 Te comparto la información de pago:
+
+*CUENTA EMPRESARIAL LEGALMENTE REGISTRADA*
+*A NOMBRE DE:* TE ALQUILAMOS S.A.S, NIT: 900.890.457
+
+Tienes estas opciones de pago:
+1. 🏦 Transferencia bancaria: Bancolombia Ahorros 786-48800-796
+2. 📱 Código QR: https://wa.me/p/25240524268871838/573023371476
+3. 💙 Nequi: https://wa.me/p/7249554021761502/573023371476
+
+Una vez hagas el pago, compárteme el comprobante para confirmar tu reserva 😊"
+```
+
+### **7.2 Información de Check-in**
+```
+"Para tu check-in:
+📍 Edificio Nuevo Conquistador, Calle 1b # 3-159, Barrio Laguito
+🏢 Oficina 1706 (primer piso, frente a recepción)
+📞 WhatsApp: 3023371476
+🗺️ Ubicación: https://maps.app.goo.gl/zgikQKkJb9LieAVq9
+
+Nos vemos de 3:00 PM a 7:00 PM para entregarte las llaves 😊"
+```
+
+### **7.3 Verificación de Confianza**
+```
+"Somos TE ALQUILAMOS S.A.S, empresa legalmente constituida:
+• NIT: 900.890.457
+• Certificado Cámara de Comercio vigente
+• Registro Nacional de Turismo (RNT)
+• Ubicación física: Edificio Nuevo Conquistador, Calle 1b # 3-159
+
+Puedes verificar nuestra empresa en la Cámara de Comercio con nuestro NIT. ¿Te gustaría que te envíe algún documento específico?"
+```
+
+### **7.4 Información de Tours**
+```
+"Para tours y actividades, tengo un equipo especializado que te va a atender súper bien:
+
+📱 WhatsApp Tours: 300 830 4905
+
+Ellos manejan:
+• Islas del Rosario y Barú
+• City Tours por Cartagena
+• Chiva Rumbera
+• Y muchas actividades más
+
+¿Quieres que te pase su contacto?"
+```
+
+### **7.5 Ubicación y Referencias**
+```
+"Estamos ubicados en el sector turístico de Cartagena:
+
+📍 Edificio Nuevo Conquistador
+🏨 Frente al Hotel Hilton
+🏖️ Frente a la playa
+🗺️ Ubicación exacta: https://maps.app.goo.gl/zgikQKkJb9LieAVq9
+
+Es súper fácil llegar en Uber o taxi. ¿Necesitas alguna referencia adicional?"
+```
+
+### **7.6 Métodos de Pago Detallados**
+```
+"Te explico las opciones de pago:
+
+🏦 *Transferencia bancaria* (Recomendado):
+- Sin recargos
+- Desde cualquier banco
+- Bancolombia Ahorros 786-48800-796
+
+💙 *Nequi* (Inmediato):
+- Sin recargos
+- 24/7 disponible
+- Tutorial: https://wa.me/p/7249554021761502/573023371476
+
+📱 *Código QR*:
+- Desde tu app bancaria
+- Link: https://wa.me/p/25240524268871838/573023371476
+
+💳 *Tarjeta* (si es necesario):
+- Recargo del 5%
+- Solo en casos especiales
+
+¿Cuál prefieres?"
+```
+
+---
+
+## **8. INTEGRACIÓN Y REFERENCIAS CRUZADAS**
+
+### **8.1 Para Tarifas y Precios**
+```
+PRECIOS_ALOJAMIENTO → Ver 02_TARIFAS_TEMPORADAS.txt
+CARGOS_SERVICIOS → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+```
+
+### **8.2 Para Procedimientos**
+```
+PROTOCOLO_CONFIANZA → Ver 11_PROTOCOLO_CONFIANZA.txt
+LLEGADAS_ESPECIALES → Ver 09_LLEGADAS_ESPECIALES.txt
+POLÍTICAS_PAGO → Ver 14_POLITICAS_OPERATIVAS.txt
+```
+
+### **8.3 Para Inventario**
+```
+APARTAMENTOS_DISPONIBLES → Ver 03_INVENTARIO_APARTAMENTOS.txt
+ENLACES_WHATSAPP_APARTAMENTOS → Ver 03_INVENTARIO_APARTAMENTOS.txt
+```
+
+---
+
+## **NOTA ARQUITECTÓNICA CRÍTICA**
+
+Este archivo contiene EXCLUSIVAMENTE:
+- Información empresarial y legal completa
+- Datos bancarios y métodos de pago
+- Contactos operativos actualizados
+- Enlaces de recursos y servicios
+- Respuestas automáticas del bot para comunicación directa
+
+**NO CONTIENE:**
+- Tarifas de alojamiento → Ver 02_TARIFAS_TEMPORADAS.txt
+- Cargos de servicios → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+- Códigos de apartamentos → Ver 03_INVENTARIO_APARTAMENTOS.txt
+- Políticas operativas → Ver 14_POLITICAS_OPERATIVAS.txt
+
+Esta arquitectura garantiza que el bot pueda proporcionar toda la información corporativa de forma natural, confiable y completa.

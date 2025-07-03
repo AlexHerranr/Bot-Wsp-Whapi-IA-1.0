@@ -1,0 +1,347 @@
+# 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+
+**Versión:** 3.0  
+**Responsable:** Sistema de Conocimiento  
+**Keywords:** cargo, servicio, limpieza, sobrecupo, early, checkout, equipaje, llegada, automático, bot  
+**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 09_LLEGADAS_ESPECIALES.txt, 14_POLITICAS_OPERATIVAS.txt
+
+---
+
+## **PROPÓSITO DEL ARCHIVO**
+Fuente única de verdad para todos los cargos fijos, servicios variables y tarifas adicionales que el bot aplica automáticamente. Incluye lógica para cálculo inteligente de servicios según contexto del cliente.
+
+---
+
+## **1. CARGOS FIJOS OBLIGATORIOS**
+
+### **1.1 Cargo por Servicio (Aseo + Registro/Manillas)**
+```
+APARTAESTUDIO: $60.000 COP
+APARTAMENTO_1_ALCOBA: $70.000 COP
+```
+
+**DESGLOSE DEL CARGO:**
+- Incluye: Aseo de salida + Registro/Manillas del edificio
+- Cargo único por reserva (no por noche)
+- **Aplicación según canal de reserva:**
+
+**PARA DIRECTOS Y BOOKING:**
+- Se cobra el "Cargo por Servicio" completo ($60.000/$70.000)
+- Incluye aseo + registro/manillas
+- Si Booking muestra $60.000/$70.000 adicionales en desglose = Ya incluido
+- No hay pagos adicionales en recepción
+
+**PARA AIRBNB Y EXPEDIA:**
+- Aseo ya pagado por la plataforma
+- Cliente paga SOLO registro/manillas en recepción del edificio
+- Monto registro: Parte proporcional del cargo total
+
+### **1.2 Registro/Manillas - Desglose por Canal**
+
+**CLIENTES DIRECTOS:**
+- Cargo por Servicio en cotización incluye registro
+- No pagan nada adicional en recepción
+
+**BOOKING:**
+- Si desglose muestra $60/$70 adicionales → Ya incluye registro
+- Si NO aparece → Cliente paga registro en recepción
+
+**AIRBNB/EXPEDIA:**
+- Plataforma solo cubre aseo
+- Cliente SIEMPRE paga registro/manillas en recepción
+- Monto a pagar en recepción según tipo de apartamento
+
+**IMPORTANTE:**
+- Sobrecupos NUNCA se pagan en recepción (directo a empresa)
+- Saldos pendientes se pagan a empresa (excepto registro si aplica)
+
+---
+
+## **2. SERVICIOS VARIABLES CON APLICACIÓN AUTOMÁTICA**
+
+### **2.1 Sobrecupo/Personas Adicionales**
+```
+TARIFA_BASE: $50.000 COP por persona por noche
+APLICACIÓN_AUTOMÁTICA: Cuando se excede capacidad base recomendada
+```
+
+**REGLAS AUTOMÁTICAS DEL BOT:**
+- Detectar número de personas vs capacidad base
+- Aplicar cargo automáticamente si excede
+- Solo si no supera capacidad máxima total
+- Comunicar transparentemente el cargo
+
+**EJEMPLO AUTOMÁTICO:**
+Cliente: "Somos 6 personas"
+Bot detecta: Apartamento base 5 → 1 persona extra
+Cálculo: 1 × $50.000 × noches
+
+### **2.2 Early Check-in Escalonado**
+```
+DESDE_LAS_06:00_AM: $130.000 COP
+DESDE_LAS_09:00_AM: $100.000 COP  
+DESDE_LAS_12:00_PM: $90.000 COP
+CHECK_IN_ESTÁNDAR: 3:00 PM (sin cargo)
+```
+
+**APLICACIÓN AUTOMÁTICA DEL BOT:**
+- Detectar hora de llegada mencionada
+- Aplicar tarifa según escala automáticamente
+- Sujeto a disponibilidad del apartamento
+- Ofrecer opciones si no especifica hora
+
+### **2.3 Late Check-out**
+```
+TARIFA_BASE: $130.000 - Puede ser negociable con aprobación e un gente humano
+HORARIO_LÍMITE: Hasta las 6:00 PM
+APLICACIÓN: Salidas después de 12:00 PM
+```
+
+**LÓGICA AUTOMÁTICA:**
+- Si cliente menciona salida tardía → aplicar cargo
+- Verificar disponibilidad antes de confirmar
+- Máximo hasta 6:00 PM por políticas
+
+### **2.4 Guardado de Equipaje**
+```
+TARIFA: $5.000 COP por hora
+PERÍODO_GRATUITO: 12:00 PM - 3:00 PM
+TARIFA_MÁXIMA_DIARIA: $20.000 COP (6+ horas)
+UBICACIÓN: Oficina 1706
+```
+
+**CÁLCULO AUTOMÁTICO DEL BOT:**
+```
+• Llegada 6:00 AM → 6 horas = $20.000 (máximo)
+• Llegada 9:00 AM → 3 horas = $15.000  
+• Llegada 11:00 AM → 1 hora = $5.000
+• Llegada 12:00-3:00 PM → GRATIS
+```
+
+### **2.5 Recargo Tarjetas Bold**
+```
+PORCENTAJE: +5% sobre el total
+APLICACIÓN: Solo pagos con tarjeta Bold
+```
+
+**DETECCIÓN AUTOMÁTICA:**
+- Si cliente menciona "tarjeta" → informar del posible recargo
+- Aplicar solo si confirma método Bold
+- Sugerir alternativas sin recargo
+
+---
+
+## **3. SERVICIOS DE LLEGADAS ESPECIALES**
+
+### **3.1 Llegada Nocturna (7:00 PM - 11:00 PM)**
+```
+TARIFA_BASE: $50.000 COP
+FUNCIÓN_EXTERNA: notify_late_arrival() para coordinación
+```
+
+**PROCESO AUTOMÁTICO DEL BOT:**
+1. Detectar llegada en horario nocturno
+2. Informar cargo adicional de $50.000
+3. Si cliente acepta → notify_late_arrival()
+4. Confirmar coordinación realizada
+
+### **3.2 Llegada Madrugada (11:00 PM - 6:00 AM)**
+```
+TARIFA_BASE: $80.000 COP
+COORDINACIÓN: Requiere notify_late_arrival() obligatorio
+```
+
+**PROCESO AUTOMÁTICO DEL BOT:**
+1. Detectar llegada en madrugada
+2. Informar cargo de $80.000 + proceso especial
+3. notify_late_arrival() con 8h anticipación mínima
+4. Confirmar autorización enviada
+
+### **3.3 Llegadas Extremas (3:00 AM - 6:00 AM)**
+```
+TARIFA_BASE: $120.000 COP
+ACCIÓN: escalate_to_human("extreme_arrival", context)
+```
+
+**REGLA DEL BOT:**
+- Detectar horario extremo → informar complejidad
+- Escalar inmediatamente a humano
+- No procesar automáticamente
+
+---
+
+## **4. APLICACIÓN INTELIGENTE DE SERVICIOS**
+
+### **4.1 Detección Contextual Automática**
+
+**El bot detecta automáticamente:**
+- Canal de reserva (para aplicar cargo por servicio correctamente)
+- Menciones de horarios de llegada/salida
+- Número de personas vs capacidad máxima
+- Necesidades especiales (equipaje, early/late checkout)
+- Si el desglose de Booking incluye o no el cargo por servicio
+
+### **4.2 Cálculo Transparente**
+
+**Principios del bot:**
+- Mostrar cada cargo por separado
+- Explicar por qué aplica cada servicio
+- Ofrecer alternativas cuando sea posible
+- Total claro y desglosado
+
+### **4.3 Optimización para el Cliente**
+
+**El bot sugiere automáticamente:**
+- Guardado de equipaje vs early check-in (según conveniencia/costo)
+- Llegadas nocturnas sin cargo adicional
+- Distribución óptima de personas para evitar sobrecupos
+- Métodos de pago sin recargo (transferencia/Nequi)
+- Claridad sobre qué se paga dónde según su canal de reserva
+
+---
+
+## **5. SERVICIOS GRUPALES AUTOMÁTICOS**
+
+### **5.1 Detección de Grupos**
+```
+TRIGGER: 3+ apartamentos solicitados
+BENEFICIO: Coordinación grupal incluida sin cargo
+ESCALAMIENTO: 8+ apartamentos → escalate_to_human("large_group")
+```
+
+**APLICACIÓN AUTOMÁTICA:**
+- Bot detecta solicitud múltiple
+- Coordina llegadas sin cargo adicional
+- Escala a humano para grupos muy grandes
+
+---
+
+## **6. REGLAS DE CÁLCULO AUTOMÁTICO**
+
+### **6.1 Orden de Cálculo del Bot**
+```
+1. Subtotal alojamiento (con descuentos aplicados)
+2. + Cargo por Servicio ($60/$70 - incluye aseo + registro)
+3. + Servicios adicionales detectados (sobrecupo, early, late, etc.)
+4. + Recargos si aplican (Bold 5%)
+5. = Total final
+```
+
+**NOTAS IMPORTANTES:**
+- **Directos/Booking con cargo incluido**: Total incluye todo
+- **Booking sin cargo en desglose**: Cliente paga registro en recepción
+- **Airbnb/Expedia**: Cliente paga registro en recepción
+- **Sobrecupos**: Siempre directo a empresa, nunca en recepción
+- **Saldos pendientes**: Se pagan a empresa (no en recepción)
+
+### **6.2 Variables de Sistema del Bot**
+```
+[CARGO_POR_SERVICIO] = $60 o $70 según tipo apartamento
+[CANAL_RESERVA] = "directo" | "booking" | "airbnb" | "expedia"
+[CARGO_INCLUIDO] = Boolean (si incluye registro en el total)
+[SERVICIOS_DETECTADOS] = Lista de servicios adicionales aplicables
+[COSTO_SERVICIOS] = Suma de todos los servicios adicionales
+[REQUIERE_COORDINACIÓN] = Boolean para llegadas especiales
+[PAGO_REGISTRO_RECEPCIÓN] = Boolean según canal
+```
+
+---
+
+## **7. CASOS ESPECIALES Y EXCEPCIONES**
+
+### **7.1 Servicios No Estándar**
+```
+DETECCIÓN: Cliente solicita algo no contemplado
+ACCIÓN: escalate_to_human("special_service_request", context)
+COMUNICACIÓN: "Déjame consultar esa solicitud especial con el equipo"
+```
+
+### **7.2 Situaciones de Emergencia**
+```
+EJEMPLOS: Vuelos cancelados, emergencias médicas
+PRINCIPIO: Máxima flexibilidad
+ACCIÓN: escalate_to_human("emergency", context)
+```
+
+### **7.3 Disputas sobre Cargos**
+```
+DETECCIÓN: Cliente cuestiona cargos aplicados
+PRIMERA RESPUESTA: Explicar justificación clara
+SI PERSISTE: escalate_to_human("billing_dispute", context)
+```
+
+---
+
+## **8. INTEGRACIÓN Y REFERENCIAS CRUZADAS**
+
+### **8.1 Para Horarios y Políticas**
+```
+HORARIOS_CHECK_IN/OUT → Ver 14_POLITICAS_OPERATIVAS.txt
+PROCEDIMIENTOS_LLEGADAS → Ver 09_LLEGADAS_ESPECIALES.txt
+COORDINACIÓN_ESPECIAL → notify_late_arrival() function
+```
+
+### **8.2 Para Cálculo de Totales**
+```
+TARIFAS_BASE → Ver 02_TARIFAS_TEMPORADAS.txt
+CAPACIDADES → Ver 03_INVENTARIO_APARTAMENTOS.txt
+DESCUENTOS → Aplicados automáticamente por el bot
+```
+
+### **8.3 Para Casos Complejos**
+```
+GRUPOS_GRANDES → Ver 13_RESERVAS_GRUPALES.txt + escalate_to_human()
+DISPONIBILIDAD → Ver 18_GESTION_DISPONIBILIDAD.txt
+CHECKOUT → Ver 12_CHECKOUT_ESTANDARIZADO.txt
+```
+
+---
+
+## **9. COMUNICACIÓN NATURAL DE CARGOS**
+
+### **9.1 Principios de Comunicación**
+- **Transparencia total**: Explicar cada cargo
+- **Tono positivo**: Enfocarse en el valor
+- **Opciones**: Siempre que sea posible
+- **Sin sorpresas**: Todo claro desde el inicio
+
+### **9.2 Frases Clave del Bot**
+- "El cargo por servicio de $X incluye aseo y registro del edificio"
+- "Por llegar temprano a las X AM, el early check-in tiene un costo de $Y"
+- "Para X personas adicionales, el costo extra es $Z por noche"
+- "Si prefieres guardar equipaje, es gratis entre 12-3 PM"
+- "No hay cargo por llegadas nocturnas, coordinamos todo sin costo"
+- "Los clientes de Airbnb/Expedia pagan registro en recepción"
+- "El sobrecupo se paga directamente a nosotros, no en recepción"
+
+### **9.3 Manejo de Sensibilidad al Precio**
+- Detectar preocupación por costos adicionales
+- Enfatizar que NO hay cargos por llegadas tardías
+- Ofrecer alternativas para servicios opcionales (early/late checkout)
+- Explicar claramente qué está incluido según su canal
+- Mantener transparencia total sobre todos los costos
+
+---
+
+## **NOTA ARQUITECTÓNICA CRÍTICA**
+
+Este archivo contiene EXCLUSIVAMENTE:
+- Cargos fijos obligatorios y su aplicación automática
+- Servicios variables con detección inteligente del bot
+- Integración con funciones externas para coordinación
+- Lógica de cálculo transparente y automático
+
+**NO CONTIENE:**
+- Tarifas de alojamiento → Ver 02_TARIFAS_TEMPORADAS.txt
+- Tours y actividades → Ver 06_TOURS_SERVICIOS_ADICIONALES.txt
+- Datos bancarios → Ver 05_DATOS_CORPORATIVOS_CONTACTO.txt
+- Templates específicos → Ver 15_PLANTILLAS_RESPUESTAS.txt
+
+**TRANSFORMACIÓN BOT:**
+- ✅ Eliminación total del sistema de override manual
+- ✅ Detección automática de servicios necesarios
+- ✅ Cálculo inteligente y transparente
+- ✅ Integración con functions para coordinación
+- ✅ Escalamiento automático para casos complejos
+
+Esta arquitectura garantiza que el bot aplique cargos de forma justa, transparente y optimizada para cada cliente.

@@ -1,0 +1,483 @@
+# 16_PROTOCOLO_B2B_COLEGAS.txt
+
+**Sistema Automático de Gestión B2B para Agentes y Agencias**
+
+**Versión:** 3.0  
+**Responsable:** Sistema de Conocimiento  
+**Keywords:** b2b, agente, colega, agencia, comercial, neto, volumen, bot, automatico  
+**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 03_INVENTARIO_APARTAMENTOS.txt, 14_POLITICAS_OPERATIVAS.txt, 18_GESTION_DISPONIBILIDAD.txt
+
+---
+
+## **PROPÓSITO DEL ARCHIVO**
+Sistema automático para que el bot identifique y gestione comunicación con agentes, colegas y agencias. Define detección de contexto B2B, comunicación técnica directa y gestión comercial especializada sin intervención humana.
+
+---
+
+## **1. DETECCIÓN AUTOMÁTICA DE CONTEXTO B2B**
+
+### **1.1 Base de Datos de Agentes Conocidos**
+```
+AGENTES_CONOCIDOS = [
+    "Carlos Orozco",
+    "Sandy Colega", 
+    "Eyder - AGENCIA",
+    "Liceth conquistador",
+    "Juan Pablo",
+    "Juan pablo",
+    "[Nombre] - Colegas",
+    "[Nombre] - AGENCIA"
+]
+```
+
+### **1.2 Frases Clave para Activación B2B**
+```
+FRASES_CLAVE_B2B = [
+    "necesito para un cliente",
+    "conseguir con colega",
+    "precio neto",
+    "buscar con colegas para esas fechas",
+    "solicita cotización [X] apartamentos",
+    "necesito [X] unidades",
+    "para mi cliente",
+    "tarifa comercial",
+    "comisión incluida",
+    "tarifa de agencia",
+    "precio mayorista",
+    "para mis huéspedes"
+]
+```
+
+### **1.3 Indicadores de Contexto Comercial**
+
+#### **Señales Positivas B2B**
+- Ausencia de preguntas turísticas (amenidades, ubicación)
+- Solicitud directa de disponibilidad y precio
+- Comunicación técnica sin expresiones emocionales
+- Referencia a terceros ("mis clientes", "el grupo")
+- Múltiples unidades en una sola consulta
+- Enfoque en logística y coordinación
+
+#### **Patrones de Comunicación B2B**
+- Mensajes concisos y directos
+- Solicitud de confirmaciones rápidas
+- Preguntas sobre capacidad total
+- Mención de otros proveedores
+- Consultas sobre descuentos por volumen
+
+---
+
+## **2. PROTOCOLO DE COMUNICACIÓN COMERCIAL**
+
+### **2.1 Reglas de Tono y Estilo B2B**
+
+#### **❌ ELIMINAR Completamente**
+- Descripciones turísticas ("frente al mar", "hermosa vista")
+- Emojis y expresiones emocionales
+- Preguntas sobre experiencia del viaje
+- Ofertas de tours o servicios adicionales
+- Explicaciones sobre amenidades del edificio
+- Lenguaje promocional o de marketing
+
+#### **✅ MANTENER Siempre**
+- Comunicación directa al punto
+- Datos técnicos precisos (capacidades)
+- Disponibilidad inmediata y clara
+- Precios netos transparentes
+- Confirmaciones rápidas
+- Información logística relevante
+
+### **2.2 Estructura de Comunicación del Bot**
+
+#### **Saludos Diferenciados**
+```
+CLIENTE_FINAL: "Hola [NOMBRE], ¿qué tal? 😊"
+COLEGA_B2B: "Hola [NOMBRE_COLEGA]." (Sin emoji)
+```
+
+#### **Cierres Comerciales**
+```
+ESTÁNDAR: "¿Confirmas la reserva?"
+URGENCIA: "Necesito confirmación para bloquear los apartamentos."
+SEGUIMIENTO: "¿Procedo a enviar datos de pago?"
+```
+
+---
+
+## **3. VARIABLES DE SISTEMA B2B**
+
+### **3.1 Variables de Identificación**
+```
+[NOMBRE_COLEGA] = Nombre del agente/colega
+[NOMBRE_CLIENTE] = Cliente final del agente
+[AGENCIA] = Nombre de la agencia
+[CONTEXTO_B2B] = Boolean (true cuando detectado)
+```
+
+### **3.2 Variables de Inventario B2B**
+```
+[APARTAMENTOS_SOLICITADOS] = Número de unidades
+[DISPONIBLES_PROPIOS] = Unidades en inventario propio
+[DISPONIBLES_TERCEROS] = Unidades con colegas
+[REQUIERE_TERCEROS] = Boolean
+```
+
+### **3.3 Variables de Precios B2B**
+```
+[PRECIO_NETO] = Precio sin comisión
+[DESCUENTO_VOLUMEN] = Porcentaje por cantidad
+[TOTAL_PAQUETE] = Total múltiples unidades
+[ANTICIPO_B2B] = Anticipo requerido
+```
+
+---
+
+## **4. PLANTILLAS AUTOMÁTICAS B2B**
+
+### **4.1 Solicitud Inicial de Colega**
+```
+Hola [NOMBRE_COLEGA]. Para el [FECHA_ENTRADA] al [FECHA_SALIDA] ([NOCHES] noches):
+
+• 1 alcoba: $[PRECIO]/noche = $[SUBTOTAL] + $70.000 = $[TOTAL] total
+• Estudio: $[PRECIO]/noche = $[SUBTOTAL] + $60.000 = $[TOTAL] total
+
+¿Qué opción necesitas para tu cliente?
+```
+
+### **4.2 Confirmación Rápida B2B**
+```
+Confirmado:
+• Apartamento: [APARTAMENTO]
+• Fechas: [FECHA_ENTRADA] - [FECHA_SALIDA]
+• Total: $[TOTAL] según lo acordado
+• Anticipo requerido: $[ANTICIPO]
+
+¿Procedo a enviar datos de pago?
+```
+
+### **4.3 Múltiples Apartamentos**
+```
+Disponibilidad confirmada para [PERSONAS] personas:
+
+• [X] apartamentos 1 alcoba: $[PRECIO]/noche c/u
+• [X] apartaestudios: $[PRECIO]/noche c/u
+• Cargos únicos totales: $[CARGOS]
+• Gran total: $[TOTAL]
+
+¿Confirmas la reserva?
+```
+
+### **4.4 Tarifas Netas de Agencias**
+```
+Precio neto para agencias ([NOCHES] noches):
+
+• Tarifa neta: $[PRECIO_NETO]/noche = $[SUBTOTAL]
+• Limpieza: $[CARGO_LIMPIEZA]
+• Total neto: $[TOTAL] (sin comisión incluida)
+```
+
+### **4.5 Descuento por Volumen**
+```
+Para [X] apartamentos, aplico descuento especial del [DESCUENTO]%:
+
+• Precio regular: $[PRECIO_BASE]/noche
+• Precio con descuento: $[PRECIO_DESCUENTO]/noche
+• Ahorro total: $[AHORRO]
+
+¿Te interesa esta opción?
+```
+
+---
+
+## **5. GESTIÓN AUTOMÁTICA DE INVENTARIO DE TERCEROS**
+
+### **5.1 Activación Automática**
+
+#### **Cuándo Buscar con Colegas**
+```
+TRIGGERS_TERCEROS = [
+    "inventario_propio_agotado",
+    "solicitud > apartamentos_disponibles",
+    "fechas_sin_disponibilidad",
+    "ubicación_específica_solicitada"
+]
+```
+
+### **5.2 Comunicación de Terceros**
+
+#### **Template de Apertura**
+```
+"Como no tengo disponibilidad en inventario propio, 
+puedo conseguir con colega confiable:
+
+• Apartamento similar: $[PRECIO]/noche
+• Ubicación: [ZONA/EDIFICIO]
+• Incluye: [SERVICIOS_BÁSICOS]
+• Me aseguro que sea óptimo para que no quedes mal con tus clientes
+
+¿Te sirve esta opción?"
+```
+
+#### **Frases de Garantía**
+- "Me aseguro que sea apartamento óptimo"
+- "Colega confiable con quien trabajamos regularmente"
+- "Mismos estándares de calidad que manejamos"
+- "Yo me encargo de coordinar todo directamente"
+
+### **5.3 Proceso de Coordinación**
+```
+1. Verificar disponibilidad con colega
+2. Confirmar estándares de calidad
+3. Negociar precio competitivo
+4. Garantizar logística de entrega
+5. Mantener comunicación durante estadía
+```
+
+---
+
+## **6. ESTRATEGIAS AUTOMÁTICAS DE PRECIOS B2B**
+
+### **6.1 Estructura de Precios Netos**
+```
+PRECIO_NETO = Tarifa base sin comisión
+COMUNICACIÓN = No mencionar comisiones salvo solicitud directa
+ENFOQUE = Precio final competitivo
+TRANSPARENCIA = Solo cuando se solicite
+```
+
+### **6.2 Descuentos Automáticos por Volumen**
+
+#### **Proceso del Bot**
+```
+1. DETECTAR múltiples unidades (3+ apartamentos)
+2. CONSULTAR 14_POLITICAS_OPERATIVAS.txt
+3. APLICAR descuento según política
+4. COMUNICAR proactivamente
+```
+
+#### **Frases Automáticas**
+- "Para [X] apartamentos, aplico descuento especial del [Y]%"
+- "Por el volumen solicitado, te ofrezco precio preferencial"
+- "Tenemos tarifas especiales para reservas múltiples"
+
+### **6.3 Manejo de Márgenes**
+```
+PRINCIPIOS:
+- Nunca revelar márgenes internos
+- Si preguntan: "Trabajamos con tarifas netas competitivas"
+- Enfoque en valor agregado
+- Transparencia en precios finales
+```
+
+---
+
+## **7. FLUJOS AUTOMÁTICOS B2B**
+
+### **7.1 Confirmación Acelerada**
+
+#### **Flujo para Colegas Conocidos**
+```
+SOLICITUD → Respuesta < 1 hora
+COTIZACIÓN → Directo, sin rodeos
+CONFIRMACIÓN → Datos mínimos
+PAGO → Proceso simplificado
+```
+
+#### **Información Mínima Requerida**
+- Fechas exactas
+- Número de apartamentos
+- Confirmación de tarifa
+- Datos facturación (si aplica)
+
+#### **Omitir para B2B**
+- Explicaciones de políticas básicas
+- Descripciones de apartamentos
+- Información turística
+- Procesos de verificación extensos
+
+### **7.2 Grupos Grandes B2B (10+ personas)**
+```
+"Para grupos de [X] personas:
+
+• [Y] apartamentos disponibles
+• Distribución sugerida: [DETALLE]
+• Precio paquete: $[TOTAL]
+• Coordinación grupal incluida"
+```
+
+### **7.3 Temporada Alta B2B**
+```
+"Para temporada [TEMPORADA]:
+
+• Disponibilidad limitada
+• Tarifa: $[PRECIO] neto por noche
+• Requiere confirmación inmediata
+• Anticipo 50% para bloquear"
+```
+
+### **7.4 Último Momento B2B**
+```
+"Para llegadas en menos de 48h:
+- Confirmo disponibilidad inmediata
+- Anticipo mínimo para agilizar
+- Coordinación express de llegada
+- Soporte logístico adicional"
+```
+
+---
+
+## **8. SEGUIMIENTO AUTOMÁTICO B2B**
+
+### **8.1 Primer Seguimiento (24h)**
+```
+"[NOMBRE_COLEGA], ¿pudiste revisar la disponibilidad?
+Necesito confirmar pronto para bloquear los apartamentos."
+```
+
+### **8.2 Recordatorio de Cierre (48h)**
+```
+"La disponibilidad que te coticé puede cambiar.
+¿Confirmas o libero los apartamentos?"
+```
+
+### **8.3 Liberación de Inventario**
+```
+"He liberado los apartamentos cotizados.
+Si necesitas opciones, avísame."
+```
+
+### **8.4 Post-Pago B2B**
+```
+"Anticipo recibido correctamente.
+Los apartamentos están confirmados para [FECHA_ENTRADA].
+¿Necesitas algo más para la llegada?"
+```
+
+---
+
+## **9. MANEJO AUTOMÁTICO DE DISPUTAS B2B**
+
+### **9.1 Diferencias en Expectativas**
+
+#### **Principios del Bot**
+- Mantener tono profesional siempre
+- Referir a cotización original
+- Ofrecer alternativas sin admitir errores
+- Documentar todos los acuerdos
+
+#### **Frases de Gestión**
+- "Reviso la cotización original que te envié..."
+- "Para evitar malentendidos, confirmemos los detalles..."
+- "Podemos ajustar la propuesta de la siguiente manera..."
+
+### **9.2 Problemas con Terceros**
+
+#### **Protocolo de Responsabilidad**
+- Asumir responsabilidad como intermediario
+- Gestionar solución inmediata
+- Compensar si necesario
+- Comunicar proactivamente
+
+#### **Frases de Crisis**
+- "Me hago responsable de coordinar una solución inmediata"
+- "Voy a gestionar personalmente el cambio"
+- "Te aseguro que resolveremos esto sin afectar a tus clientes"
+
+---
+
+## **10. MÉTRICAS AUTOMÁTICAS B2B**
+
+### **10.1 Indicadores de Éxito**
+```
+TIEMPO_RESPUESTA: < 1 hora
+CONVERSIÓN: > 60%
+DETALLES_TURÍSTICOS: 0
+EFICIENCIA: Máxima
+SATISFACCIÓN_COLEGA: Alta
+```
+
+### **10.2 Gestión de Red**
+```
+MANTENIMIENTO:
+- Base actualizada de contactos
+- Preferencias de cada agente
+- Relaciones largo plazo
+- Historial documentado
+
+OPTIMIZACIÓN:
+- Identificar patrones frecuentes
+- Ajustar templates según feedback
+- Mejorar tiempos sistemáticamente
+```
+
+---
+
+## **11. CASOS QUE REQUIEREN ESCALAMIENTO**
+
+### **11.1 Triggers de Escalamiento B2B**
+```
+- Solicitudes de facturación especial
+- Negociaciones complejas de precio
+- Problemas con terceros no resueltos
+- Grupos muy grandes (20+ apartamentos)
+- Requerimientos corporativos especiales
+```
+
+### **11.2 Function Calling B2B**
+```
+escalate_to_human("b2b_complex", {
+    "agent_name": "[NOMBRE_COLEGA]",
+    "issue_type": "negotiation|billing|third_party",
+    "urgency": "high",
+    "volume": "[APARTAMENTOS]"
+})
+```
+
+---
+
+## **12. INTEGRACIÓN CON OTROS ARCHIVOS**
+
+### **12.1 Para Precios y Tarifas**
+```
+TARIFAS_BASE → Ver 02_TARIFAS_TEMPORADAS.txt
+DESCUENTOS_VOLUMEN → Ver 14_POLITICAS_OPERATIVAS.txt
+```
+
+### **12.2 Para Inventario**
+```
+APARTAMENTOS → Ver 03_INVENTARIO_APARTAMENTOS.txt
+DISPONIBILIDAD → Ver 18_GESTION_DISPONIBILIDAD.txt
+```
+
+### **12.3 NO APLICAR en B2B**
+```
+COMUNICACIÓN_NATURAL → 17_COMUNICACION_NATURAL.txt (NO usar)
+TOURS → 06_TOURS_SERVICIOS_ADICIONALES.txt (NO ofrecer)
+PROTOCOLO_CONFIANZA → 11_PROTOCOLO_CONFIANZA.txt (NO necesario)
+```
+
+---
+
+## **NOTA ARQUITECTÓNICA CRÍTICA**
+
+Este archivo contiene EXCLUSIVAMENTE:
+- Sistema de detección automática B2B
+- Comunicación técnica directa sin humanización
+- Plantillas comerciales especializadas
+- Gestión de inventario de terceros
+- Protocolos de negociación y seguimiento B2B
+
+**NO CONTIENE:**
+- Precios específicos → Ver 02_TARIFAS_TEMPORADAS.txt
+- Inventario detallado → Ver 03_INVENTARIO_APARTAMENTOS.txt
+- Políticas generales → Ver 14_POLITICAS_OPERATIVAS.txt
+- Comunicación turística → NO aplicar en contexto B2B
+
+**TRANSFORMACIÓN BOT:**
+- ✅ Detección automática de contexto B2B
+- ✅ Cambio automático de tono comunicacional
+- ✅ Gestión de terceros sin intervención humana
+- ✅ Seguimiento comercial automatizado
+- ✅ Escalamiento solo para casos muy complejos
+
+Esta arquitectura permite al bot manejar automáticamente el 90% de interacciones B2B, manteniendo eficiencia comercial y diferenciando claramente entre clientes finales y colegas del sector.

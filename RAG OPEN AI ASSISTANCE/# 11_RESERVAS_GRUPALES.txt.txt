@@ -1,0 +1,287 @@
+# 11_RESERVAS_GRUPALES.txt
+
+**Versión:** 3.0  
+**Responsable:** Sistema de Conocimiento  
+**Keywords:** grupo, multiple, distribucion, deposito, coordinacion, apartamentos, bot, automatico  
+**Archivos relacionados:** 02_INVENTARIO_APARTAMENTOS.txt, 01_TARIFAS_TEMPORADAS.txt, 04_DATOS_CORPORATIVOS_CONTACTO.txt
+
+---
+
+## **PROPÓSITO DEL ARCHIVO**
+Gestión automática de reservas grupales por el bot. Enfocado en distribución automática al máximo de capacidad, depósito para grupos de más de 24 personas y manejo del problema común de solicitar más habitaciones durante la estadía.
+
+---
+
+## **1. DETECCIÓN AUTOMÁTICA DE GRUPOS**
+
+### **1.1 Cuándo Activar Protocolo Grupal**
+```
+TRIGGERS_AUTOMÁTICOS = [
+    "necesito 3 apartamentos",
+    "somos un grupo de [18+]",
+    "varios apartamentos",
+    "evento familiar",
+    "viaje corporativo", 
+    "múltiples apartamentos",
+    "somos [X] personas" (donde X > 18)
+]
+```
+
+### **1.2 Información Automática a Recopilar**
+```
+DATOS_ESENCIALES:
+• Número total de personas
+• Fechas exactas
+• Si requieren check-in coordinado
+```
+
+### **1.3 Distribución Automática por Capacidad Máxima**
+```
+PROTOCOLO_DISTRIBUCIÓN:
+1. Dividir personas ÷ 6 = Número de alcobas necesarias
+2. Si sobran 2-4 personas = Agregar 1 estudio
+3. Si sobra 1 persona = Agregar a última alcoba
+4. Presentar distribución automática al cliente
+```
+
+---
+
+## **2. GESTIÓN AUTOMÁTICA DE INVENTARIO**
+
+### **2.1 Proceso de Asignación**
+```
+PASO 1: Ofrecer todos los apartamentos propios disponibles
+PASO 2: Si no alcanzan, completar con apartamentos de colegas
+PASO 3: Mismo precio para todos (no diferenciar origen)
+PASO 4: Presentar como inventario unificado
+```
+
+### **2.2 Comunicación Unificada**
+```
+"Para tu grupo de [X] personas tengo disponible:
+
+• [X] apartamentos de 1 alcoba (6 personas c/u)
+• [X] apartaestudios (4 personas c/u)
+
+Total: [X] apartamentos para [X] personas
+
+¿Te funciona esta distribución?"
+```
+
+### **2.3 Si Piden Fotos de Externos**
+```
+"Perfecto, déjame conseguir las fotos de todos los apartamentos.
+
+Te las envío en unos minutos."
+
+[ESCALAR: escalate_to_human("external_apartment_photos")]
+```
+
+---
+
+## **3. DEPÓSITO PARA GRUPOS GRANDES**
+
+### **3.1 Aplicación del Depósito**
+```
+DEPÓSITO_DAÑOS: $500.000
+TRIGGER: Grupos de más de 24 personas
+DEVOLUCIÓN: 24-72h post-checkout sin daños
+PAGO: Junto con anticipo de reserva
+```
+
+### **3.2 Comunicación Automática (Solo >24 personas)**
+```
+"Para grupos grandes aplicamos un depósito de seguridad:
+
+• Monto: $500.000 (una sola vez)
+• Se devuelve completo si no hay daños
+• Devolución en 2-3 días después del checkout
+
+¿Todo claro?"
+```
+
+### **3.3 Para Grupos Menores a 24 Personas**
+- No mencionar depósito
+- Proceder como reserva normal múltiple
+- Solo anticipo estándar
+
+---
+
+## **4. COTIZACIÓN AUTOMÁTICA SIN ESCALAMIENTO**
+
+### **4.1 Proceso de Cotización**
+```
+PROTOCOLO_BOT:
+1. Calcular apartamentos necesarios automáticamente
+2. Cotizar apartamento por apartamento
+3. Aplicar descuentos si corresponde
+4. NO escalar para cotización (cualquier tamaño)
+5. Solo escalar coordinación de check-in (3+ aptos)
+```
+
+### **4.2 Template de Cotización Detallada**
+```
+"Cotización para tu grupo de [X] personas:
+
+*Distribución automática:*
+• Apartamento 1: Alcoba para 6 personas - $[PRECIO]
+• Apartamento 2: Alcoba para 6 personas - $[PRECIO]
+• Apartamento 3: Estudio para 4 personas - $[PRECIO]
+
+*Resumen [X] noches:*
+• Subtotal: $[SUBTOTAL]
+• Descuento grupal (5%): -$[DESCUENTO]
+[SI >24 personas: • Depósito seguridad: $500.000]
+
+*Total a pagar:* $[TOTAL]"
+```
+
+---
+
+## **5. MANEJO DEL PROBLEMA TÍPICO: MÁS HABITACIONES DURANTE ESTADÍA**
+
+### **5.1 Detección del Problema**
+```
+PATRONES_COMUNES = [
+    "necesitamos otro apartamento",
+    "estamos muy apretados",
+    "no cabemos todos",
+    "queremos más espacio"
+]
+```
+
+### **5.2 Respuesta Automática del Bot**
+```
+"Entiendo que necesitan más espacio.
+
+Déjame verificar disponibilidad:
+• ¿Cuántas personas adicionales?
+• ¿Para las [X] noches restantes?
+
+Un momento..."
+```
+
+### **5.3 Opciones Disponibles**
+```
+"Tengo estas opciones:
+
+• Apartamento adicional: $[PRECIO] por noche
+• Colchonetas extra: Sin costo (máx. 2)
+
+¿Qué prefieres?"
+```
+
+---
+
+## **6. COORDINACIÓN DE CHECK-IN GRUPAL**
+
+### **6.1 Escalamiento Automático para Coordinación**
+```
+SI grupo >= 3 apartamentos:
+    escalate_to_human("group_checkin_coordination", {
+        "apartments_count": number,
+        "arrival_time": time,
+        "leader": contact_name
+    })
+```
+
+### **6.2 Comunicación de Escalamiento**
+```
+"Para coordinar mejor la llegada de tu grupo, te voy a conectar con nuestro equipo.
+
+Ellos organizarán todo para que el check-in sea rápido y ordenado.
+
+Un momento..."
+```
+
+---
+
+## **7. PRECIOS Y DESCUENTOS AUTOMÁTICOS**
+
+### **7.1 Descuentos por Volumen**
+```
+DESCUENTOS_AUTOMÁTICOS:
+3-4 apartamentos: 5% descuento
+5-7 apartamentos: 8% descuento  
+8+ apartamentos: 10% descuento (máximo automático)
+```
+
+### **7.2 Aplicación Automática**
+- Bot aplica descuentos sin escalar
+- Incluye depósito solo si >24 personas
+- Cotiza cualquier tamaño de grupo
+
+---
+
+## **8. CASOS QUE REQUIEREN ESCALAMIENTO**
+
+### **8.1 Escalamiento Solo Para**
+```
+TRIGGERS_ESCALAMIENTO = [
+    "coordinación check-in (3+ apartamentos)",
+    "fotos de apartamentos externos",
+    "eventos con restricciones especiales",
+    "problemas durante estadía grupal"
+]
+
+NO ESCALAR PARA:
+- Cotizaciones (cualquier tamaño)
+- Cálculo de precios
+- Distribución automática
+```
+
+---
+
+## **9. CHECKOUT GRUPAL**
+
+### **9.1 Recordatorio Automático**
+```
+"Recordatorio para tu grupo:
+
+• Checkout mañana 12 PM
+• Todos los apartamentos listos
+• Coordina con tu grupo las llaves"
+```
+
+### **9.2 Gestión del Depósito (Solo >24 personas)**
+```
+SI grupo > 24 personas Y sin daños:
+    "¡Buenas noticias! 
+    Tu depósito de $500.000 será devuelto en 2-3 días."
+
+SI grupo <= 24 personas:
+    No mencionar depósito (no aplica)
+```
+
+---
+
+## **10. VARIABLES DEL SISTEMA**
+
+```
+[GRUPO_DETECTADO] = Boolean
+[TAMAÑO_GRUPO] = Número de personas
+[APARTAMENTOS_NECESARIOS] = Cálculo automático
+[REQUIERE_DEPÓSITO] = Boolean (solo >24 personas)
+[REQUIERE_COORDINACIÓN] = Boolean (3+ apartamentos)
+[DISTRIBUCIÓN_AUTOMÁTICA] = Máxima capacidad siempre
+```
+
+---
+
+## **NOTA ARQUITECTÓNICA CRÍTICA**
+
+Este archivo define la gestión AUTOMATIZADA de grupos por el bot:
+
+**CARACTERÍSTICAS DEL BOT:**
+- ✅ Cotización automática sin límite de tamaño
+- ✅ Distribución automática a máxima capacidad
+- ✅ Depósito de $500.000 solo para >24 personas
+- ✅ Inventario unificado (sin diferenciar origen)
+- ✅ Escalamiento solo para coordinación, no cotización
+
+**REALIDADES DEL NEGOCIO:**
+- Grupos reales son de 18+ personas típicamente
+- Distribución siempre al máximo por apartamento
+- Depósito solo para grupos muy grandes (>24)
+- No es necesario diferenciar propios vs externos
+- Coordinación de check-in es lo complejo en grupos

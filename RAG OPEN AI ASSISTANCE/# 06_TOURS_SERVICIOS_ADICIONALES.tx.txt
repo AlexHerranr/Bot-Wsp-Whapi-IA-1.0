@@ -1,0 +1,308 @@
+# 06_TOURS_SERVICIOS_ADICIONALES.txt
+
+**Sistema de Información de Tours y Servicios Complementarios para Bot Autónomo**
+
+**Versión:** 3.0  
+**Responsable:** Sistema de Conocimiento  
+**Keywords:** tour, servicios, adicionales, islas, city, chiva, información, whatsapp  
+**Archivos relacionados:** 05_DATOS_CORPORATIVOS_CONTACTO.txt, 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+
+---
+
+## **PROPÓSITO DEL ARCHIVO**
+Proporcionar información general sobre tours disponibles para que el bot informe a clientes y escale al especialista de tours cuando haya interés. El bot NO vende tours directamente, solo informa y conecta.
+
+---
+
+## **1. CATÁLOGO GENERAL DE TOURS (INFORMACIÓN BÁSICA)**
+
+### **1.1 Tours Acuáticos**
+```
+ISLAS DEL ROSARIO:
+- Precio: Desde $80.000 por persona
+- Incluye: Transporte, almuerzo básico
+- Duración: Día completo
+- Múltiples opciones disponibles
+
+PLAYA BLANCA Y BARÚ:
+- Precio: Desde $90.000 por persona  
+- Incluye: Transporte, almuerzo
+- Duración: Día completo
+- Acceso por mar o tierra
+
+EXPERIENCIAS VIP EN PLAYAS:
+- Beach clubs exclusivos
+- Precios desde $140.000 por persona
+- Incluye servicios premium
+```
+
+### **1.2 Tours Terrestres**
+```
+CITY TOUR HISTÓRICO:
+- Precio: Desde $50.000 por persona
+- Duración: 3-4 horas
+- Incluye: Guía especializado
+
+CHIVA RUMBERA NOCTURNA:
+- Precio: Desde $30.000 por persona
+- Horario: Nocturno
+- Incluye: Música y animación
+
+TOUR CULTURAL PALENQUE:
+- Precio: Desde $120.000 por persona
+- Duración: Día completo
+- Incluye: Transporte y guía cultural
+```
+
+### **1.3 Tours de Bahía**
+```
+ATARDECER EN LA BAHÍA:
+- Varios tipos de embarcaciones
+- Precios desde $70.000 por persona
+- Incluye: Bebidas y música
+- Duración: 2-3 horas
+```
+
+### **1.4 Información de Contacto Especializado**
+```
+WHATSAPP_TOURS: 300 830 4905
+ESPECIALISTA: Equipo dedicado de tours
+RESERVAS: Mínimo 24 horas anticipación
+```
+
+---
+
+## **2. PROTOCOLO DEL BOT PARA TOURS**
+
+### **2.1 Principios de Comunicación**
+- **NO vender directamente** - Solo informar opciones generales
+- **NO dar precios exactos** - Usar "desde $X"
+- **NO detallar itinerarios** - Solo información básica
+- **SIEMPRE escalar** - Al WhatsApp de tours para detalles
+
+### **2.2 Proceso de Manejo de Consultas**
+1. Detectar interés en tours
+2. Proporcionar información general
+3. Informar sobre WhatsApp especializado
+4. Escalar con función si cliente insiste
+
+### **2.3 Variables del Sistema**
+```
+[WHATSAPP_TOURS] = "300 830 4905"
+[PRECIO_DESDE] = Precio mínimo orientativo
+[TIPO_TOUR] = Categoría general del tour
+[REQUIERE_ESCALAMIENTO] = true (siempre para tours)
+```
+
+---
+
+## **3. MOMENTOS PARA MENCIONAR TOURS**
+
+### **3.1 Post-Confirmación de Reserva (30-60 min después)**
+**CONDICIONES:**
+- Cliente ya confirmó su reserva
+- Pasó tiempo prudencial
+- Tono informativo, no vendedor
+
+**COMUNICACIÓN:**
+"Por cierto, también coordinamos tours en Cartagena si te interesa conocer las islas o la ciudad. Te puedo compartir el contacto de nuestro equipo de tours cuando quieras 🏝️"
+
+### **3.2 Durante Early Check-in (Si hay espera)**
+**CONDICIONES:**
+- Tiempo de espera > 3 horas
+- Cliente llega muy temprano
+- Presentar como opción, no imposición
+
+**COMUNICACIÓN:**
+"Mientras esperas el check-in, algunas personas aprovechan para hacer un city tour. Si te interesa, tenemos opciones desde $50.000 por persona. ¿Quieres que te pase el contacto de tours?"
+
+### **3.3 Mensaje Pre-Llegada (2-3 días antes)**
+**CONDICIONES:**
+- Incluir en tips generales
+- Tono de servicio adicional disponible
+- No presionar
+
+**COMUNICACIÓN:**
+"También coordinamos tours a las islas y otros lugares si quieres explorar Cartagena. Cualquier cosa me dices y te paso el contacto 😊"
+
+### **3.4 Cuando Cliente Pregunta Directamente**
+**ACCIÓN INMEDIATA:**
+- Responder con información general
+- Ofrecer WhatsApp de tours
+- Si insiste en detalles → escalate_to_human("tour_inquiry")
+
+---
+
+## **4. RESPUESTAS AUTOMÁTICAS DEL BOT**
+
+### **4.1 Consulta General sobre Tours**
+```
+"¡Claro! Manejamos varios tipos de tours:
+
+🏝️ **Tours a Islas**: Rosario, Barú, Playa Blanca (desde $80.000/persona)
+🏛️ **City Tours**: Histórico, cultural (desde $50.000/persona)
+🌅 **Tours de Bahía**: Atardecer, nocturnos (desde $70.000/persona)
+🎉 **Chiva Rumbera**: Fiesta nocturna (desde $30.000/persona)
+
+Los precios varían según la temporada y el tipo de experiencia. 
+
+Te voy a pasar el WhatsApp de nuestro equipo de tours para que te den todos los detalles: 300 830 4905 📱"
+```
+
+### **4.2 Consulta Específica de un Tour**
+```
+"El tour a [LUGAR] es muy popular. Los precios empiezan desde $[PRECIO_DESDE] por persona e incluyen transporte y almuerzo básico.
+
+Hay varias opciones y horarios disponibles. Te paso el contacto de tours para que te expliquen todo en detalle: 300 830 4905 😊"
+```
+
+### **4.3 Solicitud de Reserva de Tour**
+```
+"¡Perfecto! Para reservar tours, nuestro equipo especializado te va a ayudar mejor.
+
+Te voy a conectar con ellos por WhatsApp: 300 830 4905
+
+Ellos manejan toda la logística, horarios y pueden personalizar la experiencia según lo que busques."
+
+[Si insiste: escalate_to_human("tour_booking_request")]
+```
+
+### **4.4 Preguntas sobre Precios Exactos**
+```
+"Los precios de los tours varían según:
+- La temporada
+- El número de personas
+- Los servicios incluidos
+- El tipo de experiencia (básica o VIP)
+
+Por eso es mejor que hables directamente con el equipo de tours al 300 830 4905. Ellos te pueden dar precios exactos y opciones personalizadas 📱"
+```
+
+---
+
+## **5. SITUACIONES QUE REQUIEREN ESCALAMIENTO**
+
+### **5.1 Escalamiento Automático**
+```
+TRIGGERS:
+- Cliente insiste en reservar tour por este chat
+- Solicita detalles específicos de itinerarios
+- Pregunta por tours no mencionados
+- Grupos grandes (10+ personas)
+- Solicitudes de tours privados o personalizados
+
+ACCIÓN: escalate_to_human("tour_complex_request", {
+  "type": "tipo_de_solicitud",
+  "details": "detalles_específicos"
+})
+```
+
+### **5.2 Comunicación de Escalamiento**
+```
+"Para darte la mejor información sobre ese tour específico, te voy a conectar con nuestro especialista de tours. Un momento por favor..."
+```
+
+---
+
+## **6. LO QUE EL BOT NO DEBE HACER**
+
+### **6.1 Prohibiciones Estrictas**
+- ❌ NO cotizar tours específicos
+- ❌ NO prometer disponibilidad
+- ❌ NO detallar itinerarios completos
+- ❌ NO procesar pagos de tours
+- ❌ NO confirmar horarios exactos
+- ❌ NO negociar precios de tours
+
+### **6.2 Siempre Derivar a Tours Para:**
+- Cotizaciones detalladas
+- Disponibilidad específica
+- Personalización de experiencias
+- Reservas y pagos
+- Cambios o cancelaciones
+- Información de punto de encuentro
+
+---
+
+## **7. INTEGRACIÓN CON OTROS SERVICIOS**
+
+### **7.1 Con Early Check-in**
+Si cliente llega temprano y pregunta qué hacer:
+1. Ofrecer guardado de equipaje
+2. Mencionar opción de tours
+3. No presionar, solo informar
+
+### **7.2 Con Grupos**
+Si es reserva grupal:
+- Mencionar que hay tours para grupos
+- Indicar que hay precios especiales
+- Derivar a WhatsApp de tours
+
+### **7.3 Con Confirmación de Reserva**
+- Esperar tiempo prudencial (30-60 min)
+- Mensaje separado sobre tours
+- Tono de información adicional
+
+---
+
+## **8. MANEJO DE OBJECIONES**
+
+### **8.1 "¿Por qué no me das los precios exactos?"**
+```
+"Los tours tienen diferentes opciones y los precios varían según lo que incluyan. El equipo de tours te puede armar algo perfecto para tu presupuesto y gustos. ¿Te paso el contacto?"
+```
+
+### **8.2 "¿No puedes reservar aquí mismo?"**
+```
+"Los tours los maneja un equipo especializado que conoce todos los detalles, horarios y disponibilidad. Te van a atender súper bien por WhatsApp: 300 830 4905 📱"
+```
+
+### **8.3 "Solo quiero saber si hay disponibilidad"**
+```
+"La disponibilidad de tours cambia diariamente. El equipo de tours tiene la información actualizada al minuto. ¿Te comparto el contacto?"
+```
+
+---
+
+## **9. REFERENCIAS CRUZADAS**
+
+### **9.1 Para Datos de Contacto**
+**CONSULTAR:** `05_DATOS_CORPORATIVOS_CONTACTO.txt`
+- WhatsApp principal de reservas
+- Horarios de atención
+
+### **9.2 Para Servicios del Apartamento**
+**CONSULTAR:** `04_CARGOS_SERVICIOS_TARIFARIOS.txt`
+- Early check-in y guardado de equipaje
+- Coordinación de horarios
+
+### **9.3 Para Comunicación Natural**
+**APLICAR:** `17_COMUNICACION_NATURAL.txt`
+- Tono conversacional
+- Uso moderado de emojis
+- Primera persona empática
+
+---
+
+## **NOTA ARQUITECTÓNICA CRÍTICA**
+
+Este archivo contiene EXCLUSIVAMENTE:
+- Información general de tours (no detallada)
+- Protocolo de derivación a especialistas
+- Respuestas automáticas informativas
+- Triggers de escalamiento para tours
+
+**NO CONTIENE:**
+- Precios exactos de tours
+- Itinerarios detallados
+- Proceso de reserva de tours
+- Políticas de cancelación de tours
+
+**TRANSFORMACIÓN BOT:**
+- ✅ Bot solo informa, no vende tours
+- ✅ Siempre deriva a WhatsApp especializado
+- ✅ Precios orientativos con "desde"
+- ✅ Escalamiento automático para solicitudes complejas
+- ✅ Separación clara entre reservas y tours
+
+Esta arquitectura garantiza que el bot mantenga su función principal (reservas de apartamentos) mientras informa sobre tours sin complicar su operación.

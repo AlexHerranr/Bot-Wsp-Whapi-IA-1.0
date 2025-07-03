@@ -1,0 +1,293 @@
+# 12_CHECKOUT_AUTOMATIZADO.txt
+
+**Versión:** 3.0  
+**Responsable:** Sistema de Conocimiento  
+**Keywords:** checkout, salida, recordatorio, automatico, objetos, bot, seguimiento  
+**Archivos relacionados:** 09_LLEGADAS_SALIDAS_ESPECIALES.txt (horarios especiales), 15_PLANTILLAS_RESPUESTAS.txt, 04_DATOS_CORPORATIVOS_CONTACTO.txt, 14_POLITICAS_OPERATIVAS.txt
+
+---
+
+## **PROPÓSITO DEL ARCHIVO**
+Sistema automatizado de gestión de checkout estándar para el bot autónomo. Define recordatorios automáticos, proceso de salida y seguimiento post-estadía. **Para late checkout y horarios especiales, ver 09_LLEGADAS_SALIDAS_ESPECIALES.txt**
+
+---
+
+## **1. ARQUITECTURA DEL PROCESO AUTOMATIZADO**
+
+### **1.1 Fases del Checkout Automático**
+```
+FASE 1: PRE-CHECKOUT AUTOMÁTICO (24h antes)
+    ├─ send_checkout_reminder("24h", booking_id)
+    └─ send_checkout_reminder("day_of", booking_id) si no hay respuesta
+
+FASE 2: CHECKOUT ACTIVO (Día de salida)
+    ├─ Coordinación automática según respuesta
+    ├─ Opciones de entrega de llaves
+    └─ notify_housekeeping_checkout(apartment, time)
+
+FASE 3: POST-CHECKOUT AUTOMÁTICO (24-48h después)
+    ├─ send_review_request(booking_id, platform)
+    └─ notify_lost_items(item_description, guest_contact) si aplica
+```
+
+### **1.2 Functions Disponibles del Bot**
+```
+send_checkout_reminder(type, booking_id)
+notify_housekeeping_checkout(apartment, expected_time)
+send_review_request(booking_id, platform)
+notify_lost_items(item_description, guest_contact)
+```
+
+---
+
+## **2. SISTEMA DE RECORDATORIOS AUTOMÁTICOS**
+
+### **2.1 Recordatorio 24 Horas Antes**
+**TRIGGER AUTOMÁTICO:** T-24h antes del checkout
+**FUNCTION:** `send_checkout_reminder("24h", booking_id)`
+
+**MENSAJE AUTOMÁTICO DEL BOT:**
+```
+"Hola [NOMBRE], espero que estés disfrutando tu estadía 😊
+
+Mañana es tu día de salida:
+• Hora de checkout: 12:00 PM  
+• ¿A qué hora aproximada saldrás?
+
+Así coordino para que todo sea fácil."
+```
+
+### **2.2 Recordatorio Día de Salida**
+**TRIGGER:** 11:00 AM si NO hubo respuesta al primer recordatorio
+**FUNCTION:** `send_checkout_reminder("day_of", booking_id)`
+
+**MENSAJE AUTOMÁTICO DEL BOT:**
+```
+"Hola [NOMBRE] 😊
+
+Recordatorio: hoy es tu checkout antes de las 12:00 PM.
+
+*Opciones para entregar las llaves:*
+• Personal en oficina 1706
+• Recepción del edificio
+
+¿Ya sabes a qué hora saldrás?"
+```
+
+### **2.3 Procesamiento de Respuestas**
+```
+SI cliente_responde_hora:
+    ejecutar notify_housekeeping_checkout(apartment, time)
+    confirmar "Perfecto, coordinado para las [HORA]"
+    
+SI cliente_no_responde:
+    informar opciones de entrega estándar
+    mantener alerta para coordinación reactiva
+```
+
+---
+
+## **3. COMUNICACIÓN AUTOMÁTICA SOBRE CHECKOUT**
+
+### **3.1 Cuando Cliente Pregunta Proceso**
+**RESPUESTA AUTOMÁTICA DEL BOT:**
+```
+"¡Super fácil! El checkout es así:
+
+• Hora límite: 12:00 PM
+• Llaves: En oficina 1706 o recepción
+• Revisa no olvidar nada 😊
+
+¿A qué hora piensas salir?"
+```
+
+### **3.2 Detección de Casos Especiales**
+```
+PATRONES_LATE_CHECKOUT = [
+    "puedo salir más tarde",
+    "salir después de las 12",
+    "late checkout",
+    "extender la salida"
+]
+
+SI detecta_late_checkout:
+    REDIRIGIR a lógica de 09_LLEGADAS_SALIDAS_ESPECIALES.txt
+```
+
+---
+
+## **4. GESTIÓN AUTOMÁTICA DE OBJETOS OLVIDADOS**
+
+### **4.1 Cuando se Reporta Objeto Olvidado**
+**FUNCTION:** `notify_lost_items(item_description, guest_contact)`
+
+**PROTOCOLO AUTOMÁTICO:**
+```
+1. Bot registra descripción del objeto
+2. Ejecuta notify_lost_items() para alertar a personal
+3. Informa opciones al cliente
+4. Coordina solución
+```
+
+### **4.2 Comunicación con Cliente**
+```
+"Entiendo, olvidaste [OBJETO].
+
+Voy a coordinar para buscarlo. 
+
+*Opciones si lo encontramos:*
+• Recogerlo en oficina 1706
+• Enviártelo (con costo de envío)
+• Guardarlo para tu próxima visita
+
+Te confirmo en cuanto tengamos noticias."
+```
+
+---
+
+## **5. SEGUIMIENTO POST-CHECKOUT AUTOMÁTICO**
+
+### **5.1 Solicitud de Reseña (24-48h después)**
+**FUNCTION:** `send_review_request(booking_id, platform)`
+
+**MENSAJE AUTOMÁTICO:**
+```
+"Hola [NOMBRE] 👋
+
+Espero que hayas llegado bien a casa.
+
+¿Cómo estuvo tu experiencia con nosotros? Tu opinión nos ayuda mucho:
+
+[ENLACE_RESEÑA_PLATFORM]
+
+¡Gracias por elegirnos! 🌊"
+```
+
+### **5.2 Incentivos Automáticos**
+```
+"Como agradecimiento por tu reseña:
+• 10% descuento en tu próxima estadía
+• Early check-in gratis (según disponibilidad)
+
+¡Esperamos verte pronto!"
+```
+
+---
+
+## **6. CASOS QUE REQUIEREN ESCALAMIENTO**
+
+### **6.1 Situaciones para escalate_to_human()**
+```
+- Cliente se niega a desocupar
+- Daños significativos reportados
+- Objetos de alto valor olvidados
+- Conflictos durante checkout
+- Solicitudes complejas no estándar
+```
+
+### **6.2 Protocolo de Escalamiento**
+```
+FUNCIÓN: escalate_to_human("checkout_issue", {
+    "issue_type": "[TIPO_PROBLEMA]",
+    "apartment": "[CÓDIGO]",
+    "guest": "[NOMBRE]",
+    "urgency": "high"
+})
+
+MENSAJE AL CLIENTE:
+"Déjame conectarte con alguien del equipo para resolver esto mejor."
+```
+
+---
+
+## **7. INTEGRACIÓN CON OTROS SISTEMAS**
+
+### **7.1 Con Llegadas y Salidas Especiales**
+**VER:** `09_LLEGADAS_SALIDAS_ESPECIALES.txt`
+- Late checkout (después 12:00 PM)
+- Checkout nocturno (después 8:00 PM)
+- Coordinación de horarios especiales
+
+### **7.2 Con Políticas Operativas**
+**VER:** `14_POLITICAS_OPERATIVAS.txt`
+- Horario estándar: 12:00 PM
+- Políticas de llaves
+- Procedimientos generales
+
+### **7.3 Con Plantillas**
+**VER:** `15_PLANTILLAS_RESPUESTAS.txt`
+- Templates de mensajes adaptados
+- Comunicación post-estadía
+
+---
+
+## **8. VARIABLES DEL SISTEMA AUTOMÁTICO**
+
+### **8.1 Variables de Control**
+```
+[CHECKOUT_TIME] = "12:00"
+[REMINDER_24H_SENT] = Boolean
+[REMINDER_DAY_SENT] = Boolean
+[CHECKOUT_COMPLETED] = Boolean
+[REVIEW_REQUESTED] = Boolean
+```
+
+### **8.2 Variables de Functions**
+```
+[LAST_FUNCTION_CALLED] = Function name
+[FUNCTION_RESPONSE] = Response status
+[COORDINATION_STATUS] = "pending" | "confirmed" | "completed"
+```
+
+---
+
+## **9. CASOS DE USO DEL BOT**
+
+### **9.1 Checkout Estándar Automatizado**
+```
+TRIGGER: T-24h antes checkout
+BOT: Ejecuta send_checkout_reminder("24h", booking_123)
+CLIENTE: "Salgo a las 10 AM"
+BOT: Ejecuta notify_housekeeping_checkout("1722A", "10:00")
+BOT: "Perfecto, todo coordinado para las 10 AM"
+DÍA CHECKOUT: Cliente sale sin problemas
+POST: Bot ejecuta send_review_request(booking_123, "direct")
+```
+
+### **9.2 Sin Respuesta a Recordatorios**
+```
+T-24h: Bot envía recordatorio - Sin respuesta
+DÍA CHECKOUT 11AM: Bot envía segundo recordatorio
+CLIENTE: No responde
+BOT: Mantiene opciones estándar disponibles
+RESULTADO: Cliente entrega llaves en recepción
+```
+
+### **9.3 Objeto Olvidado**
+```
+POST-CHECKOUT: "Olvidé mi cargador en el apartamento"
+BOT: Ejecuta notify_lost_items("cargador", contact_info)
+BOT: "Voy a coordinar la búsqueda, te confirmo pronto"
+PERSONAL: Encuentra objeto
+BOT: "¡Encontramos tu cargador! ¿Cómo prefieres recuperarlo?"
+```
+
+---
+
+## **NOTA ARQUITECTÓNICA CRÍTICA**
+
+Este archivo define EXCLUSIVAMENTE el proceso de checkout ESTÁNDAR automatizado:
+
+**CARACTERÍSTICAS DEL BOT:**
+- ✅ Recordatorios completamente automáticos
+- ✅ Function calling para coordinación sin humanos
+- ✅ Gestión de objetos olvidados
+- ✅ Seguimiento post-estadía automatizado
+- ✅ Escalamiento solo para casos complejos
+
+**NO DUPLICA:**
+- ❌ Late checkout → Ver 09_LLEGADAS_SALIDAS_ESPECIALES.txt
+- ❌ Checkout nocturno → Ver 09_LLEGADAS_SALIDAS_ESPECIALES.txt  
+- ❌ Precios de servicios → Ver 03_CARGOS_SERVICIOS_TARIFARIOS.txt
+
+**ENFOQUE:** Automatización completa del proceso estándar de checkout, dejando los casos especiales al archivo 09 para evitar redundancia.
