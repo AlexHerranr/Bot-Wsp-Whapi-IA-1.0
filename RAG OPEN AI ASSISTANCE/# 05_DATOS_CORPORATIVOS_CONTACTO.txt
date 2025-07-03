@@ -328,7 +328,7 @@ CARGOS_SERVICIOS → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
 ```
 PROTOCOLO_CONFIANZA → Ver 11_PROTOCOLO_CONFIANZA.txt
 LLEGADAS_ESPECIALES → Ver 09_LLEGADAS_ESPECIALES.txt
-POLÍTICAS_PAGO → Ver 14_POLITICAS_OPERATIVAS.txt
+POLÍTICAS_PAGO → Ver 12_POLITICAS_OPERATIVAS.txt
 ```
 
 ### **8.3 Para Inventario**
@@ -352,6 +352,13 @@ Este archivo contiene EXCLUSIVAMENTE:
 - Tarifas de alojamiento → Ver 02_TARIFAS_TEMPORADAS.txt
 - Cargos de servicios → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
 - Códigos de apartamentos → Ver 03_INVENTARIO_APARTAMENTOS.txt
-- Políticas operativas → Ver 14_POLITICAS_OPERATIVAS.txt
+- Políticas operativas → Ver 12_POLITICAS_OPERATIVAS.txt
 
 Esta arquitectura garantiza que el bot pueda proporcionar toda la información corporativa de forma natural, confiable y completa.
+
+### **11.1 Integraciones con Otros Archivos**
+```
+COMUNICACIÓN_RESPUESTAS → Ver 13_PLANTILLAS_RESPUESTAS.txt
+PROTOCOLO_CONFIANZA → Ver 09_PROTOCOLO_CONFIANZA.txt
+- Políticas operativas → Ver 12_POLITICAS_OPERATIVAS.txt
+```

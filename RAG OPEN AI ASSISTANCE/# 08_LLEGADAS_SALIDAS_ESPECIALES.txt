@@ -1,16 +1,16 @@
-# 09_LLEGADAS_SALIDAS_ESPECIALES.txt
+# 08_LLEGADAS_SALIDAS_ESPECIALES.txt
 
 **Sistema de Gestión Automática para Horarios No Estándar**
 
 **Versión:** 3.0  
 **Responsable:** Sistema de Conocimiento  
 **Keywords:** llegada, salida, tardía, nocturna, madrugada, procedimiento, coordinación, bot, automatico  
-**Archivos relacionados:** 03_CARGOS_SERVICIOS_TARIFARIOS.txt (precios), 14_POLITICAS_OPERATIVAS.txt (políticas), 04_DATOS_CORPORATIVOS_CONTACTO.txt (contactos)
+**Archivos relacionados:** 04_CARGOS_SERVICIOS_TARIFARIOS.txt (precios), 12_POLITICAS_OPERATIVAS.txt (políticas), 05_DATOS_CORPORATIVOS_CONTACTO.txt (contactos)
 
 ---
 
 ## **PROPÓSITO DEL ARCHIVO**
-Procedimientos operativos automáticos para que el bot gestione llegadas y salidas fuera de horario estándar. Incluye coordinación automática con function calling y comunicación optimizada para móvil. **Los precios están en 03_CARGOS_SERVICIOS_TARIFARIOS.txt**
+Procedimientos operativos automáticos para que el bot gestione llegadas y salidas fuera de horario estándar. Incluye coordinación automática con function calling y comunicación optimizada para móvil. **Los precios están en 04_CARGOS_SERVICIOS_TARIFARIOS.txt**
 
 ---
 
@@ -40,10 +40,10 @@ PATRONES_DETECCIÓN = [
 ### **1.3 Nivel de Coordinación Requerida**
 ```
 ESTÁNDAR: Sin coordinación especial
-NOCTURNA: Coordinación básica (notify_check_arrival con type "late_arrival")
-MADRUGADA: Coordinación avanzada (coordinate_special_access + notify_check_arrival)
-LATE_CHECKOUT: Coordinación según disponibilidad (notify_check_arrival con type "late_checkout")
-EARLY_CHECKIN: Opciones múltiples (notify_check_arrival con type "early")
+NOCTURNA: Coordinación básica (escalate_to_human("late_arrival"))
+MADRUGADA: Coordinación avanzada (escalate_to_human("special_access"))
+LATE_CHECKOUT: Coordinación según disponibilidad (escalate_to_human("late_checkout"))
+EARLY_CHECKIN: Opciones múltiples (escalate_to_human("early_checkin"))
 ```
 
 ---
@@ -52,25 +52,17 @@ EARLY_CHECKIN: Opciones múltiples (notify_check_arrival con type "early")
 
 ### **2.1 Functions Disponibles**
 ```
-notify_check_arrival(booking_info, arrival_time, type)
-coordinate_special_access(guest_info, building_reception_email)
 escalate_to_human(reason, context, urgency_level)
 ```
 
 ### **2.2 Cuándo Usar Cada Function**
 ```
-notify_check_arrival: 
-- Función unificada para llegadas y salidas especiales
-- type: "early" (6AM-2:59PM), "late_arrival" (7PM-11PM), "late_checkout" (12:01PM-8PM)
-- "madrugada" (11PM-6AM), "standard" (horarios normales)
-
-coordinate_special_access:
-- Llegadas de madrugada (11 PM - 6 AM)
-- Autorización vía email a recepción edificio
-
 escalate_to_human:
 - Casos complejos que requieren supervisión humana
 - Llegadas extremas con complicaciones
+- Coordinación de horarios especiales
+- Autorización vía email a recepción edificio
+- Gestión unificada para llegadas y salidas especiales
 ```
 
 ---
@@ -82,9 +74,9 @@ escalate_to_human:
 #### **Protocolo del Bot**
 ```
 1. Detectar hora de llegada nocturna
-2. Verificar costo en 03_CARGOS_SERVICIOS_TARIFARIOS.txt
+2. Verificar costo en 04_CARGOS_SERVICIOS_TARIFARIOS.txt
 3. Informar al cliente sobre coordinación
-4. Ejecutar: notify_check_arrival(booking_info, arrival_time, "late_arrival")
+4. Ejecutar: escalate_to_human("late_arrival", {booking_info, arrival_time})
 5. Confirmar coordinación completada
 ```
 
@@ -105,9 +97,9 @@ El costo adicional es de $[PRECIO] por la coordinación especial."
 #### **Protocolo del Bot**
 ```
 1. Detectar hora de llegada madrugada
-2. Verificar costo en 03_CARGOS_SERVICIOS_TARIFARIOS.txt
-3. Ejecutar: coordinate_special_access(guest_info, building_email)
-4. Ejecutar: notify_check_arrival(booking_info, arrival_time, "madrugada")
+2. Verificar costo en 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+3. Ejecutar: escalate_to_human("special_access", {guest_info, building_email})
+4. Ejecutar: escalate_to_human("late_arrival", {booking_info, arrival_time, type: "madrugada"})
 5. Informar procedimiento de llaves en recepción
 6. Confirmar autorización enviada
 ```
@@ -131,9 +123,9 @@ El costo adicional es de $[PRECIO] por la coordinación especial."
 #### **Protocolo del Bot**
 ```
 1. Detectar hora de llegada temprana
-2. Consultar precios en 03_CARGOS_SERVICIOS_TARIFARIOS.txt
+2. Consultar precios en 04_CARGOS_SERVICIOS_TARIFARIOS.txt
 3. Presentar opciones al cliente
-4. Según decisión: Ejecutar notify_check_arrival(booking_info, arrival_time, "early")
+4. Según decisión: Ejecutar escalate_to_human("early_checkin", {booking_info, arrival_time})
 5. Confirmar coordinación
 ```
 
@@ -162,8 +154,8 @@ El costo adicional es de $[PRECIO] por la coordinación especial."
 ```
 1. Detectar solicitud de salida tardía
 2. Verificar disponibilidad del apartamento
-3. Verificar costo en 03_CARGOS_SERVICIOS_TARIFARIOS.txt
-4. Ejecutar: notify_check_arrival(booking_info, checkout_time, "late_checkout")
+3. Verificar costo en 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+4. Ejecutar: escalate_to_human("late_checkout", {booking_info, checkout_time})
 5. Confirmar coordinación
 ```
 
@@ -285,7 +277,7 @@ SI edificio_no_autoriza:
 
 ### **7.1 Para Información de Precios**
 ```
-TODOS_LOS_PRECIOS → Ver 03_CARGOS_SERVICIOS_TARIFARIOS.txt
+TODOS_LOS_PRECIOS → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
 
 El bot consulta automáticamente:
 • Early check-in según horario
@@ -296,7 +288,7 @@ El bot consulta automáticamente:
 
 ### **7.2 Para Datos de Coordinación**
 ```
-CONTACTOS_COORDINACIÓN → Ver 04_DATOS_CORPORATIVOS_CONTACTO.txt
+CONTACTOS_COORDINACIÓN → Ver 05_DATOS_CORPORATIVOS_CONTACTO.txt
 • WhatsApp principal: 3023371476
 • Email edificio: copropiedadreservaconquistador@gmail.com
 • Oficina: 1706
@@ -304,7 +296,7 @@ CONTACTOS_COORDINACIÓN → Ver 04_DATOS_CORPORATIVOS_CONTACTO.txt
 
 ### **7.3 Para Políticas Generales**
 ```
-HORARIOS_ESTÁNDAR → Ver 14_POLITICAS_OPERATIVAS.txt
+HORARIOS_ESTÁNDAR → Ver 12_POLITICAS_OPERATIVAS.txt
 • Check-in: 3:00 PM
 • Check-out: 12:00 PM
 • Horario oficina: 9:00 AM - 6:00 PM
@@ -319,7 +311,7 @@ HORARIOS_ESTÁNDAR → Ver 14_POLITICAS_OPERATIVAS.txt
 [HORA_LLEGADA] = Hora detectada automáticamente
 [TIPO_COORDINACIÓN] = "early" | "late_arrival" | "late_checkout" | "madrugada" | "standard"
 [COORDINACIÓN_REQUERIDA] = Boolean
-[FUNCTION_EJECUTADA] = "notify_check_arrival" | "coordinate_special_access" | "escalate_to_human"
+[FUNCTION_EJECUTADA] = "escalate_to_human"
 ```
 
 ### **8.2 Variables de Comunicación**
@@ -338,8 +330,8 @@ HORARIOS_ESTÁNDAR → Ver 14_POLITICAS_OPERATIVAS.txt
 CLIENTE: "Llego a las 9 PM"
 DETECCIÓN BOT: "21:00" → TIPO "late_arrival"
 ACCIÓN BOT: 
-1. Consultar precio en archivo 03
-2. Ejecutar notify_check_arrival(info, "21:00", "late_arrival")
+1. Consultar precio en archivo 04
+2. Ejecutar escalate_to_human("late_arrival", {info, arrival_time: "21:00"})
 3. Informar procedimiento y costo al cliente
 RESPUESTA: Template de confirmación nocturna
 ```
@@ -351,7 +343,7 @@ DETECCIÓN BOT: "10:00" → TIPO "early"
 ACCIÓN BOT:
 1. Consultar precios early vs guardado equipaje
 2. Presentar ambas opciones al cliente
-3. Esperar decisión para coordinar con notify_check_arrival()
+3. Esperar decisión para coordinar con escalate_to_human("early_checkin", context)
 RESPUESTA: Template de opciones early check-in
 ```
 
@@ -361,8 +353,8 @@ CLIENTE: "¿Puedo salir a las 3 PM?"
 DETECCIÓN BOT: "15:00" → TIPO "late_checkout"
 ACCIÓN BOT:
 1. Verificar disponibilidad del apartamento
-2. Consultar precio en archivo 03
-3. Ejecutar notify_check_arrival(booking_info, "15:00", "late_checkout")
+2. Consultar precio en archivo 04
+3. Ejecutar escalate_to_human("late_checkout", {booking_info, checkout_time: "15:00"})
 RESPUESTA: Confirmación o alternativas
 ```
 
@@ -377,10 +369,10 @@ Este archivo contiene EXCLUSIVAMENTE:
 - Protocolos de escalamiento cuando sea necesario
 
 **NO CONTIENE:**
-- Precios de servicios → Ver 03_CARGOS_SERVICIOS_TARIFARIOS.txt
-- Datos de contacto → Ver 04_DATOS_CORPORATIVOS_CONTACTO.txt
-- Políticas generales → Ver 14_POLITICAS_OPERATIVAS.txt
-- Templates detallados → Ver 15_PLANTILLAS_RESPUESTAS.txt
+- Precios de servicios → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+- Datos de contacto → Ver 05_DATOS_CORPORATIVOS_CONTACTO.txt
+- Políticas generales → Ver 12_POLITICAS_OPERATIVAS.txt
+- Templates detallados → Ver 13_PLANTILLAS_RESPUESTAS.txt
 
 **OPTIMIZACIONES BOT:**
 - ✅ Detección automática de horarios especiales

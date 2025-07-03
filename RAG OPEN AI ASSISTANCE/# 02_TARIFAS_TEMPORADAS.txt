@@ -1,10 +1,10 @@
-# 01_TARIFAS_TEMPORADAS.txt
+# 02_TARIFAS_TEMPORADAS.txt
 
 **Última actualización:** 2025-01-01  
 **Versión:** 3.0  
 **Responsable:** Sistema de Conocimiento  
 **Keywords:** tarifa, precio, temporada, calendario, costo, valor, descuento, automático, bot  
-**Archivos relacionados:** 03_CARGOS_SERVICIOS_TARIFARIOS.txt, 14_POLITICAS_OPERATIVAS.txt
+**Archivos relacionados:** 04_CARGOS_SERVICIOS_TARIFARIOS.txt, 12_POLITICAS_OPERATIVAS.txt
 
 ---
 
@@ -191,13 +191,13 @@ Total: [NOCHES] noches × $[PRECIO_FINAL] = $[TOTAL_CON_DESCUENTO]
 ### **4.1 Jerarquía de Autoridad del Bot**
 1. **Matriz de precios base** (Prioridad máxima)
 2. **Sistema automático de descuentos** (Segunda prioridad)  
-3. **Políticas operativas** (Ver 14_POLITICAS_OPERATIVAS.txt)
+3. **Políticas operativas** (Ver 12_POLITICAS_OPERATIVAS.txt)
 4. **Escalamiento a humano** (Para casos muy complejos)
 
 ### **4.2 Validación Cruzada Automática**
-- **Para servicios adicionales:** Consultar 03_CARGOS_SERVICIOS_TARIFARIOS.txt
-- **Para políticas operativas:** Consultar 14_POLITICAS_OPERATIVAS.txt
-- **Para apartamentos válidos:** Consultar 02_INVENTARIO_APARTAMENTOS.txt
+- **Para servicios adicionales:** Consultar 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+- **Para políticas operativas:** Consultar 12_POLITICAS_OPERATIVAS.txt
+- **Para apartamentos válidos:** Consultar 03_INVENTARIO_APARTAMENTOS.txt
 
 ### **4.3 Variables de Sistema del Bot**
 ```
@@ -254,19 +254,6 @@ PRECIO: $650.000 por noche (temporada alta)
 RESULTADO BOT: 
 "Tu estadía abarca temporada alta (fin de año):
 • 4 noches × $650.000 = $2.600.000"
-```
-
-### **5.4 Promoción Estacional Automática**
-```
-ENTRADA BOT: Fechas enero 2026, apartaestudio
-DETECCIÓN AUTOMÁTICA: 
-- Temporada Normal
-- Mes enero → promoción especial 10%
-APLICACIÓN: Descuento automático 10%
-RESULTADO BOT:
-"¡Perfecto! Enero tiene promoción especial:
-• Descuento por temporada baja: 10%
-• Precio final: $153.000/noche"
 ```
 
 ### **5.4 Promoción Estacional Automática**
@@ -374,10 +361,10 @@ Este archivo contiene EXCLUSIVAMENTE:
 - Reglas de aplicación temporal automática
 
 **NO CONTIENE:**
-- Cargos adicionales → Ver 03_CARGOS_SERVICIOS_TARIFARIOS.txt
-- Información bancaria → Ver 04_DATOS_CORPORATIVOS_CONTACTO.txt
-- Inventario de apartamentos → Ver 02_INVENTARIO_APARTAMENTOS.txt
-- Políticas operativas → Ver 14_POLITICAS_OPERATIVAS.txt
+- Cargos adicionales → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+- Información bancaria → Ver 05_DATOS_CORPORATIVOS_CONTACTO.txt
+- Inventario de apartamentos → Ver 03_INVENTARIO_APARTAMENTOS.txt
+- Políticas operativas → Ver 12_POLITICAS_OPERATIVAS.txt
 
 **TRANSFORMACIÓN BOT:**
 - ✅ Sistema automático de descuentos inteligente

@@ -3,7 +3,7 @@
 **Versión:** 3.0  
 **Responsable:** Sistema de Conocimiento  
 **Keywords:** checkout, salida, recordatorio, automatico, objetos, bot, seguimiento  
-**Archivos relacionados:** 09_LLEGADAS_SALIDAS_ESPECIALES.txt (horarios especiales), 15_PLANTILLAS_RESPUESTAS.txt, 04_DATOS_CORPORATIVOS_CONTACTO.txt, 14_POLITICAS_OPERATIVAS.txt
+**Archivos relacionados:** 08_LLEGADAS_SALIDAS_ESPECIALES.txt (horarios especiales), 13_PLANTILLAS_RESPUESTAS.txt, 05_DATOS_CORPORATIVOS_CONTACTO.txt, 12_POLITICAS_OPERATIVAS.txt
 
 ---
 
@@ -209,7 +209,7 @@ MENSAJE AL CLIENTE:
 - Coordinación de horarios especiales
 
 ### **7.2 Con Políticas Operativas**
-**VER:** `14_POLITICAS_OPERATIVAS.txt`
+**VER:** `12_POLITICAS_OPERATIVAS.txt`
 - Horario estándar: 12:00 PM
 - Políticas de llaves
 - Procedimientos generales

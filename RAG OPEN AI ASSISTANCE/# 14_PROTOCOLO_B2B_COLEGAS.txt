@@ -1,11 +1,11 @@
-# 16_PROTOCOLO_B2B_COLEGAS.txt
+# 14_PROTOCOLO_B2B_COLEGAS.txt
 
 **Sistema Automático de Gestión B2B para Agentes y Agencias**
 
 **Versión:** 3.0  
 **Responsable:** Sistema de Conocimiento  
 **Keywords:** b2b, agente, colega, agencia, comercial, neto, volumen, bot, automatico  
-**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 03_INVENTARIO_APARTAMENTOS.txt, 14_POLITICAS_OPERATIVAS.txt, 18_GESTION_DISPONIBILIDAD.txt
+**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 03_INVENTARIO_APARTAMENTOS.txt, 12_POLITICAS_OPERATIVAS.txt, 16_GESTION_DISPONIBILIDAD.txt
 
 ---
 
@@ -250,7 +250,7 @@ TRANSPARENCIA = Solo cuando se solicite
 #### **Proceso del Bot**
 ```
 1. DETECTAR múltiples unidades (3+ apartamentos)
-2. CONSULTAR 14_POLITICAS_OPERATIVAS.txt
+2. CONSULTAR 12_POLITICAS_OPERATIVAS.txt
 3. APLICAR descuento según política
 4. COMUNICAR proactivamente
 ```
@@ -440,20 +440,20 @@ escalate_to_human("b2b_complex", {
 ### **12.1 Para Precios y Tarifas**
 ```
 TARIFAS_BASE → Ver 02_TARIFAS_TEMPORADAS.txt
-DESCUENTOS_VOLUMEN → Ver 14_POLITICAS_OPERATIVAS.txt
+DESCUENTOS_VOLUMEN → Ver 12_POLITICAS_OPERATIVAS.txt
 ```
 
 ### **12.2 Para Inventario**
 ```
 APARTAMENTOS → Ver 03_INVENTARIO_APARTAMENTOS.txt
-DISPONIBILIDAD → Ver 18_GESTION_DISPONIBILIDAD.txt
+DISPONIBILIDAD → Ver 16_GESTION_DISPONIBILIDAD.txt
 ```
 
 ### **12.3 NO APLICAR en B2B**
 ```
-COMUNICACIÓN_NATURAL → 17_COMUNICACION_NATURAL.txt (NO usar)
+COMUNICACIÓN_NATURAL → 15_COMUNICACION_NATURAL.txt (NO usar)
 TOURS → 06_TOURS_SERVICIOS_ADICIONALES.txt (NO ofrecer)
-PROTOCOLO_CONFIANZA → 11_PROTOCOLO_CONFIANZA.txt (NO necesario)
+PROTOCOLO_CONFIANZA → 09_PROTOCOLO_CONFIANZA.txt (NO necesario)
 ```
 
 ---
@@ -470,7 +470,7 @@ Este archivo contiene EXCLUSIVAMENTE:
 **NO CONTIENE:**
 - Precios específicos → Ver 02_TARIFAS_TEMPORADAS.txt
 - Inventario detallado → Ver 03_INVENTARIO_APARTAMENTOS.txt
-- Políticas generales → Ver 14_POLITICAS_OPERATIVAS.txt
+- Políticas generales → Ver 12_POLITICAS_OPERATIVAS.txt
 - Comunicación turística → NO aplicar en contexto B2B
 
 **TRANSFORMACIÓN BOT:**
@@ -480,4 +480,4 @@ Este archivo contiene EXCLUSIVAMENTE:
 - ✅ Seguimiento comercial automatizado
 - ✅ Escalamiento solo para casos muy complejos
 
-Esta arquitectura permite al bot manejar automáticamente el 90% de interacciones B2B, manteniendo eficiencia comercial y diferenciando claramente entre clientes finales y colegas del sector.
+Esta arquitectura permite al bot manejar automáticamente el 90% de interacciones B2B, manteniendo eficiencia comercial y diferenciando claramente entre clientes finales y colegas del sector. 

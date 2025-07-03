@@ -95,9 +95,9 @@ Hola [Nombre] 😊
 | `03_INVENTARIO_APARTAMENTOS` | Detalles, fotos, capacidades |
 | `02_TARIFAS_TEMPORADAS` | Precios y descuentos |
 | `04_CARGOS_SERVICIOS` | Early check-in, late checkout |
-| `14_POLITICAS_OPERATIVAS` | Horarios, políticas, reglas |
-| `17_COMUNICACION_NATURAL` | Cómo expresarse naturalmente |
-| `18_GESTION_DISPONIBILIDAD` | Manejo de disponibilidad |
+| `12_POLITICAS_OPERATIVAS` | Horarios, políticas, reglas |
+| `15_COMUNICACION_NATURAL` | Cómo expresarse naturalmente |
+| `16_GESTION_DISPONIBILIDAD` | Manejo de disponibilidad |
 
 ---
 

@@ -136,25 +136,25 @@ APLICACIÓN: Solo pagos con tarjeta Bold
 ### **3.1 Llegada Nocturna (7:00 PM - 11:00 PM)**
 ```
 TARIFA_BASE: $50.000 COP
-FUNCIÓN_EXTERNA: notify_late_arrival() para coordinación
+FUNCIÓN_EXTERNA: escalate_to_human("late_arrival") para coordinación
 ```
 
 **PROCESO AUTOMÁTICO DEL BOT:**
 1. Detectar llegada en horario nocturno
 2. Informar cargo adicional de $50.000
-3. Si cliente acepta → notify_late_arrival()
+3. Si cliente acepta → escalate_to_human("late_arrival", context)
 4. Confirmar coordinación realizada
 
 ### **3.2 Llegada Madrugada (11:00 PM - 6:00 AM)**
 ```
 TARIFA_BASE: $80.000 COP
-COORDINACIÓN: Requiere notify_late_arrival() obligatorio
+COORDINACIÓN: Requiere escalate_to_human("late_arrival") obligatorio
 ```
 
 **PROCESO AUTOMÁTICO DEL BOT:**
 1. Detectar llegada en madrugada
 2. Informar cargo de $80.000 + proceso especial
-3. notify_late_arrival() con 8h anticipación mínima
+3. escalate_to_human("late_arrival", context) con 8h anticipación mínima
 4. Confirmar autorización enviada
 
 ### **3.3 Llegadas Extremas (3:00 AM - 6:00 AM)**
@@ -278,7 +278,7 @@ SI PERSISTE: escalate_to_human("billing_dispute", context)
 ```
 HORARIOS_CHECK_IN/OUT → Ver 14_POLITICAS_OPERATIVAS.txt
 PROCEDIMIENTOS_LLEGADAS → Ver 09_LLEGADAS_ESPECIALES.txt
-COORDINACIÓN_ESPECIAL → notify_late_arrival() function
+COORDINACIÓN_ESPECIAL → escalate_to_human("late_arrival") function
 ```
 
 ### **8.2 Para Cálculo de Totales**
@@ -291,7 +291,7 @@ DESCUENTOS → Aplicados automáticamente por el bot
 ### **8.3 Para Casos Complejos**
 ```
 GRUPOS_GRANDES → Ver 13_RESERVAS_GRUPALES.txt + escalate_to_human()
-DISPONIBILIDAD → Ver 18_GESTION_DISPONIBILIDAD.txt
+DISPONIBILIDAD → Ver 16_GESTION_DISPONIBILIDAD.txt
 CHECKOUT → Ver 12_CHECKOUT_ESTANDARIZADO.txt
 ```
 

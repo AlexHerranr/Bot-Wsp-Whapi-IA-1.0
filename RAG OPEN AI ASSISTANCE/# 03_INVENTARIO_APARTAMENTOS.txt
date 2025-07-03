@@ -3,7 +3,7 @@
 **Versión:** 3.0  
 **Responsable:** Sistema de Conocimiento  
 **Keywords:** apartamento, codigo, inventario, validacion, correccion, capacidad, enlace, whatsapp, distribución, camas  
-**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 14_POLITICAS_OPERATIVAS.txt, 18_GESTION_DISPONIBILIDAD.txt
+**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 12_POLITICAS_OPERATIVAS.txt, 16_GESTION_DISPONIBILIDAD.txt
 
 ---
 
@@ -455,8 +455,8 @@ Todos tienen espacio cómodo y privacidad. ¿Te interesa para tus fechas?"
 ```
 TARIFAS POR APARTAMENTO → Ver 02_TARIFAS_TEMPORADAS.txt
 CARGOS ADICIONALES → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt  
-POLÍTICAS DE OCUPACIÓN → Ver 14_POLITICAS_OPERATIVAS.txt
-GESTIÓN DE DISPONIBILIDAD → Ver 18_GESTION_DISPONIBILIDAD.txt
+POLÍTICAS DE OCUPACIÓN → Ver 12_POLITICAS_OPERATIVAS.txt
+GESTIÓN DE DISPONIBILIDAD → Ver 16_GESTION_DISPONIBILIDAD.txt
 ```
 
 ### **9.2 Para Uso en Otros Archivos**
@@ -483,6 +483,6 @@ ESTE ARCHIVO ES CONSULTADO POR:
 - Tarifas y precios → Ver 02_TARIFAS_TEMPORADAS.txt
 - Datos corporativos → Ver 05_DATOS_CORPORATIVOS_CONTACTO.txt  
 - Servicios adicionales → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
-- Políticas operativas → Ver 14_POLITICAS_OPERATIVAS.txt
+- Políticas operativas → Ver 12_POLITICAS_OPERATIVAS.txt
 
 **ENFOQUE AMPLIADO:** Inventario completo + distribución específica para que el bot responda preguntas detalladas sobre acomodación y características de cada apartamento de forma natural y completa.

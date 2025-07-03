@@ -5,7 +5,7 @@
 **Versión:** 3.0  
 **Responsable:** Sistema de Conocimiento  
 **Keywords:** confianza, verificación, legitimidad, documentos, credibilidad, empresa, seguridad, Bot, automático  
-**Archivos relacionados:** 04_DATOS_CORPORATIVOS_CONTACTO.txt, 15_PLANTILLAS_RESPUESTAS.txt, 14_POLITICAS_OPERATIVAS.txt, 08_PROTOCOLO_MULTIIDIOMA.txt
+**Archivos relacionados:** 05_DATOS_CORPORATIVOS_CONTACTO.txt, 13_PLANTILLAS_RESPUESTAS.txt, 12_POLITICAS_OPERATIVAS.txt
 
 ---
 
@@ -404,7 +404,7 @@ Este archivo contiene EXCLUSIVAMENTE:
 **NO CONTIENE:**
 - Plantillas detalladas → Ver 15_PLANTILLAS_RESPUESTAS.txt
 - Datos empresariales → Ver 04_DATOS_CORPORATIVOS_CONTACTO.txt
-- Políticas de pago → Ver 14_POLITICAS_OPERATIVAS.txt
+- Políticas de pago → Ver 12_POLITICAS_OPERATIVAS.txt
 - Protocolos de idioma → Ver 08_PROTOCOLO_MULTIIDIOMA.txt
 
 **OPTIMIZACIONES BOT:**

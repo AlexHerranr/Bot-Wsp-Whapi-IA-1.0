@@ -27,26 +27,18 @@ FUNCIONES_EXTERNAS: 5 funciones de escalamiento y coordinación
 2. FUNCIONES DEL BOT Y MAPEO CON ARCHIVOS
 2.1 Funciones de Escalamiento y Coordinación
 
-2.1.1 notify_late_arrival()
-PROPÓSITO: Coordinar llegadas fuera de horario estándar
-ARCHIVOS_RELACIONADOS: 09_LLEGADAS_ESPECIALES.txt, 03_CARGOS_SERVICIOS_TARIFARIOS.txt
+2.1.1 check_availability()
+PROPÓSITO: Consultar disponibilidad en tiempo real desde Beds24
+ARCHIVOS_RELACIONADOS: 16_GESTION_DISPONIBILIDAD.txt, 03_INVENTARIO_APARTAMENTOS.txt
 CUÁNDO_USAR:
-- Llegadas después 7:00 PM (nocturnas)
-- Llegadas 11:00 PM - 6:00 AM (madrugada)
-- Coordinación especial requerida con recepción del edificio
+- CUALQUIER consulta de fechas/disponibilidad
+- Verificar disponibilidad exacta antes de cotizar
+- Validación final antes de proceder con reserva
 
 PARÁMETROS:
 {
-  "booking_info": {
-    "guest_name": "string",
-    "apartment_code": "string", 
-    "arrival_time": "string (HH:MM)",
-    "arrival_date": "string (DD/MM/YYYY)",
-    "guest_count": "number",
-    "phone": "string"
-  },
-  "arrival_type": "nocturna | madrugada",
-  "special_instructions": "string (opcional)"
+  "startDate": "string (YYYY-MM-DD)",
+  "endDate": "string (YYYY-MM-DD)"
 }
 
 2.1.2 escalate_to_human()
@@ -71,61 +63,17 @@ PARÁMETROS:
   }
 }
 
-2.1.3 send_reminder()
-PROPÓSITO: Enviar recordatorios automáticos
-ARCHIVOS_RELACIONADOS: 12_CHECKOUT_ESTANDARIZADO.txt, 14_POLITICAS_OPERATIVAS.txt
-CUÁNDO_USAR:
-- Recordatorios pre-checkout (24h antes)
-- Confirmaciones de llegada
-- Seguimiento post-estadía
-
-PARÁMETROS:
-{
-  "reminder_type": "pre_checkout | arrival_confirmation | post_stay_review",
-  "booking_id": "string",
-  "guest_name": "string",
-  "message_content": "string",
-  "scheduled_time": "string (opcional)"
-}
-
-2.1.4 check_availability()
-PROPÓSITO: Consultar disponibilidad en tiempo real
-ARCHIVOS_RELACIONADOS: 02_INVENTARIO_APARTAMENTOS.txt, 18_GESTION_DISPONIBILIDAD.txt
-CUÁNDO_USAR:
-- Verificar disponibilidad exacta
-- Consultas de disponibilidad compleja
-- Validación final antes de confirmar
-
-PARÁMETROS:
-{
-  "start_date": "string (DD/MM/YYYY)",
-  "end_date": "string (DD/MM/YYYY)",
-  "apartment_type": "estudio | alcoba | cualquiera",
-  "guest_count": "number",
-  "flexible_dates": "boolean"
-}
-
-2.1.5 notify_payment_received()
-PROPÓSITO: Confirmar recepción de pagos
-ARCHIVOS_RELACIONADOS: 04_DATOS_CORPORATIVOS_CONTACTO.txt, 15_PLANTILLAS_RESPUESTAS.txt
-CUÁNDO_USAR:
-- Confirmar pagos de anticipo
-- Procesar comprobantes de pago
-- Activar confirmación de reserva
-
-PARÁMETROS:
-{
-  "payment_amount": "number",
-  "payment_method": "transferencia | nequi | tarjeta | efectivo",
-  "booking_id": "string",
-  "guest_name": "string",
-  "receipt_info": "string (opcional)"
-}
+2.1.3 [FUNCIONES NO IMPLEMENTADAS - USAR ESCALATE_TO_HUMAN]
+Las siguientes funciones NO están implementadas y deben manejarse via escalate_to_human():
+- Recordatorios automáticos → escalate_to_human("reminder_needed", context)
+- Confirmación de pagos → escalate_to_human("payment_received", context)
+- Llegadas especiales → escalate_to_human("late_arrival", context)
+- Coordinación especial → escalate_to_human("special_coordination", context)
 
 3. DIRECTORIO COMPLETO DE ARCHIVOS VERIFICADOS (BOT AUTÓNOMO)
 3.1 ARCHIVOS CORE - Información Fundamental
 
-01_TARIFAS_TEMPORADAS.txt
+02_TARIFAS_TEMPORADAS.txt
 PROPÓSITO: Tarifas base + calendario temporadas + sistema automático de precios
 CONTIENE:
 ├─ Calendario oficial temporadas 2025-2026
@@ -142,7 +90,7 @@ CUÁNDO_CONSULTAR:
 
 KEYWORDS_CLAVE: tarifa, precio, temporada, descuento, costo, valor, automático
 
-02_INVENTARIO_APARTAMENTOS.txt
+03_INVENTARIO_APARTAMENTOS.txt
 PROPÓSITO: Inventario completo + distribución camas + validación automática
 CONTIENE:
 ├─ 8 apartamentos: 6 alcobas (1317,1722A,1820,2005A,814,715) + 2 estudios (1722B,2005B)
@@ -161,7 +109,7 @@ CUÁNDO_CONSULTAR:
 
 KEYWORDS_CLAVE: apartamento, codigo, inventario, validacion, capacidad, enlace, camas
 
-03_CARGOS_SERVICIOS_TARIFARIOS.txt
+04_CARGOS_SERVICIOS_TARIFARIOS.txt
 PROPÓSITO: Cargos fijos + servicios variables + cálculo automático
 CONTIENE:
 ├─ Cargos fijos: Limpieza ($60k estudios, $70k alcobas), Registro ($30k-$35k)
@@ -173,13 +121,13 @@ CONTIENE:
 
 CUÁNDO_CONSULTAR:
 - Calcular servicios adicionales automáticamente
-- Coordinar llegadas especiales (usar notify_late_arrival())
+- Coordinar llegadas especiales (usar escalate_to_human("late_arrival"))
 - Gestionar guardado de equipaje
 - Aplicar cargos según políticas
 
 KEYWORDS_CLAVE: cargo, servicio, limpieza, sobrecupo, early, checkout, equipaje
 
-04_DATOS_CORPORATIVOS_CONTACTO.txt
+05_DATOS_CORPORATIVOS_CONTACTO.txt
 PROPÓSITO: Información empresarial + datos bancarios + contactos operativos
 CONTIENE:
 ├─ Empresa: TE ALQUILAMOS S.A.S, NIT 900.890.457
@@ -199,7 +147,7 @@ KEYWORDS_CLAVE: empresa, corporativo, banco, pago, contacto, whatsapp, datos
 
 3.2 ARCHIVOS OPERATIVOS - Procedimientos Específicos
 
-05_TOURS_SERVICIOS_ADICIONALES.txt
+06_TOURS_SERVICIOS_ADICIONALES.txt
 PROPÓSITO: Catálogo tours + venta cruzada automática + servicios complementarios
 CONTIENE:
 ├─ Tours principales: Islas Rosario $80k-$90k, Ciudad Amurallada $50k-$70k, Chiva $30k
@@ -233,28 +181,14 @@ CUÁNDO_CONSULTAR:
 
 KEYWORDS_CLAVE: validacion, apartamento, codigo, correccion, existe, inventario
 
-08_PROTOCOLO_MULTIIDIOMA.txt --- SE ELIMINA ESTER ARHIVO, EN LA PROXIMA ACTUALIZACION
-PROPÓSITO: Gestión automática comunicación multiidioma
-CONTIENE:
-├─ Idiomas soportados: Español (70%), Inglés (30%), Portugués/Francés (limitado)
-├─ Detección automática: Keywords, primera interacción, umbral 3+ palabras
-├─ Frases esenciales bilingües para todos los procesos
-├─ Plantillas completas en inglés para el bot
-└─ Consideraciones culturales por tipo cliente
+[ARCHIVO ELIMINADO] 08_PROTOCOLO_MULTIIDIOMA.txt
+NOTA: Este archivo fue eliminado según indica el propio archivo. El manejo de idiomas se gestiona automáticamente por el bot.
 
-CUÁNDO_CONSULTAR:
-- Cliente escribe en inglés u otro idioma
-- Necesidad de comunicación bilingüe automática
-- Adaptación cultural requerida
-- Templates en idioma específico
-
-KEYWORDS_CLAVE: idioma, multiidioma, inglés, español, traducción, internacional
-
-09_LLEGADAS_ESPECIALES.txt
+08_LLEGADAS_ESPECIALES.txt
 PROPÓSITO: Procedimientos para llegadas fuera de horario + coordinación automática
 CONTIENE:
 ├─ Clasificación: Estándar (3-7PM), Nocturna (7-11PM), Madrugada (11PM-6AM)
-├─ Coordinación automática: Nocturna (4h antes), Madrugada (8h antes + notify_late_arrival())
+├─ Coordinación automática: Nocturna (4h antes), Madrugada (8h antes + escalate_to_human("late_arrival"))
 ├─ Protocolos específicos por horario
 ├─ Comunicación automática con recepción edificio
 └─ Contingencias y plan B
@@ -263,7 +197,7 @@ CUÁNDO_CONSULTAR:
 - Llegadas después 7:00 PM
 - Coordinación automática llegadas madrugada
 - Procedimientos específicos por horario
-- Usar notify_late_arrival() cuando sea necesario
+- Usar escalate_to_human("late_arrival") cuando sea necesario
 
 KEYWORDS_CLAVE: llegada, tardía, nocturna, madrugada, procedimiento, coordinación
 
@@ -308,13 +242,13 @@ PROPÓSITO: Gestión automática de salida y cierre de estadía
 CONTIENE:
 ├─ Fases automáticas: Pre-checkout (24-48h), Checkout activo, Post-checkout (0-72h)
 ├─ Proceso estándar: Personal limpieza 6-11AM, Buzón express
-├─ Recordatorios automáticos: send_reminder() para pre-checkout
+├─ Recordatorios automáticos: escalate_to_human("reminder_needed") para pre-checkout
 ├─ Gestión objetos olvidados automática
 └─ Casos especiales: Late checkout, emergencia, grupal
 
 CUÁNDO_CONSULTAR:
 - Proceso checkout estándar/tardío
-- Envío automático de recordatorios (send_reminder)
+- Envío automático de recordatorios (escalate_to_human("reminder_needed"))
 - Gestión objetos olvidados
 - Casos especiales de cierre
 
@@ -337,7 +271,7 @@ CUÁNDO_CONSULTAR:
 
 KEYWORDS_CLAVE: grupo, multiple, grupal, coordinación, líder, corporativo
 
-14_POLITICAS_OPERATIVAS.txt
+12_POLITICAS_OPERATIVAS.txt
 PROPÓSITO: Políticas generales y procedimientos estándar del bot
 CONTIENE:
 ├─ Horarios: Check-in 3PM, Check-out 12PM, Oficina 9AM-6PM
@@ -392,7 +326,7 @@ CUÁNDO_CONSULTAR:
 
 KEYWORDS_CLAVE: comunicación, natural, humanización, tuteo, emojis, tono, bot
 
-18_GESTION_DISPONIBILIDAD.txt
+16_GESTION_DISPONIBILIDAD.txt
 PROPÓSITO: Comunicación estratégica de disponibilidad + check_availability()
 CONTIENE:
 ├─ Jerarquía búsqueda automática: Propio→Alternativo→Parcial→Terceros→check_availability()
@@ -431,21 +365,20 @@ KEYWORDS_CLAVE: sistema, prompt, bot, autonomo, function, calling, rag
 01_TARIFAS ←→ 02_INVENTARIO: Precios por tipo ←→ Validación apartamentos
 01_TARIFAS ←→ 03_CARGOS: Precios base ←→ Servicios adicionales
 02_INVENTARIO ←→ 07_VALIDACION: Inventario real ←→ Sistema validación
-03_CARGOS ←→ 09_LLEGADAS: Precios servicios ←→ notify_late_arrival()
+03_CARGOS ←→ 09_LLEGADAS: Precios servicios ←→ escalate_to_human("late_arrival")
 04_CORPORATIVO ←→ 11_CONFIANZA: Datos empresa ←→ Verificación empresarial
 
 4.2 Relaciones Secundarias (Información Complementaria)
 14_POLITICAS → [TODOS]: Políticas generales aplicables a todos los procesos bot
-08_MULTIIDIOMA → 15_PLANTILLAS: Idioma detectado → Templates en idioma específico
 17_COMUNICACION → [TODOS]: Humanización aplicable a toda comunicación bot
 10_FORMATOS → 04_CORPORATIVO: Documentos → Datos para autorización
 
 4.3 Relaciones de Function Calling
-09_LLEGADAS → notify_late_arrival(): Llegadas especiales → Coordinación automática
 18_DISPONIBILIDAD → check_availability(): Búsqueda compleja → Verificación tiempo real
 [CASOS_COMPLEJOS] → escalate_to_human(): Situaciones fuera de protocolo → Agente humano
-12_CHECKOUT → send_reminder(): Checkout → Recordatorios automáticos
-[PAGOS] → notify_payment_received(): Confirmación pagos → Activación reserva
+09_LLEGADAS → escalate_to_human("late_arrival"): Llegadas especiales → Coordinación humana
+12_CHECKOUT → escalate_to_human("reminder_needed"): Checkout → Recordatorios humanos
+[PAGOS] → escalate_to_human("payment_received"): Confirmación pagos → Activación humana
 
 5. FLUJOS DE NAVEGACIÓN BOT OPTIMIZADOS
 5.1 Flujo de Cotización Completa Automática
@@ -461,7 +394,7 @@ BOT_NAVEGACIÓN:
 BOT_NAVEGACIÓN:
 1. 09_LLEGADAS_ESPECIALES.txt → Protocolo según horario
 2. 03_CARGOS_SERVICIOS_TARIFARIOS.txt → Precios servicios especiales
-3. notify_late_arrival() → Coordinación automática con recepción
+3. escalate_to_human("late_arrival", context) → Coordinación humana con recepción
 4. 02_INVENTARIO_APARTAMENTOS.txt → Verificar apartamento asignado
 5. 15_PLANTILLAS_RESPUESTAS.txt → Comunicación instrucciones
 
@@ -475,7 +408,7 @@ BOT_NAVEGACIÓN:
 
 5.4 Flujo de Disponibilidad Compleja
 BOT_NAVEGACIÓN:
-1. 18_GESTION_DISPONIBILIDAD.txt → Estrategias búsqueda
+1. 16_GESTION_DISPONIBILIDAD.txt → Estrategias búsqueda
 2. check_availability() → Verificación tiempo real
 3. 02_INVENTARIO_APARTAMENTOS.txt → Opciones alternativas
 4. escalate_to_human() → Si no hay disponibilidad en sistema
@@ -501,13 +434,13 @@ BOT_NAVEGACIÓN:
 [CONTEXTO_COMUNICACIÓN] = "directo"|"multiidioma"|"grupal"|"especial"
 
 6.4 Variables de Integridad
-[VERSIÓN_SISTEMA] = "3.0"
-[TOTAL_ARCHIVOS] = 19 (eliminados multiagente y B2B)
+[VERSIÓN_SISTEMA] = "4.0"
+[TOTAL_ARCHIVOS] = 17 (eliminados multiagente, B2B, multiidioma y duplicados)
 [ARCHIVOS_CORE] = 4 (01-04)
 [ARCHIVOS_OPERATIVOS] = 10 (05, 07-15)
 [ARCHIVOS_COMUNICACIÓN] = 3 (15, 17-18)
-[FUNCIONES_EXTERNAS] = 5 (notify_late_arrival, escalate_to_human, etc.)
-[SISTEMA_PRINCIPAL] = 1 (19)
+[FUNCIONES_EXTERNAS] = 2 (check_availability, escalate_to_human)
+[SISTEMA_PRINCIPAL] = 1 (00)
 
 7. CASOS DE USO BOT VERIFICADOS
 7.1 Cliente Consulta Disponibilidad Simple
@@ -530,7 +463,7 @@ FLUJO_BOT:
 FLUJO_BOT:
 1. Detectar horario fuera de estándar → 09_LLEGADAS_ESPECIALES.txt
 2. Calcular cargos adicionales → 03_CARGOS_SERVICIOS_TARIFARIOS.txt
-3. notify_late_arrival(booking_info, arrival_time)
+3. escalate_to_human("late_arrival", {booking_info, arrival_time})
 4. Confirmar coordinación realizada → 15_PLANTILLAS_RESPUESTAS.txt
 
 7.4 Cliente Pide Verificación Empresa

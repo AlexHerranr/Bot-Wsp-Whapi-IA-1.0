@@ -1,11 +1,11 @@
-# 18_GESTION_DISPONIBILIDAD.txt
+# 16_GESTION_DISPONIBILIDAD.txt
 
 **Sistema Integral de Gestión y Comunicación de Disponibilidad con Beds24**
 
 **Versión:** 3.0  
 **Responsable:** Sistema de Conocimiento  
 **Keywords:** disponibilidad, beds24, check_availability, bot, automático, function, calling  
-**Archivos relacionados:** 03_INVENTARIO_APARTAMENTOS.txt, 02_TARIFAS_TEMPORADAS.txt, 14_POLITICAS_OPERATIVAS.txt
+**Archivos relacionados:** 03_INVENTARIO_APARTAMENTOS.txt, 02_TARIFAS_TEMPORADAS.txt, 12_POLITICAS_OPERATIVAS.txt
 
 ---
 

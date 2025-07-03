@@ -3,7 +3,7 @@
 **Versión:** 3.0
 **Responsable:** Sistema de Conocimiento
 **Keywords:** plantilla, template, mensaje, respuesta, bot, whatsapp, conversación, natural
-**Archivos relacionados:** 05_DATOS_CORPORATIVOS_CONTACTO.txt, 17_COMUNICACION_NATURAL.txt, 14_POLITICAS_OPERATIVAS.txt
+**Archivos relacionados:** 05_DATOS_CORPORATIVOS_CONTACTO.txt, 15_COMUNICACION_NATURAL.txt, 12_POLITICAS_OPERATIVAS.txt
 
 ---
 
