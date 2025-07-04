@@ -41,6 +41,16 @@ export class FunctionHandler {
       
       enhancedLog('success', 'FUNCTION_HANDLER', `Consulta de disponibilidad Beds24 completada`);
       
+      // Log detallado del contenido exacto enviado a OpenAI
+      enhancedLog('info', 'OPENAI_FUNCTION_OUTPUT', `Contenido exacto enviado a OpenAI después de check_availability`, {
+        functionName: 'check_availability',
+        args: args,
+        resultType: typeof result,
+        resultLength: result.length,
+        fullContent: result, // Contenido completo que recibe OpenAI
+        timestamp: new Date().toISOString()
+      });
+      
       return {
         success: true,
         data: result

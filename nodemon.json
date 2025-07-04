@@ -3,7 +3,8 @@
     "ext": "ts",
     "ignore": [
       "**/*.test.ts",
-      "**/*.spec.ts"
+      "**/*.spec.ts",
+      "tmp/threads.json"
   ],
     "delay": "3",
     "execMap": {

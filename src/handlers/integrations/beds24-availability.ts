@@ -155,11 +155,15 @@ async function getAvailabilityAndPricesOptimized(
     const partialOptions: PropertyData[] = [];
     
     Object.values(propertyData).forEach(property => {
-        const availableDates = dateRange.filter(date => property.availability[date]);
-        if (availableDates.length === totalNights) {
+        const isFullyAvailableAndPriced = dateRange.every(date => property.availability[date] && property.prices[date] > 0);
+        
+        if (isFullyAvailableAndPriced) {
             completeOptions.push(property);
-        } else if (availableDates.length > 0) {
-            partialOptions.push(property);
+        } else {
+            const isPartiallyAvailable = dateRange.some(date => property.availability[date] && property.prices[date] > 0);
+            if (isPartiallyAvailable) {
+                partialOptions.push(property);
+            }
         }
     });
     
@@ -281,6 +285,10 @@ function buildConsecutiveSplitMaxNights(partialOptions: PropertyData[], dateRang
         totalNights += bestConsecutiveDays;
     }
     
+    if (totalNights !== dateRange.length) {
+        return null; // Devolver null si no se cubren todas las noches
+    }
+    
     return {
         type: properties.length === 2 ? 'double-split' : 'triple-split',
         transfers: properties.length - 1,
@@ -315,9 +323,9 @@ function buildConsecutiveSplitMinPrice(partialOptions: PropertyData[], dateRange
             if (option.availability[currentDate]) {
                 for (let j = currentDateIndex; j < dateRange.length; j++) {
                     const checkDate = dateRange[j];
-                    if (option.availability[checkDate]) {
+                    if (option.availability[checkDate] && option.prices[checkDate] > 0) {
                         consecutiveDays++;
-                        tempPrice += option.prices[checkDate] || 0;
+                        tempPrice += option.prices[checkDate];
                     } else {
                         break;
                     }
@@ -355,6 +363,10 @@ function buildConsecutiveSplitMinPrice(partialOptions: PropertyData[], dateRange
         totalNights += bestConsecutiveDays;
     }
     
+    if (totalNights !== dateRange.length) {
+        return null; // Devolver null si no se cubren todas las noches
+    }
+    
     return {
         type: properties.length === 2 ? 'double-split' : 'triple-split',
         transfers: properties.length - 1,
@@ -383,7 +395,7 @@ function buildConsecutiveSplitStartWith(partialOptions: PropertyData[], dateRang
     let consecutiveDays = 0;
     for (let j = 0; j < dateRange.length; j++) {
         const checkDate = dateRange[j];
-        if (startProperty.availability[checkDate]) {
+        if (startProperty.availability[checkDate] && startProperty.prices[checkDate] > 0) {
             consecutiveDays++;
         } else {
             break;
@@ -421,7 +433,7 @@ function buildConsecutiveSplitStartWith(partialOptions: PropertyData[], dateRang
             if (option.availability[currentDate]) {
                 for (let j = currentDateIndex; j < dateRange.length; j++) {
                     const checkDate = dateRange[j];
-                    if (option.availability[checkDate]) {
+                    if (option.availability[checkDate] && option.prices[checkDate] > 0) {
                         consecutiveDays++;
                     } else {
                         break;
@@ -456,6 +468,10 @@ function buildConsecutiveSplitStartWith(partialOptions: PropertyData[], dateRang
         totalNights += bestConsecutiveDays;
     }
     
+    if (totalNights !== dateRange.length) {
+        return null; // Devolver null si no se cubren todas las noches
+    }
+    
     return {
         type: properties.length === 2 ? 'double-split' : 'triple-split',
         transfers: properties.length - 1,
@@ -471,58 +487,80 @@ function buildConsecutiveSplitStartWith(partialOptions: PropertyData[], dateRang
 function formatOptimizedResponse(result: OptimizedResult, startDate: string, endDate: string): string {
     const { completeOptions, splitOptions, totalNights } = result;
     
-    let response = `📅 **Consulta: ${formatDateRange(startDate, endDate)} (${totalNights} noches)**\n\n`;
+    let response = `📅 **${formatDateRange(startDate, endDate)} (${totalNights} noches)**\n\n`;
     
-    // PRIORIDAD 1: Opciones completas
+    // 1. Mostrar siempre las opciones de estancia completa si existen
     if (completeOptions.length > 0) {
-        response += `🥇 **DISPONIBILIDAD COMPLETA (${completeOptions.length} opciones)**\n`;
+        response += `🥇 **Apartamentos Disponibles (${completeOptions.length} opciones)**\n`;
         
-        // Ordenar por precio y mostrar top 3
         const sortedComplete = completeOptions
             .map(option => {
                 const totalPrice = Object.values(option.prices).reduce((sum, price) => sum + price, 0);
                 return { ...option, totalPrice };
             })
             .sort((a, b) => a.totalPrice - b.totalPrice)
-            .slice(0, 3);
+            .slice(0, 3); // Máximo 3 opciones principales
         
         sortedComplete.forEach((option, index) => {
-            response += `✅ **Opción ${index + 1}**: ${option.propertyName} - ${totalNights} noches\n`;
-            response += `   💰 Total: $${option.totalPrice.toLocaleString()}\n`;
-            response += `   📊 Promedio: $${Math.round(option.totalPrice / totalNights).toLocaleString()}/noche\n\n`;
+            response += `✅ **${option.propertyName}** - $${option.totalPrice.toLocaleString()}\n`;
+            response += `   📊 $${Math.round(option.totalPrice / totalNights).toLocaleString()}/noche\n\n`;
         });
     }
     
-    // PRIORIDAD 2: Opciones con traslado (solo si no hay completas)
-    if (splitOptions.length > 0) {
-        if (completeOptions.length === 0) {
-            response += `🥈 **ALTERNATIVAS CON TRASLADO** (por disponibilidad limitada - posible descuento)\n`;
-        } else {
-            response += `🥈 **ALTERNATIVAS CON TRASLADO** (por preferencias de precio, comodidad o disponibilidad)\n`;
-        }
+    // 2. Mostrar opciones alternas con cambio de apartamento (solo si hay pocas opciones completas)
+    if (completeOptions.length <= 2 && splitOptions.length > 0) {
+        response += `\nOpciones Alternas cambiando de apartamento\n`;
         
-        splitOptions.forEach((split, index) => {
+        splitOptions.slice(0, 3).forEach((split, index) => { // Máximo 3 opciones alternas
             const transferText = split.transfers === 1 ? '1 traslado' : `${split.transfers} traslados`;
-            response += `🔄 **Opción ${index + 1}**: ${transferText} - $${split.totalPrice.toLocaleString()}\n`;
+            response += `🔄 **Alternativa ${index + 1}**: ${transferText} - $${split.totalPrice.toLocaleString()}\n`;
             
             split.properties.forEach((prop, propIndex) => {
                 const dates = prop.dates.length > 1 ? 
                     `${prop.dates[0]} a ${prop.dates[prop.dates.length - 1]}` : 
                     prop.dates[0];
-                response += `   ${propIndex === 0 ? '🏠' : '🔄'} ${prop.propertyName}: ${dates} (${prop.nights} noches) - $${prop.price.toLocaleString()}\n`;
+                response += `   ${propIndex === 0 ? '🏠' : '🔄'} ${prop.propertyName}: ${dates} - $${prop.price.toLocaleString()}\n`;
             });
             response += '\n';
         });
     }
     
-    // Si no hay opciones
+    // 3. Mensaje final si no se encontró absolutamente nada
     if (completeOptions.length === 0 && splitOptions.length === 0) {
         response += `❌ **Sin disponibilidad para ${totalNights} noches**\n`;
-        response += `💡 Considera fechas alternativas o menos noches\n`;
+        response += `💡 Considera fechas alternativas\n`;
     }
     
-    response += `🔄 *Datos en tiempo real desde Beds24*`;
+    // Agregar fecha y hora de la consulta (más conciso)
+    const now = new Date();
+    const consultaDateTime = now.toLocaleString('es-ES', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'America/Bogota'
+    });
     
+    response += `\n🔄 *Beds24 - ${consultaDateTime}*`;
+    
+    // Log temporal para depuración
+    console.log('\n--- DEBUG: Salida para OpenAI ---\n');
+    console.log(response);
+    console.log('---------------------------------\n');
+
+    // Log detallado para análisis
+    logInfo('BEDS24_RESPONSE_DETAIL', 'Respuesta completa de Beds24 enviada a OpenAI', {
+        responseLength: response.length,
+        estimatedTokens: Math.ceil(response.length / 4),
+        hasCompleteOptions: result.completeOptions.length > 0,
+        hasSplitOptions: result.splitOptions.length > 0,
+        completeOptionsCount: result.completeOptions.length,
+        splitOptionsCount: result.splitOptions.length,
+        totalNights: result.totalNights,
+        responsePreview: response.substring(0, 200) + (response.length > 200 ? '...' : ''),
+        fullResponse: response // Contenido completo para análisis
+    });
+
     return response;
 }
 
@@ -760,4 +798,4 @@ export const availabilityFunction: AvailabilityFunction = {
         },
         required: ['startDate', 'endDate']
     }
-}; 
+}

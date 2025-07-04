@@ -122,6 +122,16 @@ const getEnhancedContactInfo = async (userId, chatId) => {
                 profilePic: chatData.profile_pic_url
             };
             
+            // 🔍 LOG DETALLADO: Información completa de etiquetas
+            logInfo('CONTACT_API_DETAILED', `Información detallada del contacto ${userId}`, {
+                name: enhancedInfo.name,
+                labels: enhancedInfo.labels,
+                labelsCount: enhancedInfo.labels.length,
+                lastSeen: enhancedInfo.lastSeen,
+                isContact: enhancedInfo.isContact,
+                profilePic: enhancedInfo.profilePic ? 'Sí' : 'No'
+            });
+            
             logSuccess('CONTACT_API', `Info adicional obtenida para ${userId}`, {
                 hasName: !!enhancedInfo.name,
                 hasLabels: enhancedInfo.labels.length > 0,
@@ -304,15 +314,53 @@ const getCurrentTimeContext = (): string => {
     return `=== CONTEXTO TEMPORAL ACTUAL ===
 FECHA: ${dayName}, ${day} de ${monthName} de ${year} (${year}-${month}-${day})
 HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
+=== FIN CONTEXTO ===`;
+};
 
-INTERPRETACIÓN FECHAS RELATIVAS:
-- "hoy" = ${year}-${month}-${day}
-- "mañana" = ${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}
-- Cuando solo mencionen día/mes sin año, usar ${year}
-- SIEMPRE usa año ${year} o posterior, NUNCA años anteriores
-=== FIN CONTEXTO ===
-
-`;
+const getConversationalContext = (threadInfo): string => {
+    if (!threadInfo) {
+        return '';
+    }
+    
+    const { name, userName, labels } = threadInfo;
+    let context = '=== CONTEXTO CONVERSACIONAL ===\n';
+    
+    // Información del cliente
+    if (name && userName) {
+        context += `CLIENTE: ${name} (${userName})\n`;
+    } else if (name) {
+        context += `CLIENTE: ${name}\n`;
+    } else if (userName) {
+        context += `CLIENTE: ${userName}\n`;
+    } else {
+        context += `CLIENTE: Usuario\n`;
+    }
+    
+    // Etiquetas/metadatos si existen
+    if (labels && labels.length > 0) {
+        context += `ETIQUETAS: ${labels.join(', ')}\n`;
+        
+        // 🔍 LOG DETALLADO: Etiquetas incluidas en contexto
+        logInfo('CONTEXT_LABELS', `Etiquetas incluidas en contexto conversacional`, {
+            userId: threadInfo.userId || 'unknown',
+            name: name,
+            userName: userName,
+            labels: labels,
+            labelsCount: labels.length
+        });
+    } else {
+        // 🔍 LOG DETALLADO: Sin etiquetas
+        logDebug('CONTEXT_LABELS', `Sin etiquetas para incluir en contexto`, {
+            userId: threadInfo.userId || 'unknown',
+            name: name,
+            userName: userName,
+            labels: labels || []
+        });
+    }
+    
+    context += `=== FIN CONTEXTO ===\n\nMensaje del Cliente: `;
+    
+    return context;
 };
 
 // --- Procesamiento OpenAI (Simple) ---
@@ -492,12 +540,32 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
             return 'Lo siento, hay un problema técnico con la conversación. Por favor intenta de nuevo en unos momentos.';
         }
         
-        // ✅ AHORA SÍ: Agregar mensaje del usuario con contexto temporal
+        // ✅ AHORA SÍ: Agregar mensaje del usuario con contextos temporal y conversacional
         logOpenAIRequest(shortUserId, 'adding_message', threadId);
-        const messageWithTimeContext = getCurrentTimeContext() + userMsg;
+        
+        // Obtener información del thread para el contexto conversacional
+        const currentThreadInfo = threadPersistence.getThread(shortUserId);
+        const timeContext = getCurrentTimeContext();
+        const conversationalContext = getConversationalContext(currentThreadInfo);
+        const messageWithContexts = timeContext + '\n\n' + conversationalContext + userMsg;
+        
+        // 🔍 DEBUG: Log del contenido completo enviado a OpenAI
+        logInfo('OPENAI_CONTEXT_DEBUG', `Contenido completo enviado a OpenAI`, {
+            shortUserId,
+            threadId,
+            timeContextLength: timeContext.length,
+            conversationalContextLength: conversationalContext.length,
+            userMessageLength: userMsg.length,
+            totalLength: messageWithContexts.length,
+            timeContextPreview: timeContext.substring(0, 150) + '...',
+            conversationalContextPreview: conversationalContext.substring(0, 150) + '...',
+            userMessagePreview: userMsg.substring(0, 100),
+            fullContent: messageWithContexts
+        });
+        
         await openai.beta.threads.messages.create(threadId, {
             role: 'user',
-            content: messageWithTimeContext
+            content: messageWithContexts
         });
         
         // Actualizar actividad del thread
@@ -680,6 +748,22 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
                 // Esperar a que todas las funciones terminen
                 const toolOutputs = await Promise.all(toolOutputPromises);
                 
+                // Log detallado del contenido exacto enviado a OpenAI
+                logInfo('OPENAI_TOOL_OUTPUTS_DETAIL', `Contenido exacto enviado a OpenAI en tool_outputs`, {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    toolOutputsCount: toolOutputs.length,
+                    toolOutputsDetail: toolOutputs.map((output, i) => ({
+                        tool_call_id: output.tool_call_id,
+                        outputLength: output.output.length,
+                        isError: output.output.includes('"error"') || output.output.includes('"success":false'),
+                        fullContent: output.output, // Contenido completo que recibe OpenAI
+                        contentType: typeof output.output
+                    })),
+                    timestamp: new Date().toISOString()
+                });
+                
                 logInfo('FUNCTION_CALLING_OUTPUTS_READY', `Todas las funciones completadas, enviando resultados`, {
                     shortUserId,
                     threadId,
@@ -759,7 +843,24 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
                 
                 while (['queued', 'in_progress'].includes(run.status) && attempts < maxWaitAttempts) {
                     await new Promise(resolve => setTimeout(resolve, 500));
-                    run = await openai.beta.threads.runs.retrieve(threadId, run.id);
+                    
+                    try {
+                        run = await openai.beta.threads.runs.retrieve(threadId, run.id);
+                    } catch (retrieveError: any) {
+                        // Manejar rate limit en retrieve
+                        if (retrieveError?.code === 'rate_limit_exceeded') {
+                            const retryAfter = extractRetryAfter(retrieveError.message) || 2;
+                            logWarning('RATE_LIMIT_RETRIEVE', `Rate limit en retrieve, esperando ${retryAfter}s`, {
+                                shortUserId,
+                                retryAfter,
+                                error: retrieveError.message
+                            });
+                            await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                            continue;
+                        }
+                        throw retrieveError;
+                    }
+                    
                     attempts++;
                     
                     // Log periódico cada 30 segundos
@@ -1498,6 +1599,12 @@ app.post('/hook', async (req, res) => {
         res.status(200).send('OK');
     }
 });
+
+// --- Función helper para extraer tiempo de retry de rate limit ---
+const extractRetryAfter = (errorMessage: string): number | null => {
+    const match = errorMessage.match(/Please try again in ([\d.]+)s/);
+    return match ? parseFloat(match[1]) : null;
+};
 
 // --- Inicialización ---
 const main = async () => {

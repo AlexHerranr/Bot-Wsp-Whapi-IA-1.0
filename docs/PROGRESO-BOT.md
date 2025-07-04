@@ -10,6 +10,7 @@ Bot WhatsApp empresarial usando Whapi Cloud API + OpenAI Assistants API con func
 - 🎨 **UI Optimizada**: Logs ultra-limpios (7 líneas → 2 líneas por operación)
 - ⏱️ **Buffering 8s**: Sistema simple y predecible para agrupación de mensajes
 - 🎯 **Multi-usuario**: Preparado para múltiples conversaciones simultáneas
+- 📊 **Análisis de Chats**: Sistema completo de análisis de conversaciones con Whapi API ⭐ **NUEVO**
 
 ---
 
@@ -142,6 +143,15 @@ Bot WhatsApp empresarial usando Whapi Cloud API + OpenAI Assistants API con func
     - Estadísticas de timers activos
     - Métricas de uso de threads
 
+### **📊 Análisis y Herramientas**
+21. **🔍 Sistema de Análisis de Chats** ⭐ **NUEVO**
+    - Análisis completo de conversaciones con Whapi API
+    - Formato optimizado y legible con emojis y separadores
+    - Agrupación cronológica por días con numeración secuencial
+    - Truncado inteligente de contenido por palabras completas
+    - Estadísticas de participación y duración de conversaciones
+    - Manejo robusto de errores y sistema de ayuda integrado
+
 ---
 
 ## ✅ **MEJORAS COMPLETADAS**
@@ -198,6 +208,84 @@ Bot WhatsApp empresarial usando Whapi Cloud API + OpenAI Assistants API con func
 - Versión simplificada → `src/app.ts`
 - Buffering de mensajes (6 segundos)
 - Gestión de múltiples usuarios simultáneos
+
+### **4. 📊 Sistema de Análisis de Chats - COMPLETADO** ⭐ **NUEVO**
+**Problema inicial**: Necesidad de analizar conversaciones de WhatsApp de forma legible y organizada.
+
+**✅ Solución implementada**:
+- Sistema completo en `tests/whapi/test-chat-specific.js`
+- Análisis dual: combina información de chat (`/chats/{ChatID}`) y mensajes (`/messages/list/{ChatID}`)
+- Formato optimizado con emojis, separadores y numeración secuencial
+- Agrupación cronológica por días con separadores visuales
+- Truncado inteligente de contenido por palabras completas (70 caracteres)
+- Estadísticas completas: participación, período y duración de conversación
+
+**📊 Características principales**:
+```
+✅ Análisis dual de endpoints
+✅ Formato visual optimizado
+✅ Agrupación cronológica
+✅ Truncado inteligente
+✅ Estadísticas avanzadas
+✅ Sistema de ayuda
+✅ Manejo robusto de errores
+```
+
+**🎯 Output de ejemplo**:
+```
+👤 Contacto: Sr Alex
+🏷️  Etiquetas: Colega Jefe, cotización
+📊 Mensajes: 200 de 2.293 totales
+
+📱 CONVERSACIÓN (más recientes primero):
+──────────────────────────────────────────────────────────────────────
+📅 03/07/25
+──────────────────────────────
+001. 17:38 🤖 Yo: Cómo te va
+002. 17:38 🤖 Yo: Hola rinoceronte de aguas dulces
+...
+📈 Resumen: 116 míos, 84 del cliente
+📅 Período: 01/07/25 a 03/07/25
+📊 Conversación abarca: 3 día(s)
+```
+
+**🛠️ Uso**:
+```bash
+# Análisis básico (200 mensajes por defecto)
+node test-chat-specific.js 573003913251@s.whatsapp.net
+
+# Análisis con cantidad personalizada
+node test-chat-specific.js 573003913251@s.whatsapp.net 100
+
+# Mostrar ayuda
+node test-chat-specific.js --help
+```
+
+### **4. 🎯 Optimización de Formato de Respuesta Beds24 - COMPLETADO**
+**Problema identificado**: Formato de respuesta de disponibilidad confuso y poco claro para el usuario.
+
+**✅ Solución implementada**:
+- **Título principal**: Cambió de "DISPONIBILIDAD COMPLETA" a "Apartamentos Disponibles"
+- **Sección alternativas**: Reemplazó "Alternativas con traslado" por "Opciones Alternas cambiando de apartamento"
+- **Enfoque correcto**: Las opciones alternas se presentan como excepciones, no como la norma
+- **Límites optimizados**: Aumentó opciones alternas de 2 a 3 para dar más opciones
+
+**📊 Antes vs Después**:
+```
+❌ ANTES:
+🥇 **DISPONIBILIDAD COMPLETA (1 opciones)**
+🥈 **Alternativas con traslado:**
+
+✅ AHORA:
+🥇 **Apartamentos Disponibles (1 opciones)**
+Opciones Alternas cambiando de apartamento
+```
+
+**🎯 Beneficios**:
+- Formato más claro y directo para el usuario
+- Enfoque correcto en apartamentos disponibles como opción principal
+- Las opciones alternas se presentan como excepciones, no como la norma
+- Mejor experiencia de usuario al entender inmediatamente qué opciones tiene
 - Manejo de errores robusto
 
 ### **4. 📱 Extracción de Contactos Mejorada - COMPLETADO**

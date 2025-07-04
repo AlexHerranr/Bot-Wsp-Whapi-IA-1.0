@@ -4,6 +4,116 @@
 
 ---
 
+## 🗓️ **3 JULIO 2025 - Optimización de Formato de Respuesta Beds24**
+
+### **📝 Resumen**
+Mejora del formato de respuesta de disponibilidad para hacerlo más claro y lógico, enfocándose en apartamentos disponibles como opción principal y relegando las opciones con cambio de apartamento como alternativas excepcionales.
+
+### **📂 Archivos Modificados**
+
+#### **`src/handlers/integrations/beds24-availability.ts`** - Función formatOptimizedResponse()
+**Líneas modificadas**: 487-563
+
+**Cambio anterior**:
+```typescript
+// 1. Mostrar siempre las opciones de estancia completa si existen
+if (completeOptions.length > 0) {
+    response += `🥇 **DISPONIBILIDAD COMPLETA (${completeOptions.length} opciones)**\n`;
+    // ...
+}
+
+// 2. Mostrar alternativas con traslado si hay 2 o menos opciones completas
+if (completeOptions.length <= 2 && splitOptions.length > 0) {
+    if (completeOptions.length === 0) {
+        response += `🥈 **Alternativas con traslado:**\n`;
+    } else {
+        response += `\n🥈 **Alternativas con traslado:**\n`;
+    }
+    // ...
+}
+```
+
+**Cambio nuevo**:
+```typescript
+// 1. Mostrar siempre las opciones de estancia completa si existen
+if (completeOptions.length > 0) {
+    response += `🥇 **Apartamentos Disponibles (${completeOptions.length} opciones)**\n`;
+    // ...
+}
+
+// 2. Mostrar opciones alternas con cambio de apartamento (solo si hay pocas opciones completas)
+if (completeOptions.length <= 2 && splitOptions.length > 0) {
+    response += `\nOpciones Alternas cambiando de apartamento\n`;
+    // ...
+}
+```
+
+**Descripción**: 
+- Cambió el título principal de "DISPONIBILIDAD COMPLETA" a "Apartamentos Disponibles" para ser más específico
+- Reemplazó "Alternativas con traslado" por "Opciones Alternas cambiando de apartamento" para ser más claro
+- Eliminó la referencia a "SIN TRASLADO" ya que es irrelevante para el usuario
+- Aumentó el límite de opciones alternas de 2 a 3 para dar más opciones
+
+**Impacto**: 
+- Formato más claro y directo para el usuario
+- Enfoque correcto en apartamentos disponibles como opción principal
+- Las opciones alternas se presentan como excepciones, no como la norma
+- Mejor experiencia de usuario al entender inmediatamente qué opciones tiene
+
+### **📂 Archivos de Test Actualizados**
+
+#### **`tests/beds24/test-beds24.js`** - Verificación de formato
+**Funcionalidad**: El test de formato ahora verifica el nuevo formato optimizado
+
+**Ejemplos del nuevo formato**:
+
+**Con disponibilidad completa:**
+```
+📅 **14/08/2025 - 17/08/2025 (3 noches)**
+
+🥇 **Apartamentos Disponibles (22 opciones)**
+✅ **1722 B** - $510.000
+   📊 $170.000/noche
+
+✅ **2005 B** - $510.000
+   📊 $170.000/noche
+
+✅ **1421 B** - $510.000
+   📊 $170.000/noche
+
+🔄 *Beds24 - 3/7, 15:44*
+```
+
+**Con opciones alternas:**
+```
+📅 **02/07/2025 - 04/07/2025 (2 noches)**
+
+Opciones Alternas cambiando de apartamento
+🔄 **Alternativa 1**: 0 traslados - $350.000
+   🏠 0704: 2025-07-03 a 2025-07-04 - $350.000
+
+🔄 *Beds24 - 3/7, 15:45*
+```
+
+**Sin disponibilidad:**
+```
+📅 **04/07/2025 - 07/07/2025 (3 noches)**
+
+❌ **Sin disponibilidad para 3 noches**
+💡 Considera fechas alternativas
+
+🔄 *Beds24 - 3/7, 15:45*
+```
+
+### **🎯 Beneficios de la Optimización**
+
+1. **Claridad mejorada**: "Apartamentos Disponibles" es más específico que "DISPONIBILIDAD COMPLETA"
+2. **Enfoque correcto**: Las opciones alternas se presentan como excepciones, no como la norma
+3. **Mejor UX**: El usuario entiende inmediatamente qué opciones tiene disponibles
+4. **Mantenimiento de eficiencia**: Conserva la optimización en tokens mientras mejora la claridad
+
+---
+
 ## 🗓️ **1 JULIO 2025 - Utilidad de Limpieza de Threads**
 
 ### **📝 Resumen**
