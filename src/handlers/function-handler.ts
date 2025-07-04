@@ -3,6 +3,7 @@ import { whapiLabels } from '../utils/whapi/index.js';
 import { enhancedLog } from '../utils/core/index.js';
 import { threadPersistence } from '../utils/persistence/index.js';
 import { handleAvailabilityCheck } from './integrations/beds24-availability.js';
+import { EscalationServiceMinimal } from '../services/escalation/escalation-minimal.service.js';
 
 export class FunctionHandler {
   private n8nWebhook = process.env.N8N_WEBHOOK_URL;
@@ -15,6 +16,9 @@ export class FunctionHandler {
       switch (name) {
         case 'check_availability':
           return await this.handleCheckAvailability(args);
+        
+        case 'escalate_to_human':
+          return await this.handleEscalateToHuman(args);
         
         case 'update_client_labels':
           return await this.handleUpdateClientLabels(args);
@@ -29,6 +33,55 @@ export class FunctionHandler {
     } catch (error) {
       enhancedLog('error', 'FUNCTION_HANDLER', `Error ejecutando función ${name}: ${error.message}`);
       return { error: `Error ejecutando función: ${error.message}` };
+    }
+  }
+
+  /**
+   * Manejar escalamiento a humano
+   */
+  private async handleEscalateToHuman(args: any): Promise<any> {
+    try {
+      const { reason, context } = args;
+
+      if (!reason) {
+        return { error: 'reason es requerido' };
+      }
+
+      enhancedLog('info', 'FUNCTION_HANDLER', 
+        `Escalando a humano por razón: ${reason}`);
+
+      // Preparar contexto simple
+      const escalationContext = {
+        userId: context?.userId || 'unknown',
+        userName: context?.userName || 'Usuario',
+        chatId: context?.chatId || 'unknown',
+        reason: reason,
+        context: context
+      };
+
+      // Ejecutar escalamiento
+      const success = await EscalationServiceMinimal.escalateToHuman(reason, escalationContext);
+
+      if (success) {
+        enhancedLog('success', 'FUNCTION_HANDLER', 
+          `Escalamiento exitoso para razón: ${reason}`);
+        
+        return {
+          success: true,
+          message: 'Escalamiento procesado exitosamente',
+          reason: reason,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        throw new Error('Error procesando escalamiento');
+      }
+
+    } catch (error) {
+      enhancedLog('error', 'FUNCTION_HANDLER', `Error en escalamiento: ${error.message}`);
+      return { 
+        error: `Error procesando escalamiento: ${error.message}`,
+        success: false 
+      };
     }
   }
 

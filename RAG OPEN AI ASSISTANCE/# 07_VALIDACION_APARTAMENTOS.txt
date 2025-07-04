@@ -258,7 +258,7 @@ Tengo el inventario completo actualizado.
 ### **6.2 Escalamiento Automático**
 ```
 SITUACIÓN: Cliente muy insistente en código inexistente
-FUNCIÓN: escalate_to_human("apartment_code_dispute", {
+FUNCIÓN: escalate_to_human("customer_complaint", {
   "invalid_code": "[CÓDIGO]",
   "client_insistence": "high",
   "corrections_offered": "[LISTA]"

@@ -425,7 +425,7 @@ OPTIMIZACIÓN:
 
 ### **11.2 Function Calling B2B**
 ```
-escalate_to_human("b2b_complex", {
+escalate_to_human("customer_complaint", {
     "agent_name": "[NOMBRE_COLEGA]",
     "issue_type": "negotiation|billing|third_party",
     "urgency": "high",

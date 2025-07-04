@@ -74,7 +74,7 @@ Total: [X] apartamentos para [X] personas
 
 Te las envío en unos minutos."
 
-[ESCALAR: escalate_to_human("external_apartment_photos")]
+[ESCALAR: escalate_to_human("customer_complaint")]
 ```
 
 ---
@@ -178,7 +178,7 @@ Un momento..."
 ### **6.1 Escalamiento Automático para Coordinación**
 ```
 SI grupo >= 3 apartamentos:
-    escalate_to_human("group_checkin_coordination", {
+    escalate_to_human("arrival_notification", {
         "apartments_count": number,
         "arrival_time": time,
         "leader": contact_name

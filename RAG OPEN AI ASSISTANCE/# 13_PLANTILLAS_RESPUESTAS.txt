@@ -134,32 +134,41 @@ Piso [X] con vista al mar
 
 ---
 
-## **3. PRESENTACIÓN DE OPCIONES**
+## **3. PRESENTACIÓN DE OPCIONES CON CARGOS INCLUIDOS**
 
 ### **3.1 Una Sola Opción**
 ```
-Aquí te muestro:
+Para tus fechas tengo:
 
-*Apartamento [NUMERO] - Piso [X]*
-[TIPO] para [X] personas
-$[PRECIO]/noche
+*Apartamento [NUMERO]* - Piso [X]
+[TIPO] con vista al mar
 
-Vista directa al mar
+Total cotización:
+• [N] noches: $[SUBTOTAL]
+• Servicio: $[CARGO]
+• *Total: $[TOTAL_FINAL]*
 
-Detalles Apartamento [NUMERO]: [LINK_FOTOS]
+¿Te interesa?
 ```
 
 ### **3.2 Dos Opciones (Máximo)**
 ```
 Te muestro 2 opciones:
 
-*Opción 1:* Apto [NUMERO]
-[TIPO] - $[PRECIO]/noche
+*[APTO1]* → $[PRECIO1]/noche
+*[APTO2]* → $[PRECIO2]/noche
 
-*Opción 2:* Apto [NUMERO]  
-[TIPO] - $[PRECIO]/noche
+¿Cuál prefieres que te cotice completa?
+```
 
-¿Te gustaría ver fotos de alguno?
+*Después de elección:*
+```
+El *[APTO_ELEGIDO]* queda en:
+• [N] noches: $[SUBTOTAL]
+• Servicio: $[CARGO]
+• *Total: $[TOTAL]*
+
+¿Lo reservo?
 ```
 
 ### **3.3 Detalles Adicionales (Si Pregunta)**

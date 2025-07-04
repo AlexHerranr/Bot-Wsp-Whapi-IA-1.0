@@ -63,11 +63,8 @@ async function updateFunctions() {
                             reason: { 
                                 type: "string", 
                                 enum: [
-                                    "complex_request", "payment_issues", "complaint_resolution", 
-                                    "special_requirements", "booking_modification", "emergency_support", 
-                                    "technical_issues", "late_arrival", "reminder_needed", 
-                                    "payment_received", "arrival_coordination", "special_access", 
-                                    "b2b_request", "other"
+                                    "payment_confirmation", "customer_complaint", "damage_report", 
+                                    "arrival_notification", "departure_notification"
                                 ],
                                 description: "Razón específica para la escalación" 
                             },
@@ -99,9 +96,9 @@ async function updateFunctions() {
         });
         
         console.log('✅ Funciones actualizadas exitosamente!');
-        console.log('📋 Funciones activas:');
+        console.log('📋 Funciones esenciales activas:');
         console.log('   - check_availability(startDate, endDate)');
-        console.log('   - escalate_to_human(reason, context)');
+        console.log('   - escalate_to_human(reason, context) - 5 razones: payment_confirmation, customer_complaint, damage_report, arrival_notification, departure_notification');
         
     } catch (error) {
         console.error('❌ Error:', error.message);

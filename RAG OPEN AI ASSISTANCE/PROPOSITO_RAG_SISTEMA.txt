@@ -104,7 +104,7 @@ check_availability(startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD")
 
 escalate_to_human(reason: string, context: object)
 ├─ Propósito: Transferir casos complejos a agente humano
-├─ Razones válidas: "complete_booking", "technical_issue", "complaint", "complex_request"
+├─ Razones válidas: "payment_confirmation", "customer_complaint", "damage_report", "arrival_notification", "departure_notification"
 ├─ Context preservation: Toda la conversación + intento de solución automática
 ├─ Timing óptimo: Cuando bot alcanza límites de automatización
 └─ Seamless handoff: Cliente informado del cambio sin fricciones
@@ -285,17 +285,18 @@ MANEJO OBJECIONES:
 
 #### **4.1.3 Casos Escalamiento Inmediato (100% Humano)**
 ```
-RESERVAS Y PAGOS:
-├─ Completar reserva: escalate_to_human("complete_booking")
-├─ Procesar pagos: escalate_to_human("payment_received")
-├─ Modificar reservas: escalate_to_human("booking_modification")
-└─ Cancelaciones: escalate_to_human("cancellation_request")
+CASOS ESCALAMIENTO ESENCIALES:
+├─ Confirmación pagos: escalate_to_human("payment_confirmation")
+├─ Quejas clientes: escalate_to_human("customer_complaint")
+├─ Reportes daños: escalate_to_human("damage_report")
+├─ Llegadas especiales: escalate_to_human("arrival_notification")
+└─ Salidas especiales: escalate_to_human("departure_notification")
 
-CASOS COMPLEJOS:
-├─ Quejas serias: escalate_to_human("complaint")
-├─ Emergencias: escalate_to_human("emergency")
-├─ Grupos grandes (8+): escalate_to_human("large_group")
-└─ Problemas técnicos: escalate_to_human("technical_issue")
+CASOS AUTOMÁTICOS (SIN ESCALAMIENTO):
+├─ Reservas: Bot informa proceso, no completa
+├─ Emergencias: Bot da contactos directos
+├─ Grupos grandes: Bot maneja automáticamente
+└─ Problemas técnicos: Bot reintentar automáticamente
 ```
 
 ### **4.2 Métricas de Rendimiento Implementadas**
@@ -325,7 +326,7 @@ LOGGING DETALLADO:
 ```
 COMPLETADO ✅:
 ├─ Knowledge base 17 archivos optimizada
-├─ Function calling básico (check_availability, escalate_to_human)
+├─ Function calling básico (check_availability, escalate_to_human con 5 razones)
 ├─ RAG retrieval semántico eficiente
 ├─ Humanización comunicación completa
 ├─ Error handling robusto runs activos
@@ -468,7 +469,7 @@ HERRAMIENTAS MEJORADAS:
 ```
 COMPONENTES PRINCIPALES:
 ├─ OpenAI Assistants API: Motor principal procesamiento
-├─ Function Calling: check_availability + escalate_to_human
+├─ Function Calling: check_availability + escalate_to_human (5 razones esenciales)
 ├─ Structured Outputs: Validación strict parámetros
 ├─ RAG Knowledge Base: 17 archivos optimizados
 ├─ WhatsApp API: Canal comunicación principal

@@ -79,54 +79,85 @@ RETORNA:
 ```
 "No hay disponibilidad"
 → Ofrecer fechas alternativas cercanas
-→ Si cliente insiste → escalate_to_human("no_availability")
+→ Si cliente insiste → ofrecer contacto directo
 ```
 
 #### **2.2.4 Error o Timeout**
 ```
-Error en consulta → escalate_to_human("technical_issue", context)
+Error en consulta → reintentar automáticamente
 ```
 
 ---
 
 ## **3. COMUNICACIÓN NATURAL DE RESULTADOS**
 
-### **3.1 Principios de Comunicación**
-- **Párrafos naturales**: Bot genera respuestas fluidas automáticamente
+### **3.1 Principios de Comunicación con Cargos Incluidos**
+- **SIEMPRE incluir** Cargo por Servicio desde primera cotización
+- **Párrafos cortos**: Máximo 3 líneas por párrafo
 - **Sin templates rígidos**: Adaptación según contexto
-- **Transparencia total**: Comunicar exactamente lo que retorna Beds24
-- **Empatía**: Especialmente cuando no hay disponibilidad
+- **Transparencia total**: Precio final sin sorpresas
+- **Un asterisco**: Para negritas en WhatsApp (*texto*)
 
-### **3.2 Ejemplos de Comunicación Natural**
+### **3.2 Procesamiento de Resultados de check_availability()**
 
-#### **3.2.1 Con Disponibilidad**
+#### **3.2.1 Transformación Obligatoria**
 ```
-"¡Perfecto! Tengo disponibilidad para esas fechas 😊
+RECIBE DE FUNCIÓN:
+"Apartamentos Disponibles:
+✅ 0622 B - $480.000
+✅ 1603 - $480.000"
 
-Para 4 personas del 15 al 20 de julio, tengo estas opciones:
+DETECTA AUTOMÁTICAMENTE:
+- 0622 B → Alcoba (cargo $70,000)
+- 1603 → Alcoba (cargo $70,000)
+- 3 noches × $160,000 = $480,000
 
-El apartamento 1722A está disponible todas las noches a $280.000 por noche, 
-o el 814 a $250.000. Ambos son de una alcoba con vista al mar.
+COMUNICA AL CLIENTE:
+"Para 3 noches (19-22 julio) tengo:
 
-El total incluye el cargo de limpieza. ¿Te gustaría ver fotos de alguno?"
+*0622 B* y *1603* → $160 mil/noche
+
+Cualquiera incluye:
+• 3 noches: $480 mil
+• Servicio: $70 mil
+• *Total: $550 mil*
+
+¿Cuál prefieres?"
 ```
 
-#### **3.2.2 Con Traslado Necesario**
+### **3.3 Templates Naturales con Cargos**
+
+#### **3.3.1 Una Opción Disponible**
 ```
-"Tengo una opción que requiere un pequeño cambio:
+"Para esas fechas tengo el *[APTO]*
 
-Las primeras 3 noches en el apartamento 1722A y las últimas 2 en el 814.
-Ambos están en el mismo edificio, así que el cambio es súper sencillo.
+Sale a $[PRECIO]/noche, total:
+• [N] noches: $[SUBTOTAL]
+• Servicio: $[CARGO]
+• *Total: $[TOTAL]*
 
-Te ayudamos con el equipaje durante el cambio. ¿Te funciona esta alternativa?"
+¿Te interesa?"
 ```
 
-#### **3.2.3 Sin Disponibilidad**
+#### **3.3.2 Múltiples Opciones Mismo Precio**
 ```
-"Para esas fechas específicas no tengo disponibilidad 😕
+"Tengo [X] al mismo precio:
 
-¿Podrías considerar del 22 al 27 de julio? Tengo excelentes opciones disponibles.
-O si prefieres, puedo conectarte con alguien que busque alternativas con colegas."
+*[APTO1]*, *[APTO2]* → $[PRECIO]/noche
+
+Total cualquiera: *$[TOTAL_CON_CARGO]*
+
+¿Cuál prefieres ver?"
+```
+
+#### **3.3.3 Diferentes Precios**
+```
+"Hay varias opciones:
+
+*[APTO1]* → $[PRECIO1]/noche (Total: $[TOTAL1])
+*[APTO2]* → $[PRECIO2]/noche (Total: $[TOTAL2])
+
+¿Te cotizo alguna en detalle?"
 ```
 
 ---
@@ -137,7 +168,7 @@ O si prefieres, puedo conectarte con alguien que busque alternativas con colegas
 ```
 1. check_availability() retorna "no disponible"
 2. Bot ofrece fechas alternativas cercanas automáticamente
-3. Si cliente necesita fechas específicas → escalate_to_human()
+3. Si cliente necesita fechas específicas → ofrecer contacto directo
 ```
 
 ### **4.2 Comunicación Empática**
@@ -148,7 +179,7 @@ disponibilidad en nuestros apartamentos.
 Déjame conectarte con alguien de nuestro equipo que puede buscar opciones 
 con colegas de confianza."
 
-[EJECUTAR: escalate_to_human("no_availability", context)]
+[EJECUTAR: ofrecer_contacto_directo(context)]
 ```
 
 ---
@@ -211,7 +242,7 @@ TRIGGERS:
 
 ### **7.2 Function Calling para Escalamiento**
 ```
-escalate_to_human("no_availability", {
+ofrecer_contacto_directo({
   "dates": {
     "start": "2025-07-15",
     "end": "2025-07-20"

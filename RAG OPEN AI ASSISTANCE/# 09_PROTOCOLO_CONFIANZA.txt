@@ -97,7 +97,7 @@ RESPUESTA_BOT:
 ```
 
 #### **NIVEL 4 - Seguimiento (Escalamiento si necesario)**
-Si persiste desconfianza → `escalate_to_human("verification_request", context)`
+Si persiste desconfianza → `escalate_to_human("customer_complaint", context)`
 
 ### **2.2 Principios de Comunicación del Bot**
 - **Tono**: Comprensivo, nunca defensivo
@@ -130,7 +130,7 @@ INFORMACIÓN_VERIFICABLE = {
 1. DOCUMENTOS_DIGITALES: Envío inmediato por WhatsApp
 2. VERIFICACIÓN_ONLINE: Enlaces a registros públicos
 3. CONTACTO_DIRECTO: Números y correos oficiales
-4. VERIFICACIÓN_FÍSICA: escalate_to_human("videocall_request")
+4. VERIFICACIÓN_FÍSICA: escalate_to_human("customer_complaint")
 ```
 
 *Para datos específicos → Ver 04_DATOS_CORPORATIVOS_CONTACTO.txt*
@@ -164,8 +164,8 @@ RESPUESTA_BOT:
 
 ¿Te parece bien?"
 
-ACCIÓN: escalate_to_human("videocall_coordination", {
-    "client_concern": "verification_request",
+ACCIÓN: escalate_to_human("customer_complaint", {
+    "client_concern": "customer_complaint",
     "urgency": "high",
     "client_type": "international/high_value"
 })
@@ -204,7 +204,7 @@ RESPUESTA_BOT:
 
 ¿Te gustaría que te conecte con algún huésped reciente?"
 
-SI_ACEPTA: escalate_to_human("client_reference_contact", context)
+SI_ACEPTA: escalate_to_human("customer_complaint", context)
 ```
 
 ---
@@ -247,7 +247,7 @@ ACCIÓN_BOT:
 1. Activar protocolo multiidioma (08_PROTOCOLO_MULTIIDIOMA.txt)
 2. Buscar referencias en su idioma
 3. Ofrecer documentos traducidos si necesario
-4. escalate_to_human("language_verification", context)
+4. escalate_to_human("customer_complaint", context)
 ```
 
 ---
@@ -266,7 +266,7 @@ ESCALATE_TRIGGERS = [
 
 ### **7.2 Function Calling para Escalamiento**
 ```
-escalate_to_human("verification_complex", {
+escalate_to_human("customer_complaint", {
     "client_name": "[NOMBRE]",
     "concern_level": "high|medium|low",
     "actions_taken": ["documentos_enviados", "referencias_compartidas"],
@@ -368,7 +368,7 @@ RESPUESTA BOT:
 1. Validación empática automática
 2. Información empresarial inmediata
 3. Oferta de documentos y videollamada
-4. Si persiste → escalate_to_human()
+4. Si persiste → escalate_to_human("customer_complaint")
 ```
 
 ### **11.2 Solicitud de Documentos**

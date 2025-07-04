@@ -53,7 +53,7 @@ CUÁNDO_USAR:
 
 PARÁMETROS:
 {
-  "reason": "complete_booking | technical_issue | complaint | complex_request | large_group",
+  "reason": "payment_confirmation | customer_complaint | damage_report | arrival_notification | departure_notification",
   "context": {
     "guest_name": "string",
     "issue_description": "string",
@@ -65,10 +65,10 @@ PARÁMETROS:
 
 2.1.3 [FUNCIONES NO IMPLEMENTADAS - USAR ESCALATE_TO_HUMAN]
 Las siguientes funciones NO están implementadas y deben manejarse via escalate_to_human():
-- Recordatorios automáticos → escalate_to_human("reminder_needed", context)
-- Confirmación de pagos → escalate_to_human("payment_received", context)
-- Llegadas especiales → escalate_to_human("late_arrival", context)
-- Coordinación especial → escalate_to_human("special_coordination", context)
+- Recordatorios automáticos → escalate_to_human("departure_notification", context)
+- Confirmación de pagos → escalate_to_human("payment_confirmation", context)
+- Llegadas especiales → escalate_to_human("arrival_notification", context)
+- Coordinación especial → escalate_to_human("arrival_notification", context)
 
 3. DIRECTORIO COMPLETO DE ARCHIVOS VERIFICADOS (BOT AUTÓNOMO)
 3.1 ARCHIVOS CORE - Información Fundamental
@@ -121,7 +121,7 @@ CONTIENE:
 
 CUÁNDO_CONSULTAR:
 - Calcular servicios adicionales automáticamente
-- Coordinar llegadas especiales (usar escalate_to_human("late_arrival"))
+- Coordinar llegadas especiales (usar escalate_to_human("arrival_notification"))
 - Gestionar guardado de equipaje
 - Aplicar cargos según políticas
 
@@ -188,7 +188,7 @@ NOTA: Este archivo fue eliminado según indica el propio archivo. El manejo de i
 PROPÓSITO: Procedimientos para llegadas fuera de horario + coordinación automática
 CONTIENE:
 ├─ Clasificación: Estándar (3-7PM), Nocturna (7-11PM), Madrugada (11PM-6AM)
-├─ Coordinación automática: Nocturna (4h antes), Madrugada (8h antes + escalate_to_human("late_arrival"))
+├─ Coordinación automática: Nocturna (4h antes), Madrugada (8h antes + escalate_to_human("arrival_notification"))
 ├─ Protocolos específicos por horario
 ├─ Comunicación automática con recepción edificio
 └─ Contingencias y plan B
@@ -197,7 +197,7 @@ CUÁNDO_CONSULTAR:
 - Llegadas después 7:00 PM
 - Coordinación automática llegadas madrugada
 - Procedimientos específicos por horario
-- Usar escalate_to_human("late_arrival") cuando sea necesario
+- Usar escalate_to_human("arrival_notification") cuando sea necesario
 
 KEYWORDS_CLAVE: llegada, tardía, nocturna, madrugada, procedimiento, coordinación
 
@@ -242,13 +242,13 @@ PROPÓSITO: Gestión automática de salida y cierre de estadía
 CONTIENE:
 ├─ Fases automáticas: Pre-checkout (24-48h), Checkout activo, Post-checkout (0-72h)
 ├─ Proceso estándar: Personal limpieza 6-11AM, Buzón express
-├─ Recordatorios automáticos: escalate_to_human("reminder_needed") para pre-checkout
+├─ Recordatorios automáticos: escalate_to_human("departure_notification") para pre-checkout
 ├─ Gestión objetos olvidados automática
 └─ Casos especiales: Late checkout, emergencia, grupal
 
 CUÁNDO_CONSULTAR:
 - Proceso checkout estándar/tardío
-- Envío automático de recordatorios (escalate_to_human("reminder_needed"))
+- Envío automático de recordatorios (escalate_to_human("departure_notification"))
 - Gestión objetos olvidados
 - Casos especiales de cierre
 
@@ -267,7 +267,7 @@ CUÁNDO_CONSULTAR:
 - Reservas 3+ apartamentos
 - Coordinación automática grupos complejos
 - Aplicación automática beneficios grupales
-- Escalamiento para grupos 8+ (escalate_to_human)
+- Escalamiento para grupos 8+ (escalate_to_human("arrival_notification"))
 
 KEYWORDS_CLAVE: grupo, multiple, grupal, coordinación, líder, corporativo
 
@@ -331,14 +331,14 @@ PROPÓSITO: Comunicación estratégica de disponibilidad + check_availability()
 CONTIENE:
 ├─ Jerarquía búsqueda automática: Propio→Alternativo→Parcial→Terceros→check_availability()
 ├─ Templates disponibilidad bot: Confirmada, múltiples opciones, urgencia
-├─ No disponibilidad: Empática, alternativas terceros, escalate_to_human()
+├─ No disponibilidad: Empática, alternativas terceros, contacto directo
 ├─ Rotación apartamentos: Criterios aplicación automática, logística cambio
 └─ Estrategias automáticas por temporada: Alta (firmeza), Normal (flexibilidad)
 
 CUÁNDO_CONSULTAR:
 - Comunicar disponibilidad confirmada automáticamente
 - Manejar no disponibilidad total (check_availability)
-- Proponer alternativas terceros (escalate_to_human)
+- Proponer alternativas terceros (contacto directo)
 - Gestionar rotación apartamentos automáticamente
 
 KEYWORDS_CLAVE: disponibilidad, bloqueo, rotación, alternativas, flexibilización
@@ -365,7 +365,7 @@ KEYWORDS_CLAVE: sistema, prompt, bot, autonomo, function, calling, rag
 01_TARIFAS ←→ 02_INVENTARIO: Precios por tipo ←→ Validación apartamentos
 01_TARIFAS ←→ 03_CARGOS: Precios base ←→ Servicios adicionales
 02_INVENTARIO ←→ 07_VALIDACION: Inventario real ←→ Sistema validación
-03_CARGOS ←→ 09_LLEGADAS: Precios servicios ←→ escalate_to_human("late_arrival")
+03_CARGOS ←→ 09_LLEGADAS: Precios servicios ←→ escalate_to_human("arrival_notification")
 04_CORPORATIVO ←→ 11_CONFIANZA: Datos empresa ←→ Verificación empresarial
 
 4.2 Relaciones Secundarias (Información Complementaria)
@@ -376,9 +376,9 @@ KEYWORDS_CLAVE: sistema, prompt, bot, autonomo, function, calling, rag
 4.3 Relaciones de Function Calling
 18_DISPONIBILIDAD → check_availability(): Búsqueda compleja → Verificación tiempo real
 [CASOS_COMPLEJOS] → escalate_to_human(): Situaciones fuera de protocolo → Agente humano
-09_LLEGADAS → escalate_to_human("late_arrival"): Llegadas especiales → Coordinación humana
-12_CHECKOUT → escalate_to_human("reminder_needed"): Checkout → Recordatorios humanos
-[PAGOS] → escalate_to_human("payment_received"): Confirmación pagos → Activación humana
+09_LLEGADAS → escalate_to_human("arrival_notification"): Llegadas especiales → Coordinación humana
+12_CHECKOUT → escalate_to_human("departure_notification"): Checkout → Recordatorios humanos
+[PAGOS] → escalate_to_human("payment_confirmation"): Confirmación pagos → Activación humana
 
 5. FLUJOS DE NAVEGACIÓN BOT OPTIMIZADOS
 5.1 Flujo de Cotización Completa Automática
@@ -394,7 +394,7 @@ BOT_NAVEGACIÓN:
 BOT_NAVEGACIÓN:
 1. 09_LLEGADAS_ESPECIALES.txt → Protocolo según horario
 2. 03_CARGOS_SERVICIOS_TARIFARIOS.txt → Precios servicios especiales
-3. escalate_to_human("late_arrival", context) → Coordinación humana con recepción
+3. escalate_to_human("arrival_notification", context) → Coordinación humana con recepción
 4. 02_INVENTARIO_APARTAMENTOS.txt → Verificar apartamento asignado
 5. 15_PLANTILLAS_RESPUESTAS.txt → Comunicación instrucciones
 
@@ -456,21 +456,21 @@ FLUJO_BOT:
 1. Procesar toda la información de la consulta
 2. Confirmar detalles y precio final
 3. Explicar proceso de pago → 04_DATOS_CORPORATIVOS_CONTACTO.txt
-4. escalate_to_human("complete_booking", contexto_completo)
+4. escalate_to_human("payment_confirmation", contexto_completo)
 5. Informar al cliente que agente humano completará la reserva
 
 7.3 Cliente Llegada Especial
 FLUJO_BOT:
 1. Detectar horario fuera de estándar → 09_LLEGADAS_ESPECIALES.txt
 2. Calcular cargos adicionales → 03_CARGOS_SERVICIOS_TARIFARIOS.txt
-3. escalate_to_human("late_arrival", {booking_info, arrival_time})
+3. escalate_to_human("arrival_notification", {booking_info, arrival_time})
 4. Confirmar coordinación realizada → 15_PLANTILLAS_RESPUESTAS.txt
 
 7.4 Cliente Pide Verificación Empresa
 FLUJO_BOT:
 1. Detectar señales desconfianza → 11_PROTOCOLO_CONFIANZA.txt
 2. Responder con datos verificables → 04_DATOS_CORPORATIVOS_CONTACTO.txt
-3. Si persiste duda → escalate_to_human("verification_request", contexto)
+3. Si persiste duda → escalate_to_human("customer_complaint", contexto)
 4. Ofrecer videollamada con agente humano
 
 NOTA ARQUITECTÓNICA CRÍTICA

@@ -129,7 +129,7 @@ RESERVAS: Mínimo 24 horas anticipación
 **ACCIÓN INMEDIATA:**
 - Responder con información general
 - Ofrecer WhatsApp de tours
-- Si insiste en detalles → escalate_to_human("tour_inquiry")
+- Si insiste en detalles → escalate_to_human("customer_complaint")
 
 ---
 
@@ -164,7 +164,7 @@ Te voy a conectar con ellos por WhatsApp: 300 830 4905
 
 Ellos manejan toda la logística, horarios y pueden personalizar la experiencia según lo que busques."
 
-[Si insiste: escalate_to_human("tour_booking_request")]
+[Si insiste: escalate_to_human("customer_complaint")]
 ```
 
 ### **4.4 Preguntas sobre Precios Exactos**
@@ -191,7 +191,7 @@ TRIGGERS:
 - Grupos grandes (10+ personas)
 - Solicitudes de tours privados o personalizados
 
-ACCIÓN: escalate_to_human("tour_complex_request", {
+ACCIÓN: escalate_to_human("customer_complaint", {
   "type": "tipo_de_solicitud",
   "details": "detalles_específicos"
 })

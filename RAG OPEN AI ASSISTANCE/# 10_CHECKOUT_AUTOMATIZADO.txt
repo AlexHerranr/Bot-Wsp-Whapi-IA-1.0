@@ -176,7 +176,7 @@ Espero que hayas llegado bien a casa.
 
 ## **6. CASOS QUE REQUIEREN ESCALAMIENTO**
 
-### **6.1 Situaciones para escalate_to_human()**
+### **6.1 Situaciones para escalate_to_human("departure_notification")**
 ```
 - Cliente se niega a desocupar
 - Daños significativos reportados
@@ -187,7 +187,7 @@ Espero que hayas llegado bien a casa.
 
 ### **6.2 Protocolo de Escalamiento**
 ```
-FUNCIÓN: escalate_to_human("checkout_issue", {
+FUNCIÓN: escalate_to_human("departure_notification", {
     "issue_type": "[TIPO_PROBLEMA]",
     "apartment": "[CÓDIGO]",
     "guest": "[NOMBRE]",

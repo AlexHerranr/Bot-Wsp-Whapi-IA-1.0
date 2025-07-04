@@ -211,7 +211,7 @@ Total: [NOCHES] noches × $[PRECIO_FINAL] = $[TOTAL_CON_DESCUENTO]
 ### **4.4 Casos Complejos Multi-Temporada**
 Para estadías que abarcan múltiples temporadas:
 1. **Aplicar regla estándar:** Usar la temporada más alta presente
-2. **Si es muy complejo:** Usar `escalate_to_human("pricing_complex_case", context)`
+2. **Si es muy complejo:** Usar `escalate_to_human("customer_complaint", context)`
 3. **Comunicar transparentemente:** Explicar al cliente la lógica aplicada
 
 ---
@@ -276,7 +276,7 @@ DETECCIÓN AUTOMÁTICA:
 - Estadía muy larga multi-temporada
 - Múltiples apartamentos involucrados
 - Cálculo extremadamente complejo
-ACCIÓN: escalate_to_human("pricing_complex_case", {
+ACCIÓN: escalate_to_human("customer_complaint", {
   "dates": "25/12/2025 - 15/01/2026",
   "duration": "21 nights",
   "complexity": "multi-season + multi-apartment",
@@ -294,6 +294,35 @@ RESULTADO BOT:
 "¡Perfecto! Enero tiene promoción especial:
 • Descuento por temporada baja: 10%
 • Precio final: $153.000/noche"
+```
+
+### **6.4 Integración con Cargo por Servicio**
+
+#### **Variables Automáticas para Cotización**
+```
+[CARGO_SERVICIO_ESTUDIO] = $60,000
+[CARGO_SERVICIO_ALCOBA] = $70,000
+[INCLUIR_SIEMPRE] = true
+[FORMATO_PRECIO] = "$XXX mil" (no "$XXX,000")
+```
+
+#### **Detección Automática por Código**
+```
+ESTUDIOS = ["1722B", "2005B"] → Cargo $60,000
+ALCOBAS = ["1317", "1722A", "1820", "2005A", "814", "715"] → Cargo $70,000
+```
+
+#### **Template Cotización con Descuento + Cargo**
+```
+"Aplica descuento del [X]%!
+
+*[APTO]* - Temporada [TEMPORADA]
+Precio con descuento: $[PRECIO_DESC]/noche
+
+Total final:
+• [N] noches: $[SUBTOTAL_DESC]
+• Servicio: $[CARGO]
+• *Total: $[TOTAL_FINAL]*"
 ```
 
 ---

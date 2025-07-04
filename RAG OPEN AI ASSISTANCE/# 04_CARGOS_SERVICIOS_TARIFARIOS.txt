@@ -136,31 +136,31 @@ APLICACIÓN: Solo pagos con tarjeta Bold
 ### **3.1 Llegada Nocturna (7:00 PM - 11:00 PM)**
 ```
 TARIFA_BASE: $50.000 COP
-FUNCIÓN_EXTERNA: escalate_to_human("late_arrival") para coordinación
+FUNCIÓN_EXTERNA: escalate_to_human("arrival_notification") para coordinación
 ```
 
 **PROCESO AUTOMÁTICO DEL BOT:**
 1. Detectar llegada en horario nocturno
 2. Informar cargo adicional de $50.000
-3. Si cliente acepta → escalate_to_human("late_arrival", context)
+3. Si cliente acepta → escalate_to_human("arrival_notification", context)
 4. Confirmar coordinación realizada
 
 ### **3.2 Llegada Madrugada (11:00 PM - 6:00 AM)**
 ```
 TARIFA_BASE: $80.000 COP
-COORDINACIÓN: Requiere escalate_to_human("late_arrival") obligatorio
+COORDINACIÓN: Requiere escalate_to_human("arrival_notification") obligatorio
 ```
 
 **PROCESO AUTOMÁTICO DEL BOT:**
 1. Detectar llegada en madrugada
 2. Informar cargo de $80.000 + proceso especial
-3. escalate_to_human("late_arrival", context) con 8h anticipación mínima
+3. escalate_to_human("arrival_notification", context) con 8h anticipación mínima
 4. Confirmar autorización enviada
 
 ### **3.3 Llegadas Extremas (3:00 AM - 6:00 AM)**
 ```
 TARIFA_BASE: $120.000 COP
-ACCIÓN: escalate_to_human("extreme_arrival", context)
+ACCIÓN: escalate_to_human("arrival_notification", context)
 ```
 
 **REGLA DEL BOT:**
@@ -206,7 +206,7 @@ ACCIÓN: escalate_to_human("extreme_arrival", context)
 ```
 TRIGGER: 3+ apartamentos solicitados
 BENEFICIO: Coordinación grupal incluida sin cargo
-ESCALAMIENTO: 8+ apartamentos → escalate_to_human("large_group")
+ESCALAMIENTO: 8+ apartamentos → escalate_to_human("arrival_notification")
 ```
 
 **APLICACIÓN AUTOMÁTICA:**
@@ -218,13 +218,38 @@ ESCALAMIENTO: 8+ apartamentos → escalate_to_human("large_group")
 
 ## **6. REGLAS DE CÁLCULO AUTOMÁTICO**
 
-### **6.1 Orden de Cálculo del Bot**
+### **6.1 Orden de Cálculo del Bot - COTIZACIONES**
+
+#### **EN TODA COTIZACIÓN INICIAL:**
 ```
-1. Subtotal alojamiento (con descuentos aplicados)
-2. + Cargo por Servicio ($60/$70 - incluye aseo + registro)
-3. + Servicios adicionales detectados (sobrecupo, early, late, etc.)
-4. + Recargos si aplican (Bold 5%)
-5. = Total final
+1. Precio por noche (según temporada)
+2. × Número de noches
+3. = Subtotal alojamiento
+4. + Cargo por Servicio OBLIGATORIO ($60k estudio / $70k alcoba)
+5. = TOTAL COTIZACIÓN
+
+IMPORTANTE: Nunca cotizar sin incluir el cargo por servicio
+```
+
+#### **SERVICIOS ADICIONALES (solo si aplica):**
+```
+6. + Sobrecupo ($50k por persona extra por noche)
+7. + Early check-in (según hora)
+8. + Late checkout ($130k)
+9. = TOTAL FINAL CON ADICIONALES
+```
+
+### **6.3 Comunicación del Cargo por Servicio**
+```
+NUNCA DECIR:
+- "Cargo adicional de servicio"
+- "Se agrega cargo por servicio"
+- "Más cargo de limpieza"
+
+SIEMPRE DECIR:
+- "Incluye servicio"
+- "Con todo incluido"
+- "Total con servicio"
 ```
 
 **NOTAS IMPORTANTES:**
@@ -252,7 +277,7 @@ ESCALAMIENTO: 8+ apartamentos → escalate_to_human("large_group")
 ### **7.1 Servicios No Estándar**
 ```
 DETECCIÓN: Cliente solicita algo no contemplado
-ACCIÓN: escalate_to_human("special_service_request", context)
+ACCIÓN: escalate_to_human("customer_complaint", context)
 COMUNICACIÓN: "Déjame consultar esa solicitud especial con el equipo"
 ```
 
@@ -260,14 +285,14 @@ COMUNICACIÓN: "Déjame consultar esa solicitud especial con el equipo"
 ```
 EJEMPLOS: Vuelos cancelados, emergencias médicas
 PRINCIPIO: Máxima flexibilidad
-ACCIÓN: escalate_to_human("emergency", context)
+ACCIÓN: proporcionar_contacto_emergencia(context)
 ```
 
 ### **7.3 Disputas sobre Cargos**
 ```
 DETECCIÓN: Cliente cuestiona cargos aplicados
 PRIMERA RESPUESTA: Explicar justificación clara
-SI PERSISTE: escalate_to_human("billing_dispute", context)
+SI PERSISTE: escalate_to_human("customer_complaint", context)
 ```
 
 ---
@@ -278,7 +303,7 @@ SI PERSISTE: escalate_to_human("billing_dispute", context)
 ```
 HORARIOS_CHECK_IN/OUT → Ver 14_POLITICAS_OPERATIVAS.txt
 PROCEDIMIENTOS_LLEGADAS → Ver 09_LLEGADAS_ESPECIALES.txt
-COORDINACIÓN_ESPECIAL → escalate_to_human("late_arrival") function
+COORDINACIÓN_ESPECIAL → escalate_to_human("arrival_notification") function
 ```
 
 ### **8.2 Para Cálculo de Totales**
@@ -290,7 +315,7 @@ DESCUENTOS → Aplicados automáticamente por el bot
 
 ### **8.3 Para Casos Complejos**
 ```
-GRUPOS_GRANDES → Ver 13_RESERVAS_GRUPALES.txt + escalate_to_human()
+GRUPOS_GRANDES → Ver 13_RESERVAS_GRUPALES.txt + escalate_to_human("arrival_notification")
 DISPONIBILIDAD → Ver 16_GESTION_DISPONIBILIDAD.txt
 CHECKOUT → Ver 12_CHECKOUT_ESTANDARIZADO.txt
 ```
