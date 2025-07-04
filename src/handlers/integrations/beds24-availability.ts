@@ -1,3 +1,6 @@
+// @docs: features/BEDS24_INTEGRATION_COMPLETE.md
+// @docs: features/OPTIMIZACION_FORMATO_BEDS24.md
+// @docs: progress/PROGRESO-BOT.md
 import { getBeds24Service } from '../../services/beds24/beds24.service';
 import { AvailabilityInfo, Beds24Error } from '../../services/beds24/beds24.types';
 import { getBeds24Config } from '../../config/integrations/beds24.config';

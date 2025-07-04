@@ -12,7 +12,7 @@ console.log('🧪 Prueba de Funcionalidad de Eliminación de Archivos\n');
 async function testRemoveFile() {
     try {
         // Cargar configuración
-        const configPath = join(__dirname, '..', '..', 'assistant-config.json');
+        const configPath = join(__dirname, '..', '..', 'config', 'assistant-config.json');
         let config;
         try {
             config = JSON.parse(readFileSync(configPath, 'utf8'));

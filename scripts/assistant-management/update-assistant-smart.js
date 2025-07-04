@@ -23,7 +23,7 @@ async function updateAssistant() {
         });
         
         // Cargar configuración existente
-        const configPath = join(__dirname, '..', '..', 'assistant-config.json');
+        const configPath = join(__dirname, '..', '..', 'config', 'assistant-config.json');
         let config;
         try {
             config = JSON.parse(readFileSync(configPath, 'utf8'));
@@ -222,7 +222,7 @@ async function updateConfig(config, ragFolder) {
     
     config.lastUpdate = new Date().toISOString();
     
-    const configPath = join(__dirname, '..', '..', 'assistant-config.json');
+    const configPath = join(__dirname, '..', '..', 'config', 'assistant-config.json');
     writeFileSync(configPath, JSON.stringify(config, null, 2));
     
     console.log('✅ Configuración actualizada');

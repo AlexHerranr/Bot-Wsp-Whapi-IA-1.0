@@ -149,7 +149,7 @@ async function showStatus() {
         console.log(`🤖 Assistant ID: ${assistantId || '❌ No configurado'}`);
         
         // Verificar configuración
-        const configPath = join(__dirname, '..', '..', 'assistant-config.json');
+        const configPath = join(__dirname, '..', '..', 'config', 'assistant-config.json');
         if (fs.existsSync(configPath)) {
             const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
             console.log(`🗃️ Vector Store ID: ${config.vectorStore?.id || '❌ No encontrado'}`);
@@ -212,7 +212,7 @@ async function listVectorFiles() {
         console.log('🗃️ ARCHIVOS EN EL VECTOR STORE:\n');
         
         // Cargar configuración
-        const configPath = join(__dirname, '..', '..', 'assistant-config.json');
+        const configPath = join(__dirname, '..', '..', 'config', 'assistant-config.json');
         if (!fs.existsSync(configPath)) {
             console.log('❌ No se encontró assistant-config.json');
             return;

@@ -11,7 +11,8 @@
     "start": "node dist/app.js",
     "test": "node scripts/development/test-env.js",
     "assistant": "node scripts/assistant-management/assistant-cli.js",
-    "create-assistant": "node scripts/create-new-assistant-v2.js"
+    "create-assistant": "node scripts/create-new-assistant-v2.js",
+    "check-docs": "node scripts/check-docs.js"
   },
   "keywords": [
     "whatsapp",

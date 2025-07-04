@@ -113,7 +113,10 @@ const getCallerFile = (): string => {
 const writeToFile = (level: string, category: string, message: string, details?: any, sourceFile?: string, userId?: string) => {
     if (!logStream) initLogStream();
     
-    const timestamp = new Date().toISOString();
+    // Usar hora de Colombia (UTC-5)
+    const now = new Date();
+    const colombiaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    const timestamp = colombiaTime.toISOString().replace('Z', '-05:00');
     
     // Información enterprise
     const fileInfo = sourceFile ? ` [${sourceFile}]` : '';
@@ -141,7 +144,10 @@ export const enhancedLog = (
     details?: any,
     userId?: string
 ) => {
-    const timestamp = new Date().toISOString();
+    // Usar hora de Colombia (UTC-5)
+    const now = new Date();
+    const colombiaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    const timestamp = colombiaTime.toISOString().replace('Z', '-05:00');
     const sourceFile = getCallerFile();
     
     // Escribir al archivo técnico (formato completo)

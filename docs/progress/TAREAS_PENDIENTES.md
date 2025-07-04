@@ -1,11 +1,52 @@
 # 📋 TAREAS PENDIENTES - TEALQUILAMOS BOT
 
-*Fecha: 2025-07-03*
-*Estado: Sistema funcional con 8 features core completadas*
+*Fecha: 2025-07-04*
+*Estado: Sistema funcional con 10 features core completadas*
 
 ---
 
 ## ✅ **TAREAS COMPLETADAS RECIENTEMENTE**
+
+### 🎯 **Contexto Histórico para Clientes Nuevos - COMPLETADO**
+**📅 Completado: 4 Julio 2025**
+**🎯 Estado: ✅ IMPLEMENTADO Y PROBADO**
+
+#### **Cambios realizados:**
+- ✅ Implementó getChatHistory() en chatHistory.ts
+- ✅ Obtiene últimos 200 mensajes de WhatsApp vía API
+- ✅ Formatea mensajes con fecha, hora y remitente
+- ✅ Se activa solo cuando no existe thread previo
+- ✅ Integrado en processWithOpenAI() con contexto completo
+- ✅ Bot ahora recuerda conversaciones anteriores
+
+#### **Archivos creados/modificados:**
+- `src/utils/whapi/chatHistory.ts` - Nueva función getChatHistory()
+- `src/app.ts` - Integración del contexto histórico
+- `src/utils/core/enhancedLogger.ts` - Timezone Colombia (UTC-5)
+- `tests/test-chat-history.js` - Script de prueba
+- `docs/CONTEXTO_HISTORIAL_CONVERSACION.md` - Documentación completa
+
+#### **Resultado:**
+- Bot con memoria completa de conversaciones anteriores
+- Mejor experiencia para clientes recurrentes
+- Respuestas más contextualizadas desde el primer mensaje
+- Verificado en producción con éxito
+
+### 🎯 **Envío de Identidad y Metadatos a OpenAI - COMPLETADO**
+**📅 Completado: 4 Julio 2025**
+**🎯 Estado: ✅ IMPLEMENTADO Y VERIFICADO**
+
+#### **Cambios realizados:**
+- ✅ Envío de nombre del cliente (name + userName)
+- ✅ Inclusión de etiquetas del contacto en contexto
+- ✅ Actualización automática de metadatos cada 24 horas
+- ✅ Campo userName ahora se actualiza correctamente
+- ✅ Formato estructurado del contexto implementado
+
+#### **Archivos modificados:**
+- `src/app.ts` - Actualización de metadatos en líneas 424 y 467
+- `src/utils/persistence/threadPersistence.ts` - Ya actualizado
+- `tests/test-metadata-updates.js` - Verificador de metadatos
 
 ### 🎯 **Optimización de Formato de Respuesta Beds24 - COMPLETADO**
 **📅 Completado: 3 Julio 2025**
@@ -28,55 +69,6 @@
 - Enfoque correcto en apartamentos disponibles como opción principal
 - Las opciones alternas se presentan como excepciones, no como la norma
 - Mejor experiencia de usuario
-
----
-
-## 🔥 **PRIORIDAD UNO - ENRIQUECIMIENTO DE CONTEXTO**
-
-### 📝 **1. Envío de Identidad y Metadatos a OpenAI**
-**📅 Timeline: Esta semana**
-**🎯 Estado: EN DESARROLLO**
-
-#### **Qué implementar:**
-- ✅ Enviar nombre del cliente (combinación `name` + `userName`)
-- ✅ Incluir etiquetas del contacto
-- ✅ Estructurar mensaje con formato claro
-
-#### **Formato del contexto:**
-```
-IDENTIDAD DEL CLIENTE:
-- Nombre: {name} ({userName})
-- Etiquetas: [VIP, Cliente]
-
-CONTEXTO: HISTORIAL DE CONVERSACIONES ANTERIORES
-{historial}
-
-MENSAJE ACTUAL DEL CLIENTE:
-{mensaje_actual}
-```
-
-#### **Archivos a modificar:**
-- `src/app.ts` - Función `processWithOpenAI()`
-- `src/utils/persistence/threadPersistence.ts` - Ya actualizado ✅
-
----
-
-### 📚 **2. Historial de Chat para Usuarios Nuevos**
-**📅 Timeline: 1 semana**
-**🎯 Estado: PENDIENTE**
-
-#### **Qué implementar:**
-- 📋 Detectar usuarios sin thread registrado
-- 📋 Llamar API Whapi: `GET /chats/{ChatID}`
-- 📋 Extraer últimas 50 interacciones
-- 📋 Formatear y enviar a OpenAI
-
-#### **Archivos a crear/modificar:**
-```
-├── src/utils/whapi/chat-history.ts        # Nueva función para obtener historial
-├── src/app.ts                             # Integrar en processWithOpenAI()
-└── .env                                    # Verificar WHAPI_API_URL
-```
 
 ---
 
@@ -294,7 +286,7 @@ Usuario → Classifier → [Pricing|Availability|Info] Specialist → Formatter 
 
 ---
 
-*El sistema ya tiene 8 funcionalidades core completadas y funcionando en producción. El enfoque ahora es enriquecer el contexto, evaluar arquitectura multi-assistant basada en datos reales, y completar el ciclo de atención con escalamiento inteligente.*
+*El sistema ya tiene 10 funcionalidades core completadas y funcionando en producción. El enfoque ahora es enriquecer el contexto, evaluar arquitectura multi-assistant basada en datos reales, y completar el ciclo de atención con escalamiento inteligente.*
 
 ---
 

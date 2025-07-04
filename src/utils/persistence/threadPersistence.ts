@@ -244,7 +244,55 @@ export class ThreadPersistenceManager {
             `Thread ${existing ? 'actualizado' : 'creado'} para ${userId} (${record.userName}): ${threadId}`);
     }
     
-    // Eliminado: Sistema de rotación de threads (ya no contamos mensajes)
+    // 🆕 Actualizar metadatos específicos del thread (labels, nombre, etc.)
+    updateThreadMetadata(userId: string, updates: {
+        name?: string;
+        labels?: string[];
+        userName?: string;
+        chatId?: string;
+    }) {
+        const existing = this.threads.get(userId);
+        if (!existing) {
+            enhancedLog('warning', 'THREAD_PERSIST', 
+                `No se puede actualizar metadatos: thread no existe para ${userId}`);
+            return false;
+        }
+
+        // Actualizar solo los campos proporcionados
+        if (updates.name !== undefined) {
+            existing.name = updates.name;
+        }
+        if (updates.labels !== undefined) {
+            existing.labels = updates.labels;
+        }
+        if (updates.userName !== undefined) {
+            existing.userName = updates.userName;
+        }
+        if (updates.chatId !== undefined) {
+            existing.chatId = updates.chatId;
+        }
+
+        // Siempre actualizar lastActivity
+        existing.lastActivity = new Date().toISOString();
+
+        this.threads.set(userId, existing);
+        this.markAsChanged();
+
+        enhancedLog('success', 'THREAD_PERSIST', 
+            `Metadatos actualizados para ${userId}`, {
+                updates: Object.keys(updates),
+                name: existing.name,
+                labels: existing.labels,
+                userName: existing.userName
+            });
+
+        return true;
+    }
+
+    // 🆕 Actualizar solo las etiquetas de un thread
+    updateThreadLabels(userId: string, labels: string[]) {
+        return this.updateThreadMetadata(userId, { labels });
+    }
     
     // Obtener estadísticas
     getStats() {

@@ -1,3 +1,6 @@
+// @docs: progress/PROGRESO-BOT.md
+// @change: "Sistema de contexto histórico implementado"
+// @date: 2025-07-04
 import "dotenv/config";
 import express from 'express';
 import OpenAI from 'openai';
@@ -358,7 +361,7 @@ const getConversationalContext = (threadInfo): string => {
         });
     }
     
-    context += `=== FIN CONTEXTO ===\n\nMensaje del Cliente: `;
+    context += `=== FIN CONTEXTO ===`;
     
     return context;
 };
@@ -385,6 +388,9 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
             { userJid, shortUserId, threadId, totalThreads: stats.totalThreads }
         );
         
+        // Variable para guardar el historial si es un thread nuevo
+        let chatHistoryContext = '';
+        
         if (!threadId) {
             logOpenAIRequest(shortUserId, 'creating_new_thread');
             const thread = await openai.beta.threads.create();
@@ -392,6 +398,49 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
             
             // Guardar con información completa del cliente
             saveThreadId(userJid, threadId, chatId, userName);
+            
+            // 🆕 Obtener historial de conversación para thread nuevo
+            try {
+                const { getChatHistory } = await import('./utils/whapi/index.js');
+                chatHistoryContext = await getChatHistory(chatId || userJid, 200) || '';
+                
+                if (chatHistoryContext) {
+                    logInfo('CHAT_HISTORY_OBTAINED', `Historial de conversación obtenido para nuevo thread`, {
+                        shortUserId,
+                        threadId,
+                        historyLength: chatHistoryContext.length,
+                        chatId: chatId || userJid
+                    });
+                }
+            } catch (historyError) {
+                logWarning('CHAT_HISTORY_ERROR', `Error obteniendo historial de conversación`, {
+                    shortUserId,
+                    error: historyError.message
+                });
+            }
+            
+            // 🆕 Obtener y guardar labels inmediatamente para nuevo thread
+            try {
+                const enhancedInfo = await getEnhancedContactInfo(shortUserId, chatId);
+                if (enhancedInfo.labels && enhancedInfo.labels.length > 0) {
+                    threadPersistence.updateThreadMetadata(shortUserId, {
+                        name: enhancedInfo.name,
+                        userName: userName, // Actualizar también userName
+                        labels: enhancedInfo.labels
+                    });
+                    logInfo('NEW_THREAD_LABELS', `Labels establecidas para nuevo thread`, {
+                        shortUserId,
+                        threadId,
+                        labelsCount: enhancedInfo.labels.length,
+                        labels: enhancedInfo.labels
+                    });
+                }
+            } catch (err) {
+                logWarning('NEW_THREAD_LABELS_ERROR', `Error obteniendo labels para nuevo thread`, {
+                    shortUserId,
+                    error: err.message
+                });
+            }
             
             logOpenAIRequest(shortUserId, 'thread_created', threadId);
             logSuccess('THREAD_NEW', `Nuevo thread creado para ${shortUserId} (${userName})`, { 
@@ -402,6 +451,39 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
                 userName: userName
             });
         } else {
+            // 🆕 Si han pasado más de 24 horas, actualizar etiquetas (por si cambiaron manualmente)
+            const threadInfo = threadPersistence.getThread(shortUserId);
+            if (threadInfo && threadInfo.lastActivity) {
+                const lastActivityDate = new Date(threadInfo.lastActivity);
+                const now = new Date();
+                const hoursSinceLastActivity = (now.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60);
+                
+                if (hoursSinceLastActivity > 24) {
+                    logInfo('LABELS_24H_UPDATE', `Han pasado ${Math.floor(hoursSinceLastActivity)} horas, actualizando etiquetas`, {
+                        shortUserId,
+                        lastActivity: threadInfo.lastActivity
+                    });
+                    
+                    try {
+                        const enhancedInfo = await getEnhancedContactInfo(shortUserId, chatId);
+                        threadPersistence.updateThreadMetadata(shortUserId, {
+                            name: enhancedInfo.name,
+                            userName: userName, // Actualizar también userName cada 24h
+                            labels: enhancedInfo.labels
+                        });
+                        logInfo('LABELS_24H_UPDATED', `Etiquetas actualizadas después de 24h`, {
+                            shortUserId,
+                            labelsCount: enhancedInfo.labels?.length || 0,
+                            labels: enhancedInfo.labels
+                        });
+                    } catch (err) {
+                        logWarning('LABELS_24H_ERROR', `Error actualizando etiquetas después de 24h`, {
+                            shortUserId,
+                            error: err.message
+                        });
+                    }
+                }
+            }
             logSuccess('THREAD_REUSE', `Reutilizando thread existente para ${shortUserId} (${userName || 'Usuario'})`, {
                 threadId,
                 userJid: userJid,
@@ -547,7 +629,20 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
         const currentThreadInfo = threadPersistence.getThread(shortUserId);
         const timeContext = getCurrentTimeContext();
         const conversationalContext = getConversationalContext(currentThreadInfo);
-        const messageWithContexts = timeContext + '\n\n' + conversationalContext + userMsg;
+        
+        // Construir el mensaje con todos los contextos
+        let messageWithContexts = timeContext + '\n\n' + conversationalContext;
+        
+        // Si hay historial de chat (thread nuevo), agregarlo
+        if (chatHistoryContext) {
+            messageWithContexts += '\n\n' + chatHistoryContext;
+            logInfo('CONTEXT_WITH_HISTORY', `Incluyendo historial de chat en el contexto`, {
+                shortUserId,
+                historyLength: chatHistoryContext.length
+            });
+        }
+        
+        messageWithContexts += '\n\n' + userMsg;
         
         // 🔍 DEBUG: Log del contenido completo enviado a OpenAI
         logInfo('OPENAI_CONTEXT_DEBUG', `Contenido completo enviado a OpenAI`, {
@@ -555,10 +650,12 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
             threadId,
             timeContextLength: timeContext.length,
             conversationalContextLength: conversationalContext.length,
+            chatHistoryLength: chatHistoryContext.length,
             userMessageLength: userMsg.length,
             totalLength: messageWithContexts.length,
             timeContextPreview: timeContext.substring(0, 150) + '...',
             conversationalContextPreview: conversationalContext.substring(0, 150) + '...',
+            chatHistoryPreview: chatHistoryContext ? chatHistoryContext.substring(0, 150) + '...' : 'No hay historial',
             userMessagePreview: userMsg.substring(0, 100),
             fullContent: messageWithContexts
         });
@@ -970,6 +1067,10 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
         
         const response = assistantMessage.content[0].text.value;
         logOpenAIResponse(shortUserId, duration, true, userName);
+        
+        // Log simple del contenido completo de OpenAI
+        logInfo('OPENAI_OUTPUT', `Respuesta completa: ${response}`);
+        
         logInfo('OPENAI_RESPONSE', `Respuesta obtenida para ${shortUserId}`, { 
             responseLength: response.length,
             preview: response.substring(0, 100) + '...',
@@ -978,26 +1079,8 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
             userName: userName
         });
         
-        // Actualizar metadatos de contacto en threadPersistence
-        try {
-            const enhancedInfo = await getEnhancedContactInfo(shortUserId, chatId);
-            const existing = threadPersistence.getThread(shortUserId);
-            // Solo actualizar si ya existe el registro
-            if (existing) {
-                // Mantener threadId y createdAt
-                const threadId = existing.threadId;
-                const createdAt = existing.createdAt;
-                threadPersistence.setThread(shortUserId, threadId, chatId, cleanContactName(userName || 'Usuario'));
-                // Actualizar campos adicionales manualmente
-                const updated = threadPersistence.getThread(shortUserId);
-                updated.name = enhancedInfo.name;
-                updated.labels = enhancedInfo.labels;
-                updated.lastActivity = new Date().toISOString();
-                threadPersistence.saveThreads();
-            }
-        } catch (err) {
-            logWarning('CONTACT_UPDATE', 'No se pudo actualizar metadatos de contacto', { error: err.message });
-        }
+        // No necesitamos actualizar metadatos después de cada procesamiento
+        // Solo cuando se crea el thread por primera vez o cuando OpenAI lo solicita
         
         return response;
         
@@ -1529,22 +1612,11 @@ app.post('/hook', async (req, res) => {
                 });
                 logBufferActivity(shortUserId, 'buffer_created');
                 
-                // Opcionalmente, obtener información adicional del contacto para nuevos usuarios
-                // Solo si no tenemos thread guardado (usuario nuevo)
-                const existingThread = threadPersistence.getThread(shortUserId);
-                if (!existingThread) {
-                    logDebug('NEW_USER', `Usuario nuevo detectado: ${shortUserId}, obteniendo info adicional`);
-                    // No await aquí para no bloquear el procesamiento
-                    getEnhancedContactInfo(shortUserId, chatId).then(enhancedInfo => {
-                        if (enhancedInfo.name !== cleanName) {
-                            logInfo('CONTACT_ENHANCED', `Nombre mejorado para ${shortUserId}`, {
-                                webhook: cleanName,
-                                enhanced: enhancedInfo.name,
-                                labels: enhancedInfo.labels
-                            });
-                        }
-                    });
-                }
+                            // Solo obtener info adicional si es usuario nuevo (sin thread)
+            const existingThread = threadPersistence.getThread(shortUserId);
+            if (!existingThread) {
+                logDebug('NEW_USER', `Usuario nuevo detectado: ${shortUserId}, obteniendo info adicional`);
+            }
             }
             
             const buffer = userMessageBuffers.get(userId);

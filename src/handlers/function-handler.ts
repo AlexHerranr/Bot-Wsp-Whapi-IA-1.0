@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { whapiLabels } from '../utils/whapi/index.js';
 import { enhancedLog } from '../utils/core/index.js';
+import { threadPersistence } from '../utils/persistence/index.js';
 import { handleAvailabilityCheck } from './integrations/beds24-availability.js';
 
 export class FunctionHandler {
@@ -84,6 +85,26 @@ export class FunctionHandler {
 
       // Actualizar etiquetas en Whapi
       const result = await whapiLabels.updateChatLabels(userId, removeIds, addIds);
+
+      // 🆕 Sincronizar etiquetas en el sistema de persistencia de threads
+      try {
+        // Obtener las etiquetas actualizadas del chat
+        const chatInfo = await whapiLabels.getChatInfo(userId);
+        if (chatInfo && chatInfo.labels) {
+          const shortUserId = userId.split('@')[0];
+          const success = threadPersistence.updateThreadLabels(shortUserId, chatInfo.labels);
+          
+          enhancedLog('success', 'FUNCTION_HANDLER', 
+            `Etiquetas sincronizadas en threadPersistence para ${userId}`, { 
+              success,
+              labelsCount: chatInfo.labels.length,
+              labels: chatInfo.labels
+            });
+        }
+      } catch (syncError) {
+        enhancedLog('warning', 'FUNCTION_HANDLER', 
+          `Error sincronizando etiquetas en threadPersistence: ${syncError.message}`);
+      }
 
       enhancedLog('success', 'FUNCTION_HANDLER', 
         `Etiquetas actualizadas exitosamente para ${userId}`);

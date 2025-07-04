@@ -1,18 +1,18 @@
 # 📚 Índice de Documentación - Bot WhatsApp TeAlquilamos
 
-## 🚀 ROADMAP.md - Retos y Desarrollo Futuro ⭐ NUEVO
+## 🚀 progress/ROADMAP.md - Retos y Desarrollo Futuro ⭐ NUEVO
 - **Prioridad Alta**: Pruebas multi-usuario, contexto histórico Whapi, **Function Calling** ⭐ CRÍTICO, optimización performance
 - **Prioridad Media**: Dashboard tiempo real, sistema moderación, analytics
 - **Prioridad Baja**: Handoff inteligente, personalización, integración CRM
 - Timeline de desarrollo y criterios de priorización
 
-## 📋 PROGRESO-BOT.md - Estado Actual y Funcionalidades ⭐ NUEVO
+## 📋 progress/PROGRESO-BOT.md - Estado Actual y Funcionalidades ⭐ NUEVO
 - **Estado Production Ready**: Thread persistence, sincronización manual, UI optimizada
-- **20 Funcionalidades**: Sistema buffering, logs dual, colores profesionales, multi-usuario
+- **23 Funcionalidades**: Sistema buffering, logs dual, colores profesionales, multi-usuario
 - **Avances Recientes**: Sincronización manual agentes, optimización masiva UI (7→2 líneas)
 - **Sistema Timeouts**: Evolución a 8s fijos (simple y predecible)
 
-## 1. README.md - Documentación Principal
+## 1. ../README.md - Documentación Principal
 
 ### 1.1 Migración de BuilderBot a Whapi
 - Por qué migramos (limitaciones vs beneficios)
@@ -57,7 +57,7 @@
 
 ---
 
-## 2. MIGRATION_GUIDE.md - Guía Técnica de Migración
+## 2. development/MIGRATION_GUIDE.md - Guía Técnica de Migración
 
 ### 2.1 Análisis de Diferencias
 - Modelo de conexión (QR vs Token)
@@ -174,16 +174,116 @@
 
 ---
 
-## 5. Estructura de Archivos del Proyecto
+## 5. features/SISTEMA_ACTUALIZACION_LABELS.md - Sistema de Etiquetas Automático ⭐ NUEVO
+
+### 5.1 Arquitectura del Sistema
+- ThreadPersistenceManager actualizado
+- WhapiLabelsManager integración
+- FunctionHandler sincronización
+
+### 5.2 Actualización Automática
+- En cada mensaje recibido
+- Al crear threads nuevos
+- Después de procesar con OpenAI
+- Via función update_client_labels
+
+### 5.3 Persistencia y Respaldo
+- Auto-guardado optimizado (5 minutos)
+- Sistema de backups automático
+- Validación de datos
+
+### 5.4 Testing
+- Script test-labels-update.js
+- Verificación de sincronización
+- Comparación de estados
+
+---
+
+## 6. features/EXTRACCION_ETIQUETAS_WHATSAPP.md - Proceso de Extracción ⭐ NUEVO
+
+### 6.1 API de WhatsApp
+- Endpoint /chats/{CHAT_ID}
+- Estructura de respuesta JSON
+- Formato de etiquetas
+
+### 6.2 Implementación
+- Función getEnhancedContactInfo
+- Validación de datos
+- Manejo de errores
+
+### 6.3 Casos de Uso
+- Cliente sin etiquetas
+- Múltiples etiquetas
+- Modificaciones externas
+
+### 6.4 Herramientas de Prueba
+- test-chat-specific.js
+- Logging detallado
+- Debugging tips
+
+---
+
+## 7. features/CONTEXTO_HISTORIAL_CONVERSACION.md - Contexto Histórico ⭐ IMPLEMENTADO
+
+### 7.1 Sistema de Contexto
+- Detección de clientes nuevos (sin thread)
+- Obtención de últimos 200 mensajes vía API de WhatsApp
+- Formato estructurado para OpenAI con fecha, hora y remitente
+- Activación automática solo en primer contacto
+
+### 7.2 Implementación
+- getChatHistory en chatHistory.ts
+- Integración en processWithOpenAI
+- Manejo de errores robusto
+- Logs detallados para debugging
+
+### 7.3 Estructura del Contexto
+- Contexto temporal (fecha/hora Colombia UTC-5)
+- Contexto conversacional (cliente/etiquetas)
+- Historial de conversación (últimos 200 mensajes)
+- Mensaje actual del cliente
+
+### 7.4 Testing y Verificación
+- test-chat-history.js - Prueba de obtención de historial
+- test-new-client-context.js - Simulación de contexto completo
+- test-metadata-updates.js - Verificación de metadatos
+- Verificación exitosa en producción ✅
+
+### 7.5 Beneficios
+- Bot recuerda conversaciones anteriores sin thread
+- Respuestas más contextualizadas desde el primer mensaje
+- Mejor experiencia para clientes recurrentes
+- Reducción de preguntas repetitivas
+
+---
+
+## 8. Estructura de Archivos del Proyecto
 
 ```
-BotWhatsApp-TeAlquilamos/
+Bot-Wsp-Whapi-IA/
 ├── 📄 README.md                    # Documentación principal
+├── 📁 config/                      # Archivos de configuración
+│   ├── 📄 assistant-config.json    # Configuración del asistente
+│   ├── 📄 nodemon.json            # Configuración de nodemon
+│   └── 📄 rollup.config.js        # Configuración de rollup
 ├── 📁 docs/
-│   ├── 📄 MIGRATION_GUIDE.md      # Guía técnica detallada
-│   ├── 📄 FEATURE_ROADMAP.md      # Funcionalidades y casos de uso
-│   ├── 📄 ASSISTANT_CONFIG.md     # Config function calling
-│   └── 📄 DOCS_INDEX.md           # Este archivo
+│   ├── 📄 INDEX.md                # Este archivo
+│   ├── 📁 progress/               # Documentación de progreso
+│   │   ├── 📄 ROADMAP.md
+│   │   ├── 📄 PROGRESO-BOT.md
+│   │   ├── 📄 TAREAS_PENDIENTES.md
+│   │   └── 📄 HISTORIAL_CAMBIOS.md
+│   ├── 📁 features/               # Documentación de funcionalidades
+│   │   ├── 📄 SISTEMA_ACTUALIZACION_LABELS.md
+│   │   ├── 📄 EXTRACCION_ETIQUETAS_WHATSAPP.md
+│   │   ├── 📄 CONTEXTO_HISTORIAL_CONVERSACION.md
+│   │   ├── 📄 BEDS24_INTEGRATION_COMPLETE.md
+│   │   └── 📄 ESCALATE_TO_HUMAN_SPEC.md
+│   ├── 📁 development/            # Documentación técnica
+│   │   ├── 📄 MIGRATION_GUIDE.md
+│   │   └── 📄 PROPUESTA_REORGANIZACION_PROYECTO.md
+│   └── 📁 legacy/                 # Documentación antigua
+│       └── 📄 README_OLD.md
 ├── 📁 src/
 │   ├── 📄 app.ts                  # Servidor principal con Whapi
 │   ├── 📁 utils/
@@ -192,26 +292,34 @@ BotWhatsApp-TeAlquilamos/
 │   └── 📁 handlers/
 │       ├── 📄 function-handler.js  # Manejador principal
 │       └── 📄 availability-handler.js # Functions de disponibilidad
+├── 📁 tests/
+│   └── 📄 test-labels-update.js   # Prueba de actualización de etiquetas ⭐ NUEVO
 ├── 📄 .env.example                # Variables de entorno ejemplo
 └── 📄 package.json                # Dependencias del proyecto
 ```
 ---
-## 6. Orden de Lectura Recomendado
+## 9. Orden de Lectura Recomendado
 
 1. **Para nuevos desarrolladores:**
-   - README.md → PROGRESO-BOT.md → ROADMAP.md
+   - ../README.md → progress/PROGRESO-BOT.md → progress/ROADMAP.md
 
 2. **Para entender el estado actual:**
-   - PROGRESO-BOT.md → Funcionalidades implementadas
+   - progress/PROGRESO-BOT.md → Funcionalidades implementadas
 
 3. **Para planificar desarrollo futuro:**
-   - ROADMAP.md → Retos por prioridad → Timeline
+   - progress/ROADMAP.md → Retos por prioridad → Timeline
 
 4. **Para implementar function calling (legacy):**
    - ASSISTANT_CONFIG.md → availability-handler.js → function-handler.js
 
 5. **Para migración técnica (legacy):**
-   - MIGRATION_GUIDE.md → Troubleshooting
+   - development/MIGRATION_GUIDE.md → Troubleshooting
 
 6. **Para entender funcionalidades legacy:**
    - FEATURE_ROADMAP.md → Casos de uso específicos
+
+7. **Para implementar actualización de etiquetas:**
+   - features/SISTEMA_ACTUALIZACION_LABELS.md → features/EXTRACCION_ETIQUETAS_WHATSAPP.md → test-labels-update.js
+
+8. **Para implementar contexto histórico:**
+   - features/CONTEXTO_HISTORIAL_CONVERSACION.md → chatHistory.ts → test-chat-history.js

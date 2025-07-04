@@ -23,7 +23,7 @@ async function cleanupThreads() {
         if (!assistantId) {
             // Intentar cargar desde config
             try {
-                const configPath = join(__dirname, '..', '..', 'assistant-config.json');
+                const configPath = join(__dirname, '..', '..', 'config', 'assistant-config.json');
                 const config = JSON.parse((await import('fs')).readFileSync(configPath, 'utf8'));
                 assistantId = config.assistant?.id;
             } catch {}

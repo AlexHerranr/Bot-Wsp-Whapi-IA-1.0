@@ -28,7 +28,7 @@ async function addRagFile() {
         }
         
         // Cargar configuración
-        const configPath = join(__dirname, '..', 'assistant-config.json');
+        const configPath = join(__dirname, '..', '..', 'config', 'assistant-config.json');
         let config;
         try {
             config = JSON.parse(readFileSync(configPath, 'utf8'));

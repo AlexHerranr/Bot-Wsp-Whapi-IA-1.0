@@ -1,0 +1,51 @@
+{
+  "description": "Mapeo entre archivos de código y documentación que debe actualizarse",
+  "version": "1.0.0",
+  "last_updated": "2025-07-04",
+  "mappings": {
+    "src/app.ts": [
+      "docs/progress/PROGRESO-BOT.md",
+      "docs/progress/ROADMAP.md",
+      "docs/INDEX.md"
+    ],
+    "src/utils/whapi/chatHistory.ts": [
+      "docs/features/CONTEXTO_HISTORIAL_CONVERSACION.md",
+      "docs/progress/PROGRESO-BOT.md"
+    ],
+    "src/handlers/integrations/beds24-availability.ts": [
+      "docs/features/BEDS24_INTEGRATION_COMPLETE.md",
+      "docs/features/OPTIMIZACION_FORMATO_BEDS24.md",
+      "docs/progress/PROGRESO-BOT.md"
+    ],
+    "src/handlers/function-handler.ts": [
+      "docs/features/BEDS24_INTEGRATION_COMPLETE.md",
+      "docs/features/ESCALATE_TO_HUMAN_SPEC.md",
+      "docs/progress/PROGRESO-BOT.md"
+    ],
+    "src/utils/persistence/threadPersistence.ts": [
+      "docs/features/SISTEMA_ACTUALIZACION_LABELS.md",
+      "docs/progress/PROGRESO-BOT.md"
+    ],
+    "src/utils/whapi/whapiLabels.js": [
+      "docs/features/SISTEMA_ACTUALIZACION_LABELS.md",
+      "docs/features/EXTRACCION_ETIQUETAS_WHATSAPP.md"
+    ],
+    "src/utils/core/enhancedLogger.ts": [
+      "docs/progress/PROGRESO-BOT.md"
+    ],
+    "scripts/assistant-management/update-assistant-smart.js": [
+      "docs/ASSISTANT_MANAGEMENT.md",
+      "docs/SISTEMA_ACTUALIZACION_RAG.md"
+    ],
+    "scripts/create-new-assistant-v2.js": [
+      "docs/ASSISTANT_MANAGEMENT.md",
+      "docs/features/ASSISTANT_CONFIG.md"
+    ]
+  },
+  "documentation_categories": {
+    "features": "Documentación específica de funcionalidades",
+    "progress": "Estado y progreso del proyecto", 
+    "development": "Documentación técnica y arquitectura",
+    "guides": "Guías de uso e instalación"
+  }
+} 

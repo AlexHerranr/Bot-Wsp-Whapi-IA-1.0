@@ -180,7 +180,7 @@ async function createAssistant() {
             }))
         };
         
-        const configPath = join(__dirname, '..', 'assistant-config.json');
+        const configPath = join(__dirname, '..', 'config', 'assistant-config.json');
         writeFileSync(configPath, JSON.stringify(config, null, 2));
         
         // 9. Resumen final
