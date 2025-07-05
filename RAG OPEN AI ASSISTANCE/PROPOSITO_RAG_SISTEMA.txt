@@ -326,7 +326,7 @@ LOGGING DETALLADO:
 ```
 COMPLETADO ✅:
 ├─ Knowledge base 17 archivos optimizada
-├─ Function calling básico (check_availability, escalate_to_human con 5 razones)
+├─ Function calling optimizado (2 funciones esenciales: check_availability, escalate_to_human)
 ├─ RAG retrieval semántico eficiente
 ├─ Humanización comunicación completa
 ├─ Error handling robusto runs activos
@@ -469,7 +469,7 @@ HERRAMIENTAS MEJORADAS:
 ```
 COMPONENTES PRINCIPALES:
 ├─ OpenAI Assistants API: Motor principal procesamiento
-├─ Function Calling: check_availability + escalate_to_human (5 razones esenciales)
+├─ Function Calling: 2 funciones optimizadas (check_availability + escalate_to_human)
 ├─ Structured Outputs: Validación strict parámetros
 ├─ RAG Knowledge Base: 17 archivos optimizados
 ├─ WhatsApp API: Canal comunicación principal

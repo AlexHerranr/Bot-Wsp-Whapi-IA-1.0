@@ -20,11 +20,9 @@ export class FunctionHandler {
         case 'escalate_to_human':
           return await this.handleEscalateToHuman(args);
         
-        case 'update_client_labels':
-          return await this.handleUpdateClientLabels(args);
-        
-        case 'get_available_labels':
-          return await this.handleGetAvailableLabels(args);
+        // FUNCIONES DE ETIQUETAS ELIMINADAS - Sistema optimizado a solo 2 funciones esenciales
+        // case 'update_client_labels': - REMOVIDA (no se usa en RAG)
+        // case 'get_available_labels': - REMOVIDA (no se usa en RAG)
         
         default:
           enhancedLog('error', 'FUNCTION_HANDLER', `Función '${name}' no encontrada`);
@@ -119,9 +117,10 @@ export class FunctionHandler {
   }
 
   /**
-   * Actualizar etiquetas de un cliente
+   * FUNCIÓN DESHABILITADA - Actualizar etiquetas de un cliente
+   * NOTA: Función no se usa en RAG, mantenida para futuro uso si es necesario
    */
-  private async handleUpdateClientLabels(args: any): Promise<any> {
+  private async handleUpdateClientLabels_DISABLED(args: any): Promise<any> {
     try {
       const { userId, removeLabels = [], addLabels = [], reason } = args;
 
@@ -184,9 +183,10 @@ export class FunctionHandler {
   }
 
   /**
-   * Obtener etiquetas disponibles
+   * FUNCIÓN DESHABILITADA - Obtener etiquetas disponibles
+   * NOTA: Función no se usa en RAG, mantenida para futuro uso si es necesario
    */
-  private async handleGetAvailableLabels(args: any): Promise<any> {
+  private async handleGetAvailableLabels_DISABLED(args: any): Promise<any> {
     try {
       const labels = await whapiLabels.getAvailableLabels();
       

@@ -13,107 +13,107 @@
   "uploadedFiles": [
     {
       "filename": "# 00_INSTRUCCIONES_DEL_ASISTENTE.txt",
-      "hash": "4bed3065a5817f93d130b3919c8af3ac064055873a711991c9f4effe3a71c634",
-      "id": "updated-1751612050992",
-      "bytes": 6913
+      "hash": "78553bc68dc8ab3363c489d3e7994b4b17f8f96b0774c85d93794e31015cfc1b",
+      "id": "updated-1751613824010",
+      "bytes": 8511
     },
     {
       "filename": "# 01_MAPA_NAVEGACION.txt",
-      "hash": "1dad76562b0b38b41f00bdc398d44e6ed70ae068a4ac781dc60a1b825de7c14b",
-      "id": "updated-1751612050993",
-      "bytes": 23167
+      "hash": "f1b32acf93d81ed0f382c502276f51933ea035695ce4020c35941e785d7bd351",
+      "id": "updated-1751613824011",
+      "bytes": 23199
     },
     {
       "filename": "# 02_TARIFAS_TEMPORADAS.txt",
       "hash": "102b2ba6e21da8d0ca52a48cedc24a199d014aaf984a1f238c0bffe7cc4e37a5",
-      "id": "updated-1751612050993",
+      "id": "updated-1751613824011",
       "bytes": 14122
     },
     {
       "filename": "# 03_INVENTARIO_APARTAMENTOS.txt",
       "hash": "cd4719e1a55b636204b7fe0fa14084eec9c958f00ff9783eed39c38092967438",
-      "id": "updated-1751612050993",
+      "id": "updated-1751613824012",
       "bytes": 16084
     },
     {
       "filename": "# 04_CARGOS_SERVICIOS_TARIFARIOS.txt",
       "hash": "3384a10774a94357e864be4a69b46907d6c56d8dd651abeca83e801f57ce9f50",
-      "id": "updated-1751612050994",
+      "id": "updated-1751613824012",
       "bytes": 11908
     },
     {
       "filename": "# 05_DATOS_CORPORATIVOS_CONTACTO.txt",
       "hash": "9a284e2b7589301994c90365c4456b810f7563b8f60899fc70f002b9ccf11fe9",
-      "id": "updated-1751612050994",
+      "id": "updated-1751613824012",
       "bytes": 10637
     },
     {
       "filename": "# 06_TOURS_SERVICIOS_ADICIONALES.txt",
       "hash": "666d13b7a0661d6d7d5661a0eed3f28cd0d0caab3da69f14634e53f457a91e15",
-      "id": "updated-1751612050994",
+      "id": "updated-1751613824012",
       "bytes": 9536
     },
     {
       "filename": "# 07_VALIDACION_APARTAMENTOS.txt",
       "hash": "aab380eaa1d2da61d1184c78e9a76995caac2631be307a5a70c1800de43e02c8",
-      "id": "updated-1751612050994",
+      "id": "updated-1751613824013",
       "bytes": 8963
     },
     {
       "filename": "# 08_LLEGADAS_SALIDAS_ESPECIALES.txt",
-      "hash": "41d1394daaa50f3c0118cd815dd5cf891c72b28382e62023c31406c9762301ea",
-      "id": "updated-1751612050995",
-      "bytes": 10999
+      "hash": "2a1e81ca0ebb6d265477a2cde5eae58b9740d3d9748eaa2f48d7b11d978db201",
+      "id": "updated-1751613824013",
+      "bytes": 11025
     },
     {
       "filename": "# 09_PROTOCOLO_CONFIANZA.txt",
-      "hash": "f97add3e40fa166a9bcfddc0f846809491e9f423049953f2d2ff1f0ac93f036c",
-      "id": "updated-1751612050995",
-      "bytes": 11976
+      "hash": "925fab9c1b001979b249f49ba3a8858cd2d0c753039cdaceb85fb60f4a00613a",
+      "id": "updated-1751613824013",
+      "bytes": 11974
     },
     {
       "filename": "# 10_CHECKOUT_AUTOMATIZADO.txt",
       "hash": "c3f63d760a72153940348de386b674c21b066117806d6536283f989f7d3524a6",
-      "id": "updated-1751612050995",
+      "id": "updated-1751613824014",
       "bytes": 8130
     },
     {
       "filename": "# 11_RESERVAS_GRUPALES.txt",
       "hash": "126e0391214f889621bc2e8798ecee33c267c8b437b9fff4647359a0e4b8325f",
-      "id": "updated-1751612050995",
+      "id": "updated-1751613824014",
       "bytes": 7333
     },
     {
       "filename": "# 12_POLITICAS_OPERATIVAS.txt",
       "hash": "9d6a0a2d36b8f396022862c8d4cd4631fb71bde697436c30f1bc60cbcd2f2433",
-      "id": "updated-1751612050996",
+      "id": "updated-1751613824014",
       "bytes": 12871
     },
     {
       "filename": "# 13_PLANTILLAS_RESPUESTAS.txt",
       "hash": "56b943415d6f680e096e9578f4a0f43dbfb96896853c854b562ad52426f93de7",
-      "id": "updated-1751612050996",
+      "id": "updated-1751613824014",
       "bytes": 10051
     },
     {
       "filename": "# 14_PROTOCOLO_B2B_COLEGAS.txt",
       "hash": "4c0223d5886104d4abd162267a90ec6d9d687df49c519fef458cf6c382efddc3",
-      "id": "updated-1751612050996",
+      "id": "updated-1751613824014",
       "bytes": 12924
     },
     {
       "filename": "# 15_COMUNICACION_NATURAL.txt",
       "hash": "ddbe4778c12e80ff5ce58056938e497dc67a3f08aa6b727c887056b3bb9bcdb9",
-      "id": "updated-1751612050996",
+      "id": "updated-1751613824014",
       "bytes": 13748
     },
     {
       "filename": "# 16_GESTION_DISPONIBILIDAD.txt",
       "hash": "a866bc5a47c726df4df77b373710dffae8e5d75084f305703d0bfd9015518826",
-      "id": "updated-1751612050996",
+      "id": "updated-1751613824015",
       "bytes": 8862
     }
   ],
-  "lastUpdate": "2025-07-04T06:54:10.996Z",
-  "promptHash": "4bed3065a5817f93d130b3919c8af3ac064055873a711991c9f4effe3a71c634"
+  "lastUpdate": "2025-07-04T07:23:44.015Z",
+  "promptHash": "78553bc68dc8ab3363c489d3e7994b4b17f8f96b0774c85d93794e31015cfc1b"
 }

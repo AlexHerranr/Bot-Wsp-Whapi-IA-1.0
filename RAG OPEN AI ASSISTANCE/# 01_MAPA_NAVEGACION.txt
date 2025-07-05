@@ -439,7 +439,7 @@ BOT_NAVEGACIÓN:
 [ARCHIVOS_CORE] = 4 (01-04)
 [ARCHIVOS_OPERATIVOS] = 10 (05, 07-15)
 [ARCHIVOS_COMUNICACIÓN] = 3 (15, 17-18)
-[FUNCIONES_EXTERNAS] = 2 (check_availability, escalate_to_human)
+[FUNCIONES_EXTERNAS] = 2 funciones esenciales (check_availability, escalate_to_human optimizado)
 [SISTEMA_PRINCIPAL] = 1 (00)
 
 7. CASOS DE USO BOT VERIFICADOS
