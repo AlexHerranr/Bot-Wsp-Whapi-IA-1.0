@@ -6,10 +6,10 @@ import json from '@rollup/plugin-json';
 export default {
     input: 'src/app.ts',
     output: {
-        file: 'dist/app.js',
+        dir: 'dist',
         format: 'cjs',
         sourcemap: false,
-        exports: 'auto'
+        entryFileNames: 'app.js'
     },
     external: [
         'express',
