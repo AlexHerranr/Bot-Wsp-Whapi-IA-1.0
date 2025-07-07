@@ -168,15 +168,6 @@ export class ContextManager {
             enhancedLog('info', 'API_DEBUG', 
                 `Respuesta de API: ${JSON.stringify(data, null, 2).substring(0, 500)}...`);
             
-            // Según la documentación, la respuesta debe tener un campo 'messages'
-            let messages = null;
-            if (data.messages && Array.isArray(data.messages)) {
-                messages = data.messages;
-            } else if (Array.isArray(data)) {
-                messages = data;
-            }
-            
-            // Verificar si hay mensajes
             // VALIDACIÓN DE TIPOS MEJORADA
             let messages: any[] = [];
             

@@ -107,7 +107,7 @@ export class ConversationHistoryManager {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const data = await response.json() as WhapiApiResponse;
             
             if (data && data.messages && Array.isArray(data.messages)) {
                 enhancedLog('success', 'CONVERSATION_HISTORY', 
@@ -145,7 +145,7 @@ export class ConversationHistoryManager {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const data = await response.json() as WhapiApiResponse;
             
             if (data && data.messages && Array.isArray(data.messages)) {
                 enhancedLog('success', 'CONVERSATION_HISTORY', 

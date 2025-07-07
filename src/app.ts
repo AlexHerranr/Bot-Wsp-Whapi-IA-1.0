@@ -66,6 +66,23 @@ app.get('/', (req, res) => {
     });
 });
 
+// 🚀 CRÍTICO: Endpoint /ready para Cloud Run
+app.get('/ready', (req, res) => {
+    if (isServerInitialized) {
+        res.status(200).json({
+            status: 'ready',
+            timestamp: new Date().toISOString(),
+            message: 'Bot completamente inicializado y listo'
+        });
+    } else {
+        res.status(503).json({
+            status: 'initializing',
+            timestamp: new Date().toISOString(),
+            message: 'Bot aún inicializándose'
+        });
+    }
+});
+
 // 🚀 INICIAR SERVIDOR INMEDIATAMENTE
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor HTTP iniciado en puerto ${PORT}`);

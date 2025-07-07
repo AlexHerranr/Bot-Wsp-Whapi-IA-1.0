@@ -79,7 +79,7 @@ export class MultiAssistantHandler {
             const classification = await this.classifyMessage(userId, message);
             
             enhancedLog('info', 'MULTI_ASSISTANT', `Mensaje clasificado como: ${classification.category}`, 
-                { userId, category: classification.category }, userId);
+                { userId, category: classification.category });
 
             // 📊 PASO 2: Procesamiento especializado
             const specialistResult = await this.processWithSpecialist(
@@ -109,7 +109,7 @@ export class MultiAssistantHandler {
             };
 
         } catch (error) {
-            enhancedLog('error', 'MULTI_ASSISTANT_ERROR', 'Error en cadena de asistentes', { error: error.message }, userId);
+            enhancedLog('error', 'MULTI_ASSISTANT_ERROR', 'Error en cadena de asistentes', { error: error.message, userId });
             
             // Fallback al assistant general
             return await this.processWithSingleAssistant(userId, message, 'general');
@@ -317,7 +317,7 @@ export class MultiAssistantHandler {
             userAssistantThreads.set(assistantKey, threadId);
             
             enhancedLog('info', 'THREAD_CREATED', `Nuevo thread creado para ${assistantKey}`, 
-                { userId, assistantKey, threadId }, userId);
+                { userId, assistantKey, threadId });
         }
 
         return threadId;

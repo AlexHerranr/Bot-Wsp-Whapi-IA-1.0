@@ -190,16 +190,16 @@ export class FunctionHandler {
     try {
       const labels = await whapiLabels.getAvailableLabels();
       
-      enhancedLog('success', 'FUNCTION_HANDLER', `Obtenidas ${labels.length} etiquetas disponibles`);
+      enhancedLog('success', 'FUNCTION_HANDLER', `Obtenidas ${Array.isArray(labels) ? labels.length : 0} etiquetas disponibles`);
 
       return {
         success: true,
-        labels: labels.map(label => ({
+        labels: Array.isArray(labels) ? labels.map(label => ({
           id: label.id,
           name: label.name,
           color: label.color,
           count: label.count || 0
-        }))
+        })) : []
       };
 
     } catch (error) {
