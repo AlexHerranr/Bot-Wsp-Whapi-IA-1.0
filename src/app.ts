@@ -32,6 +32,38 @@ const WHAPI_API_URL = process.env.WHAPI_API_URL ?? 'https://gate.whapi.cloud/';
 const DEBUG_LOG_PATH = './whatsapp-sync-debug.log';
 const DEBUG_MODE = true;
 
+// 🔧 NUEVO: Control de niveles de log para reducir spam
+const LOG_LEVEL = process.env.LOG_LEVEL || 'development'; // 'production' | 'development'
+const isProduction = LOG_LEVEL === 'production';
+
+// 🔧 NUEVO: Función para determinar si un log debe mostrarse
+const shouldLog = (level: string, context: string): boolean => {
+    // En producción, solo mostrar logs críticos
+    if (isProduction) {
+        const criticalContexts = [
+            'THREAD_PERSIST',     // Guardado de threads
+            'CONTEXT_LABELS',     // Etiquetas críticas
+            'NEW_THREAD_LABELS',  // Etiquetas nuevas
+            'LABELS_24H',         // Actualización etiquetas
+            'OPENAI_RUN_ERROR',   // Errores OpenAI
+            'FUNCTION_EXECUTION', // Ejecución de funciones
+            'WHATSAPP_SEND',      // Envío exitoso
+            'AI_PROCESSING',      // Respuestas de IA
+            'SERVER_START',       // Inicio del servidor
+            'CONFIG',             // Configuración
+            'SHUTDOWN'            // Cierre
+        ];
+        
+        const criticalLevels = ['ERROR', 'SUCCESS', 'WARNING'];
+        
+        return criticalLevels.includes(level.toUpperCase()) || 
+               criticalContexts.some(ctx => context.includes(ctx));
+    }
+    
+    // En desarrollo, mostrar todo
+    return true;
+};
+
 // --- Colores para logs de consola ---
 const LOG_COLORS = {
     USER: '\x1b[36m',    // Cyan
@@ -75,6 +107,9 @@ if (OPENAI_API_KEY) {
     logError('OPENAI_INIT', 'OPENAI_API_KEY no está configurada en el archivo .env');
     process.exit(1);
 }
+
+// --- Cache para optimizar extracciones de User ID ---
+const userIdCache = new Map<string, string>();
 
 // --- Funciones de Extracción de Información del Contacto ---
 const cleanContactName = (rawName) => {
@@ -201,13 +236,31 @@ const showLiveStats = () => {
 // --- Utilidades ---
 const getShortUserId = (jid) => {
     if (typeof jid === 'string') {
+        // 🔧 OPTIMIZADO: Cache para evitar extracciones redundantes
+        if (userIdCache.has(jid)) {
+            // Ya está en cache, devolver sin log
+            return userIdCache.get(jid);
+        }
+        
         // Extraer solo el número, sin @s.whatsapp.net o cualquier otro sufijo
         const cleaned = jid.split('@')[0] || jid;
-        // Solo log técnico (sin spam en consola)
-        logDebug('USER_ID_EXTRACTION', `Extrayendo ID de usuario`, { 
-            original: jid, 
-            cleaned: cleaned 
-        });
+        
+        // Cache el resultado
+        userIdCache.set(jid, cleaned);
+        
+        // 🔧 OPTIMIZADO: Solo log cuando realmente se extrae (no cuando se usa cache)
+        if (shouldLog('DEBUG', 'USER_ID_EXTRACTION')) {
+            logDebug('USER_ID_EXTRACTION', `Extrayendo ID de usuario (nuevo)`, { 
+                original: jid, 
+                cleaned: cleaned 
+            });
+        }
+        
+        // Limpiar cache después de 5 minutos para evitar crecimiento infinito
+        setTimeout(() => {
+            userIdCache.delete(jid);
+        }, 5 * 60 * 1000);
+        
         return cleaned;
     }
     return 'unknown';
@@ -290,8 +343,8 @@ const getThreadId = (jid) => {
 const getCurrentTimeContext = (): string => {
     const now = new Date();
     
-    // Ajustar a zona horaria de Colombia (UTC-5)
-    const colombiaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    // 🔧 CORREGIDO: Usar toLocaleString para zona horaria Colombia correctamente
+    const colombiaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Bogota"}));
     
     // Calcular mañana correctamente
     const tomorrow = new Date(colombiaTime);
@@ -377,6 +430,71 @@ const getConversationalContext = (threadInfo): string => {
     context += `=== FIN CONTEXTO ===`;
     
     return context;
+};
+
+// --- Función de retry con escalación para errores OpenAI ---
+const handleOpenAIWithRetry = async (operation, shortUserId, maxRetries = 3) => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await operation();
+        } catch (error) {
+            logError('OPENAI_RETRY_ATTEMPT', `Error OpenAI [intento ${attempt}/${maxRetries}]`, {
+                shortUserId,
+                error: error.message,
+                errorCode: error.code,
+                attempt,
+                maxRetries
+            });
+            
+            // Si es server_error y no es el último intento, retry con backoff exponencial
+            if (error.code === 'server_error' && attempt < maxRetries) {
+                const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+                logWarning('OPENAI_RETRY_BACKOFF', `Esperando ${delay}ms antes del siguiente intento`, {
+                    shortUserId,
+                    attempt,
+                    delay
+                });
+                await new Promise(resolve => setTimeout(resolve, delay));
+                continue;
+            }
+            
+            // Si agota reintentos o es otro tipo de error, escalar a humano
+            if (attempt >= maxRetries && error.code === 'server_error') {
+                logError('OPENAI_RETRY_EXHAUSTED', `Reintentos agotados, escalando a humano`, {
+                    shortUserId,
+                    error: error.message,
+                    attempts: attempt
+                });
+                
+                try {
+                    const { FunctionHandler } = await import('./handlers/function-handler.js');
+                    const functionHandler = new FunctionHandler();
+                    await functionHandler.handleFunction('escalate_to_human', {
+                        reason: 'system_failure',
+                        context: {
+                            summary: `Error de servidor OpenAI después de ${maxRetries} intentos`,
+                            urgency: 'high',
+                            error: error.message,
+                            attempts: attempt,
+                            timestamp: new Date().toISOString()
+                        }
+                    });
+                    logSuccess('OPENAI_ERROR_ESCALATED', `Error escalado a humano exitosamente`, {
+                        shortUserId,
+                        error: error.message
+                    });
+                } catch (escalationError) {
+                    logError('ESCALATION_FAILED', `Error escalando a humano`, {
+                        shortUserId,
+                        originalError: error.message,
+                        escalationError: escalationError.message
+                    });
+                }
+            }
+            
+            throw error;
+        }
+    }
 };
 
 // --- Procesamiento OpenAI (Simple) ---
@@ -575,20 +693,22 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
         messageWithContexts += '\n\n' + userMsg;
         
         // 🔍 DEBUG: Log del contenido completo enviado a OpenAI
-        logInfo('OPENAI_CONTEXT_DEBUG', `Contenido completo enviado a OpenAI`, {
-            shortUserId,
-            threadId,
-            timeContextLength: timeContext.length,
-            conversationalContextLength: conversationalContext.length,
-            chatHistoryLength: chatHistoryContext.length,
-            userMessageLength: userMsg.length,
-            totalLength: messageWithContexts.length,
-            timeContextPreview: timeContext.substring(0, 150) + '...',
-            conversationalContextPreview: conversationalContext.substring(0, 150) + '...',
-            chatHistoryPreview: chatHistoryContext ? chatHistoryContext.substring(0, 150) + '...' : 'No hay historial',
-            userMessagePreview: userMsg.substring(0, 100),
-            fullContent: messageWithContexts
-        });
+        if (shouldLog('DEBUG', 'OPENAI_CONTEXT_DEBUG')) {
+            logInfo('OPENAI_CONTEXT_DEBUG', `Contenido completo enviado a OpenAI`, {
+                shortUserId,
+                threadId,
+                timeContextLength: timeContext.length,
+                conversationalContextLength: conversationalContext.length,
+                chatHistoryLength: chatHistoryContext.length,
+                userMessageLength: userMsg.length,
+                totalLength: messageWithContexts.length,
+                timeContextPreview: timeContext.substring(0, 150) + '...',
+                conversationalContextPreview: conversationalContext.substring(0, 150) + '...',
+                chatHistoryPreview: chatHistoryContext ? chatHistoryContext.substring(0, 150) + '...' : 'No hay historial',
+                userMessagePreview: userMsg.substring(0, 100),
+                fullContent: messageWithContexts
+            });
+        }
         
         await openai.beta.threads.messages.create(threadId, {
             role: 'user',
@@ -1033,19 +1153,22 @@ const sendToWhatsApp = async (chatId, message) => {
     const shortUserId = getShortUserId(chatId);
     
     try {
+        // 🔧 CORREGIDO: Convertir dobles asteriscos a simples para WhatsApp
+        const whatsappFormattedMessage = message.replace(/\*\*(.*?)\*\*/g, '*$1*');
+        
         // 🎯 MEJORADO: División inteligente de mensajes
         // Dividir por doble salto de línea O por bullets/listas
         let chunks = [];
         
         // Primero intentar dividir por doble salto de línea
-        const paragraphs = message.split(/\n\n+/).map(chunk => chunk.trim()).filter(chunk => chunk.length > 0);
+        const paragraphs = whatsappFormattedMessage.split(/\n\n+/).map(chunk => chunk.trim()).filter(chunk => chunk.length > 0);
         
         // Si hay párrafos claramente separados, usarlos
         if (paragraphs.length > 1) {
             chunks = paragraphs;
         } else {
             // Si no hay párrafos, buscar listas con bullets
-            const lines = message.split('\n');
+            const lines = whatsappFormattedMessage.split('\n');
             let currentChunk = '';
             
             for (let i = 0; i < lines.length; i++) {
@@ -1091,15 +1214,15 @@ const sendToWhatsApp = async (chatId, message) => {
         
         // Si no se pudo dividir bien, usar el mensaje original
         if (chunks.length === 0) {
-            chunks = [message];
+            chunks = [whatsappFormattedMessage];
         }
         
         // Si es un mensaje corto sin párrafos, enviarlo como está
         if (chunks.length === 1) {
             logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
                 chatId,
-                messageLength: message.length,
-                preview: message.substring(0, 100) + '...'
+                messageLength: whatsappFormattedMessage.length,
+                preview: whatsappFormattedMessage.substring(0, 100) + '...'
             });
             
             const response = await fetch(`${WHAPI_API_URL}/messages/text?token=${WHAPI_TOKEN}`, {
@@ -1107,7 +1230,7 @@ const sendToWhatsApp = async (chatId, message) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     to: chatId,
-                    body: message,
+                    body: whatsappFormattedMessage,
                     typing_time: 3
                 })
             });
@@ -1121,7 +1244,7 @@ const sendToWhatsApp = async (chatId, message) => {
                     logDebug('BOT_MESSAGE_TRACKED', `Mensaje del bot registrado para tracking anti-duplicación`, {
                         shortUserId: shortUserId,
                         messageId: result.message.id,
-                        messageLength: message.length,
+                        messageLength: whatsappFormattedMessage.length,
                         timestamp: new Date().toISOString()
                     });
                     
@@ -1136,10 +1259,10 @@ const sendToWhatsApp = async (chatId, message) => {
                 }
                 
                 // Solo logs técnicos (sin log en consola, ya se muestra en processUserMessage)
-                logWhatsAppMessage(shortUserId, 'OUT', message.substring(0, 50) + '...', 'Usuario');
+                logWhatsAppMessage(shortUserId, 'OUT', whatsappFormattedMessage.substring(0, 50) + '...', 'Usuario');
                 logSuccess('WHATSAPP_SEND', `Mensaje enviado exitosamente`, {
                     shortUserId: shortUserId,
-                    messageLength: message.length,
+                    messageLength: whatsappFormattedMessage.length,
                     messageId: result.message?.id,
                     responseTime: Date.now() - Date.now() // Esto se puede mejorar con un timestamp inicial
                 });
@@ -1159,7 +1282,7 @@ const sendToWhatsApp = async (chatId, message) => {
                 chatId: chatId,
                 shortUserId: shortUserId,
                 totalChunks: chunks.length,
-                originalLength: message.length
+                originalLength: whatsappFormattedMessage.length
             });
             
             // Enviar cada chunk como mensaje independiente
@@ -1212,7 +1335,7 @@ const sendToWhatsApp = async (chatId, message) => {
             logSuccess('WHATSAPP_CHUNKS_COMPLETE', `Todos los párrafos enviados`, {
                 shortUserId: shortUserId,
                 totalChunks: chunks.length,
-                originalLength: message.length
+                originalLength: whatsappFormattedMessage.length
             });
             return true;
         }
@@ -1253,7 +1376,7 @@ const processUserMessage = async (userId) => {
     
     // Enviar a OpenAI con el userId original y la información completa del cliente
     const startTime = Date.now();
-    const response = await processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.name);
+    const response = await handleOpenAIWithRetry(() => processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.name), shortUserId);
     const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
     
     // 🎯 Log compacto - Resultado con preview
@@ -1617,6 +1740,39 @@ app.post('/hook', async (req, res) => {
 const extractRetryAfter = (errorMessage: string): number | null => {
     const match = errorMessage.match(/Please try again in ([\d.]+)s/);
     return match ? parseFloat(match[1]) : null;
+};
+
+// --- Función para detectar mensajes incompletos ---
+const isMessageIncomplete = (text) => {
+    // Detectar mensajes que parecen cortados
+    const indicators = [
+        text.length > 100 && !text.match(/[.!?]$/), // Largo sin puntuación final
+        text.endsWith('...'), // Termina con puntos suspensivos
+        text.match(/\w+$/) && text.length > 80, // Termina a mitad de palabra y es largo
+        text.match(/q\s*$|que\s*$|para\s*$|con\s*$/i) // Termina con palabras incompletas comunes
+    ];
+    
+    return indicators.some(indicator => indicator);
+};
+
+// --- Función para manejar mensajes incompletos ---
+const handleIncompleteMessage = (userId, currentMessages) => {
+    const lastMessage = currentMessages[currentMessages.length - 1];
+    
+    if (isMessageIncomplete(lastMessage)) {
+        const shortUserId = getShortUserId(userId);
+        logInfo('MESSAGE_INCOMPLETE_DETECTED', `Mensaje posiblemente incompleto detectado`, {
+            shortUserId,
+            messageLength: lastMessage.length,
+            preview: lastMessage.substring(0, 100) + '...',
+            endsWithPunctuation: /[.!?]$/.test(lastMessage)
+        });
+        
+        // Extender el timeout en 3 segundos para esperar continuación
+        return 3000;
+    }
+    
+    return 0; // No hay extensión de timeout
 };
 
 // --- Inicialización ---
