@@ -42,7 +42,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
-    "@types/uuid": "^10.0.1",
+    "@types/uuid": "^9.0.8",
     "concurrently": "^9.1.0",
     "rollup": "^4.27.4",
     "tsx": "^4.19.2",
