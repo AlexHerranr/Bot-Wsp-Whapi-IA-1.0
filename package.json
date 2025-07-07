@@ -12,7 +12,10 @@
     "test": "node scripts/development/test-env.js",
     "assistant": "node scripts/assistant-management/assistant-cli.js",
     "create-assistant": "node scripts/create-new-assistant-v2.js",
-    "check-docs": "node scripts/check-docs.js"
+    "check-docs": "node scripts/check-docs.js",
+    "pre-deploy": "powershell -ExecutionPolicy Bypass -File scripts/pre-deploy.ps1",
+    "deploy": "npm run pre-deploy && git push origin master",
+    "health-check": "node -e \"require('http').get('http://localhost:8080/health', (res) => { console.log('Status:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1) })\""
   },
   "keywords": [
     "whatsapp",
@@ -49,7 +52,8 @@
     "typescript": "^5.7.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
   },
   "author": "Alexander - TeAlquilamos",
   "license": "ISC"
