@@ -1,372 +1,123 @@
-# 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+# SERVICIOS ADICIONALES Y CARGOS ESPECIALES
 
-**Versión:** 3.0  
-**Responsable:** Sistema de Conocimiento  
-**Keywords:** cargo, servicio, limpieza, sobrecupo, early, checkout, equipaje, llegada, automático, bot  
-**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 09_LLEGADAS_ESPECIALES.txt, 14_POLITICAS_OPERATIVAS.txt
+**Propósito:** Información sobre servicios adicionales específicos y sus costos para consultas puntuales de clientes.
 
 ---
 
-## **PROPÓSITO DEL ARCHIVO**
-Fuente única de verdad para todos los cargos fijos, servicios variables y tarifas adicionales que el bot aplica automáticamente. Incluye lógica para cálculo inteligente de servicios según contexto del cliente.
+## **1. EARLY CHECK-IN ESCALONADO**
+
+**Tarifas por horario:**
+- **6:00 AM:** $130,000
+- **9:00 AM:** $100,000
+- **12:00 PM:** $90,000
+- **3:00 PM:** GRATIS (check-in estándar)
+
+**Importante:** Sujeto a disponibilidad del apartamento
 
 ---
 
-## **1. CARGOS FIJOS OBLIGATORIOS**
+## **2. SERVICIOS ADICIONALES**
 
-### **1.1 Cargo por Servicio (Aseo + Registro/Manillas)**
-```
-APARTAESTUDIO: $60.000 COP
-APARTAMENTO_1_ALCOBA: $70.000 COP
-```
+### **Sobrecupo/Personas Extra**
+- **Tarifa:** $50,000 por persona por noche
+- **Aplicación:** Cuando se excede capacidad base recomendada
+- **Límite:** Solo hasta capacidad máxima del apartamento
 
-**DESGLOSE DEL CARGO:**
-- Incluye: Aseo de salida + Registro/Manillas del edificio
-- Cargo único por reserva (no por noche)
-- **Aplicación según canal de reserva:**
+### **Late Check-out**
+- **Tarifa:** $130,000 (puede ser negociable)
+- **Horario límite:** Hasta las 6:00 PM máximo
+- **Aplicación:** Salidas después de 12:00 PM
+- **Sujeto a:** Disponibilidad del apartamento
 
-**PARA DIRECTOS Y BOOKING:**
-- Se cobra el "Cargo por Servicio" completo ($60.000/$70.000)
-- Incluye aseo + registro/manillas
-- Si Booking muestra $60.000/$70.000 adicionales en desglose = Ya incluido
-- No hay pagos adicionales en recepción
+### **Guardado de Equipaje**
+- **Tarifa:** $5,000 por hora
+- **Período GRATIS:** 12:00 PM - 3:00 PM
+- **Máximo diario:** $20,000 (6+ horas)
+- **Ubicación:** Oficina 1706
+- **Cálculo:** 
+  - Llegada 6:00 AM → 6 horas = $20,000 (máximo)
+  - Llegada 9:00 AM → 3 horas = $15,000
+  - Llegada 11:00 AM → 1 hora = $5,000
 
-**PARA AIRBNB Y EXPEDIA:**
-- Aseo ya pagado por la plataforma
-- Cliente paga SOLO registro/manillas en recepción del edificio
-- Monto registro: Parte proporcional del cargo total
-
-### **1.2 Registro/Manillas - Desglose por Canal**
-
-**CLIENTES DIRECTOS:**
-- Cargo por Servicio en cotización incluye registro
-- No pagan nada adicional en recepción
-
-**BOOKING:**
-- Si desglose muestra $60/$70 adicionales → Ya incluye registro
-- Si NO aparece → Cliente paga registro en recepción
-
-**AIRBNB/EXPEDIA:**
-- Plataforma solo cubre aseo
-- Cliente SIEMPRE paga registro/manillas en recepción
-- Monto a pagar en recepción según tipo de apartamento
-
-**IMPORTANTE:**
-- Sobrecupos NUNCA se pagan en recepción (directo a empresa)
-- Saldos pendientes se pagan a empresa (excepto registro si aplica)
+### **Recargo Tarjetas Bold**
+- **Porcentaje:** +5% sobre el total
+- **Aplicación:** Solo pagos con tarjeta Bold
+- **Alternativas sin recargo:** Transferencia, Nequi, efectivo
 
 ---
 
-## **2. SERVICIOS VARIABLES CON APLICACIÓN AUTOMÁTICA**
+## **3. LLEGADAS ESPECIALES**
 
-### **2.1 Sobrecupo/Personas Adicionales**
-```
-TARIFA_BASE: $50.000 COP por persona por noche
-APLICACIÓN_AUTOMÁTICA: Cuando se excede capacidad base recomendada
-```
+### **Llegada Nocturna**
+- **Horario:** 7:00 PM - 11:00 PM
+- **Tarifa:** $50,000
+- **Proceso:** Requiere coordinación previa
 
-**REGLAS AUTOMÁTICAS DEL BOT:**
-- Detectar número de personas vs capacidad base
-- Aplicar cargo automáticamente si excede
-- Solo si no supera capacidad máxima total
-- Comunicar transparentemente el cargo
+### **Llegada Madrugada**
+- **Horario:** 11:00 PM - 6:00 AM
+- **Tarifa:** $80,000
+- **Proceso:** Requiere coordinación con 8h de anticipación
 
-**EJEMPLO AUTOMÁTICO:**
-Cliente: "Somos 6 personas"
-Bot detecta: Apartamento base 5 → 1 persona extra
-Cálculo: 1 × $50.000 × noches
+### **Llegada Extrema**
+- **Horario:** 3:00 AM - 6:00 AM
+- **Tarifa:** $120,000
+- **Proceso:** Requiere gestión especial y coordinación
 
-### **2.2 Early Check-in Escalonado**
-```
-DESDE_LAS_06:00_AM: $130.000 COP
-DESDE_LAS_09:00_AM: $100.000 COP  
-DESDE_LAS_12:00_PM: $90.000 COP
-CHECK_IN_ESTÁNDAR: 3:00 PM (sin cargo)
-```
-
-**APLICACIÓN AUTOMÁTICA DEL BOT:**
-- Detectar hora de llegada mencionada
-- Aplicar tarifa según escala automáticamente
-- Sujeto a disponibilidad del apartamento
-- Ofrecer opciones si no especifica hora
-
-### **2.3 Late Check-out**
-```
-TARIFA_BASE: $130.000 - Puede ser negociable con aprobación e un gente humano
-HORARIO_LÍMITE: Hasta las 6:00 PM
-APLICACIÓN: Salidas después de 12:00 PM
-```
-
-**LÓGICA AUTOMÁTICA:**
-- Si cliente menciona salida tardía → aplicar cargo
-- Verificar disponibilidad antes de confirmar
-- Máximo hasta 6:00 PM por políticas
-
-### **2.4 Guardado de Equipaje**
-```
-TARIFA: $5.000 COP por hora
-PERÍODO_GRATUITO: 12:00 PM - 3:00 PM
-TARIFA_MÁXIMA_DIARIA: $20.000 COP (6+ horas)
-UBICACIÓN: Oficina 1706
-```
-
-**CÁLCULO AUTOMÁTICO DEL BOT:**
-```
-• Llegada 6:00 AM → 6 horas = $20.000 (máximo)
-• Llegada 9:00 AM → 3 horas = $15.000  
-• Llegada 11:00 AM → 1 hora = $5.000
-• Llegada 12:00-3:00 PM → GRATIS
-```
-
-### **2.5 Recargo Tarjetas Bold**
-```
-PORCENTAJE: +5% sobre el total
-APLICACIÓN: Solo pagos con tarjeta Bold
-```
-
-**DETECCIÓN AUTOMÁTICA:**
-- Si cliente menciona "tarjeta" → informar del posible recargo
-- Aplicar solo si confirma método Bold
-- Sugerir alternativas sin recargo
+**Importante:** Todas las llegadas especiales requieren coordinación previa con nuestro equipo
 
 ---
 
-## **3. SERVICIOS DE LLEGADAS ESPECIALES**
+## **4. RESPUESTAS A CONSULTAS FRECUENTES**
 
-### **3.1 Llegada Nocturna (7:00 PM - 11:00 PM)**
-```
-TARIFA_BASE: $50.000 COP
-FUNCIÓN_EXTERNA: escalate_to_human("arrival_notification") para coordinación
-```
+### **"¿Cuánto cuesta llegar temprano?"**
+"El early check-in depende de la hora: desde $90,000 (12PM) hasta $130,000 (6AM). ¿A qué hora planeas llegar?"
 
-**PROCESO AUTOMÁTICO DEL BOT:**
-1. Detectar llegada en horario nocturno
-2. Informar cargo adicional de $50.000
-3. Si cliente acepta → escalate_to_human("arrival_notification", context)
-4. Confirmar coordinación realizada
+### **"¿Hay cargo por persona extra?"**
+"Sí, las personas adicionales tienen un costo de $50,000 por persona por noche, siempre que no se exceda la capacidad máxima del apartamento."
 
-### **3.2 Llegada Madrugada (11:00 PM - 6:00 AM)**
-```
-TARIFA_BASE: $80.000 COP
-COORDINACIÓN: Requiere escalate_to_human("arrival_notification") obligatorio
-```
+### **"¿Puedo guardar equipaje?"**
+"Claro, el guardado de equipaje es gratis de 12PM a 3PM. Fuera de ese horario cuesta $5,000 por hora, con máximo de $20,000 al día."
 
-**PROCESO AUTOMÁTICO DEL BOT:**
-1. Detectar llegada en madrugada
-2. Informar cargo de $80.000 + proceso especial
-3. escalate_to_human("arrival_notification", context) con 8h anticipación mínima
-4. Confirmar autorización enviada
+### **"¿Hay cargo por llegar de noche?"**
+"Para llegadas nocturnas (7PM-11PM) hay un cargo de $50,000 por coordinación. Para madrugada (después 11PM) varía entre $80,000-$120,000."
 
-### **3.3 Llegadas Extremas (3:00 AM - 6:00 AM)**
-```
-TARIFA_BASE: $120.000 COP
-ACCIÓN: escalate_to_human("arrival_notification", context)
-```
+### **"¿Puedo salir más tarde?"**
+"El late checkout hasta las 6PM cuesta $130,000 y está sujeto a disponibilidad. También puedes guardar equipaje gratis de 12PM-3PM si prefieres."
 
-**REGLA DEL BOT:**
-- Detectar horario extremo → informar complejidad
-- Escalar inmediatamente a humano
-- No procesar automáticamente
+### **"¿Hay recargo por pagar con tarjeta?"**
+"Solo las tarjetas Bold tienen recargo del 5%. Con transferencia bancaria, Nequi o efectivo no hay recargo adicional."
 
 ---
 
-## **4. APLICACIÓN INTELIGENTE DE SERVICIOS**
+## **5. COORDINACIÓN ESPECIAL**
 
-### **4.1 Detección Contextual Automática**
+**Para servicios que requieren gestión:**
+- Early check-in (confirmar disponibilidad)
+- Llegadas nocturnas/madrugada
+- Late checkout (verificar disponibilidad)
+- Grupos grandes (coordinación especial)
 
-**El bot detecta automáticamente:**
-- Canal de reserva (para aplicar cargo por servicio correctamente)
-- Menciones de horarios de llegada/salida
-- Número de personas vs capacidad máxima
-- Necesidades especiales (equipaje, early/late checkout)
-- Si el desglose de Booking incluye o no el cargo por servicio
+**Proceso:** Nuestro equipo se encarga de toda la coordinación necesaria para garantizar tu comodidad.
 
-### **4.2 Cálculo Transparente**
+Otros ejemplos:
+**Pregunta: "¿Cuánto cuesta llegar temprano?"**
+**Respuesta:** "El early check-in depende de la hora y la disponibilidad. Por ejemplo, a las 12 PM cuesta $90,000 y a las 9 AM son $100,000. ¿A qué hora tenías pensado llegar para verificar?"
 
-**Principios del bot:**
-- Mostrar cada cargo por separado
-- Explicar por qué aplica cada servicio
-- Ofrecer alternativas cuando sea posible
-- Total claro y desglosado
+**Pregunta: "¿Puedo guardar mis maletas?"**
+**Respuesta:** "¡Claro! Puedes guardar tu equipaje en nuestra oficina. Es gratis si lo dejas entre las 12 PM y las 3 PM. Fuera de ese horario, tiene un pequeño costo."
 
-### **4.3 Optimización para el Cliente**
+**Pregunta: "Llego a Cartagena a las 10 de la noche, ¿hay problema?"**
+**Respuesta:** "¡Sin problema! Podemos coordinar tu llegada nocturna. Tiene un costo de $50,000 para cubrir la logística de recibirte a esa hora."
 
-**El bot sugiere automáticamente:**
-- Guardado de equipaje vs early check-in (según conveniencia/costo)
-- Llegadas nocturnas sin cargo adicional
-- Distribución óptima de personas para evitar sobrecupos
-- Métodos de pago sin recargo (transferencia/Nequi)
-- Claridad sobre qué se paga dónde según su canal de reserva
+**Pregunta: "Mi reserva es por Airbnb, ¿debo pagar algo más?"**
+**Respuesta:** "Tu reserva de Airbnb ya incluye el aseo. Solo tendrías que pagar el registro del edificio y las manillas directamente en recepción al llegar."
 
----
+### **"¿Cuánto cuesta llegar temprano?"**
 
-## **5. SERVICIOS GRUPALES AUTOMÁTICOS**
+"El early check-in depende de la hora:
 
-### **5.1 Detección de Grupos**
-```
-TRIGGER: 3+ apartamentos solicitados
-BENEFICIO: Coordinación grupal incluida sin cargo
-ESCALAMIENTO: 8+ apartamentos → escalate_to_human("arrival_notification")
-```
+- 6:00 AM: $130,000
+- 9:00 AM: $100,000  
+- 12:00 PM: $90,000
 
-**APLICACIÓN AUTOMÁTICA:**
-- Bot detecta solicitud múltiple
-- Coordina llegadas sin cargo adicional
-- Escala a humano para grupos muy grandes
-
----
-
-## **6. REGLAS DE CÁLCULO AUTOMÁTICO**
-
-### **6.1 Orden de Cálculo del Bot - COTIZACIONES**
-
-#### **EN TODA COTIZACIÓN INICIAL:**
-```
-1. Precio por noche (según temporada)
-2. × Número de noches
-3. = Subtotal alojamiento
-4. + Cargo por Servicio OBLIGATORIO ($60k estudio / $70k alcoba)
-5. = TOTAL COTIZACIÓN
-
-IMPORTANTE: Nunca cotizar sin incluir el cargo por servicio
-```
-
-#### **SERVICIOS ADICIONALES (solo si aplica):**
-```
-6. + Sobrecupo ($50k por persona extra por noche)
-7. + Early check-in (según hora)
-8. + Late checkout ($130k)
-9. = TOTAL FINAL CON ADICIONALES
-```
-
-### **6.3 Comunicación del Cargo por Servicio**
-```
-NUNCA DECIR:
-- "Cargo adicional de servicio"
-- "Se agrega cargo por servicio"
-- "Más cargo de limpieza"
-
-SIEMPRE DECIR:
-- "Incluye servicio"
-- "Con todo incluido"
-- "Total con servicio"
-```
-
-**NOTAS IMPORTANTES:**
-- **Directos/Booking con cargo incluido**: Total incluye todo
-- **Booking sin cargo en desglose**: Cliente paga registro en recepción
-- **Airbnb/Expedia**: Cliente paga registro en recepción
-- **Sobrecupos**: Siempre directo a empresa, nunca en recepción
-- **Saldos pendientes**: Se pagan a empresa (no en recepción)
-
-### **6.2 Variables de Sistema del Bot**
-```
-[CARGO_POR_SERVICIO] = $60 o $70 según tipo apartamento
-[CANAL_RESERVA] = "directo" | "booking" | "airbnb" | "expedia"
-[CARGO_INCLUIDO] = Boolean (si incluye registro en el total)
-[SERVICIOS_DETECTADOS] = Lista de servicios adicionales aplicables
-[COSTO_SERVICIOS] = Suma de todos los servicios adicionales
-[REQUIERE_COORDINACIÓN] = Boolean para llegadas especiales
-[PAGO_REGISTRO_RECEPCIÓN] = Boolean según canal
-```
-
----
-
-## **7. CASOS ESPECIALES Y EXCEPCIONES**
-
-### **7.1 Servicios No Estándar**
-```
-DETECCIÓN: Cliente solicita algo no contemplado
-ACCIÓN: escalate_to_human("customer_complaint", context)
-COMUNICACIÓN: "Déjame consultar esa solicitud especial con el equipo"
-```
-
-### **7.2 Situaciones de Emergencia**
-```
-EJEMPLOS: Vuelos cancelados, emergencias médicas
-PRINCIPIO: Máxima flexibilidad
-ACCIÓN: proporcionar_contacto_emergencia(context)
-```
-
-### **7.3 Disputas sobre Cargos**
-```
-DETECCIÓN: Cliente cuestiona cargos aplicados
-PRIMERA RESPUESTA: Explicar justificación clara
-SI PERSISTE: escalate_to_human("customer_complaint", context)
-```
-
----
-
-## **8. INTEGRACIÓN Y REFERENCIAS CRUZADAS**
-
-### **8.1 Para Horarios y Políticas**
-```
-HORARIOS_CHECK_IN/OUT → Ver 14_POLITICAS_OPERATIVAS.txt
-PROCEDIMIENTOS_LLEGADAS → Ver 09_LLEGADAS_ESPECIALES.txt
-COORDINACIÓN_ESPECIAL → escalate_to_human("arrival_notification") function
-```
-
-### **8.2 Para Cálculo de Totales**
-```
-TARIFAS_BASE → Ver 02_TARIFAS_TEMPORADAS.txt
-CAPACIDADES → Ver 03_INVENTARIO_APARTAMENTOS.txt
-DESCUENTOS → Aplicados automáticamente por el bot
-```
-
-### **8.3 Para Casos Complejos**
-```
-GRUPOS_GRANDES → Ver 13_RESERVAS_GRUPALES.txt + escalate_to_human("arrival_notification")
-DISPONIBILIDAD → Ver 16_GESTION_DISPONIBILIDAD.txt
-CHECKOUT → Ver 12_CHECKOUT_ESTANDARIZADO.txt
-```
-
----
-
-## **9. COMUNICACIÓN NATURAL DE CARGOS**
-
-### **9.1 Principios de Comunicación**
-- **Transparencia total**: Explicar cada cargo
-- **Tono positivo**: Enfocarse en el valor
-- **Opciones**: Siempre que sea posible
-- **Sin sorpresas**: Todo claro desde el inicio
-
-### **9.2 Frases Clave del Bot**
-- "El cargo por servicio de $X incluye aseo y registro del edificio"
-- "Por llegar temprano a las X AM, el early check-in tiene un costo de $Y"
-- "Para X personas adicionales, el costo extra es $Z por noche"
-- "Si prefieres guardar equipaje, es gratis entre 12-3 PM"
-- "No hay cargo por llegadas nocturnas, coordinamos todo sin costo"
-- "Los clientes de Airbnb/Expedia pagan registro en recepción"
-- "El sobrecupo se paga directamente a nosotros, no en recepción"
-
-### **9.3 Manejo de Sensibilidad al Precio**
-- Detectar preocupación por costos adicionales
-- Enfatizar que NO hay cargos por llegadas tardías
-- Ofrecer alternativas para servicios opcionales (early/late checkout)
-- Explicar claramente qué está incluido según su canal
-- Mantener transparencia total sobre todos los costos
-
----
-
-## **NOTA ARQUITECTÓNICA CRÍTICA**
-
-Este archivo contiene EXCLUSIVAMENTE:
-- Cargos fijos obligatorios y su aplicación automática
-- Servicios variables con detección inteligente del bot
-- Integración con funciones externas para coordinación
-- Lógica de cálculo transparente y automático
-
-**NO CONTIENE:**
-- Tarifas de alojamiento → Ver 02_TARIFAS_TEMPORADAS.txt
-- Tours y actividades → Ver 06_TOURS_SERVICIOS_ADICIONALES.txt
-- Datos bancarios → Ver 05_DATOS_CORPORATIVOS_CONTACTO.txt
-- Templates específicos → Ver 15_PLANTILLAS_RESPUESTAS.txt
-
-**TRANSFORMACIÓN BOT:**
-- ✅ Eliminación total del sistema de override manual
-- ✅ Detección automática de servicios necesarios
-- ✅ Cálculo inteligente y transparente
-- ✅ Integración con functions para coordinación
-- ✅ Escalamiento automático para casos complejos
-
-Esta arquitectura garantiza que el bot aplique cargos de forma justa, transparente y optimizada para cada cliente.
+¿A qué hora planeas llegar para verificar disponibilidad?"

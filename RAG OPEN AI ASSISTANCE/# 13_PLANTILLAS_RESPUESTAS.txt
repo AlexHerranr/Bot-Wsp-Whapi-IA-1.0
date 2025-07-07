@@ -1,495 +1,343 @@
-# 15_PLANTILLAS_RESPUESTAS.txt
+Plantillas de Conversación WhatsApp - Ejemplos Específicos
+1. Manejo de Fechas Ambiguas (Validación Obligatoria)
+Cuando Cliente Dice Fechas Vagas
+Cliente: "Para diciembre"
+Bot: "¡Perfecto! ¿Del día X al día Y de diciembre?"
+Cliente: "4 noches"
+Bot: "¿A partir de qué fecha serían esas 4 noches?"
+Cliente: "El próximo mes"
+Bot: "¿Qué fechas exactas necesitas en [mes]?"
+Cliente: "Fin de semana"
+Bot: "¿Qué fin de semana específico? ¿Del [fecha] al [fecha]?"
+Cliente: "3 días desde mañana"
+Bot: "¿Del [fecha] al [fecha]? Confírmame las fechas"
+Cliente: "Próxima semana"
+Bot: "¿Del lunes X al domingo Y?"
+Confirmación de Fechas Parciales
+Solo mes mencionado:
+"¿De qué día a qué día de [mes]?"
+Solo duración mencionada:
+"¿A partir de qué fecha serían esas [X] noches?"
+Año no claro:
+"¿Te refieres a [mes] del 2025 o 2026?"
+2. Respuestas de Capacidad por Apartamento
+"¿Cómo duermen 6 personas en el [apartamento]?"
+1317, 1722A, 2005A:
+"En el 1317 duermen así:
 
-**Versión:** 3.0
-**Responsable:** Sistema de Conocimiento
-**Keywords:** plantilla, template, mensaje, respuesta, bot, whatsapp, conversación, natural
-**Archivos relacionados:** 05_DATOS_CORPORATIVOS_CONTACTO.txt, 15_COMUNICACION_NATURAL.txt, 12_POLITICAS_OPERATIVAS.txt
+Alcoba: 2 en cama doble + 2 en cama nido
+Sala: 1 persona en cada sofá-cama
+¿Para qué fechas lo necesitas?"
 
----
+1820:
+"En el 1820 la distribución es:
 
-## **PROPÓSITO DEL ARCHIVO**
-Manual de comunicación conversacional para el bot autónomo. Plantillas optimizadas para WhatsApp con psicología de venta suave y formato natural de mensajes cortos.
+Alcoba: 2 en cama doble
+Sala: 2 personas en cada cama nido
+Es ideal para familias. ¿Para qué fechas?"
 
----
+814:
+"El 814 tiene distribución única:
 
-## **0. PRINCIPIOS DE COMUNICACIÓN WHATSAPP**
+Alcoba: 2 en cama doble + 1 en cama sencilla
+Sala: 1 en cama sencilla + 2 en cama nido
+¿Te funciona esta distribución?"
 
-### **0.1 Reglas de Formato**
-```
-MÁXIMO_PALABRAS_POR_PÁRRAFO: 10-30 palabras
-PÁRRAFOS_POR_RESPUESTA: 2-3 máximo
-NEGRITAS: Un solo asterisco (*texto*)
-SEPARACIÓN: Cada párrafo = mensaje independiente
-PREGUNTAS: Solo cuando aporten valor
-EMOJIS: Máximo 2 por conversación completa (solo en saludo inicial y al final)
-```
+715:
+"En el 715 duermen:
 
-### **0.2 Psicología Conversacional**
-- **NO saturar** con información
-- **NO presionar** para cerrar venta
-- **NO exagerar** con adjetivos o emojis
-- **SÍ crear** conversación natural
-- **SÍ descubrir** necesidades gradualmente
-- **SÍ ofrecer** valor en cada mensaje
-- **SÍ mantener** tono amable pero equilibrado
+Alcoba: 2 en cama doble + 2 en cama nido
+Sala: 1 en sofá-cama + 1 colchoneta adicional
+Tiene vista única al lago y mar."
 
-### **0.3 Flujo Natural de Venta**
-1. Saludo cálido y breve
-2. Pregunta abierta de exploración
-3. Escuchar (esperar respuesta)
-4. Ofrecer 1-2 opciones máximo
-5. Profundizar según interés
-6. Cerrar naturalmente
+"¿Cuántas personas caben en el [apartamento]?"
+Alcobas (1317, 1722A, 1820, 2005A, 814, 715): "Hasta 6 personas cómodamente"
+1722B: "Hasta 4 personas"
+2005B: "Hasta 3 personas"
+3. Corrección Automática de Códigos
+Cliente dice "17A":
+"¡Perfecto! El apartamento 1722A en piso 17 es excelente para hasta 6 personas. Tiene balcón con vista al mar y 2 TVs. ¿Para qué fechas lo necesitas?"
+Cliente dice "17B":
+"El apartaestudio 1722B en piso 17 es ideal para hasta 4 personas. Tiene vista al mar y es muy cómodo. ¿Para qué fechas sería?"
+Cliente dice "20A":
+"El apartamento 2005A en piso 20 es espectacular para hasta 6 personas. Tiene vista panorámica desde el piso más alto. ¿Para qué fechas lo necesitas?"
+Cliente dice "20B":
+"El apartaestudio 2005B en piso 20 es perfecto para hasta 3 personas. Compacto pero con vista increíble. ¿Para qué fechas sería?"
+4. Disponibilidad con Traslados (Sistema de Splits)
+Cuando Hay Traslados Disponibles
+"Para tus fechas no tengo apartamentos disponibles las 5 noches completas, pero tengo esta excelente alternativa:
+Opción con 1 traslado:
 
----
+Apartamento 1317: 15-17 marzo (3 noches) = $900,000
+Apartamento 2005B: 18-20 marzo (2 noches) = $630,000
+Cargo de servicio: $70,000
+Total: $1,600,000
 
-## **1. PRIMER CONTACTO**
+El cambio es muy fácil, ambos están en el mismo edificio. ¿Te funciona?"
+Explicación de Múltiples Traslados
+"Esta opción tiene 2 traslados:
 
-### **1.1 Cliente Directo - Con Fechas**
-```
-Hola [NOMBRE]! 😊
+Apartamento 1722A: 15-16 marzo (2 noches)
+Apartamento 814: 17-18 marzo (2 noches)
+Apartamento 2005B: 19-20 marzo (1 noche)
+Es más movimiento pero conoces diferentes apartamentos y vistas. ¿Te interesa?"
 
-Para el [FECHA_INICIO] al [FECHA_FIN], serían [NOCHES] noches.
+Ventajas de los Traslados
+"Una ventaja de esta opción es que conoces dos apartamentos diferentes:
 
+El 1317 tiene vista al mar desde piso 13
+El 2005B está en piso 20 con vista panorámica
+Es como tener dos experiencias en una estadía."
+
+5. Primeros Contactos (Ejemplos por Situación)
+Cliente Directo con Fechas
+"Hola María! 😊
+Para el 15 al 20 de marzo, serían 5 noches.
 Tengo algunas opciones frente al mar.
-
-¿Cuántas personas viajan?
-```
-
-### **1.2 Cliente Directo - Sin Fechas**
-```
-Hola [NOMBRE], qué gusto! 😊
-
+¿Cuántas personas viajan?"
+Cliente Directo sin Fechas
+"Hola Carlos, qué gusto! 😊
 Tenemos apartamentos frente a la playa en Cartagena.
-
-¿Para qué fechas estás pensando viajar?
-```
-
-### **1.3 Booking Sin Tarjeta**
-```
-Hola [NOMBRE]! Vi tu reserva en Booking 😊
-
-*Apartamento [TIPO]*
-Del [FECHA_INICIO] al [FECHA_FIN]
-Total: $[TOTAL] COP
-
+¿Para qué fechas estás pensando viajar?"
+Booking sin Tarjeta
+"Hola Ana! Vi tu reserva en Booking 😊
+Apartamento 1317
+Del 20 al 25 de abril
+Total: $890,000 COP
 ¿Deseas ver de nuevo las fotos del apartamento?
-
-Si gustas te envío los datos de pago.
-```
-
-### **1.4 Booking Con Tarjeta**
-```
-Hola [NOMBRE]! 
-
+Si gustas te envío los datos de pago."
+Booking con Tarjeta
+"Hola Pedro!
 Tu reserva en Booking está confirmada ✅
-
-*Apartamento [TIPO]*
-[FECHA_INICIO] al [FECHA_FIN]
-
-¿Necesitas algo especial para tu llegada?
-```
-
-### **1.5 Airbnb Consulta**
-```
-Hola [NOMBRE]! 
-
-Sí tenemos disponibilidad para esas fechas 😊
-
-Puedes reservar directamente en la plataforma.
-
-¿Cuéntame qué dudas tienes? ¿Cómo te puedo ayudar?
-```
-
----
-
-## **2. EXPLORACIÓN DE NECESIDADES**
-
-### **2.1 Después de Saber Cuántos Son**
-```
-Perfecto, para [X] personas tengo algunas opciones.
-
-¿Prefieres pisos altos o bajos, o cualquiera?
-```
-
-### **2.2 Después de Preferencia de Piso**
-```
-Entendido!
-
+Apartamento 1722A
+15 al 18 de mayo
+¿Necesitas algo especial para tu llegada?"
+6. Exploración de Necesidades (Flujo Natural)
+Después de Saber Cuántos Son
+"Perfecto, para 4 personas tengo algunas opciones.
+¿Prefieres pisos altos o bajos, o cualquiera?"
+Después de Preferencia de Piso
+"Entendido!
 ¿Qué aproximado tienes por noche?
-
-Así te mostraré algunas opciones.
-```
-
-### **2.3 Con Presupuesto Definido**
-```
-Tengo algo que puede funcionarte:
-
-*Apartamento [NUMERO]*
-$[PRECIO]/noche - [TIPO]
-Piso [X] con vista al mar
-
-¿Te interesa verlo?
-```
-
----
-
-## **3. PRESENTACIÓN DE OPCIONES CON CARGOS INCLUIDOS**
-
-### **3.1 Una Sola Opción**
-```
-Para tus fechas tengo:
-
-*Apartamento [NUMERO]* - Piso [X]
-[TIPO] con vista al mar
-
+Así te mostraré algunas opciones."
+Con Presupuesto Definido
+"Tengo algo que puede funcionarte:
+Apartamento 1820
+$280,000/noche - 1 alcoba
+Piso 18 con vista al mar
+¿Te interesa verlo?"
+7. Presentación de Opciones (Con Cargos Incluidos)
+Una Sola Opción
+"Para tus fechas tengo:
+Apartamento 1317 - Piso 13
+Alcoba con vista al mar
 Total cotización:
-• [N] noches: $[SUBTOTAL]
-• Servicio: $[CARGO]
-• *Total: $[TOTAL_FINAL]*
 
-¿Te interesa?
-```
+4 noches: $1,200,000
+Servicio: $70,000
+Total: $1,270,000
+¿Te interesa?"
 
-### **3.2 Dos Opciones (Máximo)**
-```
-Te muestro 2 opciones:
+Dos Opciones Máximo
+"Te muestro 2 opciones:
+1722A → $280,000/noche
+1722B → $220,000/noche
+¿Cuál prefieres que te cotice completa?"
+Después de elección:
+"El 1722A queda en:
 
-*[APTO1]* → $[PRECIO1]/noche
-*[APTO2]* → $[PRECIO2]/noche
+3 noches: $840,000
+Servicio: $70,000
+Total: $910,000
+¿Lo reservo?"
 
-¿Cuál prefieres que te cotice completa?
-```
-
-*Después de elección:*
-```
-El *[APTO_ELEGIDO]* queda en:
-• [N] noches: $[SUBTOTAL]
-• Servicio: $[CARGO]
-• *Total: $[TOTAL]*
-
-¿Lo reservo?
-```
-
-### **3.3 Detalles Adicionales (Si Pregunta)**
-```
-El [NUMERO] tiene:
-• Alcoba independiente
-• Balcón con vista al mar
-• Cocina completa
-
-Capacidad para [X] personas cómodas.
-
-¿Quieres ver fotos?
-```
-
----
-
-## **4. SEGUIMIENTOS NATURALES**
-
-### **4.0 Principio de Seguimientos**
-```
-REGLA DE ORO: Si el cliente no responde, es por algo.
-- Tal vez está ocupado
-- Tal vez está comparando opciones
-- Tal vez cambió de planes
-
-NUNCA presionar, SIEMPRE dar valor o salida digna.
-```
-
-### **4.1 Primer Seguimiento (24-48h)**
-```
-Hola [NOMBRE]! 
-
-¿Pudiste ver las opciones que te envié?
-
-Si necesitas algo diferente, dime.
-```
-
-### **4.2 Segundo Seguimiento (3-5 días)**
-```
-Hola! Sigo por aquí por si necesitas algo.
-
-Las fechas del [FECHA] siguen disponibles.
-```
-
-### **4.3 Seguimiento Final (7+ días)**
-```
-[NOMBRE], por si acaso...
-
-Si cambias de fechas o necesitas otras opciones, me avisas.
-
-Que tengas buena semana!
-```
-
----
-
-## **5. GESTIÓN DE OBJECIONES**
-
-### **5.1 Precio Alto**
-```
-Entiendo, busquemos algo más económico.
-
-¿Cuál sería tu presupuesto ideal?
-```
-
-*Después de respuesta:*
-```
-Tengo el apartamento [NUMERO] en $[PRECIO].
-
+Presentación de Fotos
+"Detalles Apto 1317:
+https://wa.me/p/6754564561280380/573023371476
+¿Te interesa?"
+8. Manejo de Objeciones (Ejemplos Reales)
+Precio Alto
+"Entiendo, busquemos algo más económico.
+¿Cuál sería tu presupuesto ideal?"
+Después de respuesta:
+"Tengo el apartamento 1722B en $220,000.
 Más compacto pero igual de cómodo.
-
-¿Te gustaría verlo?
-```
-
-### **5.2 Dudas sobre Ubicación**
-```
-Estamos frente a la playa en el sector turístico.
-
+¿Te gustaría verlo?"
+Dudas sobre Ubicación
+"Estamos frente a la playa en el sector turístico.
 Edificio Nuevo Conquistador, al lado del Hilton.
-
-¿Te envío la ubicación en Maps?
-```
-
-### **5.3 Desconfianza**
-```
-Claro! Somos Pa'Cartagena.
-
+¿Te envío la ubicación en Maps?"
+Desconfianza
+"Claro! Somos Pa'Cartagena.
 Nuestra razón social es TE ALQUILAMOS S.A.S.
-
 Puedes verificarnos en Booking y Airbnb.
+¿Te gustaría ver nuestros documentos oficiales?"
+Comparación con Otros
+"Entiendo que estés comparando opciones.
+Nuestras ventajas son:
 
-¿Te gustaría ver nuestros documentos oficiales?
-```
+Ubicación frente al mar
+Apartamentos completamente equipados
+Soporte 24/7 durante tu estadía
+¿Hay algo específico que te preocupe?"
 
----
-
-## **6. PROCESO DE RESERVA**
-
-### **6.1 Cuando Muestra Interés Real**
-```
-Qué bueno! 
-
-Para separarlo se necesita un anticipo de $[MONTO].
-
-¿Te cuento las opciones de pago?
-```
-
-### **6.2 Opciones de Pago**
-```
-Puedes pagar por:
-
-*Transferencia:* Bancolombia 786-48800-796
-*Nequi:* Te envío el QR
-
-Lo que te sea más cómodo.
-```
-
-### **6.3 Confirmación de Pago**
-```
-Listo! Recibí tu pago ✅
-
+9. Proceso de Reserva (Paso a Paso)
+Cuando Muestra Interés Real
+"¡Qué bueno!
+Para separarlo se necesita un anticipo de $280,000.
+¿Te cuento las opciones de pago?"
+Opciones de Pago
+"Puedes pagar por:
+Transferencia: Bancolombia 786-48800-796
+Nequi: Te envío el QR
+Lo que te sea más cómodo."
+Confirmación de Pago
+"¡Listo! Recibí tu pago ✅
 Tu reserva está confirmada:
-*Apto [NUMERO]* 
-[FECHA_INICIO] al [FECHA_FIN]
-
+Apto 1317
+20 al 25 de marzo
 En las próximas horas te llegará el correo de confirmación.
-
-Unos días antes de tu llegada te envío todos los detalles.
-```
-
----
-
-## **7. INFORMACIÓN DE CHECK-IN**
-
-### **7.1 Recordatorio Pre-Llegada**
-```
-Hola [NOMBRE]! 
-
-*Check-in:* Oficina 1706 (primer piso)
-*Hora:* Desde las 3:00 PM
-
-¿A qué hora llegarías aproximadamente?
-```
-
-### **7.2 Llegada Nocturna**
-```
-Ok! Para llegadas después de 7 PM:
-
-Ve directo a recepción del edificio.
-
-Las llaves estarán autorizadas ahí.
-```
-
-### **7.3 Día de Check-in**
-```
-Bienvenido a Cartagena!
-
-Nos vemos en la oficina 1706.
-
-Cualquier cosa me escribes.
-```
-
----
-
-## **8. SITUACIONES ESPECIALES**
-
-### **8.1 Sin Disponibilidad**
-```
-Para esas fechas no tengo disponible.
-
+Unos días antes de tu llegada te envío todos los detalles."
+10. Seguimientos Naturales (Sin Presionar)
+Primer Seguimiento (24-48h)
+"Hola Laura!
+¿Pudiste ver las opciones que te envié?
+Si necesitas algo diferente, dime."
+Segundo Seguimiento (3-5 días)
+"Hola! Sigo por aquí por si necesitas algo.
+Las fechas del 15 al 20 siguen disponibles."
+Seguimiento Final (7+ días)
+"Roberto, por si acaso...
+Si cambias de fechas o necesitas otras opciones, me avisas.
+Que tengas buena semana!"
+11. Situaciones Especiales (Ejemplos Específicos)
+Sin Disponibilidad
+"Para esas fechas no tengo disponible.
 Pero puedo buscar con colegas de confianza.
-
-¿Te interesa que busque opciones?
-```
-
-### **8.2 Mascotas**
-```
-El edificio no permite mascotas.
-
-Es política de la administración.
-
-¿Es indispensable viajar con tu mascota?
-```
-
-### **8.3 Early Check-in**
-```
-Llegas a las [HORA]? Tengo 2 opciones:
-
-*Early check-in:* $[PRECIO]
-*Guardar equipaje:* $[PRECIO]/hora
-
-¿Qué prefieres?
-```
-
-### **8.4 Grupos**
-```
-Para [X] personas necesitarías [Y] apartamentos.
-
+¿Te interesa que busque opciones?"
+Early Check-in
+"Llegas a las 10 AM? Tengo 2 opciones:
+Early check-in: $100,000
+Guardar equipaje: $15,000 por 3 horas
+¿Qué prefieres?"
+Grupos
+"Para 18 personas necesitarías 3 apartamentos.
 Puedo coordinar que estén cerca.
-
-¿Te interesa que cotice todo el grupo?
-```
-
----
-
-## **9. MANEJO DE PLATAFORMAS**
-
-### **9.1 Booking - Recordatorio Pago**
-```
-Hola! Vi que tu reserva en Booking está pendiente.
-
-Se cancela automáticamente en 24h sin el anticipo.
-
-¿Todo bien? ¿Necesitas algo?
-```
-
-### **9.2 Airbnb - Respuesta Rápida**
-```
-Hola! Sí hay disponibilidad.
-
-Reserva directo en Airbnb cuando quieras.
-```
-
----
-
-## **10. CIERRE Y POST-VENTA**
-
-### **10.1 Check-out**
-```
-Hola! Mañana es tu salida.
-
-*Check-out:* Antes de 12:00 PM
-*Llaves:* En recepción
-
-¿Necesitas late check-out?
-```
-
-### **10.2 Solicitud de Reseña (Solo si expresó satisfacción)**
-```
-Qué bueno que disfrutaste!
-
-Si puedes dejarnos una reseña en [PLATAFORMA] nos ayudarías mucho.
-
-Gracias por elegirnos!
-```
-
-### **10.3 Objetos Olvidados**
-```
-Hola! Encontramos [OBJETO] en el apartamento.
-
-¿Es tuyo?
-
-Podemos guardártelo o enviártelo.
-```
-
----
-
-## **11. CASOS QUE REQUIEREN ESCALAMIENTO**
-
-### **11.1 Identificar Cuándo Escalar**
-```
-SITUACIONES:
-- Cliente quiere reservar YA
-- Problemas complejos
-- Quejas o inconformidades
-- Solicitudes fuera de lo normal
-- Grupos de 8+ apartamentos
-```
-
-### **11.2 Mensaje de Escalamiento**
-```
-Déjame consultarlo con el equipo.
-
-Te confirmo en unos minutos.
-```
-
----
-
-## **12. TOURS (Solo Informativo)**
-
-### **12.1 Si Pregunta por Tours**
-```
-Claro! Manejamos varios tours:
-
-*Islas del Rosario:* desde $80.000
-*City Tour:* desde $50.000
-
-¿Te paso el contacto del equipo de tours?
-```
-
-### **12.2 Compartir Contacto Tours**
-```
-El equipo de tours te atenderá bien:
-
+¿Te interesa que cotice todo el grupo?"
+Mascotas
+"El edificio no permite mascotas.
+Es política de la administración.
+¿Es indispensable viajar con tu mascota?"
+Cambio de Fechas
+"Sin problema, puedo revisar otras fechas.
+¿Tienes flexibilidad para llegar unos días antes o después?
+Así te muestro las opciones disponibles."
+12. Check-in y Llegadas
+Recordatorio Pre-Llegada
+"Hola Carmen!
+Check-in: Oficina 1706 (primer piso)
+Hora: Desde las 3:00 PM
+¿A qué hora llegarías aproximadamente?"
+Llegada Nocturna
+"Ok! Para llegadas después de 7 PM:
+Ve directo a recepción del edificio.
+Las llaves estarán autorizadas ahí."
+Día de Check-in
+"¡Bienvenido a Cartagena!
+Nos vemos en la oficina 1706.
+Cualquier cosa me escribes."
+Llegada Temprana
+"Para tu llegada a las 11 AM, el apartamento puede no estar listo aún.
+¿Te parece que guardes el equipaje gratis hasta las 3 PM?
+Así puedes explorar la ciudad mientras tanto."
+13. Tours (Solo Informativo)
+Si Pregunta por Tours
+"¡Claro! Manejamos varios tours:
+Islas del Rosario: desde $80,000
+City Tour: desde $50,000
+¿Te paso el contacto del equipo de tours?"
+Compartir Contacto Tours
+"El equipo de tours te atenderá bien:
 WhatsApp: 300 830 4905
+Ellos manejan todos los detalles."
+Post-Reserva (Venta Cruzada)
+"Por cierto, si durante tu estadía te interesa hacer algún tour a las islas o por la ciudad, avísame y te paso el contacto de nuestro equipo especializado. 🏝️"
+14. Check-out y Post-Venta
+Check-out
+"Hola! Mañana es tu salida.
+Check-out: Antes de 12:00 PM
+Llaves: En recepción
+¿Necesitas late check-out?"
+Objetos Olvidados
+"Hola! Encontramos tu cargador en el apartamento.
+¿Es tuyo?
+Podemos guardártelo o enviártelo."
+Protocolo de Reseñas (Actualizado)
+Paso 1 - Siempre preguntar primero:
+"Hola Carmen! ¿Cómo estuvo tu experiencia en Cartagena? ¿Todo bien con el apartamento y nuestro servicio?"
+Paso 2 - Solo si respuesta es positiva:
+"¡Qué alegría saber que disfrutaste! 😊
+¿Te gustaría dejarnos una reseña? Nos ayudaría muchísimo:
+Para Booking: [enlace específico reseña]
+Para Airbnb: [enlace específico reseña]
+Para Google: [enlace Google Maps]
+¡Gracias por elegirnos!"
+Si respuesta neutra o negativa:
+"Gracias por tu comentario. Si hay algo específico que podamos mejorar, nos encantaría saberlo para futuras estadías."
+15. Plataformas Específicas
+Booking - Recordatorio Pago
+"Hola! Vi que tu reserva en Booking está pendiente.
+Se cancela automáticamente en 24h sin el anticipo.
+¿Todo bien? ¿Necesitas algo?"
+Airbnb - Respuesta Rápida
+"Hola! Sí hay disponibilidad.
+Reserva directo en Airbnb cuando quieras."
+Reserva Directa vs Plataforma
+"Si reservas directo conmigo:
 
-Ellos manejan todos los detalles.
-```
+Sin comisiones de plataforma
+Mejor precio
+Atención directa
+¿Te interesa que te cotice por este canal?"
 
----
+16. Comunicación B2B (Colegas/Agencias)
+Detección de Colega
+Cliente: "Necesito para un cliente"
+Bot: "Hola Carlos.
+Para el 15-20 marzo (5 noches):
 
-## **NOTA ARQUITECTÓNICA CRÍTICA**
+1 alcoba: $280,000/noche = $1,470,000 total
+Estudio: $220,000/noche = $1,160,000 total
+¿Qué opción necesitas?"
 
-Este archivo contiene EXCLUSIVAMENTE:
-- Plantillas conversacionales cortas para WhatsApp
-- Formato de párrafos separados (máximo 30 palabras)
-- Preguntas estratégicas, no invasivas
-- Flujo natural de descubrimiento de necesidades
+Confirmación B2B
+"Confirmado:
 
-**NO CONTIENE:**
-- Mensajes largos o párrafos densos
-- Presión de venta agresiva
-- Información completa en un solo mensaje
-- Plantillas B2B (eliminadas para bot de cliente final)
+Apartamento: 1317
+Fechas: 15-20 marzo
+Total: $1,470,000
+¿Procedo a enviar datos de pago?"
 
-**TRANSFORMACIÓN BOT:**
-- ✅ Mensajes ultra cortos estilo WhatsApp real
-- ✅ Psicología de venta suave y conversacional
-- ✅ Un párrafo = un mensaje separado
-- ✅ Preguntas solo cuando aportan valor
-- ✅ Crear conversación, no monólogo
-- ✅ Nunca presionar para cerrar venta
-- ✅ Ofrecer opciones, no forzar decisiones
+Descuento por Volumen (Colegas)
+"Para 3 apartamentos, aplico descuento del 5%:
 
-**PRINCIPIO CLAVE:** Menos es más. Crear diálogo natural que fluya como una conversación real de WhatsApp entre amigos. El cliente debe sentirse acompañado, no presionado.
+Precio regular: $2,400,000
+Con descuento: $2,280,000
+Ahorro: $120,000
+¿Confirmas?"
+
+17. Escalamiento
+Mensaje de Escalamiento
+"Déjame consultarlo con el equipo.
+Te confirmo en unos minutos."
+Cuándo Escalar
+
+Cliente quiere reservar YA pero hay complicaciones
+Problemas complejos durante estadía
+Quejas o inconformidades serias
+Solicitudes fuera de lo normal
+Grupos de 8+ apartamentos
+Situaciones no cubiertas en plantillas
+
+Escalamiento con Contexto
+"Esta situación específica requiere atención personalizada. Te voy a conectar con nuestro supervisor que tiene más opciones y flexibilidad para ayudarte."

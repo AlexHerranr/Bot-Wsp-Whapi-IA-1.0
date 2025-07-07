@@ -1,418 +1,184 @@
-# 11_PROTOCOLO_CONFIANZA.txt
+# Protocolo para Generar Confianza y Verificación Empresarial
 
-**Sistema Automático de Generación de Confianza**
+## 1. Señales de Desconfianza (Cuándo Aplicar Este Protocolo)
 
-**Versión:** 3.0  
-**Responsable:** Sistema de Conocimiento  
-**Keywords:** confianza, verificación, legitimidad, documentos, credibilidad, empresa, seguridad, Bot, automático  
-**Archivos relacionados:** 05_DATOS_CORPORATIVOS_CONTACTO.txt, 13_PLANTILLAS_RESPUESTAS.txt, 12_POLITICAS_OPERATIVAS.txt
+### Frases Directas de Alerta
+- "¿Es real esta empresa?" / "¿Cómo sé que no es estafa?"
+- "No confío en transferir dinero" / "¿Son legítimos?"
+- "Tengo miedo de que sea fraude" / "¿Tienen documentos?"
+- "¿Están registrados?" / "¿Hay referencias?"
 
----
+### Señales Indirectas
+- Preguntas repetitivas sobre la empresa
+- Dudas sobre métodos de pago
+- Menciones de experiencias negativas previas
+- Comparaciones con casos de estafa
 
-## **PROPÓSITO DEL ARCHIVO**
-Sistema integral para que el Bot genere confianza automáticamente y maneje verificación empresarial. Define protocolos específicos para detectar desconfianza, responder empáticamente y proporcionar verificación completa de legitimidad empresarial.
+## 2. Respuesta Automática en 4 Niveles
 
----
+### Nivel 1 - Validación Empática (SIEMPRE primero)
+**Respuesta del bot:**
+"Entiendo perfectamente tu preocupación, y me parece muy inteligente que verifiques antes de hacer cualquier pago. Es completamente normal ser cauteloso, especialmente con servicios online."
 
-## **1. DETECCIÓN AUTOMÁTICA DE SEÑALES DE DESCONFIANZA**
-
-### **1.1 Frases de Alerta Directas**
-```
-ALTA_PRIORIDAD = [
-    "¿Es real esta empresa?",
-    "Tengo miedo de que sea estafa",
-    "¿Cómo sé que no es fraude?",
-    "No confío en transferir dinero",
-    "¿Son legítimos?"
-]
-
-MEDIA_PRIORIDAD = [
-    "¿Tienen algún documento?",
-    "¿Puedo verificar que existen?",
-    "¿Hay referencias?",
-    "¿Están registrados?"
-]
-```
-
-### **1.2 Señales Indirectas de Desconfianza**
-```
-PATRONES_COMPORTAMIENTO = [
-    "preguntas repetitivas sobre la empresa",
-    "solicitud de múltiples confirmaciones",
-    "dudas sobre métodos de pago",
-    "comparaciones con casos de estafa",
-    "menciones de experiencias negativas previas"
-]
-```
-
-### **1.3 Contexto de Alto Riesgo**
-- Cliente internacional sin referencias locales
-- Montos significativos de reserva
-- Primera vez usando servicios online
-- Comunicación después de historias de fraude en medios
-
----
-
-## **2. PROTOCOLO AUTOMÁTICO DE RESPUESTA EMPÁTICA**
-
-### **2.1 Estructura de Respuesta en 4 Niveles**
-
-#### **NIVEL 1 - Validación (Automática)**
-```
-RESPUESTA_BOT:
-"Entiendo perfectamente tu preocupación, y me parece muy inteligente que verifiques antes de hacer cualquier pago.
-
-Es normal ser cauteloso, especialmente con servicios online."
-```
-
-#### **NIVEL 2 - Información (Automática)**
-```
-RESPUESTA_BOT:
+### Nivel 2 - Información Verificable
+**Respuesta del bot:**
 "Somos una empresa legalmente constituida y registrada:
 
-*Información verificable:*
-• Empresa: TE ALQUILAMOS S.A.S
-• NIT: 900.890.457-4
-• Registro Nacional de Turismo vigente
-• Ubicación física: Edificio Nuevo Conquistador
+**Información verificable:**
+- Empresa: TE ALQUILAMOS S.A.S
+- NIT: 900.890.457
+- Registro Nacional de Turismo vigente
+- Ubicación física: Oficina 1706, Edificio Nuevo Conquistador
+- Dirección: Calle 1b # 3-159, Barrio Laguito, Cartagena
 
-Puedo enviarte todos los documentos que necesites."
-```
+Puedes verificar nuestro NIT en la página de la Cámara de Comercio. ¿Te gustaría que te envíe nuestros documentos oficiales?"
 
-#### **NIVEL 3 - Acción (Automática + Escalamiento)**
-```
-RESPUESTA_BOT:
+### Nivel 3 - Opciones de Verificación
+**Respuesta del bot:**
 "Te puedo ofrecer varias formas de verificar nuestra legitimidad:
 
-*Opciones inmediatas:*
-• Certificado Cámara de Comercio
-• Registro Nacional de Turismo
-• Reviews en Booking y Airbnb
+**Verificación inmediata:**
+- Certificado Cámara de Comercio actualizado
+- Registro Nacional de Turismo (RNT)
+- RUT de la empresa
+- Reviews en Booking y Airbnb
 
-*Verificación personal:*
-• Videollamada con nuestro equipo
-• Visita a nuestra oficina 1706
+**Verificación personal:**
+- Videollamada con nuestro equipo
+- Visita a nuestra oficina 1706
+- Referencias de huéspedes recientes
 
-¿Cuál prefieres?"
-```
+¿Cuál de estas opciones te haría sentir más tranquilo?"
 
-#### **NIVEL 4 - Seguimiento (Escalamiento si necesario)**
-Si persiste desconfianza → `escalate_to_human("customer_complaint", context)`
+### Nivel 4 - Escalamiento (Si persiste la duda)
+**Respuesta del bot:**
+"Entiendo que necesitas verificación adicional. Déjame conectarte directamente con nuestro supervisor para que te ayude personalmente con todas las verificaciones que necesites. Te confirmo la conexión en unos minutos."
 
-### **2.2 Principios de Comunicación del Bot**
-- **Tono**: Comprensivo, nunca defensivo
-- **Velocidad**: Respuesta inmediata automática
-- **Transparencia**: Total apertura a verificación
-- **Paciencia**: Sin presión para decidir rápido
+## 3. Documentos Disponibles para Verificación
 
----
+### Documentos Oficiales (Envío Inmediato)
+- **Certificado Cámara de Comercio:** Documento actualizado 2025
+- **Registro Nacional de Turismo (RNT):** Certificación vigente del sector
+- **RUT empresarial:** Documento tributario oficial
+- **Certificados de constitución:** Documentos legales de la empresa
 
-## **3. ARSENAL DE VERIFICACIÓN AUTOMÁTICA**
+### Verificación Online (Enlaces Directos)
+- **Cámara de Comercio:** Búsqueda por NIT 900.890.457
+- **DIAN:** Verificación tributaria pública
+- **Superintendencia de Sociedades:** Registro empresarial
 
-### **3.1 Documentación Disponible para Envío Inmediato**
-```
-DOCUMENTOS_PRIMARIOS = {
-    "certificado_camara": "Certificado Cámara de Comercio actualizado",
-    "registro_turismo": "Registro Nacional de Turismo (RNT)",
-    "rut_empresa": "RUT de la empresa"
-}
+## 4. Protocolo de Videollamada
 
-INFORMACIÓN_VERIFICABLE = {
-    "razon_social": "TE ALQUILAMOS S.A.S",
-    "nit": "900.890.457",
-    "direccion": "Calle 1b # 3-159, Edificio Nuevo Conquistador",
-    "telefono": "+57 302 337 1476"
-}
-```
+### Cuándo Ofrecer Videollamada
+- Cliente expresa dudas directas después de documentos
+- Reservas de alto valor (más de $2,000,000)
+- Clientes internacionales sin referencias locales
+- Solicitud específica del cliente
 
-### **3.2 Canales de Verificación Automáticos**
-```
-1. DOCUMENTOS_DIGITALES: Envío inmediato por WhatsApp
-2. VERIFICACIÓN_ONLINE: Enlaces a registros públicos
-3. CONTACTO_DIRECTO: Números y correos oficiales
-4. VERIFICACIÓN_FÍSICA: escalate_to_human("customer_complaint")
-```
-
-*Para datos específicos → Ver 04_DATOS_CORPORATIVOS_CONTACTO.txt*
-
----
-
-## **4. MANEJO AUTOMÁTICO DE VIDEOLLAMADAS**
-
-### **4.1 Detección de Necesidad de Videollamada**
-```
-TRIGGER_VIDEOLLAMADA = [
-    "cliente expresa dudas directas",
-    "después de documentos si persiste duda",
-    "reservas de alto valor",
-    "clientes internacionales sin referencias"
-]
-```
-
-### **4.2 Protocolo del Bot para Videollamada**
-```
-RESPUESTA_BOT:
+### Respuesta del Bot para Videollamada
 "Te entiendo perfectamente. La mejor forma de generar confianza es que nos conozcas personalmente.
 
-¿Te gustaría que coordinemos una videollamada corta? 
+**¿Te gustaría que coordinemos una videollamada corta?**
 
-*Podemos mostrarte:*
-• Nuestra oficina 1706
-• El edificio y lobby
-• El apartamento que te interesa
-• Responder todas tus dudas
+**Podemos mostrarte:**
+- Nuestra oficina 1706 en funcionamiento
+- El edificio y lobby del Nuevo Conquistador
+- El apartamento específico que te interesa
+- Responder todas tus dudas cara a cara
 
-¿Te parece bien?"
+La videollamada dura unos 5-10 minutos y podemos hacerla por WhatsApp Video, Zoom o Google Meet. ¿Te parece bien?"
 
-ACCIÓN: escalate_to_human("customer_complaint", {
-    "client_concern": "customer_complaint",
-    "urgency": "high",
-    "client_type": "international/high_value"
-})
-```
+## 5. Casos Especiales
 
-### **4.3 Información para Coordinación Humana**
-```
-DETALLES_VIDEOLLAMADA = {
-    "duracion": "5-10 minutos",
-    "plataformas": "WhatsApp Video, Zoom, Google Meet",
-    "contenido": "Oficina 1706, edificio, apartamento, Q&A",
-    "preparacion": "Apartamento limpio, personal disponible"
-}
-```
----
-## **5. SISTEMA AUTOMÁTICO DE REFERENCIAS**
+### Cliente con Experiencia Negativa Previa
+**Respuesta del bot:**
+"Lamento mucho que hayas tenido esa mala experiencia anteriormente. Entiendo perfectamente por qué sientes desconfianza, y es completamente válido.
 
-### **5.1 Referencias Públicas (Envío Inmediato)**
-```
-REFERENCIAS_PÚBLICAS = {
-    "booking_reviews": "Reviews verificados en Booking.com",
-    "airbnb_ratings": "Calificaciones en Airbnb",
-    "google_reviews": "Google Reviews del edificio",
-    "redes_sociales": "Testimonios en redes sociales"
-}
-```
-### **5.2 Protocolo de Compartir Referencias**
-```
-RESPUESTA_BOT:
-"Además de los documentos oficiales, tenemos referencias reales:
+**Lo que te puedo ofrecer para tu tranquilidad:**
+- Verificación completa de nuestra legitimidad
+- Pago en dos partes si te ayuda a sentirte más seguro
+- Contacto directo con nuestro supervisor
+- Referencias de clientes reales recientes
+- Videollamada para conocernos personalmente
 
-*Reviews verificados:*
-• Booking.com: [enlace]
-• Airbnb: [enlace]
-• Google Reviews: [enlace]
+¿Qué de esto te haría sentir más tranquilo para proceder?"
 
-¿Te gustaría que te conecte con algún huésped reciente?"
+### Presión de Familia/Amigos
+**Respuesta del bot:**
+"Es normal que tu familia/amigos se preocupen por tu seguridad, y los entiendo perfectamente.
 
-SI_ACEPTA: escalate_to_human("customer_complaint", context)
-```
+**Los puedo tranquilizar enviándoles:**
+- Toda nuestra documentación oficial
+- Referencias verificables de otros huéspedes
+- Información completa de nuestra ubicación física
+- Si quieren, podemos coordinar una videollamada grupal
 
----
+Tu seguridad y la tranquilidad de tu familia son nuestra prioridad."
 
-## **6. MANEJO AUTOMÁTICO DE CASOS ESPECÍFICOS**
+### Cliente Internacional
+**Respuesta del bot:**
+"Entiendo que es más difícil verificar empresas en otro país. Es muy inteligente de tu parte ser cauteloso.
 
-### **6.1 Cliente con Experiencia Negativa Previa**
-```
-RESPUESTA_BOT:
-"Lamento mucho que hayas tenido esa experiencia negativa anteriormente.
+**Para clientes internacionales ofrecemos:**
+- Documentos traducidos si es necesario
+- Referencias de huéspedes de tu país
+- Videollamada en tu idioma preferido
+- Explicación detallada de nuestros procesos legales
 
-Entiendo perfectamente por qué sientes desconfianza, y es completamente válido.
+¿Hay algo específico de tu país de origen que necesites para sentirte seguro?"
 
-*Lo que te puedo ofrecer:*
-• Verificación completa de nuestra legitimidad
-• Pago escalonado si te ayuda a sentirte más seguro
-• Contacto directo con nuestro equipo
-• Referencias de clientes reales
+## 6. Referencias y Testimonios
 
-¿Qué te haría sentir más tranquilo?"
-```
+### Referencias Públicas (Compartir Enlaces)
+- **Booking.com:** Reviews verificados de huéspedes reales
+- **Airbnb:** Calificaciones y comentarios detallados
+- **Google Reviews:** Opiniones del edificio y ubicación
+- **Redes sociales:** Testimonios en Instagram y Facebook
 
-### **6.2 Presión de Terceros**
-```
-RESPUESTA_BOT:
-"Es normal que tu familia/amigos se preocupen por tu seguridad.
+### Respuesta del Bot para Referencias
+"Además de nuestros documentos oficiales, tenemos referencias reales de huéspedes:
 
-*Los puedo tranquilizar enviándoles:*
-• Toda nuestra documentación oficial
-• Referencias verificables
-• Coordinemos videollamada grupal si quieren
+**Reviews verificados:**
+- Booking.com: [Más de X reviews positivos]
+- Airbnb: [Calificación X.X estrellas]
+- Google Reviews: [Opiniones del edificio]
 
-Tu seguridad y tranquilidad son nuestra prioridad."
-```
+Si quieres hablar directamente con algún huésped reciente, puedo coordinar el contacto. ¿Te ayudaría eso?"
 
-### **6.3 Barreras Idiomáticas**
-```
-DETECCIÓN: Desconfianza por comunicación limitada
-ACCIÓN_BOT:
-1. Activar protocolo multiidioma (08_PROTOCOLO_MULTIIDIOMA.txt)
-2. Buscar referencias en su idioma
-3. Ofrecer documentos traducidos si necesario
-4. escalate_to_human("customer_complaint", context)
-```
+## 7. Frases Que Generan vs Destruyen Confianza
 
----
-
-## **7. ESCALAMIENTO AUTOMÁTICO**
-
-### **7.1 Situaciones de Escalamiento**
-```
-ESCALATE_TRIGGERS = [
-    "cliente requiere hablar con el dueño",
-    "solicita documentos no disponibles en sistema",
-    "persiste desconfianza tras protocolo completo",
-    "amenaza con denuncias o acciones legales"
-]
-```
-
-### **7.2 Function Calling para Escalamiento**
-```
-escalate_to_human("customer_complaint", {
-    "client_name": "[NOMBRE]",
-    "concern_level": "high|medium|low",
-    "actions_taken": ["documentos_enviados", "referencias_compartidas"],
-    "client_response": "descripción_respuesta",
-    "verification_type": "videocall|documents|personal_meeting"
-})
-```
-
-### **7.3 Comunicación Durante Escalamiento**
-```
-RESPUESTA_BOT:
-"Entiendo que necesitas verificación adicional.
-
-Déjame conectarte directamente con nuestro supervisor para que te ayude personalmente con todas las verificaciones que necesites.
-
-Te confirmo la conexión en unos minutos."
-```
-
----
-
-## **8. INTEGRACIÓN CON PROCESO DE RESERVA**
-
-### **8.1 Momento Óptimo de Aplicación**
-```
-PREVENTIVO: Si el bot detecta señales en primeras interacciones
-REACTIVO: Inmediatamente al expresar dudas
-POST_RESERVA: Si surgen dudas antes del pago
-```
-
-### **8.2 Impacto en Conversión**
-- No presionar para cerrar durante verificación
-- Priorizar confianza sobre velocidad
-- Documentar proceso automáticamente para mejora
-
----
-
-## **9. COMUNICACIÓN OPTIMIZADA PARA MÓVIL**
-
-### **9.1 Estructura de Mensajes de Confianza**
-```
-LÍNEA 1: Validación empática
-
-SECCIÓN INFORMACIÓN:
-*Datos verificables*
-• Punto 1
-• Punto 2
-
-SECCIÓN ACCIÓN:
-*Lo que puedo hacer:*
-• Opción 1
-• Opción 2
-
-¿Qué te haría sentir más tranquilo?
-```
-
-### **9.2 Frases Prohibidas vs Preferidas**
-
-#### **❌ NUNCA decir:**
+### ❌ NUNCA Decir:
 - "No somos una estafa"
 - "Confía en nosotros"
 - "No tenemos nada que ocultar"
 - "Es tu decisión si confías o no"
+- "Ya te envié los documentos"
 
-#### **✅ SIEMPRE preferir:**
+### ✅ SIEMPRE Decir:
 - "Entiendo tu preocupación"
 - "Me alegra que verifiques"
 - "Estoy aquí para demostrártelo"
 - "Tu seguridad es mi prioridad"
+- "¿Qué te haría sentir más tranquilo?"
 
----
+## 8. Información de Emergencia
 
-## **10. VARIABLES DE SISTEMA DEL BOT**
+### Contactos Directos
+- **WhatsApp principal:** 3023371476
+- **Email corporativo:** copropiedadreservaconquistador@gmail.com
+- **Oficina física:** 1706, Edificio Nuevo Conquistador
+- **Google Maps:** https://maps.app.goo.gl/zgikQKkJb9LieAVq9
 
-### **10.1 Variables de Detección**
-```
-[DESCONFIANZA_DETECTADA] = Boolean
-[NIVEL_PREOCUPACIÓN] = "alta" | "media" | "baja"
-[TIPO_VERIFICACIÓN] = "documentos" | "videollamada" | "referencias"
-[ESCALAMIENTO_REQUERIDO] = Boolean
-```
+### Horarios de Verificación
+- **Videollamadas:** 9:00 AM - 6:00 PM
+- **Visitas oficina:** 9:00 AM - 6:00 PM (previa cita)
+- **WhatsApp:** 24/7 para documentos
+- **Llamadas:** 9:00 AM - 9:00 PM
 
-### **10.2 Variables de Respuesta**
-```
-[DOCUMENTOS_ENVIADOS] = Array de documentos compartidos
-[REFERENCIAS_COMPARTIDAS] = Boolean
-[VIDEOLLAMADA_OFRECIDA] = Boolean
-[HUMAN_ESCALATED] = Boolean
-```
+### **Después de Enviar Documentos**
+**Respuesta del bot:**
+"¿Pudiste revisar los documentos que te envié? ¿Hay algo específico que te gustaría aclarar o algún otro documento que necesites ver? Estoy aquí para resolver todas tus dudas."
 
----
-
-## **11. CASOS DE USO DOCUMENTADOS**
-
-### **11.1 Desconfianza Alta Detectada**
-```
-CLIENTE: "¿Cómo sé que no es una estafa?"
-DETECCIÓN BOT: Señal alta prioridad
-RESPUESTA BOT: 
-1. Validación empática automática
-2. Información empresarial inmediata
-3. Oferta de documentos y videollamada
-4. Si persiste → escalate_to_human("customer_complaint")
-```
-
-### **11.2 Solicitud de Documentos**
-```
-CLIENTE: "¿Tienen documentos que demuestren que son legales?"
-ACCIÓN BOT:
-1. Envío inmediato de certificados disponibles
-2. Información verificable de la empresa
-3. Enlaces a registros públicos
-4. Oferta de verificación adicional
-```
-
-### **11.3 Cliente Internacional**
-```
-CLIENTE: (En inglés) "How do I know this is legitimate?"
-ACCIÓN BOT:
-1. Activar protocolo multiidioma
-2. Respuesta empática en inglés
-3. Documentos en inglés si disponibles
-4. Escalate para videollamada en inglés
-```
-
----
-
-## **NOTA ARQUITECTÓNICA CRÍTICA**
-
-Este archivo contiene EXCLUSIVAMENTE:
-- Protocolos automáticos de detección de desconfianza
-- Respuestas empáticas automatizadas del bot
-- Sistema de escalamiento para verificación compleja
-- Comunicación directa optimizada para móvil
-
-**NO CONTIENE:**
-- Plantillas detalladas → Ver 15_PLANTILLAS_RESPUESTAS.txt
-- Datos empresariales → Ver 04_DATOS_CORPORATIVOS_CONTACTO.txt
-- Políticas de pago → Ver 12_POLITICAS_OPERATIVAS.txt
-- Protocolos de idioma → Ver 08_PROTOCOLO_MULTIIDIOMA.txt
-
-**OPTIMIZACIONES BOT:**
-- ✅ Detección automática de señales de desconfianza
-- ✅ Respuesta empática inmediata y estructurada
-- ✅ Arsenal de verificación disponible 24/7
-- ✅ Escalamiento inteligente para casos complejos
-- ✅ Comunicación natural y no defensiva
-- ✅ Integración perfecta con function calling
-
-Esta arquitectura permite al bot manejar automáticamente el 85% de casos de verificación de confianza, escalando solo cuando se requiere intervención humana especializada.
+### **Cuando Piden Hablar con Huéspedes Anteriores**
+**Respuesta del bot:**
+"Claro, puedo conectarte con huéspedes recientes que han tenido experiencias similares a la tuya. Por privacidad, necesito su autorización primero. ¿Te parece que coordine esto con nuestro supervisor?"

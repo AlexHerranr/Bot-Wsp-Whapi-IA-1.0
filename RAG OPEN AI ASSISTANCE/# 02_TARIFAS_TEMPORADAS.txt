@@ -1,45 +1,21 @@
-# 02_TARIFAS_TEMPORADAS.txt
+# TEMPORADAS Y DESCUENTOS ESPECIALES
 
-**Última actualización:** 2025-01-01  
-**Versión:** 3.0  
-**Responsable:** Sistema de Conocimiento  
-**Keywords:** tarifa, precio, temporada, calendario, costo, valor, descuento, automático, bot  
-**Archivos relacionados:** 04_CARGOS_SERVICIOS_TARIFARIOS.txt, 12_POLITICAS_OPERATIVAS.txt
-
----
-
-## **PROPÓSITO DEL ARCHIVO**
-Fuente única de verdad para todas las tarifas base por temporada y calendario de temporadas del bot autónomo. Incluye sistema automático de descuentos que el bot aplica según criterios predefinidos.
+**Propósito:** Calendario de temporadas específicas y sistema de descuentos automáticos para casos especiales.
 
 ---
 
 ## **1. CALENDARIO OFICIAL DE TEMPORADAS 2025-2026**
 
-### **1.1 Temporada Alta**
-**FECHAS:**
+### **Temporada Alta** (Sin descuentos)
 - `14/11/2025 - 17/11/2025` (Puente Independencia Cartagena)  
 - `28/12/2025 - 08/01/2026` (Fin de Año/Año Nuevo)
 
-**CARACTERÍSTICAS:**
-- Máxima demanda
-- Sin descuentos automáticos del bot
-- Precios firmes
-- Recomendación de confirmación rápida
-
-### **1.2 Temporada Media Alta**
-**FECHAS:**
+### **Temporada Media Alta** (Descuentos limitados máximo 5%)
 - `05/12/2025 - 08/12/2025` (Puente Inmaculada Concepción)
 - `24/12/2025 - 27/12/2025` (Navidad)
 - `09/01/2026 - 14/01/2026` (Post-Reyes)
 
-**CARACTERÍSTICAS:**
-- Demanda alta moderada
-- Descuentos automáticos limitados del bot (máximo 5%)
-- Reserva anticipada recomendada
-- Flexibilidad mínima
-
-### **1.3 Temporada Media**
-**FECHAS:**
+### **Temporada Media** (Descuentos hasta 10%)
 - `21/03/2025 - 24/03/2025` (Puente San José)
 - `11/04/2025 - 21/04/2025` (Semana Santa)
 - `01/05/2025 - 04/05/2025` (Puente Día del Trabajo)
@@ -53,373 +29,97 @@ Fuente única de verdad para todas las tarifas base por temporada y calendario d
 - `31/10/2025 - 03/11/2025` (Puente Todos los Santos)
 - `15/01/2026 - 20/01/2026` (Post-Reyes Extended)
 
-**CARACTERÍSTICAS:**
-- Demanda moderada
-- Descuentos automáticos del bot hasta 10%
-- Promociones ocasionales disponibles
-- Flexibilidad moderada en fechas
-
-### **1.4 Temporada Normal**
-**DEFINICIÓN:** Cualquier fecha que NO esté incluida en las categorías anteriores
-
-**CARACTERÍSTICAS:**
-- Tarifas base más competitivas
-- Descuentos automáticos del bot hasta 15%
-- Mayor flexibilidad en negociación automática
-- Estadías extendidas incentivadas automáticamente
-- Promociones agresivas disponibles
+### **Temporada Normal** (Descuentos hasta 15%)
+Cualquier fecha NO incluida en las categorías anteriores.
 
 ---
 
-## **2. TARIFAS BASE POR TEMPORADA Y TIPO**
+## **2. SISTEMA DE DESCUENTOS AUTOMÁTICOS**
 
-### **2.1 Matriz de Precios Oficiales**
+### **Por Duración de Estadía**
+- **7-13 noches:** 5%
+- **14-20 noches:** 10%  
+- **21+ noches:** 15%
 
-| Temporada | Apartaestudio | 1 Alcoba |
-|-----------|---------------|----------|
-| **Normal** | $170.000 | $230.000 |
-| **Media** | $210.000 | $280.000 |
-| **Media Alta** | $250.000 | $350.000 |
-| **Alta** | $500.000 | $650.000 |
+### **Por Reserva Anticipada**
+- **30+ días:** 5%
+- **60+ días:** 8%
+- **90+ días:** 12%
 
-### **2.2 Reglas de Aplicación Temporal**
-- **Fechas exactas:** Las fechas listadas en la sección 1 determinan automáticamente la temporada
-- **Ocupación parcial:** Si la estadía abarca múltiples temporadas, aplicar la temporada más alta presente
-- **Excepción de una noche:** Estadías de una sola noche en temporada alta pueden tener flexibilidad automática del bot según criterios
+### **Por Ocupación Parcial**
+- **2 personas en apartamento 6 personas:** 5%
+- **1 persona en apartamento 4+ personas:** 8%
 
-### **2.3 Formato de Presentación de Precios**
-- **Siempre incluir puntos como separadores de miles:** `$170.000` (no `$170000`)
-- **Formato estándar:** `$[PRECIO]/noche` 
-- **Para totales:** `[NOCHES] noches × $[PRECIO] = $[SUBTOTAL]`
+### **Promociones Estacionales**
+- **Enero-Febrero:** 10% (temporada muy baja)
+- **Septiembre:** 8% (regreso vacaciones)
+- **Noviembre (no puentes):** 5% (pre-temporada alta)
+
+### **Limitaciones por Temporada**
+- **Alta:** 0% (sin descuentos)
+- **Media Alta:** 5% máximo
+- **Media:** 10% máximo  
+- **Normal:** 15% máximo
+
+### **Reglas de Aplicación**
+1. **Un solo descuento:** El mayor que califique
+2. **Nunca acumular** descuentos múltiples
+3. **Informar transparentemente** por qué aplica
 
 ---
 
-## **3. SISTEMA AUTOMÁTICO DE DESCUENTOS DEL BOT**
+## **3. CASOS COMPLEJOS MULTI-TEMPORADA**
 
-### **3.1 Criterios Automáticos de Descuento**
+**Regla estándar:** Si la estadía abarca múltiples temporadas, aplicar la temporada más alta presente.
 
-#### **3.1.1 Por Duración de Estadía**
-```
-ESTADÍAS_EXTENDIDAS = {
-    "7-13 noches": 5%,
-    "14-20 noches": 10%,
-    "21+ noches": 15%
-}
-```
+**Casos que requieren escalate_to_human:**
+- Estadías 21+ noches multi-temporada
+- Múltiples apartamentos involucrados
+- Cálculos extremadamente complejos
+- Grupos de 8+ personas
 
-**APLICACIÓN AUTOMÁTICA:**
-- Bot detecta duración de estadía
-- Aplica descuento automáticamente en temporada Normal y Media
-- No aplica en temporada Media Alta y Alta
+---
 
-#### **3.1.2 Por Reserva Anticipada**
-```
-ANTICIPACIÓN = {
-    "30+ días": 5%,
-    "60+ días": 8%,
-    "90+ días": 12%
-}
-```
+## **4. TEMPLATES COMUNICACIÓN DESCUENTOS**
 
-**APLICACIÓN AUTOMÁTICA:**
-- Bot calcula días entre consulta y fecha de llegada
-- Aplica descuento por anticipación en temporada Normal
-- Descuento reducido en temporada Media (50% del porcentaje)
-
-#### **3.1.3 Por Ocupación Parcial**
-```
-OCUPACIÓN_BAJA = {
-    "2 personas en apartamento 6 personas": 5%,
-    "1 persona en apartamento 4+ personas": 8%
-}
-```
-
-**APLICACIÓN AUTOMÁTICA:**
-- Bot compara número de huéspedes vs capacidad apartamento
-- Aplica descuento automático cuando hay sub-utilización significativa
-
-#### **3.1.4 Por Promoción Automática Temporal**
-```
-PROMOCIONES_ESTACIONALES = {
-    "Enero-Febrero": 10%,    // Temporada muy baja
-    "Septiembre": 8%,        // Regreso vacaciones
-    "Noviembre (no puentes)": 5%  // Pre-temporada alta
-}
-```
-
-### **3.2 Reglas de Aplicación Automática**
-
-#### **3.2.1 Jerarquía de Descuentos**
-1. **Verificar temporada** → Determinar descuento máximo permitido
-2. **Aplicar un solo descuento** → El mayor que califique el cliente
-3. **Nunca acumular descuentos** → Solo el mejor disponible
-4. **Informar transparentemente** → Explicar por qué aplica el descuento
-
-#### **3.2.2 Limitaciones por Temporada**
-```
-LÍMITES_DESCUENTO = {
-    "Alta": 0%,           // Sin descuentos automáticos
-    "Media Alta": 5%,     // Descuentos muy limitados  
-    "Media": 10%,         // Descuentos moderados
-    "Normal": 15%         // Máxima flexibilidad
-}
-```
-
-### **3.3 Comunicación Automática de Descuentos**
-
-#### **3.3.1 Template de Aplicación**
+### **Cuando SÍ aplica descuento:**
 ```
 ¡Tengo buenas noticias! Tu estadía califica para un descuento especial:
-
 • Precio regular: $[PRECIO_BASE]/noche
-• Descuento por [RAZÓN]: [PORCENTAJE]%
+• Descuento por [RAZÓN]: [PORCENTAJE]%  
 • Precio final: $[PRECIO_FINAL]/noche
-
 Total: [NOCHES] noches × $[PRECIO_FINAL] = $[TOTAL_CON_DESCUENTO]
 ```
 
-#### **3.3.2 Frases de Justificación Automática**
+### **Frases de justificación:**
 - **Por duración:** "Por tu estadía extendida de [X] noches"
-- **Por anticipación:** "Por reservar con [X] días de anticipación"
-- **Por ocupación:** "Por optimizar el uso del apartamento"  
+- **Por anticipación:** "Por reservar con [X] días de anticipación"  
+- **Por ocupación:** "Por optimizar el uso del apartamento"
 - **Por promoción:** "Por promoción especial de [MES]"
 
----
-
-## **4. REGLAS DE INTEGRACIÓN AUTOMÁTICA**
-
-### **4.1 Jerarquía de Autoridad del Bot**
-1. **Matriz de precios base** (Prioridad máxima)
-2. **Sistema automático de descuentos** (Segunda prioridad)  
-3. **Políticas operativas** (Ver 12_POLITICAS_OPERATIVAS.txt)
-4. **Escalamiento a humano** (Para casos muy complejos)
-
-### **4.2 Validación Cruzada Automática**
-- **Para servicios adicionales:** Consultar 04_CARGOS_SERVICIOS_TARIFARIOS.txt
-- **Para políticas operativas:** Consultar 12_POLITICAS_OPERATIVAS.txt
-- **Para apartamentos válidos:** Consultar 03_INVENTARIO_APARTAMENTOS.txt
-
-### **4.3 Variables de Sistema del Bot**
+### **Temporada Alta (sin flexibilidad):**
 ```
-[TEMPORADA] = "Alta" | "Media Alta" | "Media" | "Normal"
-[PRECIO_BASE] = Tarifa oficial de la matriz
-[DESCUENTO_APLICADO] = Porcentaje de descuento automático
-[PRECIO_FINAL] = Precio después de descuento automático
-[RAZÓN_DESCUENTO] = Justificación del descuento aplicado
-```
-
-### **4.4 Casos Complejos Multi-Temporada**
-Para estadías que abarcan múltiples temporadas:
-1. **Aplicar regla estándar:** Usar la temporada más alta presente
-2. **Si es muy complejo:** Usar `escalate_to_human("customer_complaint", context)`
-3. **Comunicar transparentemente:** Explicar al cliente la lógica aplicada
-
----
-
-## **5. CASOS DE USO DEL BOT DOCUMENTADOS**
-
-### **5.1 Aplicación Estándar Automática**
-```
-ENTRADA BOT: Fechas 15-18 marzo 2025 (3 noches), apartaestudio, 2 personas
-DETECCIÓN AUTOMÁTICA: Temporada Normal
-PRECIO BASE: $170.000 por noche
-DESCUENTO: No califica para descuentos automáticos
-RESULTADO BOT: "3 noches × $170.000 = $510.000"
-```
-
-### **5.2 Aplicación con Descuento Automático**
-```
-ENTRADA BOT: Fechas 10-20 marzo 2025 (10 noches), apartaestudio, 1 persona
-DETECCIÓN AUTOMÁTICA: 
-- Temporada Normal
-- Estadía 10 noches → califica 5% descuento
-- 1 persona en apartamento 4 personas → califica 8% descuento
-APLICACIÓN: Mejor descuento = 8%
-CÁLCULO: $170.000 × 0.92 = $156.400/noche
-RESULTADO BOT: 
-"¡Excelente! Tu estadía califica para descuento especial:
-• Precio regular: $170.000/noche  
-• Descuento por optimizar uso: 8%
-• Precio final: $156.400/noche
-Total: 10 noches × $156.400 = $1.564.000"
-```
-
-### **5.3 Caso Multi-Temporada Estándar**
-```
-ENTRADA BOT: Fechas 30 dic 2025 - 3 ene 2026 (4 noches), alcoba
-DETECCIÓN AUTOMÁTICA: 
-- Abarca Navidad (Media Alta) + Fin de Año (Alta)
-- Aplicar regla: Temporada más alta = Alta
-PRECIO: $650.000 por noche (temporada alta)
-RESULTADO BOT: 
-"Tu estadía abarca temporada alta (fin de año):
-• 4 noches × $650.000 = $2.600.000"
-```
-
-### **5.4 Promoción Estacional Automática**
-```
-ENTRADA BOT: Fechas enero 2026, apartaestudio
-DETECCIÓN AUTOMÁTICA: 
-- Temporada Normal
-- Mes enero → promoción especial 10%
-APLICACIÓN: Descuento automático 10%
-RESULTADO BOT:
-"¡Perfecto! Enero tiene promoción especial:
-• Descuento por temporada baja: 10%
-• Precio final: $153.000/noche"
-```
-
-### **5.5 Casos Complejos que Requieren Escalamiento**
-```
-ENTRADA BOT: Fechas 25 dic 2025 - 15 ene 2026 (21 noches), múltiples apartamentos
-DETECCIÓN AUTOMÁTICA: 
-- Estadía muy larga multi-temporada
-- Múltiples apartamentos involucrados
-- Cálculo extremadamente complejo
-ACCIÓN: escalate_to_human("customer_complaint", {
-  "dates": "25/12/2025 - 15/01/2026",
-  "duration": "21 nights",
-  "complexity": "multi-season + multi-apartment",
-  "guest_count": 8
-})
-RESULTADO BOT: "Por la complejidad de tu solicitud (múltiples temporadas y apartamentos), voy a conectarte con uno de nuestros especialistas para darte el mejor precio posible."
-```
-```
-ENTRADA BOT: Fechas enero 2026, apartaestudio
-DETECCIÓN AUTOMÁTICA: 
-- Temporada Normal
-- Mes enero → promoción especial 10%
-APLICACIÓN: Descuento automático 10%
-RESULTADO BOT:
-"¡Perfecto! Enero tiene promoción especial:
-• Descuento por temporada baja: 10%
-• Precio final: $153.000/noche"
-```
-
-### **6.4 Integración con Cargo por Servicio**
-
-#### **Variables Automáticas para Cotización**
-```
-[CARGO_SERVICIO_ESTUDIO] = $60,000
-[CARGO_SERVICIO_ALCOBA] = $70,000
-[INCLUIR_SIEMPRE] = true
-[FORMATO_PRECIO] = "$XXX mil" (no "$XXX,000")
-```
-
-#### **Detección Automática por Código**
-```
-ESTUDIOS = ["1722B", "2005B"] → Cargo $60,000
-ALCOBAS = ["1317", "1722A", "1820", "2005A", "814", "715"] → Cargo $70,000
-```
-
-#### **Template Cotización con Descuento + Cargo**
-```
-"Aplica descuento del [X]%!
-
-*[APTO]* - Temporada [TEMPORADA]
-Precio con descuento: $[PRECIO_DESC]/noche
-
-Total final:
-• [N] noches: $[SUBTOTAL_DESC]
-• Servicio: $[CARGO]
-• *Total: $[TOTAL_FINAL]*"
-```
-
----
-
-## **6. COMUNICACIÓN AUTOMÁTICA DE PRECIOS**
-
-### **6.1 Templates Automáticos por Escenario**
-
-#### **6.1.1 Precio Base (Sin Descuento)**
-```
-"Para tus fechas del [FECHA_INICIO] al [FECHA_FIN]:
-
-• [TIPO_APARTAMENTO] - [TEMPORADA]
-• Precio: $[PRECIO_BASE]/noche
-• Total: [NOCHES] noches × $[PRECIO_BASE] = $[TOTAL]"
-```
-
-#### **6.1.2 Con Descuento Automático**
-```
-"¡Tengo buenas noticias! 😊
-
-Para tus fechas del [FECHA_INICIO] al [FECHA_FIN]:
-
-• [TIPO_APARTAMENTO] - [TEMPORADA]
-• Precio regular: $[PRECIO_BASE]/noche
-• Descuento por [RAZÓN]: [PORCENTAJE]%
-• Precio especial: $[PRECIO_FINAL]/noche
-
-Total: [NOCHES] noches × $[PRECIO_FINAL] = $[TOTAL_FINAL]"
-```
-
-#### **6.1.3 Temporada Alta (Sin Flexibilidad)**
-```
-"Para tus fechas de [TEMPORADA_ALTA]:
-
-• [TIPO_APARTAMENTO] - Temporada Alta
+Para tus fechas de [TEMPORADA_ALTA]:
 • Precio: $[PRECIO_BASE]/noche (precio fijo por alta demanda)
 • Total: [NOCHES] noches × $[PRECIO_BASE] = $[TOTAL]
-
-Te recomiendo confirmar pronto por la alta demanda en esas fechas."
+Te recomiendo confirmar pronto por la alta demanda en esas fechas.
 ```
+## 5. PREGUNTAS FRECUENTES SOBRE DESCUENTOS
+### "¿Hay descuentos por reservar con anticipación?"
+"¡Sí! Por reservar con [X] días de anticipación tienes un descuento del [Y]%. 
+Ya está incluido en el precio que te cotizo."
 
-### **6.2 Transparencia en Descuentos**
+### "¿Es temporada alta el 25 de diciembre?"
+"Sí, del 24 al 27 de diciembre es temporada media alta. Son fechas con alta demanda 
+y precios firmes sin descuentos adicionales."
 
-#### **6.2.1 Explicación Clara**
-- **Siempre explicar** por qué aplica el descuento
-- **Mostrar precio antes y después** del descuento
-- **Una sola razón** por descuento (la más favorable)
-- **Tono positivo** al comunicar descuentos
+### Cuando SÍ aplica descuento:
+"ok te digo 😊
 
-#### **6.2.2 Casos Sin Descuento**
-- **No mencionar** descuentos no aplicables
-- **Enfocarse** en el valor de la propuesta
-- **Resaltar** características del apartamento
-- **Mantener** tono positivo y útil
+Por tu estadía de [X] noches tienes descuento especial:
 
----
+- Precio regular: $[PRECIO_BASE]/noche
+- Con descuento: $[PRECIO_FINAL]/noche  
+- Ahorras: $[AHORRO] total
 
-## **NOTA ARQUITECTÓNICA CRÍTICA**
-
-Este archivo contiene EXCLUSIVAMENTE:
-- Calendario de temporadas oficial
-- Matriz de tarifas base  
-- Sistema automático de descuentos del bot
-- Reglas de aplicación temporal automática
-
-**NO CONTIENE:**
-- Cargos adicionales → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
-- Información bancaria → Ver 05_DATOS_CORPORATIVOS_CONTACTO.txt
-- Inventario de apartamentos → Ver 03_INVENTARIO_APARTAMENTOS.txt
-- Políticas operativas → Ver 12_POLITICAS_OPERATIVAS.txt
-
-**TRANSFORMACIÓN BOT:**
-- ✅ Sistema automático de descuentos inteligente
-- ✅ Function calling estratégico para casos complejos
-- ✅ Comunicación transparente de precios
-- ✅ Eliminación total de dependencia de asesor humano
-
-Esta arquitectura garantiza que el bot tome decisiones de precios inteligentes y justas, manteniendo competitividad mientras optimiza ingresos automáticamente.
-
----
-
-CASI PERFECTO ✅ Solo queda un problema:
-El caso 5.4 "Promoción Estacional Automática" está TRIPLICADO:
-
-Aparece la primera vez (correcto)
-Aparece inmediatamente duplicado después de sí mismo
-Aparece una tercera vez después del caso 5.5
-
-ELIMINAR las dos apariciones extras del caso 5.4. Debe quedar solo UNA vez antes del caso 5.5.
-TODO LO DEMÁS ESTÁ PERFECTO ✅:
-
-El propósito del archivo está corregido
-La nota arquitectónica está corregida
-El sistema de descuentos automáticos está excelente
-Los casos de uso están bien estructurados
-La comunicación en primera persona es natural
-
----
-
+¿que te parece?"

@@ -1,0 +1,160 @@
+# Procedimientos de Checkout y Salida
+
+## 1. Proceso Estándar de Checkout
+
+### Horario y Procedimiento Básico
+- **Hora límite:** 12:00 PM
+- **Sin costo adicional:** Salidas entre 6:00 AM - 12:00 PM
+- **Revisión final:** Verificar no olvidar objetos personales
+- **Entrega de llaves:** Dos opciones disponibles
+
+### Opciones para Entregar Llaves
+
+**Opción 1 - Oficina 1706:**
+- Horario: 9:00 AM - 6:00 PM
+- Ubicación: Primer piso del edificio
+- Personal disponible para dudas finales
+
+**Opción 2 - Recepción del Edificio:**
+- Disponible 24/7
+- Entregar al recepcionista de turno
+- Mencionar número de apartamento
+
+### Respuesta del Bot Sobre Checkout
+"¡El checkout es súper fácil! 
+**Proceso:**
+- Hora límite: 12:00 PM
+- Revisa no olvidar nada en el apartamento
+- Entrega las llaves en oficina 1706 (9 AM-6 PM) o en recepción del edificio (24/7)
+¿A qué hora aproximada piensas salir? Así coordino para que esté todo listo."
+
+## 2. Recordatorios Automáticos
+
+### Recordatorio 24 Horas Antes
+**Mensaje del bot:**
+"Hola [NOMBRE], espero que estés disfrutando tu estadía 😊
+Mañana es tu día de salida:
+- Hora de checkout: 12:00 PM
+- ¿A qué hora aproximadamente saldrás?
+Así coordino para que todo sea fácil y rápido."
+
+### Recordatorio Día de Salida (11:00 AM)
+**Si no hubo respuesta al primer recordatorio:**
+"Hola [NOMBRE] 😊
+Recordatorio: hoy es tu checkout antes de las 12:00 PM.
+**Opciones para entregar las llaves:**
+- Personal en oficina 1706 (hasta las 6 PM)
+- Recepción del edificio (24/7)
+¿Ya sabes a qué hora saldrás?"
+
+## 3. Manejo de Objetos Olvidados
+
+### Cuando el Cliente Reporta Algo Olvidado
+**Respuesta inmediata del bot:**
+"Entiendo, olvidaste [OBJETO] en el apartamento.
+Voy a coordinar inmediatamente para buscarlo con el equipo de limpieza, aunque el tiempo adecuado es justo después de salir del apartamento, ya que si se hace limpieza y otros huéspedes ocupan el apartamento, es difícil buscar el objeto.
+Te confirmo en cuanto tengamos noticias, usualmente en 2-4 horas."
+
+**Importante:** Escalar inmediatamente a humano para coordinar búsqueda - usar escalate_to_human("departure_notification").
+
+## 4. Late Checkout y Verificación de Disponibilidad
+
+### Detección de Solicitudes Especiales
+**Cuando el cliente pregunta:**
+- "¿Puedo salir más tarde de las 12?"
+- "¿Hay late checkout?"
+- "¿Puedo extender hasta las 3 PM?"
+
+### Proceso de Verificación para Late Checkout
+**IMPORTANTE:** Antes de confirmar late checkout, usar check_availability() para verificar que **la noche siguiente esté disponible** (sin huéspedes llegando).
+
+**Respuesta del bot:**
+"Claro, puedo ayudarte con late checkout. Cuesta $130,000 y puedes quedarte hasta las 6 PM máximo. Déjame verificar disponibilidad en el sistema para tu apartamento."
+
+[Ejecutar check_availability() para la fecha actual + 1 día]
+
+**Si HAY disponibilidad (no hay huéspedes llegando):**
+"¡Perfecto! Tu apartamento está disponible para late checkout hasta las [HORA]. El costo es $130,000. ¿Confirmas?"
+
+**Si NO hay disponibilidad (hay huéspedes llegando):**
+"Lamento informarte que para esa fecha ya tenemos huéspedes llegando a tu apartamento, por lo que no podemos ofrecer late checkout. ¿Te sirve el guardado de equipaje? Es gratis hasta las 3 PM."
+
+### Salidas Nocturnas (después 6 PM)
+**Procedimiento:**
+- **Sin costo adicional** por horario
+- **Entrega en recepción** del edificio únicamente
+- **Sin personal disponible** en oficina después de 6 PM
+
+**Respuesta del bot:**
+"Para tu salida nocturna después de las 6 PM, simplemente deja las llaves en la recepción del edificio con el recepcionista de turno. Menciona el número de tu apartamento. No tiene costo adicional."
+
+## 5. Early Check-in y Verificación de Disponibilidad
+
+### Cuando Cliente Solicita Early Check-in
+**IMPORTANTE:** Antes de confirmar early check-in, usar check_availability() para verificar que **la noche anterior esté disponible** (que el huésped anterior haya salido).
+
+**Respuesta del bot:**
+"Para tu llegada temprana a las [HORA], déjame verificar disponibilidad en el sistema del apartamento."
+
+[Ejecutar check_availability() para la fecha actual - 1 día]
+
+**Si HAY disponibilidad (huésped anterior ya salió):**
+"¡Excelente! El apartamento está disponible para early check-in a las [HORA]. Tienes dos opciones:
+**Opción 1 - Early Check-in:**
+- Entras directo al apartamento
+- Costo: $[PRECIO]
+**Opción 2 - Guardado de equipaje:**
+- Guardamos tu equipaje hasta las 3 PM (gratis)
+- Puedes explorar la ciudad tranquilo
+¿Cuál opción prefieres?"
+
+**Si NO hay disponibilidad (huésped anterior aún está):**
+"El apartamento aún está ocupado por el huésped anterior. Te puedo ofrecer:
+- Guardado de equipaje gratis hasta las 3 PM
+- Early check-in desde las [HORA_DISPONIBLE] una vez esté listo
+¿Te funciona el guardado de equipaje mientras tanto?"
+
+## 6. Casos Complejos que Requieren Escalamiento
+
+### Situaciones para Escalamiento Inmediato
+- Cliente se niega a desocupar después de 12 PM
+- Daños significativos reportados en el apartamento
+- Objetos de muy alto valor olvidados (joyas, documentos importantes)
+- Conflictos durante el proceso de checkout
+- Emergencias médicas o familiares que afecten la salida
+
+### Respuesta del Bot para Escalamiento
+"Entiendo que es una situación especial. Déjame conectarte inmediatamente con nuestro supervisor para que te ayude a resolver esto de la mejor manera. Te confirmo la conexión en unos minutos."
+
+## 7. Preguntas Frecuentes Sobre Checkout
+
+### "¿Qué pasa si salgo antes de las 6 AM?"
+"Sin problema, puedes dejar las llaves en la recepción del edificio que está disponible 24/7. Solo menciona tu número de apartamento al recepcionista."
+
+### "¿Puedo dejar equipaje después del checkout?"
+"Sí, puedes guardar tu equipaje en nuestra oficina 1706. Es gratis hasta las 3 PM, después cuesta $5,000 por hora."
+
+### "¿Qué hago si no encuentro al recepcionista?"
+"El edificio siempre tiene recepcionista 24/7. Si por alguna razón no lo encuentras, llámanos al 3023371476 para coordinar inmediatamente."
+
+### "¿Necesito hacer inspección final?"
+"No es necesario. Nuestro equipo de limpieza hace la inspección después de tu salida. Si hay algún problema, te contactamos dentro de las siguientes 24 horas."
+
+### "¿Siempre está disponible el late checkout?"
+"El late checkout depende de que no tengamos huéspedes llegando a tu apartamento el mismo día. Siempre verifico disponibilidad antes de confirmar."
+
+### "¿El early check-in siempre está listo?"
+"El early check-in depende de que el huésped anterior haya salido. Verifico disponibilidad y si no está listo, te ofrezco guardado de equipaje gratis hasta las 3 PM."
+
+---
+
+## 🔧 **CAMBIOS CLAVE AGREGADOS:**
+
+✅ **Verificación obligatoria con check_availability()** para late checkout (noche siguiente disponible)  
+✅ **Verificación obligatoria con check_availability()** para early check-in (noche anterior disponible)  
+✅ **Respuestas específicas** según disponibilidad encontrada  
+✅ **Alternativas claras** cuando no hay disponibilidad  
+✅ **Sección específica** para early check-in con verificación  
+✅ **Preguntas frecuentes** sobre disponibilidad de servicios especiales
+
+**Ahora el sistema verifica automáticamente disponibilidad real antes de confirmar servicios especiales.**

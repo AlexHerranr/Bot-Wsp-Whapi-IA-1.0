@@ -13,15 +13,21 @@ interface LogEntry {
     details?: any;
 }
 
-// --- Configuración ---
+// --- Configuración de Sesión ---
+const SESSION_TIMESTAMP = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+const SESSION_ID = `session-${SESSION_TIMESTAMP}`;
 const LOG_DIR = 'logs';
+const LOG_FILE = path.join(LOG_DIR, `bot-session-${SESSION_TIMESTAMP}.log`);
+const MAX_SESSIONS = 5; // Máximo número de sesiones a mantener
+
+// --- Configuración de Buffer ---
 const BUFFER_FLUSH_INTERVAL = 100; // 100ms
 const MAX_BUFFER_SIZE = 50; // Flush si hay 50+ entradas
 
 // --- Estado Global ---
 let logBuffer: string[] = [];
 let flushTimer: NodeJS.Timeout | null = null;
-let currentLogFile = '';
+let sessionInitialized = false;
 
 // --- Colores para consola ---
 const colors = {
@@ -40,23 +46,7 @@ const colors = {
     RED: '\x1b[31m'        // Red
 };
 
-// --- Utilidades ---
-const getISOTimestamp = (): string => {
-    return new Date().toISOString();
-};
-
-const getDateString = (): string => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-};
-
-const getLogFileName = (): string => {
-    return path.join(LOG_DIR, `bot-${getDateString()}.log`);
-};
-
+// --- Funciones de Sesión ---
 const ensureLogDirectory = (): void => {
     if (!fs.existsSync(LOG_DIR)) {
         try {
@@ -65,6 +55,71 @@ const ensureLogDirectory = (): void => {
             console.error(`Error creando directorio de logs: ${error}`);
         }
     }
+};
+
+const cleanupOldSessions = (): void => {
+    try {
+        // Obtener todos los archivos de sesión
+        const files = fs.readdirSync(LOG_DIR)
+            .filter(file => file.startsWith('bot-session-') && file.endsWith('.log'))
+            .map(file => ({
+                name: file,
+                path: path.join(LOG_DIR, file),
+                stats: fs.statSync(path.join(LOG_DIR, file))
+            }))
+            .sort((a, b) => b.stats.mtime.getTime() - a.stats.mtime.getTime()); // Más recientes primero
+
+        // Si hay más archivos que el máximo permitido, eliminar los más antiguos
+        if (files.length >= MAX_SESSIONS) {
+            const filesToDelete = files.slice(MAX_SESSIONS - 1); // Dejar espacio para la nueva sesión
+            
+            filesToDelete.forEach(file => {
+                try {
+                    fs.unlinkSync(file.path);
+                    console.log(`🗑️ Sesión antigua eliminada: ${file.name}`);
+                } catch (error) {
+                    console.error(`Error eliminando ${file.name}:`, error);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error limpiando sesiones antiguas:', error);
+    }
+};
+
+const initializeSession = (): void => {
+    if (sessionInitialized) return;
+    
+    ensureLogDirectory();
+    cleanupOldSessions();
+    
+    // Escribir header de sesión
+    const sessionHeader = `
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: ${new Date().toISOString()}
+Session ID: ${SESSION_ID}
+PID: ${process.pid}
+Node Version: ${process.version}
+=============================
+
+`;
+    
+    try {
+        fs.writeFileSync(LOG_FILE, sessionHeader);
+        sessionInitialized = true;
+        
+        // Mostrar información de sesión
+        console.log(`📁 Logs de esta sesión: ${LOG_FILE}`);
+        console.log(`🔄 Manteniendo máximo ${MAX_SESSIONS} sesiones`);
+        
+    } catch (error) {
+        console.error('Error inicializando sesión:', error);
+    }
+};
+
+// --- Utilidades ---
+const getISOTimestamp = (): string => {
+    return new Date().toISOString();
 };
 
 const getCallerInfo = (): string => {
@@ -174,16 +229,18 @@ const formatConsoleEntry = (entry: LogEntry): string => {
 const flushBuffer = (): void => {
     if (logBuffer.length === 0) return;
     
-    ensureLogDirectory();
+    // Asegurar que la sesión esté inicializada
+    if (!sessionInitialized) {
+        initializeSession();
+    }
     
-    const logFile = getLogFileName();
     const entries = [...logBuffer];
     logBuffer = [];
     
-    // Escribir al archivo
+    // Escribir al archivo de sesión
     try {
         const content = entries.join('\n') + '\n';
-        fs.appendFileSync(logFile, content, 'utf8');
+        fs.appendFileSync(LOG_FILE, content, 'utf8');
     } catch (error) {
         console.error(`Error escribiendo logs: ${error}`);
     }
@@ -305,10 +362,67 @@ export const logSimpleProcessing = (userName: string, duration: number): void =>
     detailedLog('SUCCESS', 'AI_PROCESSING', `Respuesta obtenida para ${userName} en ${duration}ms`, { userName, duration });
 };
 
+// --- Funciones de Sesión ---
+export const getSessionInfo = () => {
+    return {
+        sessionId: SESSION_ID,
+        logFile: LOG_FILE,
+        timestamp: SESSION_TIMESTAMP,
+        pid: process.pid
+    };
+};
+
+export const listAvailableSessions = () => {
+    try {
+        const files = fs.readdirSync(LOG_DIR)
+            .filter(file => file.startsWith('bot-session-') && file.endsWith('.log'))
+            .map(file => ({
+                name: file,
+                path: path.join(LOG_DIR, file),
+                stats: fs.statSync(path.join(LOG_DIR, file)),
+                size: fs.statSync(path.join(LOG_DIR, file)).size
+            }))
+            .sort((a, b) => b.stats.mtime.getTime() - a.stats.mtime.getTime());
+
+        return files;
+    } catch (error) {
+        console.error('Error listando sesiones:', error);
+        return [];
+    }
+};
+
 // --- Limpieza al salir ---
 const cleanup = (): void => {
     if (logBuffer.length > 0) {
         flushBuffer();
+    }
+    
+    // Escribir footer de sesión
+    const sessionFooter = `
+=============================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: ${new Date().toISOString()}
+Session ID: ${SESSION_ID}
+Duración: ${Math.round((Date.now() - new Date(SESSION_TIMESTAMP.replace(/-/g, ':')).getTime()) / 1000)}s
+=============================
+`;
+    
+    try {
+        fs.appendFileSync(LOG_FILE, sessionFooter);
+        console.log(`✅ Logs guardados en: ${LOG_FILE}`);
+        
+        // Mostrar resumen de sesiones disponibles
+        const sessions = listAvailableSessions();
+        if (sessions.length > 0) {
+            console.log(`\n📁 Sesiones disponibles (${sessions.length}/${MAX_SESSIONS}):`);
+            sessions.forEach((session, index) => {
+                const sizeKB = (session.size / 1024).toFixed(1);
+                const date = session.stats.mtime.toLocaleString('es-CO');
+                console.log(`   ${index + 1}. ${session.name} (${sizeKB}KB - ${date})`);
+            });
+        }
+    } catch (error) {
+        console.error('Error guardando logs:', error);
     }
 };
 
@@ -322,13 +436,13 @@ process.on('uncaughtException', (error) => {
 });
 
 // --- Inicialización ---
-ensureLogDirectory();
+initializeSession();
 
 // Log de inicio del sistema
-console.log(`${colors.DIM}📁 Logs técnicos detallados en: ${process.cwd()}${path.sep}${getLogFileName()}${colors.RESET}`);
-detailedLog('SUCCESS', 'LOGGER_INIT', 'Sistema de logging detallado inicializado', {
-    logDir: LOG_DIR,
+detailedLog('SUCCESS', 'LOGGER_INIT', 'Sistema de logging por sesión inicializado', {
+    sessionId: SESSION_ID,
+    logFile: LOG_FILE,
+    maxSessions: MAX_SESSIONS,
     bufferInterval: BUFFER_FLUSH_INTERVAL,
-    maxBufferSize: MAX_BUFFER_SIZE,
-    currentFile: getLogFileName()
+    maxBufferSize: MAX_BUFFER_SIZE
 }); 

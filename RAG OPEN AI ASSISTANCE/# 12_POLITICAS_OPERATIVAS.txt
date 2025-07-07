@@ -1,373 +1,198 @@
-# 12_POLITICAS_OPERATIVAS.txt
+# Políticas Operativas Detalladas
 
-**Versión:** 3.0  
-**Responsable:** Sistema de Conocimiento  
-**Keywords:** política, horario, ocupación, pago, cancelación, check-in, check-out, anticipo, bot, automático  
-**Archivos relacionados:** 02_TARIFAS_TEMPORADAS.txt, 03_INVENTARIO_APARTAMENTOS.txt, 04_CARGOS_SERVICIOS_TARIFARIOS.txt
+## 1. Políticas de Pago y Anticipos
 
----
+### Plazos de Pago del Anticipo
+- **Reservas 30+ días:** Anticipo dentro de 48 horas
+- **Reservas 15-29 días:** Anticipo dentro de 36 horas
+- **Reservas 7-14 días:** Anticipo dentro de 24 horas
+- **Reservas menos 7 días:** Anticipo mismo día
+- **Reservas mismo día:** Pago completo o anticipo inmediato (sin garantía apartamento específico - según disponibilidad al llegar)
 
-## **PROPÓSITO DEL ARCHIVO**
-Fuente única de verdad para todas las políticas operativas del alojamiento que el bot utiliza automáticamente: horarios, ocupación, pagos, cancelaciones y procedimientos estándar. **Los precios específicos están en archivos especializados.**
+### Métodos de Pago y Recargos
 
----
+**Aceptados sin recargo:**
+- Transferencia bancaria (recomendado)
+- Nequi al 3003913251 a nombre de Alex Herr
+- QR bancario
+- Efectivo en oficina 1706
 
-## **1. HORARIOS OPERATIVOS**
+**Con recargo:**
+- Tarjetas Bold: +5% sobre el total
 
-### **1.1 Horarios de Check-in/Check-out**
-```
-CHECK_IN_ESTÁNDAR: 3:00 PM
-CHECK_OUT_ESTÁNDAR: 12:00 PM
-HORARIO_OFICINA: 9:00 AM - 6:00 PM
-DÍAS_OPERACIÓN: 7 días a la semana
-UBICACIÓN: Oficina 1706
-```
+**NO aceptados:**
+- Cheques, pagos fraccionados, criptomonedas
 
-### **1.2 Flexibilidad Horaria**
-```
-EARLY_CHECK_IN: Disponible desde 6:00 AM (cargo adicional - ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt)
-LATE_CHECK_OUT: Disponible hasta 8:00 PM (sistema escalonado - ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt)
-LLEGADAS_NOCTURNAS: Hasta 11:00 PM (cargo adicional - ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt)
-LLEGADAS_MADRUGADA: 11:00 PM - 6:00 AM (cargo adicional - ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt)
-```
+### Política de IVA
+- **Reservas directas:** Sin IVA
+- **Reservas Booking:** IVA incluido (19%)
+- **Reservas Airbnb:** Sin IVA (incluido en comisión)
 
----
+## 2. Políticas de Cancelación Detalladas
 
-## **2. POLÍTICAS DE OCUPACIÓN**
+### Canal Directo (Escalonada)
+- **30+ días antes:** Reembolso 100% del anticipo
+- **15-29 días:** Reembolso 50% del anticipo
+- **7-14 días:** Sin reembolso, opción reprogramar UNA vez
+- **Menos 7 días:** Sin reembolso ni reprogramación
+- **Mismo día:** Sin reembolso, cargo completo
 
-### **2.1 Capacidades por Tipo de Apartamento**
+### Booking.com
+- **Según tarifa:** Flexible (24-48h antes gratis) o No reembolsable
+- **Procesamiento:** Booking maneja reembolsos directamente
 
-#### **Apartaestudios**
-```
-CAPACIDAD_BASE_RECOMENDADA: 2-3 personas
-CAPACIDAD_MÁXIMA: 3-4 personas  
-SOBRECUPO_PERMITIDO: +2 personas adicionales
-DISTRIBUCIÓN_ESPECÍFICA: Ver 03_INVENTARIO_APARTAMENTOS.txt para cada apartamento
-```
+### Airbnb
+- **Según política:** Moderada (5 días antes) o Estricta
+- **Procesamiento:** Airbnb maneja reembolsos directamente
 
-#### **Apartamentos 1 Alcoba**
-```
-CAPACIDAD_BASE_RECOMENDADA: 4-5 personas
-CAPACIDAD_MÁXIMA: 6 personas
-SOBRECUPO_PERMITIDO: +2 personas adicionales  
-DISTRIBUCIÓN_ESPECÍFICA: Ver 03_INVENTARIO_APARTAMENTOS.txt para cada apartamento
-```
+### Política de Reactivación (SOLO Booking)
+- **Aplica a:** Cualquier reserva cancelada de Booking
+- **Descuento:** 10% sobre tarifa vigente
+- **Vigencia:** 6 meses desde cancelación
+- **Condición:** Sujeto a disponibilidad
 
-### **2.2 Política de Niños**
-```
-NIÑOS_0-4_AÑOS: Gratis (no cuentan en ocupación máxima)
-NIÑOS_5+_AÑOS: Cuentan como adulto en ocupación
-CUNAS: No disponibles en inventario
-CAMAS_ADICIONALES: No disponibles (usar sofá cama existente)
-RESPONSABILIDAD: Padres supervisan menores en todas las áreas
-```
+**Respuesta del bot para reactivación:**
+"¡Buenas noticias! Como tu reserva anterior era de Booking, tienes un 10% de descuento para reactivar en cualquier fecha dentro de los próximos 6 meses. ¿Te interesa?"
 
-### **2.3 Sobrecupo**
-```
-MÁXIMO_PERMITIDO: 2 personas adicionales sobre capacidad máxima
-CARGO: Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
-RESTRICCIÓN: Sujeto a disponibilidad y políticas del bot
-ACOMODACIÓN: Sofás cama existentes + colchonetas de suelo adicionales disponibles bajo solicitud
-SERVICIOS_INCLUIDOS: Registro en recepción + manillas de acceso
-```
+## 3. Políticas Especiales
 
----
+### No Show (No Presentación)
+- **Definición:** No llegar sin avisar dentro de 24h del check-in
+- **Cargo:** 100% del valor total
+- **Anticipo:** No reembolsable
+- **Resultado:** Apartamento se libera automáticamente
 
-## **3. POLÍTICAS DE PAGO**
+### Cambios de Fecha
+- **Primera vez:** Sin costo administrativo
+- **Restricción:** No permitido en temporada alta
+- **Plazo mínimo:** 72 horas antes del check-in
+- **Diferencia tarifaria:** Cliente paga diferencia si aplica
 
-### **3.1 Anticipo Requerido**
-```
-MONTO_ANTICIPO: Valor de una noche de alojamiento
-FUNCIÓN: Confirmar y garantizar la reserva
-APLICACIÓN: Se descuenta del total al momento del check-in
-CONFIRMACIÓN: Reserva se considera confirmada al recibir anticipo
-```
+### Reducción de Noches
+- **Antes check-in:** Aplicar política cancelación según días restantes
+- **Después check-in:** Cobro total de noches originales
+- **Excepción:** Emergencias (escalar a humano para validar)
 
-### **3.2 Plazos de Pago del Anticipo**
-```
-RESERVAS_30+_DÍAS: Anticipo dentro de 48 horas
-RESERVAS_15-29_DÍAS: Anticipo dentro de 36 horas  
-RESERVAS_7-14_DÍAS: Anticipo de 24 horas
-RESERVAS_<7_DÍAS: Anticipo requerido mismo día 
-RESERVAS_MISMO_DÍA: Pago completo o anticipo inmediato, sin garantía de disponibilidad al llegar, sin pago realizado, se le asigna según disponibilidad, puede que el apartamento sea otro en el mismo edificio.
-```
+## 4. Estadías Mínimas y Extensiones
 
-### **3.3 Política de IVA**
-```
-RESERVAS_DIRECTAS: Sin IVA aplicado
-RESERVAS_BOOKING: IVA incluido (19% sobre tarifa)
-RESERVAS_AIRBNB: Sin IVA (incluido en comisión de plataforma)
-NOTA: IVA solo aplica cuando es requerido por la plataforma
-```
+### Estadías Mínimas por Temporada
+- **Temporada baja:** 3 noches (excepciones para llenar huecos 1-2 noches)
+- **Temporada media:** 3 noches mínimo
+- **Temporada alta/media alta:** 4 noches mínimo
+- **Fin de semana:** 3 noches (viernes-domingo)
+- **Mismo día:** Flexible según disponibilidad
 
-### **3.4 Métodos de Pago Aceptados**
-```
-PREFERIDO:
-• Transferencia bancaria
-• Nequi QR o numero de teléfono 3003913251 a nombre de Alex** Herr**
-• QR bancario
+### Descuentos por Estadías Extendidas
+- **7-14 noches:** 5% descuento sobre total
+- **15-29 noches:** 10% descuento sobre total
+- **30+ noches:** 15% descuento sobre total
+- **Restricción:** No aplica en temporada alta
 
-ACEPTADOS:
-• Tarjetas con terminal Bold (+5% recargo)
-• Efectivo (solo en oficina 1706)
+### Extensiones Durante la Estadía
+**Proceso:**
+- Verificar disponibilidad del apartamento con check_availability()
+- Tarifa vigente del día de extensión
+- Pago al momento de confirmar
+- Si no hay disponibilidad: ofrecer cambio de apartamento (seguido o parcial)
 
-NO_ACEPTADOS:
-• Cheques
-• Pagos fraccionados
-• Criptomonedas
-```
+**Respuesta del bot para extensión:**
+"¿Quieres extender tu estadía? Déjame verificar disponibilidad de tu apartamento para las noches adicionales usando el sistema en tiempo real. Si no está disponible, te puedo ofrecer otro apartamento en el mismo edificio."
 
----
+## 5. Políticas de Ocupación y Sobrecupo
 
-## **4. POLÍTICAS DE CANCELACIÓN**
+### Sobrecupo y Niños
+- **Sobrecupo máximo:** +2 personas sobre capacidad máxima
+- **Niños 0-4 años:** Gratis (no cuentan en ocupación)
+- **Niños 5+ años:** Cuentan como adulto
+- **Cunas:** No disponibles
+- **Responsabilidad:** Padres supervisan menores
+- **Cargo sobrecupo:** Ver archivo de cargos específicos
 
-### **4.1 Cancelación Canal Directo**
-```
-30+_DÍAS_ANTES: Reembolso 100% del anticipo
-15-29_DÍAS: Reembolso 50% del anticipo
-7-14_DÍAS: Sin reembolso, opción reprogramar una vez
-<7_DÍAS: Sin reembolso ni reprogramación
-MISMO_DÍA: Sin reembolso, cargo completo
-```
+### Acomodación Sobrecupo
+- **Sofás cama existentes** + colchonetas de suelo adicionales
+- **Servicios incluidos:** Registro en recepción + manillas de acceso
 
-### **4.2 Cancelación Booking.com**
-```
-POLÍTICA: Según tipo de tarifa seleccionada por el cliente
-FLEXIBLE: Cancelación gratuita hasta 24-48h antes
-NO_REEMBOLSABLE: Sin opción de cancelación
-PROCESAMIENTO: Booking maneja reembolsos directamente
-```
+## 6. Reglas de Convivencia (Solo si Preguntan)
 
-### **4.3 Cancelación Airbnb**
-```
-POLÍTICA: Según política de cancelación de la plataforma
-MODERADA: Cancelación gratuita hasta 5 días antes
-ESTRICTA: Reembolso parcial según condiciones Airbnb
-PROCESAMIENTO: Airbnb maneja reembolsos directamente
-```
+### Horarios de Silencio
+- **Entre semana:** 10:00 PM - 8:00 AM
+- **Fines de semana:** 11:00 PM - 9:00 AM
+- **Piscina:** 8:00 AM - 5:30 PM (cerrada lunes mantenimiento)
 
-### **4.4 Política de Reactivación - SOLO RESERVAS DE BOOKING**
-```
-APLICA_A: Reservas canceladas cualquier fecha
-DESCUENTO: 10% sobre tarifa vigente al momento de reactivar
-VIGENCIA: 6 meses desde cancelación original
-RESTRICCIÓN: Aplica para cualquier fecha
-CONDICIÓN: Sujeto a disponibilidad del apartamento
-```
+### Política de Visitantes
+- **Horario:** 24 horas
+- **Registro:** Obligatorio en recepción como huéspedes temporales
+- **Límite:** Total (huéspedes + visitantes) no exceder capacidad máxima
+- **Identificación:** Documento válido obligatorio
+- **Responsabilidad:** Huésped principal responde por visitantes
 
----
+**⚠️ ALERTA:** Si preguntas sobre visitas nocturnas o sospecha de uso inadecuado (prostitución), escalar inmediatamente.
 
-## **5. POLÍTICAS ESPECIALES**
+### Prohibiciones Estrictas
+- **Fiestas o reuniones masivas**
+- **Música alta después horario silencio**
+- **Parlantes visibles** (retenidos en portería hasta checkout)
+- **Fumar dentro del apartamento**
+- **Mascotas** (salvo autorización especial)
+- **Mover muebles o alterar configuración**
 
-### **5.1 No Show (No Presentación)**
-```
-DEFINICIÓN: Cliente no llega sin avisar dentro de 24h del check-in
-CARGO: 100% del valor total de la reserva
-ANTICIPO: No reembolsable bajo ninguna circunstancia
-REACTIVACIÓN: No disponible
-LIBERACIÓN: Apartamento se libera automáticamente
-```
+## 7. Procedimientos de Emergencia y Contacto
 
-### **5.2 Cambios de Fecha**
-```
-PRIMERA_VEZ: Sin costo administrativo (sujeto a disponibilidad)
-RESTRICCIÓN: No permitido en temporada alta
-PLAZO_MÍNIMO: 72 horas antes del check-in original
-DIFERENCIA_TARIFARIA: Cliente paga diferencia si aplica
-```
+### Contactos de Emergencia
+- **Principal:** 3023371476 (WhatsApp y llamadas)
+- **Propietario:** 3003913251 (emergencias delicadas y seguridad)
+- **Horario atención:** 24/7 para emergencias
+- **Emergencias médicas:** Llamar 123 directamente
+- **Seguridad edificio:** Recepción o policía (robos/temas delicados)
+- **Servicios públicos:** Reportar cortes al 3023371476
 
-### **5.3 Reducción de Noches**
-```
-ANTES_CHECK_IN: Aplicar política de cancelación según días restantes
-DESPUÉS_CHECK_IN: Cobro total de noches originales sin reembolso
-EXCEPCIÓN: Emergencias - escalar a humano para determinar si la excepción es valida
-PROCESAMIENTO: Ajuste se realiza al momento del de la solicitud
-```
+### Check-out y Objetos Olvidados
+- **Proceso:** Devolución llaves antes 12:00 PM
+- **Objetos olvidados:** Notificar dentro de 2 horas del checkout
+- **Importante:** Después de 2 horas no se garantiza búsqueda del artículo
 
----
+**Respuesta del bot sobre objetos olvidados:**
+"Es importante que nos reportes cualquier objeto olvidado dentro de las primeras 2 horas después de tu checkout. Después de ese tiempo, ya habremos hecho limpieza y nuevos huéspedes pueden haber ocupado el apartamento, por lo que no podemos garantizar la búsqueda."
 
-## **6. POLÍTICAS DE ESTADÍA**
+### Feedback y Solicitud de Reseñas (Protocolo Actualizado)
 
-### **6.1 Estadías Mínimas**
-```
-TEMPORADA_BAJA: 
-- Estándar: 3 noches mínimo
-- Excepciones: 1-2 noches para llenar huecos entre reservas existentes
-- Mismo día: Flexible según disponibilidad inmediata
+**PASO 1 - Siempre preguntar cómo le fue (Proactivo):**
+Después del checkout, enviar mensaje:
+"Hola [NOMBRE], ¿cómo estuvo tu experiencia en Cartagena? ¿Todo bien con el apartamento y nuestro servicio?"
 
-TEMPORADA_MEDIA: 3 noches mínimo  
-TEMPORADA_ALTA y MEDIA_ALTA: 4 noches mínimo
-FIN_DE_SEMANA: 3 noches (viernes-domingo)
-PUENTES_FESTIVOS: 3 noches mínimo
+**PASO 2 - Solo si respuesta es positiva, pedir reseña:**
 
-NOTA: Los huecos de 1-2 noches entre reservas pueden ser ocupados independientemente del mínimo estándar
-```
+**Si respuesta positiva** (ejemplo: "muy bien", "excelente", "me encantó"):
+"¡Qué alegría saber que disfrutaste tu estadía! 😊
+¿Te gustaría dejarnos una reseña? Nos ayudaría muchísimo:
 
-### **6.2 Descuentos por Estadías Extendidas**
-```
-7-14_NOCHES: 5% descuento sobre total
-15-29_NOCHES: 10% descuento sobre total
-30+_NOCHES: 15% descuento sobre total
-RESTRICCIÓN: No aplica en temporada alta
-APLICACIÓN: Automática al calcular total
-```
+**Para reservas Booking:**
+[Enlace específico de reseña Booking]
 
-### **6.3 Extensiones de Estadía**
-```
-DURANTE_ESTADÍA: Tarifa vigente del día de extensión
-DISPONIBILIDAD: Sujeto a reservas posteriores del apartamento
-PAGO: Al momento de confirmar la Extensión
-PROCESAMIENTO: Bot verifica disponibilidad y coordina, en caso de no tener disponibilidad, ofrecer cambio de apartamentos, ya sea en fechas seguidas o parciales para cambio entre apartamentos. ofrecer varias opciones.
-LÍMITE: No hay limite
-Si no hay respuesta de procedimiento o no se tiene claro como responder
-declarar escalar a humano
-```
+**Para reservas Airbnb:**
+[Enlace específico de reseña Airbnb]
+
+**Para reservas directas:**
+[Enlace Google Maps del negocio]
+
+¡Muchísimas gracias por elegirnos!"
+
+**Si respuesta neutra o negativa:**
+NO solicitar reseña. En su lugar:
+"Gracias por tu comentario. Si hay algo específico que podamos mejorar, nos encantaría saberlo para futuras estadías."
+
+## 8. Casos que Requieren Escalamiento
+
+### Escalar Inmediatamente Para:
+- Visitantes sospechosos o uso inadecuado de propiedad
+- Emergencias médicas o situaciones delicadas
+- Conflictos serios con otros huéspedes
+- Daños significativos al apartamento
+- Situaciones no cubiertas en políticas estándar
+- Solicitudes de excepción por emergencia familiar
+- Feedback negativo que requiere seguimiento especializado
+
+**Respuesta del bot para escalamiento:**
+"Esta situación requiere atención especializada. Te voy a conectar inmediatamente con nuestro supervisor para que te ayude de la mejor manera."
 
 ---
-
-## **7. REGLAS DE CONVIVENCIA**
-
-### **7.1 Horarios de Silencio** -- SOLO RESPONDER ESTO SI LO PREGUNTA EL CLIENTE
-```
-ENTRE_SEMANA: 10:00 PM - 8:00 AM
-FINES_SEMANA: 11:00 PM - 9:00 AM
-ZONAS_COMUNES: Respetar horarios del edificio
-PISCINA: 8:00 AM - 5:30 PM (cerrada lunes por mantenimiento)
-```
-
-### **7.2 Política de Visitantes**
-```
-HORARIO_VISITAS: 24 HORAS
-REGISTRO_OBLIGATORIO: En recepción del edificio como huéspedes temporales
-LÍMITE_SIMULTÁNEO: Huéspedes + visitantes no deben exceder capacidad máxima del apartamento
-EJEMPLO: Si se hospedan 5 personas en apartamento de 6, máximo 1 visitante
-RESTRICCIÓN: No se permite reemplazar cupos cuando salen huéspedes
-RESPONSABILIDAD: Huésped principal responde por todos los visitantes
-IDENTIFICACIÓN: Visitantes deben portar documento válido
-EVITAR Y ALERTAR: posible uso inadecuado si el cliente solo pregunta visitas, de forma nocturna o sospecha de uso indebido de la propiedad para promover la prostitución . alertar a escalar a humano
-```
-
-### **7.3 Prohibiciones Estrictas**
-```
-FIESTAS: No se permiten fiestas o reuniones masivas
-RUIDO_EXCESIVO: Música alta después de horario de silencio
-PARLANTES: Prohibido ingresar parlantes visibles (serán retenidos en portería hasta checkout)
-FUMAR: Prohibido fumar dentro del apartamento
-MASCOTAS: No permitidas (salvo autorización especial previa)
-ALTERACIÓN: No mover muebles o alterar configuración del apartamento
-```
-
-### **7.4 Responsabilidades del Huésped**
-```
-LIMPIEZA_BÁSICA: Mantener orden durante estadía
-DAÑOS: Reportar cualquier daño inmediatamente
-LLAVES: Cuidado y devolución de llaves y tarjetas
-SERVICIOS: Uso responsable de agua, luz y gas
-SEGURIDAD: Cerrar apartamento al salir
-```
-
----
-
-## **8. PROCEDIMIENTOS ESTÁNDAR**
-
-### **8.1 Proceso de Check-in**
-```
-DOCUMENTACIÓN: Presentar documento de identidad válido
-VERIFICACIÓN: Confirmación de datos de reserva
-ENTREGA: Llaves del apartamento + tarjetas de acceso
-EXPLICACIÓN: Tour básico del apartamento y servicios
-CONTACTO: Información de contacto de emergencia
-```
-
-### **8.2 Proceso de Check-out**
-```
-HORARIO: Antes de las 12:00 PM
-DEVOLUCIÓN: Llaves y tarjetas de acceso
-INSPECCIÓN: Verificación básica del estado del apartamento
-OBJETOS_OLVIDADOS: Notificación dentro de las próximas 2 horas del check out, de lo contrario no se podrá garanizar la búsqueda del articulo. 
-FEEDBACK: Solicitud opcional de comentarios solo si el cliente menciona que disfruto de su estadia y muchas gracias por todo, le enviamos el link de maps de negocio de la empresa o si viene de booking o Airbnb indicar que por favor dejar comentario que nos ayudaría mucho
-```
-
-### **8.3 Emergencias y Contacto**
-```
-CONTACTO_PRINCIPAL: WhatsApp y llamadas 3023371476
-CONTACTO_PROPIETARIO: 3003913251 (emergencias y temas de seguridad delicados)
-HORARIO_ATENCIÓN: 24/7 para emergencias
-EMERGENCIAS_MÉDICAS: Llamar directamente al 123
-SEGURIDAD_EDIFICIO: Contactar recepción del edificio o a la policía por robos y temas delicados fijo: 6056552640, 
-SERVICIOS_PÚBLICOS: Reportar cortes o fallas inmediatamente al numero normal 3023371476
-```
-
----
-
-## **9. VARIABLES DE SISTEMA PARA EL BOT**
-
-### **9.1 Variables de Tiempo**
-```
-[CHECK_IN_HORA] = 15:00 (3:00 PM)
-[CHECK_OUT_HORA] = 12:00 (12:00 PM)
-[HORARIO_OFICINA_INICIO] = 09:00
-[HORARIO_OFICINA_FIN] = 18:00
-[SILENCIO_INICIO] = 22:00 | 23:00 (según día)
-[SILENCIO_FIN] = 08:00 | 09:00 (según día)
-```
-
-### **9.2 Variables de Ocupación**
-```
-[CAPACIDAD_BASE_APARTAESTUDIO] = 2-3 personas
-[CAPACIDAD_MAX_APARTAESTUDIO] = 3-4 personas
-[CAPACIDAD_BASE_1ALCOBA] = 4-5 personas
-[CAPACIDAD_MAX_1ALCOBA] = 6 personas
-[SOBRECUPO_MAXIMO] = +2 personas
-```
-
-### **9.3 Variables de Política**
-```
-[ANTICIPO_REQUERIDO] = 1 noche
-[MINIMO_TEMPORADA_BAJA] = 3 noches
-[MINIMO_TEMPORADA_MEDIA] = 3 noches
-[MINIMO_TEMPORADA_ALTA] = 4 noches
-[PLAZO_REACTIVACION] = 6 meses
-[DESCUENTO_REACTIVACION] = 10%
-```
-
----
-
-## **10. INTEGRACIÓN CON OTROS ARCHIVOS**
-
-### **10.1 Para Precios y Tarifas**
-```
-TARIFAS_BASE → Ver 02_TARIFAS_TEMPORADAS.txt
-SERVICIOS_ADICIONALES → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
-DESCUENTOS_TEMPORADA → Ver 02_TARIFAS_TEMPORADAS.txt
-```
-
-### **10.2 Para Inventario y Capacidades**
-```
-APARTAMENTOS_DISPONIBLES → Ver 03_INVENTARIO_APARTAMENTOS.txt
-CARACTERÍSTICAS_ESPECÍFICAS → Ver 03_INVENTARIO_APARTAMENTOS.txt
-```
-
-### **10.3 Para Procedimientos Especiales**
-```
-LLEGADAS_FUERA_HORARIO → Ver 09_LLEGADAS_SALIDAS_ESPECIALES.txt
-COORDINACIÓN_EDIFICIO → Ver 09_LLEGADAS_SALIDAS_ESPECIALES.txt
-```
-
----
-
-## **NOTA ARQUITECTÓNICA CRÍTICA**
-
-Este archivo contiene EXCLUSIVAMENTE:
-- Políticas operativas generales y estándar
-- Horarios y procedimientos base
-- Reglas de ocupación y convivencia
-- Políticas de pago y cancelación
-- Procedimientos estándar de check-in/check-out
-
-**NO CONTIENE:**
-- Precios específicos → Ver 02_TARIFAS_TEMPORADAS.txt
-- Cargos por servicios adicionales → Ver 04_CARGOS_SERVICIOS_TARIFARIOS.txt
-- Inventario detallado → Ver 03_INVENTARIO_APARTAMENTOS.txt
-- Procedimientos de llegadas especiales → Ver 09_LLEGADAS_SALIDAS_ESPECIALES.txt
-- Datos de contacto → Ver 05_DATOS_CORPORATIVOS_CONTACTO.txt

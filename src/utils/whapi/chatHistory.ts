@@ -1,7 +1,9 @@
 // @docs: features/CONTEXTO_HISTORIAL_CONVERSACION.md
 // @docs: progress/PROGRESO-BOT.md
 import axios from 'axios';
-import { enhancedLog } from '../core/enhancedLogger';
+import fs from 'fs';
+import path from 'path';
+import { detailedLog as enhancedLog } from '../logger';
 
 const WHAPI_TOKEN = process.env.WHAPI_TOKEN || '';
 const WHAPI_BASE_URL = process.env.WHAPI_API_URL || 'https://gate.whapi.cloud';
@@ -62,7 +64,7 @@ function smartTruncate(text: string, maxLength: number = 70): string {
  */
 export async function getChatHistory(chatId: string, messageCount: number = 200): Promise<string | null> {
     try {
-        enhancedLog('info', 'CHAT_HISTORY', `Obteniendo historial de chat para ${chatId}`);
+        enhancedLog('INFO', 'CHAT_HISTORY', `Obteniendo historial de chat para ${chatId}`);
         
         const response = await axios.get(`${WHAPI_BASE_URL}/messages/list/${chatId}`, {
             headers: {
@@ -77,7 +79,7 @@ export async function getChatHistory(chatId: string, messageCount: number = 200)
         const data: ChatHistoryResponse = response.data;
         
         if (!data.messages || data.messages.length === 0) {
-            enhancedLog('info', 'CHAT_HISTORY', `No se encontraron mensajes para ${chatId}`);
+            enhancedLog('INFO', 'CHAT_HISTORY', `No se encontraron mensajes para ${chatId}`);
             return null;
         }
         
@@ -130,13 +132,13 @@ export async function getChatHistory(chatId: string, messageCount: number = 200)
         
         historyContext += '\n=== FIN HISTORIAL ===\n';
         
-        enhancedLog('success', 'CHAT_HISTORY', 
+        enhancedLog('SUCCESS', 'CHAT_HISTORY', 
             `Historial obtenido: ${sortedMessages.length} mensajes procesados`);
         
         return historyContext;
         
     } catch (error) {
-        enhancedLog('error', 'CHAT_HISTORY', 
+        enhancedLog('ERROR', 'CHAT_HISTORY', 
             `Error obteniendo historial: ${error.message}`);
         return null;
     }

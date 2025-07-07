@@ -340,21 +340,8 @@ const getConversationalContext = (threadInfo): string => {
     }
     
     // Etiquetas/metadatos si existen
-    if (labels && Array.isArray(labels) && labels.length > 0) {
-        // Corregido: manejar objetos de etiquetas
-        const labelNames = labels
-            .map(label => {
-                if (typeof label === 'object' && label.name) {
-                    return label.name;
-                }
-                return String(label);
-            })
-            .filter(name => name && name.trim())
-            .join(', ');
-        
-        if (labelNames) {
-            context += `ETIQUETAS: ${labelNames}\n`;
-        }
+    if (labels && labels.length > 0) {
+        context += `ETIQUETAS: ${labels.join(', ')}\n`;
         
         // 🔍 LOG DETALLADO: Etiquetas incluidas en contexto
         logInfo('CONTEXT_LABELS', `Etiquetas incluidas en contexto conversacional`, {
@@ -510,46 +497,129 @@ const processWithOpenAI = async (userMsg, userJid, chatId = null, userName = nul
             threadId
         });
         
-        // 🔧 SIMPLIFICADO: Verificar y cancelar runs activos (sin reintentos agresivos)
-        try {
-            const existingRuns = await openai.beta.threads.runs.list(threadId, { limit: 1 });
-            const activeRun = existingRuns.data.find(r => 
-                ['queued', 'in_progress', 'requires_action'].includes(r.status)
-            );
-            
-            if (activeRun) {
-                logWarning('ACTIVE_RUN_FOUND', `Cancelando run activo: ${activeRun.id}`, {
-                    shortUserId,
-                    runId: activeRun.id,
-                    status: activeRun.status,
-                    threadId
-                });
+        // 🔧 MEJORADO: Verificar y cancelar runs activos con mejor error handling
+        let retryCount = 0;
+        const maxRetries = 3;
+        let activeRunHandled = false;
+        
+        while (!activeRunHandled && retryCount < maxRetries) {
+            try {
+                const existingRuns = await openai.beta.threads.runs.list(threadId, { limit: 5 });
+                const activeRuns = existingRuns.data.filter(r => 
+                    ['queued', 'in_progress', 'requires_action'].includes(r.status)
+                );
                 
-                try {
-                    await openai.beta.threads.runs.cancel(threadId, activeRun.id);
-                    // Esperar solo 1 segundo, sin reintentos complejos
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    logSuccess('ACTIVE_RUN_CANCELLED', `Run cancelado exitosamente`, {
+                if (activeRuns.length > 0) {
+                    logWarning('ACTIVE_RUNS_DETECTED', `${activeRuns.length} run(s) activo(s) detectado(s), cancelando`, {
                         shortUserId,
-                        runId: activeRun.id,
-                        threadId
+                        activeRuns: activeRuns.map(r => ({
+                            id: r.id,
+                            status: r.status,
+                            created_at: r.created_at,
+                            expires_at: r.expires_at
+                        })),
+                        threadId,
+                        retryAttempt: retryCount + 1
                     });
-                } catch (cancelError) {
-                    // Solo log, no reintentar
-                    logError('RUN_CANCEL_ERROR', `Error cancelando run`, { 
+                    
+                    // Cancelar todos los runs activos en paralelo
+                    const cancelPromises = activeRuns.map(async (activeRun) => {
+                        try {
+                            await openai.beta.threads.runs.cancel(threadId, activeRun.id);
+                            logSuccess('ACTIVE_RUN_CANCELLED', `Run cancelado: ${activeRun.id}`, {
+                                shortUserId,
+                                runId: activeRun.id,
+                                previousStatus: activeRun.status,
+                                threadId
+                            });
+                            return { success: true, runId: activeRun.id };
+                        } catch (cancelError) {
+                            logError('RUN_CANCEL_ERROR', `Error cancelando run ${activeRun.id}`, {
+                                shortUserId,
+                                runId: activeRun.id,
+                                error: cancelError.message,
+                                errorCode: cancelError.status,
+                                threadId
+                            });
+                            return { success: false, runId: activeRun.id, error: cancelError.message };
+                        }
+                    });
+                    
+                    const cancelResults = await Promise.all(cancelPromises);
+                    const successfulCancellations = cancelResults.filter(r => r.success).length;
+                    
+                    logInfo('RUN_CANCELLATION_SUMMARY', `Cancelación completada: ${successfulCancellations}/${activeRuns.length} exitosas`, {
                         shortUserId,
-                        runId: activeRun.id,
-                        error: cancelError.message,
-                        threadId
+                        totalRuns: activeRuns.length,
+                        successful: successfulCancellations,
+                        threadId,
+                        retryAttempt: retryCount + 1
                     });
+                    
+                    // Esperar más tiempo para que las cancelaciones tomen efecto
+                    const waitTime = Math.min(2000 + (retryCount * 1000), 5000); // 2s, 3s, 4s max
+                    logInfo('RUN_CANCEL_WAIT', `Esperando ${waitTime}ms para que las cancelaciones tomen efecto`, {
+                        shortUserId,
+                        waitTime,
+                        retryAttempt: retryCount + 1
+                    });
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    
+                    // Verificar si realmente se cancelaron
+                    const verificationRuns = await openai.beta.threads.runs.list(threadId, { limit: 5 });
+                    const stillActiveRuns = verificationRuns.data.filter(r => 
+                        ['queued', 'in_progress', 'requires_action'].includes(r.status)
+                    );
+                    
+                    if (stillActiveRuns.length > 0) {
+                        logWarning('RUNS_STILL_ACTIVE', `${stillActiveRuns.length} run(s) siguen activos después de cancelación`, {
+                            shortUserId,
+                            stillActiveRuns: stillActiveRuns.map(r => ({
+                                id: r.id,
+                                status: r.status,
+                                created_at: r.created_at
+                            })),
+                            threadId,
+                            retryAttempt: retryCount + 1
+                        });
+                        retryCount++;
+                        continue; // Reintentar
+                    }
                 }
+                
+                activeRunHandled = true;
+                
+            } catch (listError) {
+                logError('RUN_LIST_ERROR', `Error listando runs existentes`, {
+                    shortUserId,
+                    error: listError.message,
+                    errorCode: listError.status,
+                    threadId,
+                    retryAttempt: retryCount + 1
+                });
+                retryCount++;
+                
+                if (retryCount >= maxRetries) {
+                    logError('RUN_CLEANUP_FAILED', `Falló limpieza de runs después de ${maxRetries} intentos`, {
+                        shortUserId,
+                        threadId,
+                        finalError: listError.message
+                    });
+                    return 'Lo siento, hay un problema técnico con la conversación. Por favor intenta de nuevo en unos momentos.';
+                }
+                
+                // Esperar antes de reintentar
+                await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
             }
-        } catch (listError) {
-            logError('RUN_LIST_ERROR', `Error listando runs existentes`, {
+        }
+        
+        if (!activeRunHandled) {
+            logError('RUN_CLEANUP_TIMEOUT', `No se pudo limpiar runs activos después de ${maxRetries} intentos`, {
                 shortUserId,
-                error: listError.message,
-                threadId
+                threadId,
+                maxRetries
             });
+            return 'Lo siento, hay un problema técnico con la conversación. Por favor intenta de nuevo en unos momentos.';
         }
         
         // ✅ AHORA SÍ: Agregar mensaje del usuario con contextos temporal y conversacional
@@ -1340,18 +1410,7 @@ app.post('/hook', async (req, res) => {
         
         logInfo('WEBHOOK', `Procesando ${messages.length} mensajes del webhook`);
         
-        // Prevenir procesamiento de mensajes duplicados
-        const messageIds = new Set<string>();
-        
         for (const message of messages) {
-            // Evitar procesar el mismo mensaje dos veces
-            if (message.id && messageIds.has(message.id)) {
-                logDebug('WEBHOOK_DUPLICATE', 'Mensaje duplicado ignorado', { messageId: message.id });
-                continue;
-            }
-            if (message.id) {
-                messageIds.add(message.id);
-            }
             // 🔧 PROCESAR MENSAJES MANUALES DEL AGENTE (from_me: true)
             if (message.from_me && message.type === 'text' && message.text?.body) {
                 

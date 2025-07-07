@@ -1,16 +1,11 @@
-// Core utilities exports
+// Re-exportar utilidades core
 export { 
-    enhancedLog, 
-    logConversationFlow, 
-    logUserInteraction, 
-    initializeEnhancedLogging,
-    showMetricsSummary,
-    systemMetrics,
-    dashboardEvents,
-    getRecentLogs,
-    searchErrors,
-    generateCorrelationId,
-    setCorrelationId,
-    getCorrelationId,
-    clearCorrelationId
-} from './enhancedLogger.js'; 
+    logInfo, 
+    logError, 
+    logWarning, 
+    logSuccess, 
+    logDebug,
+    detailedLog as enhancedLog,
+    getSessionInfo,
+    listAvailableSessions
+} from '../logger.js'; 
