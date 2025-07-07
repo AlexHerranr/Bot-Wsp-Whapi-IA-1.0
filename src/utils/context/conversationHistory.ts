@@ -21,6 +21,14 @@ interface WhapiMessage {
     to_name?: string;
 }
 
+
+// Interfaz para respuesta de API
+interface WhapiApiResponse {
+    messages?: WhapiMessage[];
+    total?: number;
+    [key: string]: any;
+}
+
 interface ConversationHistory {
     userId: string;
     messages: WhapiMessage[];
@@ -52,9 +60,9 @@ export class ConversationHistoryManager {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const data = await response.json() as WhapiApiResponse;
             
-            if (data.messages && Array.isArray(data.messages)) {
+            if (data && data.messages && Array.isArray(data.messages)) {
                 enhancedLog('success', 'CONVERSATION_HISTORY', 
                     `Obtenidas ${data.messages.length} mensajes del historial para ${userId}`);
                 
@@ -101,7 +109,7 @@ export class ConversationHistoryManager {
 
             const data = await response.json();
             
-            if (data.messages && Array.isArray(data.messages)) {
+            if (data && data.messages && Array.isArray(data.messages)) {
                 enhancedLog('success', 'CONVERSATION_HISTORY', 
                     `Obtenidas ${data.messages.length} conversaciones recientes`);
                 return data.messages;
@@ -139,7 +147,7 @@ export class ConversationHistoryManager {
 
             const data = await response.json();
             
-            if (data.messages && Array.isArray(data.messages)) {
+            if (data && data.messages && Array.isArray(data.messages)) {
                 enhancedLog('success', 'CONVERSATION_HISTORY', 
                     `Obtenidos ${data.messages.length} mensajes desde ${sinceTimestamp} para ${userId}`);
                 return data.messages;

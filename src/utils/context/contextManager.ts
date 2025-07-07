@@ -162,7 +162,7 @@ export class ContextManager {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const data = await response.json() as any;
             
             // LOG DE DEBUG: Mostrar estructura de respuesta
             enhancedLog('info', 'API_DEBUG', 
@@ -177,7 +177,19 @@ export class ContextManager {
             }
             
             // Verificar si hay mensajes
-            if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            // VALIDACIÓN DE TIPOS MEJORADA
+            let messages: any[] = [];
+            
+            if (data && typeof data === 'object') {
+                if (data.messages && Array.isArray(data.messages)) {
+                    messages = data.messages;
+                } else if (Array.isArray(data)) {
+                    messages = data;
+                }
+            }
+            
+            // Verificar si hay mensajes
+            if (messages.length === 0) {
                 enhancedLog('warning', 'CONTEXT_MANAGER', 
                     `API respondió correctamente pero sin mensajes para ${userId}`);
                 return null;

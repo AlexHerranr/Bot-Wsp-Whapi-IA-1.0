@@ -98,7 +98,7 @@ export class FunctionHandler {
         functionName: 'check_availability',
         args: args,
         resultType: typeof result,
-        resultLength: result.length,
+        resultLength: Array.isArray(result) ? result.length : 'N/A',
         fullContent: result, // Contenido completo que recibe OpenAI
         timestamp: new Date().toISOString()
       });

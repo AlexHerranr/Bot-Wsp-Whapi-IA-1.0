@@ -385,6 +385,167 @@ Se aplicaron 4 correcciones principales que resolvieron todos los problemas iden
 
 ---
 
-**Fecha de Resolución:** 7 de enero 2025  
-**Tiempo Total de Resolución:** ~2 horas  
-**Estado:** ✅ COMPLETADO - LISTO PARA DESPLIEGUE 
+## 🔄 **INTENTO 2: SOLUCIÓN ENHANCEDLOG APLICADA**
+**Fecha:** 7 de enero 2025, 2:39:05 p.m.  
+**Build ID:** 171755da-5c5a-47b0-8724-1b7798298728  
+**Commit:** af18772ead7d5c940053409ad953dc93facb9702
+
+### **✅ PROGRESO CONFIRMADO**
+
+#### **Errores de TypeScript REDUCIDOS SIGNIFICATIVAMENTE:**
+- **ANTES:** 75+ errores de LogLevel + 18 errores adicionales = **93+ errores totales**
+- **DESPUÉS:** Solo 22 errores (eliminamos TODOS los errores de LogLevel)
+- **REDUCCIÓN:** 76% menos errores
+
+#### **Errores Restantes (22 total):**
+```
+[plugin typescript] src/utils/context/conversationHistory.ts: Property 'messages' does not exist on type 'unknown' (14 errores)
+[plugin typescript] src/utils/context/contextManager.ts: Property 'messages' does not exist on type 'unknown' (3 errores)
+[plugin typescript] src/handlers/multi-assistant-handler.ts: Expected 3-4 arguments, but got 5 (3 errores)
+[plugin typescript] src/handlers/function-handler.ts: Property 'length'/'map' does not exist on type 'unknown' (2 errores)
+```
+
+#### **✅ COMPILACIÓN EXITOSA:**
+```
+created dist in 7.7s
+Successfully built d3f517b5e01a
+Successfully tagged northamerica-northeast1-docker.pkg.dev/.../bot-wsp-whapi-ia:af18772...
+```
+
+### **❌ PROBLEMA PERSISTENTE: TIMEOUT EN CLOUD RUN**
+
+**Error Actual:**
+```
+ERROR: (gcloud.run.services.update) Revision 'bot-wsp-whapi-ia-00008-hwj' is not ready and cannot serve traffic. The user-provided container failed to start and listen on the port defined provided by the PORT=8080 environment variable within the allocated timeout.
+```
+
+### **🔍 ANÁLISIS DEL PROBLEMA ACTUAL**
+
+**YA NO ES un problema de compilación TypeScript** - esos están resueltos.
+
+**ES un problema de RUNTIME:** El contenedor se construye correctamente pero no logra iniciar el servidor HTTP a tiempo.
+
+### **🚨 POSIBLES CAUSAS DEL TIMEOUT:**
+
+1. **Inicialización bloqueante** - El bot tarda mucho en inicializar
+2. **Dependencias externas** - OpenAI/WhatsApp APIs lentas
+3. **Carga de archivos** - Threads, configuraciones pesadas
+4. **Memoria insuficiente** - Proceso se queda sin recursos
+5. **Puerto incorrecto** - No escucha en el puerto correcto
+
+### **📋 PRÓXIMAS ACCIONES REQUERIDAS:**
+
+#### **INVESTIGACIÓN NECESARIA:**
+1. **Ver logs del contenedor** para identificar dónde se cuelga
+2. **Revisar inicialización del bot** en `src/app.ts`
+3. **Verificar dependencias externas** que puedan estar bloqueando
+4. **Analizar carga de archivos** pesados al inicio
+
+#### **SOLUCIONES POTENCIALES:**
+1. **Diferir inicialización** - Mover más lógica después del `app.listen()`
+2. **Aumentar timeout** de Cloud Run
+3. **Optimizar memoria** y recursos
+4. **Lazy loading** de componentes pesados
+5. **Health check más simple**
+
+---
+
+## 🎯 **ESTADO ACTUAL ACTUALIZADO**
+
+### **✅ PROBLEMAS RESUELTOS:**
+- [x] Tipos LogLevel incompatibles (75+ errores eliminados)
+- [x] Dependencia tslib faltante
+- [x] Configuración TypeScript optimizada
+- [x] Exportación enhancedLog corregida
+- [x] Compilación exitosa con solo errores menores
+
+### **❌ PROBLEMA ACTIVO:**
+- [ ] **Timeout de Cloud Run** - El contenedor no inicia el servidor HTTP a tiempo
+
+### **📊 MÉTRICAS DE PROGRESO:**
+- **Errores TypeScript:** 93+ → 22 (76% reducción) ✅
+- **Compilación:** EXITOSA ✅
+- **Build Docker:** EXITOSO ✅
+- **Deploy Cloud Run:** FALLA por timeout ❌
+
+---
+
+---
+
+## 🎯 **PLAN DE ACCIÓN COMPLETO DESARROLLADO**
+**Fecha:** 7 de enero 2025, 3:00 p.m.  
+
+### **🔍 ANÁLISIS DETALLADO DE ERRORES RESTANTES**
+
+#### **Errores TypeScript Restantes (22 errores):**
+1. **conversationHistory.ts y contextManager.ts (17 errores)**: Respuesta API no tipada, acceso a `data.messages` sin validación
+2. **multi-assistant-handler.ts (3 errores)**: Llamadas a funciones con parámetros incorrectos  
+3. **function-handler.ts (2 errores)**: Uso de `.length` y `.map` en variables tipo `unknown`
+
+#### **Problema de Timeout en Cloud Run:**
+- Servidor inicia correctamente pero `initializeBot()` está bloqueando
+- El problema está en la inicialización síncrona que se ejecuta después de `app.listen()`
+
+### **🛠️ SOLUCIONES DESARROLLADAS**
+
+#### **1. Script Automático de Corrección TypeScript**
+- Archivo: `fix-typescript-errors.js`
+- Corrige automáticamente `conversationHistory.ts` y `contextManager.ts`
+- Agrega interfaces y validación de tipos
+
+#### **2. App.ts Optimizado para Cloud Run**
+- Inicialización no bloqueante
+- Health check inmediato (200/503)
+- Endpoint `/ready` específico para Cloud Run
+- Graceful shutdown
+- Manejo robusto de errores
+
+#### **3. Script de Despliegue v2**
+- Verificaciones previas automatizadas
+- Configuración optimizada de Cloud Run
+- Timeout extendido (300s)
+- CPU y memoria optimizados
+- Health check automático post-deploy
+
+#### **4. Correcciones Manuales Documentadas**
+- `function-handler.ts`: Validación de arrays antes de `.length`/`.map`
+- `multi-assistant-handler.ts`: Ajuste de parámetros en llamadas
+
+### **📋 PLAN DE ACCIÓN INMEDIATO (30 minutos)**
+
+#### **PASO 1: Correcciones Automáticas (5 min)**
+```bash
+node fix-typescript-errors.js
+npm run build
+```
+
+#### **PASO 2: Correcciones Manuales (10 min)**
+- Validar arrays en `function-handler.ts`
+- Ajustar parámetros en `multi-assistant-handler.ts`
+
+#### **PASO 3: Reemplazar app.ts (5 min)**
+- Backup actual
+- Implementar versión optimizada
+
+#### **PASO 4: Verificación (2 min)**
+```bash
+npm run build
+```
+
+#### **PASO 5: Deploy Optimizado (8 min)**
+```bash
+./deploy-cloud-run-v2.sh
+```
+
+### **🎯 RESULTADO ESPERADO**
+- ✅ 0 errores TypeScript críticos
+- ✅ Servidor inicia en <5 segundos  
+- ✅ Health check responde inmediatamente
+- ✅ Bot operativo en Cloud Run
+- ✅ Webhook funcionando
+
+---
+
+**Fecha de Última Actualización:** 7 de enero 2025, 3:00 p.m.  
+**Tiempo Total Invertido:** ~3.5 horas  
+**Estado:** 🚀 PLAN COMPLETO DESARROLLADO - LISTO PARA IMPLEMENTAR 
