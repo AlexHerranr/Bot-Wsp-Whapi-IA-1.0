@@ -1,4 +1,10 @@
-import { Beds24Config } from '../services/beds24/beds24.types';
+// import { Beds24Config } from '../services/beds24/beds24.types';
+
+// Temporary type definition to avoid build errors
+interface Beds24Config {
+    apiUrl: string;
+    apiToken: string;
+}
 
 /**
  * Configuración para el servicio de Beds24

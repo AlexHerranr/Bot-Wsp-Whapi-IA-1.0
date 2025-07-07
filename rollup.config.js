@@ -6,10 +6,10 @@ import json from '@rollup/plugin-json';
 export default {
     input: 'src/app.ts',
     output: {
-        dir: 'dist',
-        format: 'esm',
+        file: 'dist/app.js',
+        format: 'cjs',
         sourcemap: false,
-        entryFileNames: 'app.js'
+        exports: 'auto'
     },
     external: [
         'express',
@@ -17,7 +17,17 @@ export default {
         'dotenv/config',
         'fs',
         'path',
-        'url'
+        'url',
+        'http',
+        'https',
+        'util',
+        'events',
+        'stream',
+        'crypto',
+        'os',
+        'buffer',
+        'querystring',
+        'zlib'
     ],
     plugins: [
         resolve({
