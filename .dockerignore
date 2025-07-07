@@ -1,6 +1,67 @@
-dist/*
+# Archivos de desarrollo
 node_modules
+.git
+.gitignore
+*.md
+README.md
 
+# Archivos de configuración local
+.env
+.env.local
+.env.development
+.env.production
+
+# Logs
+logs/
+*.log
+whatsapp-sync-debug.log
+
+# Archivos temporales
+tmp/
+temp/
+.tmp
+
+# Archivos de desarrollo
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de prueba
+tests/
+test/
+*.test.js
+*.spec.js
+
+# Documentación
+docs/
+documentation/
+
+# Archivos de build local
+dist/
+build/
+
+# Archivos de npm/pnpm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Scripts locales
+scripts/windows/
+scripts/development/
+
+# Archivos de backup
+*.backup.*
 
 *_sessions
 *tokens
