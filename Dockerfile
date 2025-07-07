@@ -25,7 +25,7 @@ RUN npm install -g pnpm && \
     pnpm install --frozen-lockfile --ignore-scripts
 
 # Copiar código fuente y archivos de configuración
-COPY tsconfig.json rollup.config.js ./
+COPY tsconfig.json rollup.config.mjs ./
 COPY src/ ./src/
 COPY config/ ./config/
 
