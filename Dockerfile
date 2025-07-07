@@ -65,4 +65,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:8080/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
 
 # Comando de inicio directo
-CMD ["node", "--max-old-space-size=768", "dist/src/app.js"]
+CMD ["node", "--max-old-space-size=768", "dist/app.js"]
