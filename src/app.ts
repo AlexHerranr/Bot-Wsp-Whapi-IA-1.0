@@ -1429,6 +1429,25 @@ app.get('/', (req, res) => {
     res.json(status);
 });
 
+// --- Health Check para Cloud Run ---
+app.get('/health', (req, res) => {
+    const stats = threadPersistence.getStats();
+    const healthStatus = {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        service: 'TeAlquilamos Bot',
+        version: 'v1.0',
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        activeThreads: stats.totalThreads,
+        activeBuffers: userMessageBuffers.size,
+        port: PORT
+    };
+    
+    logInfo('HEALTH_CHECK', 'Cloud Run health check', healthStatus);
+    res.status(200).json(healthStatus);
+});
+
 // --- Webhook de Whapi ---
 app.post('/hook', async (req, res) => {
     try {
