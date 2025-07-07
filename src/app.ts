@@ -23,7 +23,7 @@ import { isLikelyFinalMessage, getRecommendedTimeout, getBufferStats } from './u
 import { recordTypingEvent, recordMessage, hasTypingSupport, getTypingStats, getUserTypingInfo } from './utils/typingDetector.js';
 
 // --- Configuración Inicial ---
-const PORT = process.env.PORT || 8080;  // Cloud Run usa PORT, no PORT ?? 3008
+const PORT = parseInt(process.env.PORT || '8080', 10);  // Cloud Run usa PORT, asegurar que sea número
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 const WHAPI_TOKEN = process.env.WHAPI_TOKEN ?? '';
@@ -72,7 +72,21 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     logSuccess('SERVER_START', 'Servidor HTTP iniciado', { port: PORT });
     
     // Inicializar componentes de forma asíncrona
-    initializeBot();
+    initializeBot().catch(error => {
+        console.error('❌ Error en inicialización asíncrona:', error);
+        logError('INIT_ERROR', 'Error en inicialización asíncrona', { error: error.message });
+    });
+});
+
+// 🚀 MANEJO DE ERRORES DEL SERVIDOR
+server.on('error', (error: any) => {
+    console.error('❌ Error del servidor:', error);
+    logError('SERVER_ERROR', 'Error del servidor', { error: error.message, code: error.code });
+});
+
+server.on('listening', () => {
+    console.log(`✅ Servidor escuchando en puerto ${PORT}`);
+    logSuccess('SERVER_LISTENING', 'Servidor escuchando correctamente', { port: PORT });
 });
 
 // 🚀 INICIALIZACIÓN ASÍNCRONA DEL BOT
