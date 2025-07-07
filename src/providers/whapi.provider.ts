@@ -1,23 +1,41 @@
-import { ProviderClass, utils } from '@builderbot/bot';
 import axios from 'axios';
 import { EventEmitter } from 'events';
-import { Request, Response } from 'express';
+import { logInfo, logError, logSuccess } from '../utils/logger.js';
 
-export class WhapiProvider extends ProviderClass {
-    private apiUrl = process.env.WHAPI_API_URL || 'https://gate.whapi.cloud';
-    private token = process.env.WHAPI_TOKEN;
+export interface WhapiMessage {
+    id: string;
+    from: string;
+    chat_id: string;
+    from_name?: string;
+    text?: {
+        body: string;
+    };
+    type: string;
+    from_me: boolean;
+}
+
+export interface ParsedMessage {
+    from: string;
+    name: string;
+    body: string;
+    message_id: string;
+}
+
+export class WhapiProvider extends EventEmitter {
+    private apiUrl: string;
+    private token: string;
     
     constructor() {
         super();
-        this.vendor = new EventEmitter();
-    }
-
-    async initVendor() {
-        return this.vendor;
+        this.apiUrl = process.env.WHAPI_API_URL || 'https://gate.whapi.cloud';
+        this.token = process.env.WHAPI_TOKEN || '';
+        
+        if (!this.token) {
+            throw new Error('WHAPI_TOKEN no está definido en las variables de entorno');
+        }
     }
 
     private getHeaders() {
-        if (!this.token) throw new Error('WHAPI_TOKEN no está definido en .env');
         return {
             'Authorization': `Bearer ${this.token}`,
             'Accept': 'application/json',
@@ -25,11 +43,11 @@ export class WhapiProvider extends ProviderClass {
         };
     }
 
-    protected async setupWebhook() {
-        const webhookUrl = this.getWebhookEndpoint();
-        console.log(`[WhapiProvider] Configurando Webhook con URL: ${webhookUrl}`);
+    async setupWebhook(webhookUrl: string): Promise<void> {
+        logInfo('WHAPI_WEBHOOK', `Configurando Webhook con URL: ${webhookUrl}`);
+        
         try {
-            await axios.patch(`${this.apiUrl}/settings`, {
+            const response = await axios.patch(`${this.apiUrl}/settings`, {
                 webhooks: [{ 
                     url: webhookUrl, 
                     events: [
@@ -39,15 +57,24 @@ export class WhapiProvider extends ProviderClass {
                     mode: "method" 
                 }]
             }, { headers: this.getHeaders() });
-            console.log('[WhapiProvider] Webhook configurado exitosamente con eventos: message, presences');
-        } catch (error) {
+            
+            logSuccess('WHAPI_WEBHOOK', 'Webhook configurado exitosamente', {
+                url: webhookUrl,
+                events: ['message', 'presences']
+            });
+        } catch (error: any) {
             const errorMsg = error.response?.data || error.message;
-            console.error('[WhapiProvider] Error al configurar webhook:', errorMsg);
+            logError('WHAPI_WEBHOOK', 'Error al configurar webhook', { 
+                error: errorMsg,
+                url: webhookUrl 
+            });
+            throw error;
         }
     }
 
-    protected parseMessage(msg: any) {
+    parseMessage(msg: WhapiMessage): ParsedMessage | null {
         if (msg.from_me) return null;
+        
         return {
             from: msg.chat_id,
             name: msg.from_name || msg.chat_id.replace(/@s\.whatsapp\.net$/, ''),
@@ -56,44 +83,60 @@ export class WhapiProvider extends ProviderClass {
         };
     }
 
-    protected async handleIncomingMessage(req: Request, res: Response) {
-        const { messages } = req.body;
-        if (!messages) return res.status(200).send('No messages to process');
-
-        for (const message of messages) {
-            const parsed = this.parseMessage(message);
-            if (parsed) {
-                this.emit('message', parsed);
-            }
-        }
-        return res.status(200).send('Processed');
-    }
-
-    protected listen() {
-        this.server.post('/webhook', this.handleIncomingMessage.bind(this));
-    }
-    
-    public async init() {
-        await this.setupWebhook();
-        this.emit('ready', true);
-    }
-    
     async sendMessage(to: string, message: string): Promise<any> {
-        return axios.post(`${this.apiUrl}/messages/text`, {
-            to: to.replace(/@s\.whatsapp\.net$/, ''),
-            body: message
-        }, { headers: this.getHeaders() });
+        try {
+            const cleanTo = to.replace(/@s\.whatsapp\.net$/, '');
+            
+            const response = await axios.post(`${this.apiUrl}/messages/text`, {
+                to: cleanTo,
+                body: message
+            }, { headers: this.getHeaders() });
+            
+            logSuccess('WHAPI_SEND', 'Mensaje enviado exitosamente', {
+                to: cleanTo,
+                messageLength: message.length
+            });
+            
+            return response.data;
+        } catch (error: any) {
+            logError('WHAPI_SEND', 'Error enviando mensaje', {
+                to: to,
+                error: error.response?.data || error.message
+            });
+            throw error;
+        }
     }
 
-    async sendPresenceUpdate(to: string, type: 'composing' | 'paused') {}
-    
-    protected beforeHttpServerInit(): void {}
-    protected afterHttpServerInit(): void {}
-    
-    // CORREGIDO: Convertido a método para cumplir la interfaz
-    public busEvents() {
-        return [];
+    async sendPresenceUpdate(to: string, type: 'composing' | 'paused'): Promise<void> {
+        try {
+            const cleanTo = to.replace(/@s\.whatsapp\.net$/, '');
+            
+            await axios.post(`${this.apiUrl}/messages/presence`, {
+                to: cleanTo,
+                type: type
+            }, { headers: this.getHeaders() });
+            
+            logInfo('WHAPI_PRESENCE', `Presencia ${type} enviada`, { to: cleanTo });
+        } catch (error: any) {
+            logError('WHAPI_PRESENCE', 'Error enviando presencia', {
+                to: to,
+                type: type,
+                error: error.response?.data || error.message
+            });
+        }
     }
-    
-    public globalVendorArgs: any = {};
+
+    async getAccountInfo(): Promise<any> {
+        try {
+            const response = await axios.get(`${this.apiUrl}/account`, {
+                headers: this.getHeaders()
+            });
+            return response.data;
+        } catch (error: any) {
+            logError('WHAPI_ACCOUNT', 'Error obteniendo info de cuenta', {
+                error: error.response?.data || error.message
+            });
+            throw error;
+        }
+    }
 }

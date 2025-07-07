@@ -6,9 +6,10 @@ import json from '@rollup/plugin-json';
 export default {
     input: 'src/app.ts',
     output: {
-        file: 'dist/app.js',
+        dir: 'dist',
         format: 'esm',
-        sourcemap: false
+        sourcemap: false,
+        entryFileNames: 'app.js'
     },
     external: [
         'express',
