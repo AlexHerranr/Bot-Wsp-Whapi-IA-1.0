@@ -16,12 +16,12 @@ COPY src/ ./src/
 # Compilar TypeScript
 RUN npm run build
 
-# Exponer puerto
-EXPOSE 3008
+# Exponer puerto 8080 (requerido por Cloud Run)
+EXPOSE 8080
 
 # Variables de entorno
 ENV NODE_ENV=production
-ENV PORT=3008
+ENV PORT=8080
 
 # Comando de inicio
 CMD ["node", "dist/app.js"]
