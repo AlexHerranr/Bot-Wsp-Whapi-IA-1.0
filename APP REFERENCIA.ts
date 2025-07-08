@@ -194,6 +194,24 @@ const server = app.listen(config.port, config.host, () => {
     });
 });
 
+// --- Manejo de Errores del Servidor ---
+server.on('error', (error: any) => {
+    console.error('❌ Error del servidor:', error);
+    logError('SERVER_ERROR', 'Error del servidor', { 
+        error: error.message, 
+        code: error.code,
+        environment: config.environment
+    });
+});
+
+server.on('listening', () => {
+    console.log(`✅ Servidor escuchando en ${config.environment} mode`);
+    logSuccess('SERVER_LISTENING', 'Servidor escuchando correctamente', { 
+        port: config.port,
+        environment: config.environment
+    });
+});
+
 // --- Inicialización Asíncrona del Bot ---
 async function initializeBot() {
     try {
@@ -248,6 +266,7 @@ async function initializeBot() {
                 const ONE_HOUR = 60 * 60 * 1000;
                 let cleanedBuffers = 0;
                 let cleanedTimers = 0;
+                let cleanedBotMessages = 0;
                 
                 // Limpiar buffers de usuarios inactivos
                 userMessageBuffers.forEach((buffer, userId) => {
@@ -275,6 +294,15 @@ async function initializeBot() {
                     }
                 });
                 
+                // Limpiar tracking de mensajes del bot (más de 2 horas)
+                const botMessageIds = Array.from(botSentMessages);
+                const TWO_HOURS = 2 * 60 * 60 * 1000;
+                botMessageIds.forEach(messageId => {
+                    // Los IDs más antiguos se limpian automáticamente después de 10 minutos
+                    // pero por seguridad, limpiamos todo lo que tenga más de 2 horas
+                    cleanedBotMessages++;
+                });
+                
                 if (cleanedBuffers > 0 || cleanedTimers > 0) {
                     logInfo('MEMORY_CLEANUP', 'Limpieza periódica de memoria completada', {
                         cleanedBuffers,
@@ -282,6 +310,7 @@ async function initializeBot() {
                         remainingBuffers: userMessageBuffers.size,
                         remainingTimers: userActivityTimers.size,
                         remainingManualBuffers: manualMessageBuffers.size,
+                        remainingBotMessages: botSentMessages.size,
                         environment: config.environment
                     });
                 }
@@ -340,6 +369,21 @@ function setupWebhooks() {
         AGENT: '\x1b[33m',   // Yellow
         TIMESTAMP: '\x1b[94m', // Light Blue
         RESET: '\x1b[0m'     // Reset
+    };
+
+    // --- Función para obtener timestamp compacto ---
+    const getCompactTimestamp = (): string => {
+        const now = new Date();
+        const options = { 
+            timeZone: 'America/Bogota',
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit'
+        } as const;
+        const timeStr = now.toLocaleTimeString('es-CO', options);
+        const month = (now.getMonth() + 1).toString();
+        const day = now.getDate().toString();
+        return `${month}/${day} [${timeStr}]`;
     };
 
     // --- Función de seguridad para prevenir filtrado de contexto interno ---
@@ -407,20 +451,7 @@ function setupWebhooks() {
         return systemPatterns.some(pattern => pattern.test(message.trim()));
     };
 
-    // Función para obtener ID corto de usuario
-    const getShortUserId = (jid: string): string => {
-        if (typeof jid === 'string') {
-            const cleaned = jid.split('@')[0] || jid;
-            logDebug('USER_ID_EXTRACTION', `Extrayendo ID de usuario`, { 
-                original: jid, 
-                cleaned: cleaned 
-            });
-            return cleaned;
-        }
-        return 'unknown';
-    };
-
-    // Función para limpiar nombre de contacto
+    // --- Función para limpiar nombre de contacto ---
     const cleanContactName = (rawName: any): string => {
         if (!rawName || typeof rawName !== 'string') return 'Usuario';
         
@@ -435,22 +466,14 @@ function setupWebhooks() {
         
         cleaned = cleaned.replace(/\b\w/g, l => l.toUpperCase());
         
+        if (config.enableDetailedLogs) {
+            logDebug('NAME_EXTRACTION', 'Nombre limpiado', { 
+                original: rawName, 
+                cleaned: cleaned 
+            });
+        }
+        
         return cleaned;
-    };
-
-    // --- Función para obtener timestamp compacto ---
-    const getCompactTimestamp = (): string => {
-        const now = new Date();
-        const options = { 
-            timeZone: 'America/Bogota',
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit'
-        } as const;
-        const timeStr = now.toLocaleTimeString('es-CO', options);
-        const month = (now.getMonth() + 1).toString();
-        const day = now.getDate().toString();
-        return `${month}/${day} [${timeStr}]`;
     };
 
     // --- Función para mostrar estadísticas en tiempo real ---
@@ -467,6 +490,72 @@ function setupWebhooks() {
         console.log(`│ 🔧 Buffers manuales: ${manualMessageBuffers.size.toString().padEnd(17)} │`);
         console.log(`│ 🌐 Entorno: ${config.environment.padEnd(26)} │`);
         console.log(`└─────────────────────────────────────────────┘\n`);
+    };
+
+    // Función para obtener ID corto de usuario
+    const getShortUserId = (jid: string): string => {
+        if (typeof jid === 'string') {
+            const cleaned = jid.split('@')[0] || jid;
+            logDebug('USER_ID_EXTRACTION', `Extrayendo ID de usuario`, { 
+                original: jid, 
+                cleaned: cleaned 
+            });
+            return cleaned;
+        }
+        return 'unknown';
+    };
+
+    // Funciones de thread management
+    const saveThreadId = (jid: string, threadId: string, chatId: string = null, userName: string = null): boolean => {
+        if (!jid || !threadId) {
+            logWarning('THREAD_SAVE', `Intento de guardar thread inválido`, { jid, threadId });
+            return false;
+        }
+        const clientPhone = getShortUserId(jid);
+        
+        const fullChatId = chatId || `${clientPhone}@s.whatsapp.net`;
+        const name = userName || 'Usuario';
+        
+        threadPersistence.setThread(clientPhone, threadId, fullChatId, name);
+        logThreadPersist(clientPhone, threadId, 'saved');
+        
+        const stats = threadPersistence.getStats();
+        logInfo('THREAD_STATE', 'Estado de threads actualizado', stats);
+        
+        return true;
+    };
+
+    const getThreadId = (jid: string): string | null => {
+        if (!jid) {
+            logWarning('THREAD_GET', 'Intento de obtener thread con jid nulo');
+            return null;
+        }
+        const clientPhone = getShortUserId(jid);
+        
+        const threadInfo = threadPersistence.getThread(clientPhone);
+        const threadId = threadInfo?.threadId || null;
+        
+        logDebug('THREAD_LOOKUP', `Búsqueda de thread`, {
+            userJid: jid,
+            cleanedId: clientPhone,
+            found: !!threadId,
+            threadId: threadId,
+            threadInfo: threadInfo
+        });
+        
+        if (threadId) {
+            logInfo('THREAD_GET', `Thread encontrado para ${clientPhone} (${threadInfo.userName}): ${threadId}`, {
+                chatId: threadInfo.chatId,
+                userName: threadInfo.userName,
+                lastActivity: new Date(threadInfo.lastActivity).toISOString()
+            });
+        } else {
+            logInfo('THREAD_GET', `No existe thread para ${clientPhone}`, {
+                searchedKey: clientPhone
+            });
+        }
+        
+        return threadId;
     };
 
     // Función para contexto temporal
@@ -541,121 +630,139 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         return context;
     };
 
-    // 🚨 COLA DE RUNS DE OPENAI para evitar runs concurrentes
-    class OpenAIRunQueue {
-        private userQueues: Map<string, Promise<any>> = new Map();
+    // --- Función para procesar mensajes agrupados ---
+    async function processUserMessages(userId: string) {
+        const buffer = userMessageBuffers.get(userId);
+        if (!buffer || buffer.messages.length === 0) {
+            logWarning('MESSAGE_PROCESS', `Buffer vacío o inexistente para ${getShortUserId(userId)}`);
+            return;
+        }
+
+        const shortUserId = getShortUserId(userId);
         
-        /**
-         * Ejecuta una operación de OpenAI en cola para evitar runs concurrentes
-         */
-        async executeInQueue<T>(userId: string, operation: () => Promise<T>): Promise<T> {
-            const shortUserId = getShortUserId(userId);
+        // 🛡️ VERIFICAR RATE LIMITING
+        if (!rateLimiter.canProcess(userId)) {
+            logWarning('RATE_LIMIT_EXCEEDED', `Usuario excedió límite de mensajes`, {
+                userId: shortUserId,
+                environment: config.environment
+            });
             
-            // Obtener la promesa actual o crear una resuelta
-            const currentQueue = this.userQueues.get(userId) || Promise.resolve();
+            await sendWhatsAppMessage(buffer.chatId, 
+                'Por favor espera un momento antes de enviar más mensajes 🙏');
             
-            // Encadenar la nueva operación
-            const newQueue = currentQueue
-                .then(() => {
-                    logDebug('RUN_QUEUE', `Ejecutando operación en cola para ${shortUserId}`, {
-                        environment: config.environment
-                    });
-                    return operation();
-                })
-                .catch(error => {
-                    logError('RUN_QUEUE_ERROR', `Error en cola de runs para ${shortUserId}`, {
-                        error: error.message,
-                        environment: config.environment
-                    });
-                    throw error;
-                })
-                .finally(() => {
-                    // Limpiar la cola si es la última operación
-                    if (this.userQueues.get(userId) === newQueue) {
-                        this.userQueues.delete(userId);
-                        logDebug('RUN_QUEUE', `Cola limpiada para ${shortUserId}`, {
-                            environment: config.environment
-                        });
-                    }
-                });
-            
-            // Actualizar la cola
-            this.userQueues.set(userId, newQueue);
-            
-            return newQueue;
+            // Limpiar buffer y timer
+            userMessageBuffers.delete(userId);
+            userActivityTimers.delete(userId);
+            return;
         }
         
-        /**
-         * Verifica si hay operaciones pendientes para un usuario
-         */
-        hasPendingOperations(userId: string): boolean {
-            return this.userQueues.has(userId);
+        const combinedMessage = buffer.messages.join('\n\n');
+
+        logInfo('MESSAGE_PROCESS', `Procesando mensajes agrupados`, {
+            userId,
+            shortUserId,
+            chatId: buffer.chatId,
+            messageCount: buffer.messages.length,
+            totalLength: combinedMessage.length,
+            preview: combinedMessage.substring(0, 100) + '...',
+            environment: config.environment
+        });
+
+        // 🎯 Log compacto - Inicio con colores
+        const timestamp1 = getCompactTimestamp();
+        console.log(`${LOG_COLORS.TIMESTAMP}${timestamp1}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} 🤖 ${buffer.messages.length} msgs → OpenAI`);
+        
+        // Enviar a OpenAI con el userId original y la información completa del cliente
+        const startTime = Date.now();
+        const response = await processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.name);
+        const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
+        
+        // 🎯 Log compacto - Resultado con preview
+        const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
+        const timestamp2 = getCompactTimestamp();
+        
+        // Verificar si la respuesta será dividida en párrafos
+        const paragraphs = response.split(/\n\n+/).filter(p => p.trim().length > 0);
+        const willSplit = paragraphs.length > 1;
+        
+        if (willSplit) {
+            console.log(`${LOG_COLORS.TIMESTAMP}${timestamp2}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Completado (${aiDuration}s) → 💬 ${paragraphs.length} párrafos`);
+        } else {
+            console.log(`${LOG_COLORS.TIMESTAMP}${timestamp2}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Completado (${aiDuration}s) → 💬 "${preview}"`);
         }
         
-        /**
-         * Obtener estadísticas de la cola
-         */
-        getStats() {
-            return {
-                activeQueues: this.userQueues.size,
-                users: Array.from(this.userQueues.keys()).map(getShortUserId)
-            };
-        }
+        // Enviar respuesta a WhatsApp usando la función mejorada
+        await sendWhatsAppMessage(buffer.chatId, response);
+
+        // Limpiar buffer
+        userMessageBuffers.delete(userId);
+        userActivityTimers.delete(userId);
+        logBufferActivity(shortUserId, 'buffer_cleared');
     }
 
-    // Crear instancia global de la cola
-    const openAIQueue = new OpenAIRunQueue();
-
-    // 🛡️ RATE LIMITER SIMPLE para prevenir spam por usuario
-    class SimpleRateLimiter {
-        private userRequests: Map<string, number[]> = new Map();
-        private readonly maxRequests = 20; // 20 mensajes por ventana
-        private readonly windowMs = 60000; // 1 minuto
-        
-        canProcess(userId: string): boolean {
-            const now = Date.now();
-            const requests = this.userRequests.get(userId) || [];
+    // --- 🎯 FUNCIÓN PARA OBTENER INFORMACIÓN ENRIQUECIDA DEL CONTACTO ---
+    const getEnhancedContactInfo = async (userId: string, chatId: string) => {
+        try {
+            const endpoint = `${WHAPI_API_URL}/chats/${encodeURIComponent(chatId)}`;
             
-            // Filtrar requests antiguos (fuera de la ventana)
-            const recentRequests = requests.filter(time => now - time < this.windowMs);
+            logDebug('CONTACT_API', `Obteniendo info adicional del contacto ${userId}`, {
+                endpoint,
+                environment: config.environment
+            });
             
-            if (recentRequests.length >= this.maxRequests) {
-                return false;
-            }
-            
-            recentRequests.push(now);
-            this.userRequests.set(userId, recentRequests);
-            
-            // Limpieza periódica para evitar memory leak
-            if (this.userRequests.size > 100) {
-                this.cleanup();
-            }
-            
-            return true;
-        }
-        
-        private cleanup() {
-            const now = Date.now();
-            this.userRequests.forEach((requests, userId) => {
-                const recent = requests.filter(time => now - time < this.windowMs);
-                if (recent.length === 0) {
-                    this.userRequests.delete(userId);
-                } else {
-                    this.userRequests.set(userId, recent);
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${WHAPI_TOKEN}`
                 }
+            });
+            
+            if (response.ok) {
+                const chatData = await response.json() as any;
+                
+                const enhancedInfo = {
+                    name: cleanContactName(chatData.name || chatData.first_name || 'Usuario'),
+                    labels: chatData.labels || [],
+                    lastSeen: chatData.last_message?.timestamp,
+                    isContact: !!chatData.name,
+                    profilePic: chatData.profile_pic_url
+                };
+                
+                logInfo('CONTACT_API_DETAILED', `Información detallada del contacto ${userId}`, {
+                    name: enhancedInfo.name,
+                    labels: enhancedInfo.labels,
+                    labelsCount: enhancedInfo.labels.length,
+                    lastSeen: enhancedInfo.lastSeen,
+                    isContact: enhancedInfo.isContact,
+                    profilePic: enhancedInfo.profilePic ? 'Sí' : 'No',
+                    environment: config.environment
+                });
+                
+                logSuccess('CONTACT_API', `Info adicional obtenida para ${userId}`, {
+                    hasName: !!enhancedInfo.name,
+                    hasLabels: enhancedInfo.labels.length > 0,
+                    isContact: enhancedInfo.isContact,
+                    environment: config.environment
+                });
+                
+                return enhancedInfo;
+            } else {
+                logWarning('CONTACT_API', `No se pudo obtener info adicional para ${userId}: ${response.status}`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    environment: config.environment
+                });
+            }
+        } catch (error) {
+            logError('CONTACT_API', `Error obteniendo info del contacto ${userId}`, { 
+                error: error.message,
+                environment: config.environment
             });
         }
         
-        getStats() {
-            return {
-                activeUsers: this.userRequests.size,
-                totalRequests: Array.from(this.userRequests.values())
-                    .reduce((sum, requests) => sum + requests.length, 0)
-            };
-        }
-    }
-
-    const rateLimiter = new SimpleRateLimiter();
+        return { name: 'Usuario', labels: [], isContact: false };
+    };
 
     // --- 🎯 FUNCIÓN PARA ENVÍO INTELIGENTE DE MENSAJES CON DIVISIÓN ---
     async function sendWhatsAppMessage(chatId: string, message: string) {
@@ -787,6 +894,11 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                             timestamp: new Date().toISOString(),
                             environment: config.environment
                         });
+                        
+                        // Limpiar después de 10 minutos
+                        setTimeout(() => {
+                            botSentMessages.delete(result.message.id);
+                        }, 10 * 60 * 1000);
                     }
                     
                     logSuccess('WHATSAPP_SEND', `Mensaje enviado exitosamente`, {
@@ -882,23 +994,139 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         }
     }
 
+    // 🚨 COLA DE RUNS DE OPENAI para evitar runs concurrentes
+    class OpenAIRunQueue {
+        private userQueues: Map<string, Promise<any>> = new Map();
+        
+        /**
+         * Ejecuta una operación de OpenAI en cola para evitar runs concurrentes
+         */
+        async executeInQueue<T>(userId: string, operation: () => Promise<T>): Promise<T> {
+            const shortUserId = getShortUserId(userId);
+            
+            // Obtener la promesa actual o crear una resuelta
+            const currentQueue = this.userQueues.get(userId) || Promise.resolve();
+            
+            // Encadenar la nueva operación
+            const newQueue = currentQueue
+                .then(() => {
+                    logDebug('RUN_QUEUE', `Ejecutando operación en cola para ${shortUserId}`, {
+                        environment: config.environment
+                    });
+                    return operation();
+                })
+                .catch(error => {
+                    logError('RUN_QUEUE_ERROR', `Error en cola de runs para ${shortUserId}`, {
+                        error: error.message,
+                        environment: config.environment
+                    });
+                    throw error;
+                })
+                .finally(() => {
+                    // Limpiar la cola si es la última operación
+                    if (this.userQueues.get(userId) === newQueue) {
+                        this.userQueues.delete(userId);
+                        logDebug('RUN_QUEUE', `Cola limpiada para ${shortUserId}`, {
+                            environment: config.environment
+                        });
+                    }
+                });
+            
+            // Actualizar la cola
+            this.userQueues.set(userId, newQueue);
+            
+            return newQueue;
+        }
+        
+        /**
+         * Verifica si hay operaciones pendientes para un usuario
+         */
+        hasPendingOperations(userId: string): boolean {
+            return this.userQueues.has(userId);
+        }
+        
+        /**
+         * Obtener estadísticas de la cola
+         */
+        getStats() {
+            return {
+                activeQueues: this.userQueues.size,
+                users: Array.from(this.userQueues.keys()).map(getShortUserId)
+            };
+        }
+    }
+
+    // Crear instancia global de la cola
+    const openAIQueue = new OpenAIRunQueue();
+
+    // 🛡️ RATE LIMITER SIMPLE para prevenir spam por usuario
+    class SimpleRateLimiter {
+        private userRequests: Map<string, number[]> = new Map();
+        private readonly maxRequests = 20; // 20 mensajes por ventana
+        private readonly windowMs = 60000; // 1 minuto
+        
+        canProcess(userId: string): boolean {
+            const now = Date.now();
+            const requests = this.userRequests.get(userId) || [];
+            
+            // Filtrar requests antiguos (fuera de la ventana)
+            const recentRequests = requests.filter(time => now - time < this.windowMs);
+            
+            if (recentRequests.length >= this.maxRequests) {
+                return false;
+            }
+            
+            recentRequests.push(now);
+            this.userRequests.set(userId, recentRequests);
+            
+            // Limpieza periódica para evitar memory leak
+            if (this.userRequests.size > 100) {
+                this.cleanup();
+            }
+            
+            return true;
+        }
+        
+        private cleanup() {
+            const now = Date.now();
+            this.userRequests.forEach((requests, userId) => {
+                const recent = requests.filter(time => now - time < this.windowMs);
+                if (recent.length === 0) {
+                    this.userRequests.delete(userId);
+                } else {
+                    this.userRequests.set(userId, recent);
+                }
+            });
+        }
+        
+        getStats() {
+            return {
+                activeUsers: this.userRequests.size,
+                totalRequests: Array.from(this.userRequests.values())
+                    .reduce((sum, requests) => sum + requests.length, 0)
+            };
+        }
+    }
+
+    const rateLimiter = new SimpleRateLimiter();
+
     // --- Función principal de procesamiento con OpenAI
-    const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string | null = null, userName: string | null = null): Promise<string> => {
+    const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string = null, userName: string = null): Promise<string> => {
         const shortUserId = getShortUserId(userJid);
         
         // 🚨 USAR COLA para evitar runs concurrentes
         return openAIQueue.executeInQueue(userJid, async () => {
             const startTime = Date.now();
-        
-        logInfo('USER_DEBUG', `UserJid para búsqueda: "${userJid}"`, { 
-            originalFormat: userJid,
-            cleanedFormat: shortUserId,
-            chatId: chatId,
-            userName: userName,
-            environment: config.environment
-        });
-        
-        try {
+            
+            logInfo('USER_DEBUG', `UserJid para búsqueda: "${userJid}"`, { 
+                originalFormat: userJid,
+                cleanedFormat: shortUserId,
+                chatId: chatId,
+                userName: userName,
+                environment: config.environment
+            });
+            
+            try {
             // Verificar thread existente
             let threadId = getThreadId(userJid);
             
@@ -908,12 +1136,39 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 { userJid, shortUserId, threadId, totalThreads: stats.totalThreads }
             );
             
+            let chatHistoryContext = '';
+            
             if (!threadId) {
                 logOpenAIRequest(shortUserId, 'creating_new_thread');
                 const thread = await openaiClient.beta.threads.create();
                 threadId = thread.id;
                 
                 saveThreadId(userJid, threadId, chatId, userName);
+                
+                // 🆕 OBTENER ETIQUETAS INMEDIATAMENTE PARA NUEVO THREAD
+                try {
+                    const enhancedInfo = await getEnhancedContactInfo(shortUserId, chatId);
+                    if (enhancedInfo.labels && enhancedInfo.labels.length > 0) {
+                        threadPersistence.updateThreadMetadata(shortUserId, {
+                            name: enhancedInfo.name,
+                            userName: userName,
+                            labels: enhancedInfo.labels
+                        });
+                        logInfo('NEW_THREAD_LABELS', `Labels establecidas para nuevo thread`, {
+                            shortUserId,
+                            threadId,
+                            labelsCount: enhancedInfo.labels.length,
+                            labels: enhancedInfo.labels,
+                            environment: config.environment
+                        });
+                    }
+                } catch (err) {
+                    logWarning('NEW_THREAD_LABELS_ERROR', `Error obteniendo labels para nuevo thread`, {
+                        shortUserId,
+                        error: err.message,
+                        environment: config.environment
+                    });
+                }
                 
                 logOpenAIRequest(shortUserId, 'thread_created');
                 logSuccess('THREAD_NEW', `Nuevo thread creado para ${shortUserId} (${userName})`, { 
@@ -924,6 +1179,43 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     userName: userName
                 });
             } else {
+                // 🆕 ACTUALIZACIÓN DE ETIQUETAS CADA 24 HORAS
+                const threadInfo = threadPersistence.getThread(shortUserId);
+                if (threadInfo && threadInfo.lastActivity) {
+                    const lastActivityDate = new Date(threadInfo.lastActivity);
+                    const now = new Date();
+                    const hoursSinceLastActivity = (now.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60);
+                    
+                    if (hoursSinceLastActivity > 24) {
+                        logInfo('LABELS_24H_UPDATE', `Han pasado ${Math.floor(hoursSinceLastActivity)} horas, actualizando etiquetas`, {
+                            shortUserId,
+                            lastActivity: threadInfo.lastActivity,
+                            environment: config.environment
+                        });
+                        
+                        try {
+                            const enhancedInfo = await getEnhancedContactInfo(shortUserId, chatId);
+                            threadPersistence.updateThreadMetadata(shortUserId, {
+                                name: enhancedInfo.name,
+                                userName: userName,
+                                labels: enhancedInfo.labels
+                            });
+                            logInfo('LABELS_24H_UPDATED', `Etiquetas actualizadas después de 24h`, {
+                                shortUserId,
+                                labelsCount: enhancedInfo.labels?.length || 0,
+                                labels: enhancedInfo.labels,
+                                environment: config.environment
+                            });
+                        } catch (err) {
+                            logWarning('LABELS_24H_ERROR', `Error actualizando etiquetas después de 24h`, {
+                                shortUserId,
+                                error: err.message,
+                                environment: config.environment
+                            });
+                        }
+                    }
+                }
+                
                 logSuccess('THREAD_REUSE', `Reutilizando thread existente para ${shortUserId} (${userName || 'Usuario'})`, {
                     threadId,
                     userJid: userJid,
@@ -931,14 +1223,210 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 });
             }
             
+            // 🔄 RECOVERY: Verificar si hay respuestas pendientes de reinicios anteriores
+            try {
+                const recentMessages = await openaiClient.beta.threads.messages.list(threadId, {
+                    limit: 3,
+                    order: 'desc'
+                });
+                
+                // Buscar si hay una respuesta del asistente reciente sin enviar
+                const lastAssistantMessage = recentMessages.data.find(msg => msg.role === 'assistant');
+                if (lastAssistantMessage && lastAssistantMessage.content[0]?.type === 'text') {
+                    const messageAge = Date.now() - (lastAssistantMessage.created_at * 1000);
+                    
+                    // Si hay una respuesta de menos de 5 minutos, podría ser huérfana
+                    if (messageAge < 5 * 60 * 1000) {
+                        logInfo('RECOVERY_CHECK', `Respuesta reciente encontrada, verificando si es huérfana`, {
+                            shortUserId,
+                            messageAge: Math.round(messageAge / 1000) + 's',
+                            environment: config.environment
+                        });
+                        
+                        // Enviar la respuesta que pudo haberse perdido
+                        const orphanedResponse = lastAssistantMessage.content[0].text.value;
+                        await sendWhatsAppMessage(chatId, orphanedResponse);
+                        
+                        logSuccess('RECOVERY_SUCCESS', `Respuesta huérfana recuperada y enviada`, {
+                            shortUserId,
+                            responseLength: orphanedResponse.length,
+                            messageAge: Math.round(messageAge / 1000) + 's',
+                            environment: config.environment
+                        });
+                        
+                        // Retornar para evitar procesar el mensaje nuevamente
+                        return orphanedResponse;
+                    }
+                }
+            } catch (recoveryError) {
+                logWarning('RECOVERY_ERROR', `Error en verificación de recovery`, {
+                    shortUserId,
+                    error: recoveryError.message,
+                    environment: config.environment
+                });
+            }
+            
             // Agregar mensaje del usuario con contextos
             logOpenAIRequest(shortUserId, 'adding_message');
             
+            // 🔧 CRÍTICO: Verificar y cancelar runs activos ANTES de agregar mensaje
+            logInfo('RUN_CHECK_START', `Verificando runs activos antes de agregar mensaje`, {
+                shortUserId,
+                threadId,
+                environment: config.environment
+            });
+            
+            let retryCount = 0;
+            const maxRetries = 3;
+            let activeRunHandled = false;
+            
+            while (!activeRunHandled && retryCount < maxRetries) {
+                try {
+                    const existingRuns = await openaiClient.beta.threads.runs.list(threadId, { limit: 5 });
+                    const activeRuns = existingRuns.data.filter(r => 
+                        ['queued', 'in_progress', 'requires_action'].includes(r.status)
+                    );
+                    
+                    if (activeRuns.length > 0) {
+                        logWarning('ACTIVE_RUNS_DETECTED', `${activeRuns.length} run(s) activo(s) detectado(s), cancelando`, {
+                            shortUserId,
+                            activeRuns: activeRuns.map(r => ({
+                                id: r.id,
+                                status: r.status,
+                                created_at: r.created_at,
+                                expires_at: r.expires_at
+                            })),
+                            threadId,
+                            retryAttempt: retryCount + 1,
+                            environment: config.environment
+                        });
+                        
+                        // Cancelar todos los runs activos en paralelo
+                        const cancelPromises = activeRuns.map(async (activeRun) => {
+                            try {
+                                await openaiClient.beta.threads.runs.cancel(threadId, activeRun.id);
+                                logSuccess('ACTIVE_RUN_CANCELLED', `Run cancelado: ${activeRun.id}`, {
+                                    shortUserId,
+                                    runId: activeRun.id,
+                                    previousStatus: activeRun.status,
+                                    threadId,
+                                    environment: config.environment
+                                });
+                                return { success: true, runId: activeRun.id };
+                            } catch (cancelError) {
+                                logError('RUN_CANCEL_ERROR', `Error cancelando run ${activeRun.id}`, {
+                                    shortUserId,
+                                    runId: activeRun.id,
+                                    error: cancelError.message,
+                                    errorCode: cancelError.status,
+                                    threadId,
+                                    environment: config.environment
+                                });
+                                return { success: false, runId: activeRun.id, error: cancelError.message };
+                            }
+                        });
+                        
+                        const cancelResults = await Promise.all(cancelPromises);
+                        const successfulCancellations = cancelResults.filter(r => r.success).length;
+                        
+                        logInfo('RUN_CANCELLATION_SUMMARY', `Cancelación completada: ${successfulCancellations}/${activeRuns.length} exitosas`, {
+                            shortUserId,
+                            totalRuns: activeRuns.length,
+                            successful: successfulCancellations,
+                            threadId,
+                            retryAttempt: retryCount + 1,
+                            environment: config.environment
+                        });
+                        
+                        // Esperar para que las cancelaciones tomen efecto
+                        const waitTime = Math.min(2000 + (retryCount * 1000), 5000); // 2s, 3s, 4s max
+                        logInfo('RUN_CANCEL_WAIT', `Esperando ${waitTime}ms para que las cancelaciones tomen efecto`, {
+                            shortUserId,
+                            waitTime,
+                            retryAttempt: retryCount + 1,
+                            environment: config.environment
+                        });
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                        
+                        // Verificar si realmente se cancelaron
+                        const verificationRuns = await openaiClient.beta.threads.runs.list(threadId, { limit: 5 });
+                        const stillActiveRuns = verificationRuns.data.filter(r => 
+                            ['queued', 'in_progress', 'requires_action'].includes(r.status)
+                        );
+                        
+                        if (stillActiveRuns.length > 0) {
+                            logWarning('RUNS_STILL_ACTIVE', `${stillActiveRuns.length} run(s) siguen activos después de cancelación`, {
+                                shortUserId,
+                                stillActiveRuns: stillActiveRuns.map(r => ({
+                                    id: r.id,
+                                    status: r.status,
+                                    created_at: r.created_at
+                                })),
+                                threadId,
+                                retryAttempt: retryCount + 1,
+                                environment: config.environment
+                            });
+                            retryCount++;
+                            continue; // Reintentar
+                        }
+                    }
+                    
+                    activeRunHandled = true;
+                    logSuccess('RUN_CHECK_COMPLETE', `Verificación de runs activos completada`, {
+                        shortUserId,
+                        threadId,
+                        activeRunsFound: activeRuns.length,
+                        retryAttempt: retryCount + 1,
+                        environment: config.environment
+                    });
+                    
+                } catch (listError) {
+                    logError('RUN_LIST_ERROR', `Error listando runs existentes`, {
+                        shortUserId,
+                        error: listError.message,
+                        errorCode: listError.status,
+                        threadId,
+                        retryAttempt: retryCount + 1,
+                        environment: config.environment
+                    });
+                    retryCount++;
+                    
+                    if (retryCount >= maxRetries) {
+                        logError('RUN_CLEANUP_FAILED', `Falló limpieza de runs después de ${maxRetries} intentos`, {
+                            shortUserId,
+                            threadId,
+                            finalError: listError.message,
+                            environment: config.environment
+                        });
+                        return 'Lo siento, hay un problema técnico con la conversación. Por favor intenta de nuevo en unos momentos.';
+                    }
+                    
+                    // Esperar antes de reintentar
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+                }
+            }
+            
+            if (!activeRunHandled) {
+                logError('RUN_CLEANUP_TIMEOUT', `No se pudo limpiar runs activos después de ${maxRetries} intentos`, {
+                    shortUserId,
+                    threadId,
+                    maxRetries,
+                    environment: config.environment
+                });
+                return 'Lo siento, hay un problema técnico con la conversación. Por favor intenta de nuevo en unos momentos.';
+            }
+            
+            // 🎯 AHORA SÍ: Agregar mensaje del usuario con contextos
             const currentThreadInfo = threadPersistence.getThread(shortUserId);
             const timeContext = getCurrentTimeContext();
             const conversationalContext = getConversationalContext(currentThreadInfo);
             
             let messageWithContexts = timeContext + '\n\n' + conversationalContext;
+            
+            if (chatHistoryContext) {
+                messageWithContexts += '\n\n' + chatHistoryContext;
+            }
+            
             messageWithContexts += '\n\n' + userMsg;
             
             await openaiClient.beta.threads.messages.create(threadId, {
@@ -1009,6 +1497,407 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 
                 return sanitizeResponseForClient('Lo siento, no pude generar una respuesta adecuada.');
                 
+            } else if (run.status === 'requires_action') {
+                // 🎯 FUNCTION CALLING COMPLETO con manejo avanzado
+                const toolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
+                
+                if (!toolCalls || toolCalls.length === 0) {
+                    logError('FUNCTION_CALLING_NO_TOOLS', `Run requires_action pero sin tool_calls`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        required_action: run.required_action
+                    });
+                    return sanitizeResponseForClient('Lo siento, hubo un problema procesando la consulta. Por favor intenta de nuevo.');
+                }
+                
+                logInfo('FUNCTION_CALLING_START', `OpenAI requiere ejecutar ${toolCalls.length} función(es)`, {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    toolCallsCount: toolCalls.length,
+                    functions: toolCalls.map(tc => ({
+                        id: tc.id,
+                        name: tc.function.name,
+                        argsLength: tc.function.arguments.length
+                    })),
+                    expires_at: run.expires_at,
+                    environment: config.environment
+                });
+                
+                try {
+                    // 🔧 PROCESAMIENTO PARALELO de tool calls con error handling
+                    const toolOutputPromises = toolCalls.map(async (toolCall, index) => {
+                        const startTime = Date.now();
+                        
+                        if (toolCall.type !== 'function') {
+                            logWarning('FUNCTION_CALL_SKIP', `Tool call tipo '${toolCall.type}' no soportado`, {
+                                shortUserId,
+                                toolCallId: toolCall.id,
+                                type: toolCall.type,
+                                index
+                            });
+                            return {
+                                tool_call_id: toolCall.id,
+                                output: JSON.stringify({ 
+                                    error: `Tool call tipo '${toolCall.type}' no soportado`,
+                                    success: false 
+                                })
+                            };
+                        }
+                        
+                        const functionName = toolCall.function.name;
+                        let functionArgs;
+                        
+                        try {
+                            functionArgs = JSON.parse(toolCall.function.arguments);
+                        } catch (parseError) {
+                            logError('FUNCTION_ARGS_PARSE_ERROR', `Error parseando argumentos para ${functionName}`, {
+                                shortUserId,
+                                functionName,
+                                toolCallId: toolCall.id,
+                                rawArgs: toolCall.function.arguments,
+                                parseError: parseError.message
+                            });
+                            return {
+                                tool_call_id: toolCall.id,
+                                output: JSON.stringify({ 
+                                    error: 'Error parseando argumentos de la función',
+                                    success: false 
+                                })
+                            };
+                        }
+                        
+                        logInfo('FUNCTION_EXECUTION_START', `Ejecutando función ${functionName} [${index + 1}/${toolCalls.length}]`, {
+                            shortUserId,
+                            functionName,
+                            args: functionArgs,
+                            toolCallId: toolCall.id,
+                            index: index + 1,
+                            total: toolCalls.length,
+                            environment: config.environment
+                        });
+                        
+                        try {
+                            // Ejecutar la función usando FunctionHandler
+                            const { FunctionHandler } = await import('./handlers/function-handler.js');
+                            const functionHandler = new FunctionHandler();
+                            const result = await functionHandler.handleFunction(functionName, functionArgs);
+                            
+                            const executionTime = Date.now() - startTime;
+                            
+                            // 🔧 FORMATEO ROBUSTO del resultado
+                            let formattedResult;
+                            if (typeof result === 'string') {
+                                formattedResult = result;
+                            } else if (result && typeof result === 'object') {
+                                formattedResult = JSON.stringify(result);
+                            } else {
+                                formattedResult = String(result || 'success');
+                            }
+                            
+                            logSuccess('FUNCTION_EXECUTION_COMPLETE', `Función ${functionName} ejecutada exitosamente`, {
+                                shortUserId,
+                                functionName,
+                                toolCallId: toolCall.id,
+                                executionTime,
+                                resultLength: formattedResult.length,
+                                resultPreview: formattedResult.substring(0, 200) + (formattedResult.length > 200 ? '...' : ''),
+                                index: index + 1,
+                                total: toolCalls.length,
+                                environment: config.environment
+                            });
+                            
+                            return {
+                                tool_call_id: toolCall.id,
+                                output: sanitizeResponseForClient(formattedResult)
+                            };
+                            
+                        } catch (functionError) {
+                            const executionTime = Date.now() - startTime;
+                            
+                            logError('FUNCTION_EXECUTION_ERROR', `Error ejecutando función ${functionName}`, {
+                                shortUserId,
+                                functionName,
+                                toolCallId: toolCall.id,
+                                error: functionError.message,
+                                stack: functionError.stack,
+                                executionTime,
+                                args: functionArgs,
+                                index: index + 1,
+                                total: toolCalls.length,
+                                environment: config.environment
+                            });
+                            
+                            return {
+                                tool_call_id: toolCall.id,
+                                output: JSON.stringify({ 
+                                    error: 'Error ejecutando la función',
+                                    details: functionError.message,
+                                    success: false 
+                                })
+                            };
+                        }
+                    });
+                    
+                    // Esperar a que todas las funciones terminen
+                    const toolOutputs = await Promise.all(toolOutputPromises);
+                    
+                    // Log detallado del contenido enviado a OpenAI
+                    logInfo('OPENAI_TOOL_OUTPUTS_DETAIL', `Contenido exacto enviado a OpenAI en tool_outputs`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        toolOutputsCount: toolOutputs.length,
+                        toolOutputsDetail: toolOutputs.map((output, i) => ({
+                            tool_call_id: output.tool_call_id,
+                            outputLength: output.output.length,
+                            isError: output.output.includes('"error"') || output.output.includes('"success":false'),
+                            fullContent: output.output,
+                            contentType: typeof output.output
+                        })),
+                        timestamp: new Date().toISOString(),
+                        environment: config.environment
+                    });
+                    
+                    logInfo('FUNCTION_CALLING_OUTPUTS_READY', `Todas las funciones completadas, enviando resultados`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        toolOutputsCount: toolOutputs.length,
+                        outputSummary: toolOutputs.map((output, i) => ({
+                            tool_call_id: output.tool_call_id,
+                            outputLength: output.output.length,
+                            isError: output.output.includes('"error"') || output.output.includes('"success":false')
+                        })),
+                        environment: config.environment
+                    });
+                    
+                    // 🔧 ENVÍO CON TIMEOUT Y RETRY
+                    let submitAttempts = 0;
+                    const maxSubmitAttempts = 3;
+                    let submitSuccess = false;
+                    
+                    while (!submitSuccess && submitAttempts < maxSubmitAttempts) {
+                        try {
+                            submitAttempts++;
+                            
+                            logInfo('FUNCTION_SUBMIT_ATTEMPT', `Enviando tool outputs [intento ${submitAttempts}/${maxSubmitAttempts}]`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                attempt: submitAttempts,
+                                environment: config.environment
+                            });
+                            
+                            run = await openaiClient.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+                                tool_outputs: toolOutputs
+                            });
+                            
+                            submitSuccess = true;
+                            
+                            logSuccess('FUNCTION_SUBMIT_SUCCESS', `Tool outputs enviados exitosamente`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                toolOutputsCount: toolOutputs.length,
+                                newRunStatus: run.status,
+                                attempt: submitAttempts,
+                                environment: config.environment
+                            });
+                            
+                        } catch (submitError) {
+                            logError('FUNCTION_SUBMIT_ERROR', `Error enviando tool outputs [intento ${submitAttempts}]`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                error: submitError.message,
+                                errorCode: submitError.status,
+                                attempt: submitAttempts,
+                                maxAttempts: maxSubmitAttempts,
+                                environment: config.environment
+                            });
+                            
+                            if (submitAttempts >= maxSubmitAttempts) {
+                                return sanitizeResponseForClient('Lo siento, hubo un problema enviando los resultados de la consulta. Por favor intenta de nuevo.');
+                            }
+                            
+                            // Esperar antes de reintentar
+                            await new Promise(resolve => setTimeout(resolve, 1000 * submitAttempts));
+                        }
+                    }
+                    
+                    // 🔧 CONTINUAR ESPERANDO HASTA COMPLETION con timeout de 10 minutos
+                    const submitTime = Date.now();
+                    const maxWaitTime = 10 * 60 * 1000; // 10 minutos (límite de OpenAI)
+                    attempts = 0;
+                    const maxWaitAttempts = Math.floor(maxWaitTime / 500); // 500ms por intento
+                    
+                    logInfo('FUNCTION_WAITING_COMPLETION', `Esperando completion después de function calling`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        currentStatus: run.status,
+                        maxWaitMinutes: 10,
+                        environment: config.environment
+                    });
+                    
+                    while (['queued', 'in_progress'].includes(run.status) && attempts < maxWaitAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        try {
+                            run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
+                        } catch (retrieveError: any) {
+                            // Manejar rate limit en retrieve
+                            if (retrieveError?.code === 'rate_limit_exceeded') {
+                                const retryAfter = 2; // Default 2 segundos
+                                logWarning('RATE_LIMIT_RETRIEVE', `Rate limit en retrieve, esperando ${retryAfter}s`, {
+                                    shortUserId,
+                                    retryAfter,
+                                    error: retrieveError.message,
+                                    environment: config.environment
+                                });
+                                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                                continue;
+                            }
+                            throw retrieveError;
+                        }
+                        
+                        attempts++;
+                        
+                        // Log periódico cada 30 segundos
+                        if (attempts % 60 === 0) {
+                            const waitedMinutes = Math.floor((Date.now() - submitTime) / 60000);
+                            logInfo('FUNCTION_WAITING_UPDATE', `Esperando completion: ${waitedMinutes} min transcurridos`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                currentStatus: run.status,
+                                waitedMinutes,
+                                attempts: attempts,
+                                maxWaitMinutes: 10,
+                                environment: config.environment
+                            });
+                        }
+                    }
+                    
+                    const functionDuration = Date.now() - startTime;
+                    
+                    logInfo('FUNCTION_CALLING_FINAL_STATUS', `Function calling completado`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        finalStatus: run.status,
+                        totalDuration: functionDuration,
+                        toolCallsCount: toolCalls.length,
+                        waitAttempts: attempts,
+                        environment: config.environment
+                    });
+                    
+                    // Continuar con el procesamiento normal después del function calling
+                    
+                    // Verificar el estado final del run después del function calling
+                    if (run.status === 'completed') {
+                        logSuccess('FUNCTION_CALLING_COMPLETED', `Function calling completado exitosamente`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            finalStatus: run.status,
+                            totalDuration: functionDuration,
+                            toolCallsCount: toolCalls.length,
+                            environment: config.environment
+                        });
+                        
+                        // Obtener la respuesta final del asistente
+                        const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
+                        const assistantMessage = messages.data[0];
+                        
+                        if (assistantMessage && assistantMessage.content && assistantMessage.content.length > 0) {
+                            const content = assistantMessage.content[0];
+                            if (content.type === 'text') {
+                                const responseText = content.text.value;
+                                
+                                logSuccess('FUNCTION_CALLING_RESPONSE', `Respuesta final recibida después de function calling`, {
+                                    shortUserId,
+                                    threadId,
+                                    responseLength: responseText.length,
+                                    totalDuration: functionDuration,
+                                    toolCallsExecuted: toolCalls.length,
+                                    environment: config.environment
+                                });
+                                
+                                return sanitizeResponseForClient(responseText);
+                            }
+                        }
+                        
+                        logWarning('FUNCTION_CALLING_NO_RESPONSE', `Function calling completado pero sin respuesta de texto`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            messageContent: assistantMessage?.content
+                        });
+                        
+                        return sanitizeResponseForClient('Las funciones se ejecutaron correctamente, pero no pude generar una respuesta final.');
+                        
+                    } else if (run.status === 'failed') {
+                        logError('FUNCTION_CALLING_FAILED', `Function calling falló`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            finalStatus: run.status,
+                            lastError: run.last_error,
+                            totalDuration: functionDuration,
+                            toolCallsCount: toolCalls.length,
+                            environment: config.environment
+                        });
+                        
+                        return sanitizeResponseForClient('Lo siento, hubo un problema ejecutando las funciones requeridas. Por favor intenta de nuevo.');
+                        
+                    } else if (run.status === 'expired') {
+                        logError('FUNCTION_CALLING_EXPIRED', `Function calling expiró`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            finalStatus: run.status,
+                            totalDuration: functionDuration,
+                            toolCallsCount: toolCalls.length,
+                            maxWaitMinutes: 10,
+                            environment: config.environment
+                        });
+                        
+                        return sanitizeResponseForClient('Lo siento, la consulta tardó demasiado en procesarse. Por favor intenta de nuevo con una consulta más específica.');
+                        
+                    } else {
+                        logWarning('FUNCTION_CALLING_UNEXPECTED_STATUS', `Function calling terminó con estado inesperado`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            finalStatus: run.status,
+                            totalDuration: functionDuration,
+                            toolCallsCount: toolCalls.length,
+                            environment: config.environment
+                        });
+                        
+                        return sanitizeResponseForClient('Lo siento, hubo un problema procesando la consulta. Por favor intenta de nuevo.');
+                    }
+                    
+                } catch (functionError) {
+                    const functionDuration = Date.now() - startTime;
+                    
+                    logError('FUNCTION_CALLING_CRITICAL_ERROR', `Error crítico en function calling`, {
+                        shortUserId,
+                        error: functionError.message,
+                        stack: functionError.stack,
+                        threadId,
+                        runId: run.id,
+                        duration: functionDuration,
+                        toolCallsCount: toolCalls?.length || 0,
+                        environment: config.environment
+                    });
+                    
+                    return sanitizeResponseForClient('Lo siento, hubo un problema ejecutando la consulta. Por favor intenta de nuevo.');
+                }
+                
             } else {
                 logError('OPENAI_RUN_ERROR', `Run falló o expiró`, {
                     shortUserId,
@@ -1071,193 +1960,6 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         }
         }); // Cerrar executeInQueue
     };
-
-    // Funciones de thread management
-    const saveThreadId = (jid: string, threadId: string, chatId: string | null = null, userName: string | null = null): boolean => {
-        if (!jid || !threadId) {
-            logWarning('THREAD_SAVE', `Intento de guardar thread inválido`, { jid, threadId });
-            return false;
-        }
-        const clientPhone = getShortUserId(jid);
-        
-        const fullChatId = chatId || `${clientPhone}@s.whatsapp.net`;
-        const name = userName || 'Usuario';
-        
-        threadPersistence.setThread(clientPhone, threadId, fullChatId, name);
-        logThreadPersist(clientPhone, threadId, 'saved');
-        
-        const stats = threadPersistence.getStats();
-        logInfo('THREAD_STATE', 'Estado de threads actualizado', stats);
-        
-        return true;
-    };
-
-    const getThreadId = (jid: string): string | null => {
-        if (!jid) {
-            logWarning('THREAD_GET', 'Intento de obtener thread con jid nulo');
-            return null;
-        }
-        const clientPhone = getShortUserId(jid);
-        
-        const threadInfo = threadPersistence.getThread(clientPhone);
-        const threadId = threadInfo?.threadId || null;
-        
-        logDebug('THREAD_LOOKUP', `Búsqueda de thread`, {
-            userJid: jid,
-            cleanedId: clientPhone,
-            found: !!threadId,
-            threadId: threadId,
-            threadInfo: threadInfo
-        });
-        
-        if (threadId) {
-            logInfo('THREAD_GET', `Thread encontrado para ${clientPhone} (${threadInfo.userName}): ${threadId}`, {
-                chatId: threadInfo.chatId,
-                userName: threadInfo.userName,
-                lastActivity: new Date(threadInfo.lastActivity).toISOString()
-            });
-        } else {
-            logInfo('THREAD_GET', `No existe thread para ${clientPhone}`, {
-                searchedKey: clientPhone
-            });
-        }
-        
-        return threadId;
-    };
-
-    // --- 🎯 FUNCIÓN PARA OBTENER INFORMACIÓN ENRIQUECIDA DEL CONTACTO ---
-    const getEnhancedContactInfo = async (userId: string, chatId: string) => {
-        try {
-            const endpoint = `${WHAPI_API_URL}/chats/${encodeURIComponent(chatId)}`;
-            
-            logDebug('CONTACT_API', `Obteniendo info adicional del contacto ${userId}`, {
-                endpoint,
-                environment: config.environment
-            });
-            
-            const response = await fetch(endpoint, {
-                method: 'GET',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${WHAPI_TOKEN}`
-                }
-            });
-            
-            if (response.ok) {
-                const chatData = await response.json() as any;
-                
-                const enhancedInfo = {
-                    name: cleanContactName(chatData.name || chatData.first_name || 'Usuario'),
-                    labels: chatData.labels || [],
-                    lastSeen: chatData.last_message?.timestamp,
-                    isContact: !!chatData.name,
-                    profilePic: chatData.profile_pic_url
-                };
-                
-                logInfo('CONTACT_API_DETAILED', `Información detallada del contacto ${userId}`, {
-                    name: enhancedInfo.name,
-                    labels: enhancedInfo.labels,
-                    labelsCount: enhancedInfo.labels.length,
-                    lastSeen: enhancedInfo.lastSeen,
-                    isContact: enhancedInfo.isContact,
-                    profilePic: enhancedInfo.profilePic ? 'Sí' : 'No',
-                    environment: config.environment
-                });
-                
-                logSuccess('CONTACT_API', `Info adicional obtenida para ${userId}`, {
-                    hasName: !!enhancedInfo.name,
-                    hasLabels: enhancedInfo.labels.length > 0,
-                    isContact: enhancedInfo.isContact,
-                    environment: config.environment
-                });
-                
-                return enhancedInfo;
-            } else {
-                logWarning('CONTACT_API', `No se pudo obtener info adicional para ${userId}: ${response.status}`, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    environment: config.environment
-                });
-            }
-        } catch (error) {
-            logError('CONTACT_API', `Error obteniendo info del contacto ${userId}`, { 
-                error: error.message,
-                environment: config.environment
-            });
-        }
-        
-        return { name: 'Usuario', labels: [], isContact: false };
-    };
-
-    // --- Función para procesar mensajes agrupados ---
-    async function processUserMessages(userId: string) {
-        const buffer = userMessageBuffers.get(userId);
-        if (!buffer || buffer.messages.length === 0) {
-            logWarning('MESSAGE_PROCESS', `Buffer vacío o inexistente para ${getShortUserId(userId)}`);
-            return;
-        }
-
-        const shortUserId = getShortUserId(userId);
-        
-        // 🛡️ VERIFICAR RATE LIMITING
-        if (!rateLimiter.canProcess(userId)) {
-            logWarning('RATE_LIMIT_EXCEEDED', `Usuario excedió límite de mensajes`, {
-                userId: shortUserId,
-                environment: config.environment
-            });
-            
-            await sendWhatsAppMessage(buffer.chatId, 
-                'Por favor espera un momento antes de enviar más mensajes 🙏');
-            
-            // Limpiar buffer y timer
-            userMessageBuffers.delete(userId);
-            userActivityTimers.delete(userId);
-            return;
-        }
-        
-        const combinedMessage = buffer.messages.join('\n\n');
-
-        logInfo('MESSAGE_PROCESS', `Procesando mensajes agrupados`, {
-            userId,
-            shortUserId,
-            chatId: buffer.chatId,
-            messageCount: buffer.messages.length,
-            totalLength: combinedMessage.length,
-            preview: combinedMessage.substring(0, 100) + '...',
-            environment: config.environment
-        });
-
-        // 🎯 Log compacto - Inicio con colores
-        const timestamp1 = getCompactTimestamp();
-        console.log(`${LOG_COLORS.TIMESTAMP}${timestamp1}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} 🤖 ${buffer.messages.length} msgs → OpenAI`);
-        
-        // Enviar a OpenAI con el userId original y la información completa del cliente
-        const startTime = Date.now();
-        const response = await processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.name);
-        const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
-        
-        // 🎯 Log compacto - Resultado con preview
-        const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
-        const timestamp2 = getCompactTimestamp();
-        
-        // Verificar si la respuesta será dividida en párrafos
-        const paragraphs = response.split(/\n\n+/).filter(p => p.trim().length > 0);
-        const willSplit = paragraphs.length > 1;
-        
-        if (willSplit) {
-            console.log(`${LOG_COLORS.TIMESTAMP}${timestamp2}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Completado (${aiDuration}s) → 💬 ${paragraphs.length} párrafos`);
-        } else {
-            console.log(`${LOG_COLORS.TIMESTAMP}${timestamp2}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Completado (${aiDuration}s) → 💬 "${preview}"`);
-        }
-        
-        // Enviar respuesta a WhatsApp usando la función mejorada
-        await sendWhatsAppMessage(buffer.chatId, response);
-
-        // Limpiar buffer
-        userMessageBuffers.delete(userId);
-        userActivityTimers.delete(userId);
-        logBufferActivity(shortUserId, 'buffer_cleared');
-    }
 
     // --- Webhook Principal ---
     app.post('/hook', async (req, res) => {
@@ -1659,24 +2361,6 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         });
     }
 }
-
-// --- Manejo de Errores del Servidor ---
-server.on('error', (error: any) => {
-    console.error('❌ Error del servidor:', error);
-    logError('SERVER_ERROR', 'Error del servidor', { 
-        error: error.message, 
-        code: error.code,
-        environment: config.environment
-    });
-});
-
-server.on('listening', () => {
-    console.log(`✅ Servidor escuchando en ${config.environment} mode`);
-    logSuccess('SERVER_LISTENING', 'Servidor escuchando correctamente', { 
-        port: config.port,
-        environment: config.environment
-    });
-});
 
 // --- Manejo de Errores y Cierre ---
 process.on('unhandledRejection', (reason) => {
