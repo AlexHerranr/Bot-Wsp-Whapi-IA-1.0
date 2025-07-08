@@ -82,8 +82,10 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     const logLevel = (process.env.LOG_LEVEL as 'development' | 'production') || 
                     (isCloudRun ? 'production' : 'development');
     
+    // 🔧 MEJORADO: Habilitar logs detallados en Cloud Run también (van a Google Cloud Console)
     const enableDetailedLogs = process.env.ENABLE_DETAILED_LOGS === 'true' || 
-                              (!isCloudRun && logLevel === 'development');
+                              (!isCloudRun && logLevel === 'development') ||
+                              isCloudRun; // ← Siempre true en Cloud Run
 
     // 🔧 NUEVO: Configuración adicional de logs
     const enableVerboseLogs = process.env.ENABLE_VERBOSE_LOGS === 'true';

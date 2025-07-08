@@ -13,6 +13,9 @@ interface LogEntry {
     details?: any;
 }
 
+// --- Detectar entorno ---
+const isCloudRun = !!process.env.K_SERVICE || process.env.NODE_ENV === 'production';
+
 // --- Configuración de Sesión ---
 const SESSION_TIMESTAMP = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const SESSION_ID = `session-${SESSION_TIMESTAMP}`;
@@ -48,6 +51,8 @@ const colors = {
 
 // --- Funciones de Sesión ---
 const ensureLogDirectory = (): void => {
+    if (isCloudRun) return; // No crear archivos en Cloud Run
+    
     if (!fs.existsSync(LOG_DIR)) {
         try {
             fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -58,6 +63,8 @@ const ensureLogDirectory = (): void => {
 };
 
 const cleanupOldSessions = (): void => {
+    if (isCloudRun) return; // No limpiar archivos en Cloud Run
+    
     try {
         // Obtener todos los archivos de sesión
         const files = fs.readdirSync(LOG_DIR)
@@ -90,11 +97,13 @@ const cleanupOldSessions = (): void => {
 const initializeSession = (): void => {
     if (sessionInitialized) return;
     
-    ensureLogDirectory();
-    cleanupOldSessions();
-    
-    // Escribir header de sesión
-    const sessionHeader = `
+    if (!isCloudRun) {
+        // Solo en local: crear archivos de log
+        ensureLogDirectory();
+        cleanupOldSessions();
+        
+        // Escribir header de sesión
+        const sessionHeader = `
 === NUEVA SESIÓN DEL BOT ===
 Timestamp: ${new Date().toISOString()}
 Session ID: ${SESSION_ID}
@@ -103,18 +112,23 @@ Node Version: ${process.version}
 =============================
 
 `;
-    
-    try {
-        fs.writeFileSync(LOG_FILE, sessionHeader);
-        sessionInitialized = true;
         
-        // Mostrar información de sesión
-        console.log(`📁 Logs de esta sesión: ${LOG_FILE}`);
-        console.log(`🔄 Manteniendo máximo ${MAX_SESSIONS} sesiones`);
-        
-    } catch (error) {
-        console.error('Error inicializando sesión:', error);
+        try {
+            fs.writeFileSync(LOG_FILE, sessionHeader);
+            
+            // Mostrar información de sesión
+            console.log(`📁 Logs de esta sesión: ${LOG_FILE}`);
+            console.log(`🔄 Manteniendo máximo ${MAX_SESSIONS} sesiones`);
+            
+        } catch (error) {
+            console.error('Error inicializando sesión:', error);
+        }
+    } else {
+        // En Cloud Run: solo marcar como inicializado
+        console.log(`☁️ Logs enviados a Google Cloud Console`);
     }
+    
+    sessionInitialized = true;
 };
 
 // --- Utilidades ---
@@ -240,12 +254,14 @@ const flushBuffer = (): void => {
     const entries = [...logBuffer];
     logBuffer = [];
     
-    // Escribir al archivo de sesión
-    try {
-        const content = entries.join('\n') + '\n';
-        fs.appendFileSync(LOG_FILE, content, 'utf8');
-    } catch (error) {
-        console.error(`Error escribiendo logs: ${error}`);
+    // Escribir al archivo de sesión (solo en local)
+    if (!isCloudRun) {
+        try {
+            const content = entries.join('\n') + '\n';
+            fs.appendFileSync(LOG_FILE, content, 'utf8');
+        } catch (error) {
+            console.error(`Error escribiendo logs: ${error}`);
+        }
     }
     
     // Limpiar timer
@@ -400,8 +416,9 @@ const cleanup = (): void => {
         flushBuffer();
     }
     
-    // Escribir footer de sesión
-    const sessionFooter = `
+    // Escribir footer de sesión (solo en local)
+    if (!isCloudRun) {
+        const sessionFooter = `
 =============================
 === FIN DE SESIÓN DEL BOT ===
 Timestamp: ${new Date().toISOString()}
@@ -409,23 +426,26 @@ Session ID: ${SESSION_ID}
 Duración: ${Math.round((Date.now() - new Date(SESSION_TIMESTAMP.replace(/-/g, ':')).getTime()) / 1000)}s
 =============================
 `;
-    
-    try {
-        fs.appendFileSync(LOG_FILE, sessionFooter);
-        console.log(`✅ Logs guardados en: ${LOG_FILE}`);
         
-        // Mostrar resumen de sesiones disponibles
-        const sessions = listAvailableSessions();
-        if (sessions.length > 0) {
-            console.log(`\n📁 Sesiones disponibles (${sessions.length}/${MAX_SESSIONS}):`);
-            sessions.forEach((session, index) => {
-                const sizeKB = (session.size / 1024).toFixed(1);
-                const date = session.stats.mtime.toLocaleString('es-CO');
-                console.log(`   ${index + 1}. ${session.name} (${sizeKB}KB - ${date})`);
-            });
+        try {
+            fs.appendFileSync(LOG_FILE, sessionFooter);
+            console.log(`✅ Logs guardados en: ${LOG_FILE}`);
+            
+            // Mostrar resumen de sesiones disponibles
+            const sessions = listAvailableSessions();
+            if (sessions.length > 0) {
+                console.log(`\n📁 Sesiones disponibles (${sessions.length}/${MAX_SESSIONS}):`);
+                sessions.forEach((session, index) => {
+                    const sizeKB = (session.size / 1024).toFixed(1);
+                    const date = session.stats.mtime.toLocaleString('es-CO');
+                    console.log(`   ${index + 1}. ${session.name} (${sizeKB}KB - ${date})`);
+                });
+            }
+        } catch (error) {
+            console.error('Error guardando logs:', error);
         }
-    } catch (error) {
-        console.error('Error guardando logs:', error);
+    } else {
+        console.log(`☁️ Logs enviados a Google Cloud Console`);
     }
 };
 

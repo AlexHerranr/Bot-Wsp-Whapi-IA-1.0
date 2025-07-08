@@ -67,7 +67,7 @@ const manualMessageBuffers = new Map<string, {
 const manualTimers = new Map<string, NodeJS.Timeout>();
 
 // Configuración de timeouts por entorno
-const MESSAGE_BUFFER_TIMEOUT = config.isLocal ? 8000 : 7000; // 8s local, 7s Cloud Run (menos agresivo)
+const MESSAGE_BUFFER_TIMEOUT = 10000; // 10s en TODOS lados (consistente local y Cloud Run)
 const MANUAL_MESSAGE_TIMEOUT = 8000;
 const MAX_BUFFER_SIZE = 10; // 🚨 Límite máximo de mensajes por buffer (anti-spam)
 const MAX_BOT_MESSAGES = 1000; // 🛡️ Límite de seguridad para tracking de mensajes
