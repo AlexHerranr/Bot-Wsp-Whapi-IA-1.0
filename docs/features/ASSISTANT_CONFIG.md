@@ -8,29 +8,28 @@ En el panel de OpenAI, configura tu Assistant con estas funciones:
 ```json
 {
   "name": "check_availability",
-  "description": "Consulta la disponibilidad de habitaciones para fechas específicas. Úsala cuando el usuario pregunte por disponibilidad, fechas libres, o si hay habitaciones.",
+  "description": "Consulta disponibilidad en tiempo real de propiedades en Beds24",
   "parameters": {
     "type": "object",
     "properties": {
-      "check_in": {
+      "startDate": {
         "type": "string",
-        "description": "Fecha de entrada en formato YYYY-MM-DD"
+        "description": "Fecha de inicio en formato YYYY-MM-DD"
       },
-      "check_out": {
+      "endDate": {
         "type": "string",
-        "description": "Fecha de salida en formato YYYY-MM-DD"
+        "description": "Fecha de fin en formato YYYY-MM-DD"
       },
-      "guests": {
-        "type": "integer",
-        "description": "Número total de huéspedes"
+      "propertyId": {
+        "type": "number",
+        "description": "ID específico de la propiedad (opcional)"
       },
-      "room_type": {
-        "type": "string",
-        "description": "Tipo de habitación preferida",
-        "enum": ["standard", "deluxe", "suite", "cualquiera"]
+      "roomId": {
+        "type": "number",
+        "description": "ID específico de la habitación (opcional)"
       }
     },
-    "required": ["check_in", "check_out", "guests"]
+    "required": ["startDate", "endDate"]
   }
 }
 ```

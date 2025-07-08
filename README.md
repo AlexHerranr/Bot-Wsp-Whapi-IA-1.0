@@ -240,6 +240,108 @@ GET /statuses/{MessageID} - Ver quién leyó en grupos
 ```
 **Uso potencial:** Confirmar recepción de información importante
 
+## 🔄 Sistema Inteligente de Splits y Disponibilidad
+
+### **🎯 Algoritmo de Alternativas con Traslado**
+
+El bot implementa un sistema avanzado para maximizar las reservas cuando no hay disponibilidad completa, ofreciendo alternativas inteligentes con traslados entre apartamentos.
+
+#### **📋 Lógica de Negocio:**
+
+| Escenario | Alternativas Mostradas | Límite Traslados | Estrategia |
+|-----------|----------------------|------------------|------------|
+| **0 opciones completas** | Hasta 3 splits | 3 traslados | Cubrir la necesidad del cliente |
+| **1 opción completa** | Hasta 2 splits | 1 traslado | Ofrecer alternativas adicionales |
+| **2+ opciones completas** | Hasta 1 split | 1 traslado | Mostrar alternativa económica |
+
+#### **🧠 Estrategias de Optimización:**
+
+1. **🏆 Maximizar Noches Consecutivas**
+   - Algoritmo greedy que prioriza estancias largas sin traslados
+   - Reduce molestias al huésped
+
+2. **💰 Minimizar Precio Total**
+   - Encuentra la combinación más económica
+   - Atrae clientes sensibles al precio
+
+3. **🎯 Diversificar Propiedades**
+   - Ofrece opciones con diferentes apartamentos
+   - Maximiza utilización del inventario
+
+#### **⚙️ Funcionamiento Técnico:**
+
+```javascript
+// Implementación en src/handlers/integrations/beds24-availability.ts
+function findConsecutiveSplits(
+    partialOptions: PropertyData[], 
+    dateRange: string[], 
+    maxResults: number = 3, 
+    maxTransfers: number = 3
+): SplitOption[]
+```
+
+**Proceso de Optimización:**
+1. **Análisis de Disponibilidad**: Clasifica propiedades en completas/parciales
+2. **Aplicación de Reglas**: Determina límites según disponibilidad completa
+3. **Generación de Splits**: Ejecuta 3 estrategias en paralelo
+4. **Filtrado y Ranking**: Ordena por traslados y precio
+5. **Validación**: Verifica cobertura completa del rango
+
+#### **📊 Beneficios del Sistema:**
+
+- ✅ **Incrementa conversión**: Ofrece alternativas cuando no hay disponibilidad ideal
+- ✅ **Maximiza ingresos**: Utiliza inventario parcial disponible
+- ✅ **Mejora experiencia**: Prioriza comodidad limitando traslados
+- ✅ **Optimiza precios**: Encuentra combinaciones económicas
+- ✅ **Inteligencia adaptativa**: Ajusta estrategia según disponibilidad
+
+#### **🧪 Testing y Validación:**
+
+```bash
+# Test específico de lógica de splits
+npx tsx tests/beds24/test-beds24.js splits 2025-07-09 2025-07-11
+
+# Verificación completa del sistema
+npx tsx tests/beds24/test-beds24.js general 2025-07-17 2025-07-21
+```
+
+**Métricas de Validación:**
+- Aplicación correcta de reglas de negocio
+- Respeto de límites de traslados
+- Cobertura completa del rango solicitado
+- Optimización de precios y comodidad
+
+#### **📤 Mensajes Contextualizados a OpenAI:**
+
+El sistema envía mensajes específicos a OpenAI para que entienda la situación de disponibilidad:
+
+**🔴 Sin Disponibilidad Completa:**
+```
+❌ **No hay Disponibilidad Completa - Solo Parcial con Opción de Traslado**
+💡 *Alternativas con cambio de apartamento (ofrecer solo como opción adicional al huésped)*
+```
+
+**🟢 Con Disponibilidad Completa:**
+```
+🥇 **Apartamentos Disponibles (X opciones)**
+🔄 **Opciones Adicionales con Traslado**
+💡 *Alternativas económicas con cambio de apartamento (opcional para el huésped)*
+```
+
+**⚫ Sin Disponibilidad:**
+```
+❌ **Sin disponibilidad para X noches**
+💡 Considera fechas alternativas
+```
+
+**Beneficios del contexto:**
+- ✅ OpenAI distingue entre disponibilidad ideal vs alternativas
+- ✅ Maneja expectativas del huésped apropiadamente
+- ✅ Presenta traslados como opciones adicionales, no primarias
+- ✅ Guía la conversación hacia la mejor experiencia del cliente
+
+---
+
 ## 🤖 Sistema de Gestión del Assistant
 
 ### **CLI Unificado para Gestión Profesional**

@@ -158,30 +158,28 @@ export const toAsk = async (assistantId, userMsg, userJid) => {
                     type: 'function',
                     function: {
                         name: 'check_availability',
-                        description: 'Verificar disponibilidad de habitaciones y obtener precios para fechas específicas',
+                        description: 'Consulta disponibilidad en tiempo real de propiedades en Beds24',
                         parameters: {
                             type: 'object',
                             properties: {
-                                checkin_date: {
+                                startDate: {
                                     type: 'string',
-                                    description: 'Fecha de check-in en formato YYYY-MM-DD'
+                                    description: 'Fecha de inicio en formato YYYY-MM-DD'
                                 },
-                                checkout_date: {
+                                endDate: {
                                     type: 'string',
-                                    description: 'Fecha de check-out en formato YYYY-MM-DD'
+                                    description: 'Fecha de fin en formato YYYY-MM-DD'
                                 },
-                                adults: {
-                                    type: 'integer',
-                                    description: 'Número de adultos',
-                                    default: 2
+                                propertyId: {
+                                    type: 'number',
+                                    description: 'ID específico de la propiedad (opcional)'
                                 },
-                                children: {
-                                    type: 'integer',
-                                    description: 'Número de niños',
-                                    default: 0
+                                roomId: {
+                                    type: 'number',
+                                    description: 'ID específico de la habitación (opcional)'
                                 }
                             },
-                            required: ['checkin_date', 'checkout_date']
+                            required: ['startDate', 'endDate']
                         }
                     }
                 },

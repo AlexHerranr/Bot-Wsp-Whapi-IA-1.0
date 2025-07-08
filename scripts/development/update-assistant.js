@@ -9,29 +9,28 @@ const assistantId = process.env.ASSISTANT_ID;
 
 const functions = [{
   "name": "check_availability",
-  "description": "Consulta disponibilidad de habitaciones para un hotel. Permite saber qué tipo de habitaciones y cuántas hay para un rango de fechas y un número de huéspedes.",
+  "description": "Consulta disponibilidad en tiempo real de propiedades en Beds24",
   "parameters": {
     "type": "object",
     "properties": {
-      "check_in": { 
+      "startDate": { 
         "type": "string", 
-        "description": "Fecha de check-in en formato YYYY-MM-DD. Obligatorio." 
+        "description": "Fecha de inicio en formato YYYY-MM-DD" 
       },
-      "check_out": { 
+      "endDate": { 
         "type": "string", 
-        "description": "Fecha de check-out en formato YYYY-MM-DD. Obligatorio." 
+        "description": "Fecha de fin en formato YYYY-MM-DD" 
       },
-      "guests": { 
-        "type": "integer", 
-        "description": "Número de huéspedes. Obligatorio." 
+      "propertyId": { 
+        "type": "number", 
+        "description": "ID específico de la propiedad (opcional)" 
       },
-      "room_type": { 
-        "type": "string", 
-        "enum": ["standard", "suite", "deluxe", "familiar"],
-        "description": "Tipo de habitación a consultar. Si no se especifica, se buscan todos los tipos." 
+      "roomId": { 
+        "type": "number", 
+        "description": "ID específico de la habitación (opcional)" 
       }
     },
-    "required": ["check_in", "check_out", "guests"]
+    "required": ["startDate", "endDate"]
   }
 }];
 

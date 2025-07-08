@@ -1,9 +1,11 @@
 import 'dotenv/config';
 import { handleAvailabilityCheck, checkBeds24Health } from '../../src/handlers/integrations/beds24-availability.ts';
 
-console.log('🧪 TEST: Algoritmo Multi-Estrategia de Disponibilidad (Beds24)');
+console.log('🧪 TEST: Sistema Inteligente de Splits y Disponibilidad (Beds24)');
 console.log('================================================================');
-console.log('🎯 Verificando formato de salida optimizado para OpenAI');
+console.log('🎯 Verificando lógica optimizada de alternativas con traslado');
+console.log('📋 Nueva lógica: 0 completas=3 splits | 1 completa=2 splits | 2+ completas=1 split');
+console.log('🚫 Máximo 1 traslado cuando hay opciones completas disponibles');
 console.log('================================================================');
 
 // Función helper para mostrar ayuda
@@ -41,7 +43,12 @@ function showHelp() {
     console.log('8️⃣  TEST TOKENS - Analizar consumo de tokens');
     console.log('    npx tsx tests/beds24/test-beds24.js tokens YYYY-MM-DD YYYY-MM-DD');
     console.log('');
+    console.log('9️⃣  TEST SPLITS - Verificar lógica de alternativas con traslado');
+    console.log('    npx tsx tests/beds24/test-beds24.js splits YYYY-MM-DD YYYY-MM-DD');
+    console.log('    Ejemplo: npx tsx tests/beds24/test-beds24.js splits 2025-07-09 2025-07-11');
+    console.log('');
     console.log('💡 NOTA: Usa fechas futuras. Hoy y fechas posteriores son válidas.');
+    console.log('💡 LÓGICA SPLITS: 0 completas=3 splits | 1 completa=2 splits | 2+ completas=1 split');
     console.log('══════════════════════════════════════════════════════════════\n');
 }
 
@@ -300,6 +307,71 @@ async function testPerformance(startDate, endDate) {
     }
 }
 
+// TEST 7: Verificar lógica de splits
+async function testSplits(startDate, endDate) {
+    console.log('\n🧪 TEST 7: VERIFICACIÓN DE LÓGICA DE SPLITS');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`📅 Analizando lógica de splits: ${startDate} al ${endDate}`);
+    console.log('🔍 Verificando aplicación de reglas de alternativas con traslado...');
+    console.log('───────────────────────────────────────────────────────────');
+
+    try {
+        const result = await handleAvailabilityCheck({ startDate, endDate });
+        
+        console.log('\n✅ RESULTADO DEL TEST DE SPLITS:\n');
+        console.log(result);
+        
+        // Analizar la lógica aplicada
+        const hasCompleteOptions = result.includes('Apartamentos Disponibles');
+        const hasSplitOptions = result.includes('Opciones Alternas con Traslado');
+        const splitLines = result.split('\n').filter(line => line.includes('Alternativa'));
+        const completeLines = result.split('\n').filter(line => line.includes('✅ **') && line.includes(' - $'));
+        
+        console.log(`\n📊 ANÁLISIS DE LÓGICA DE SPLITS:`);
+        console.log(`   • Opciones completas detectadas: ${completeLines.length}`);
+        console.log(`   • Alternativas con traslado: ${splitLines.length}`);
+        console.log(`   • Tiene opciones completas: ${hasCompleteOptions ? '✅' : '❌'}`);
+        console.log(`   • Tiene alternativas con traslado: ${hasSplitOptions ? '✅' : '❌'}`);
+        
+        // Verificar aplicación correcta de reglas
+        console.log(`\n🔍 VERIFICACIÓN DE REGLAS:`);
+        if (completeLines.length === 0) {
+            console.log(`   📋 REGLA APLICADA: Sin opciones completas → Hasta 3 splits permitidos`);
+            console.log(`   ✅ Splits mostrados: ${splitLines.length} (esperado: 0-3)`);
+        } else if (completeLines.length === 1) {
+            console.log(`   📋 REGLA APLICADA: 1 opción completa → Máximo 2 splits con 1 traslado`);
+            console.log(`   ${splitLines.length <= 2 ? '✅' : '❌'} Splits mostrados: ${splitLines.length} (esperado: 0-2)`);
+        } else if (completeLines.length >= 2) {
+            console.log(`   📋 REGLA APLICADA: ${completeLines.length} opciones completas → Máximo 1 split con 1 traslado`);
+            console.log(`   ${splitLines.length <= 1 ? '✅' : '❌'} Splits mostrados: ${splitLines.length} (esperado: 0-1)`);
+        }
+        
+        // Analizar traslados en los splits
+        if (hasSplitOptions) {
+            console.log(`\n🔄 ANÁLISIS DE TRASLADOS:`);
+            splitLines.forEach((line, index) => {
+                if (line.includes('traslado')) {
+                    const transfers = line.includes('1 traslado') ? 1 : 
+                                    line.includes('2 traslados') ? 2 : 
+                                    line.includes('3 traslados') ? 3 : 0;
+                    const isValid = completeLines.length === 0 ? transfers <= 3 : transfers <= 1;
+                    console.log(`   ${isValid ? '✅' : '❌'} Alternativa ${index + 1}: ${transfers} traslado${transfers > 1 ? 's' : ''} ${isValid ? '(válido)' : '(excede límite)'}`);
+                }
+            });
+        }
+        
+        console.log(`\n📈 ESTADÍSTICAS:`);
+        console.log(`   • Tiempo de respuesta: ${result.length > 0 ? 'Exitoso' : 'Error'}`);
+        console.log(`   • Tamaño de respuesta: ${result.length} caracteres`);
+        console.log(`   • Tokens estimados: ${Math.ceil(result.length / 4)}`);
+        
+    } catch (error) {
+        console.error('\n❌ ERROR DURANTE EL TEST DE SPLITS:');
+        console.error(`   Mensaje: ${error.message}`);
+        console.error(`   Tipo: ${error.constructor.name}`);
+    }
+}
+
 // Función principal
 async function runTest() {
     const testType = process.argv[2];
@@ -391,7 +463,7 @@ async function runTest() {
             if (!validateDates(startDate, endDate)) {
                 process.exit(1);
             }
-            await testGeneral(startDate, endDate); // Por ahora usa el mismo que general
+            await testSplits(startDate, endDate);
             break;
             
         case 'tokens':
