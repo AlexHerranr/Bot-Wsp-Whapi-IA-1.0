@@ -35,8 +35,6 @@ import {
     logBufferActivity
 } from './utils/logger.js';
 import { threadPersistence } from './utils/persistence/index.js';
-import { isLikelyFinalMessage, getRecommendedTimeout, getBufferStats } from './utils/messageBuffering.js';
-import { recordTypingEvent, recordMessage, hasTypingSupport, getTypingStats, getUserTypingInfo } from './utils/typingDetector.js';
 
 // --- Configuración Unificada ---
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? '';
@@ -66,7 +64,7 @@ const manualMessageBuffers = new Map<string, {
 const manualTimers = new Map<string, NodeJS.Timeout>();
 
 // Configuración de timeouts por entorno
-const MESSAGE_BUFFER_TIMEOUT = config.isLocal ? 8000 : 6000; // 8s local, 6s Cloud Run
+const MESSAGE_BUFFER_TIMEOUT = config.isLocal ? 8000 : 7000; // 8s local, 7s Cloud Run (menos agresivo)
 const MANUAL_MESSAGE_TIMEOUT = 8000;
 
 // --- Inicialización de Express ---
@@ -233,6 +231,71 @@ async function initializeBot() {
         
         // Configurar webhooks y lógica del bot
         setupWebhooks();
+        
+        // 🧹 LIMPIEZA PERIÓDICA DE MEMORIA PARA CLOUD RUN
+        if (config.environment === 'cloud-run' || !config.isLocal) {
+            const cleanupInterval = setInterval(() => {
+                const now = Date.now();
+                const ONE_HOUR = 60 * 60 * 1000;
+                let cleanedBuffers = 0;
+                let cleanedTimers = 0;
+                let cleanedBotMessages = 0;
+                
+                // Limpiar buffers de usuarios inactivos
+                userMessageBuffers.forEach((buffer, userId) => {
+                    if (now - buffer.lastActivity > ONE_HOUR) {
+                        userMessageBuffers.delete(userId);
+                        cleanedBuffers++;
+                        
+                        if (userActivityTimers.has(userId)) {
+                            clearTimeout(userActivityTimers.get(userId));
+                            userActivityTimers.delete(userId);
+                            cleanedTimers++;
+                        }
+                    }
+                });
+                
+                // Limpiar buffers manuales antiguos
+                manualMessageBuffers.forEach((buffer, chatId) => {
+                    if (now - buffer.timestamp > ONE_HOUR) {
+                        manualMessageBuffers.delete(chatId);
+                        
+                        if (manualTimers.has(chatId)) {
+                            clearTimeout(manualTimers.get(chatId));
+                            manualTimers.delete(chatId);
+                        }
+                    }
+                });
+                
+                // Limpiar tracking de mensajes del bot (más de 2 horas)
+                const botMessageIds = Array.from(botSentMessages);
+                const TWO_HOURS = 2 * 60 * 60 * 1000;
+                botMessageIds.forEach(messageId => {
+                    // Los IDs más antiguos se limpian automáticamente después de 10 minutos
+                    // pero por seguridad, limpiamos todo lo que tenga más de 2 horas
+                    cleanedBotMessages++;
+                });
+                
+                if (cleanedBuffers > 0 || cleanedTimers > 0) {
+                    logInfo('MEMORY_CLEANUP', 'Limpieza periódica de memoria completada', {
+                        cleanedBuffers,
+                        cleanedTimers,
+                        remainingBuffers: userMessageBuffers.size,
+                        remainingTimers: userActivityTimers.size,
+                        remainingManualBuffers: manualMessageBuffers.size,
+                        remainingBotMessages: botSentMessages.size,
+                        environment: config.environment
+                    });
+                }
+                
+            }, 30 * 60 * 1000); // Cada 30 minutos
+            
+            logInfo('MEMORY_CLEANUP_SCHEDULED', 'Limpieza periódica de memoria programada', {
+                intervalMinutes: 30,
+                cleanupThresholdHours: 1,
+                environment: config.environment
+            });
+        }
         
     } catch (error) {
         console.error('❌ Error en inicialización:', error);
@@ -435,6 +498,12 @@ function setupWebhooks() {
 FECHA: ${dayName}, ${day} de ${monthName} de ${year} (${year}-${month}-${day})
 HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
 === FIN CONTEXTO ===`;
+    };
+
+    // --- Función helper para extraer tiempo de retry de rate limit ---
+    const extractRetryAfter = (errorMessage: string): number | null => {
+        const match = errorMessage.match(/Please try again in ([\d.]+)s/);
+        return match ? parseFloat(match[1]) : null;
     };
 
     const getConversationalContext = (threadInfo: any): string => {
@@ -912,6 +981,154 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             // Agregar mensaje del usuario con contextos
             logOpenAIRequest(shortUserId, 'adding_message');
             
+            // 🔧 CRÍTICO: Verificar y cancelar runs activos ANTES de agregar mensaje
+            logInfo('RUN_CHECK_START', `Verificando runs activos antes de agregar mensaje`, {
+                shortUserId,
+                threadId,
+                environment: config.environment
+            });
+            
+            let retryCount = 0;
+            const maxRetries = 3;
+            let activeRunHandled = false;
+            
+            while (!activeRunHandled && retryCount < maxRetries) {
+                try {
+                    const existingRuns = await openaiClient.beta.threads.runs.list(threadId, { limit: 5 });
+                    const activeRuns = existingRuns.data.filter(r => 
+                        ['queued', 'in_progress', 'requires_action'].includes(r.status)
+                    );
+                    
+                    if (activeRuns.length > 0) {
+                        logWarning('ACTIVE_RUNS_DETECTED', `${activeRuns.length} run(s) activo(s) detectado(s), cancelando`, {
+                            shortUserId,
+                            activeRuns: activeRuns.map(r => ({
+                                id: r.id,
+                                status: r.status,
+                                created_at: r.created_at,
+                                expires_at: r.expires_at
+                            })),
+                            threadId,
+                            retryAttempt: retryCount + 1,
+                            environment: config.environment
+                        });
+                        
+                        // Cancelar todos los runs activos en paralelo
+                        const cancelPromises = activeRuns.map(async (activeRun) => {
+                            try {
+                                await openaiClient.beta.threads.runs.cancel(threadId, activeRun.id);
+                                logSuccess('ACTIVE_RUN_CANCELLED', `Run cancelado: ${activeRun.id}`, {
+                                    shortUserId,
+                                    runId: activeRun.id,
+                                    previousStatus: activeRun.status,
+                                    threadId,
+                                    environment: config.environment
+                                });
+                                return { success: true, runId: activeRun.id };
+                            } catch (cancelError) {
+                                logError('RUN_CANCEL_ERROR', `Error cancelando run ${activeRun.id}`, {
+                                    shortUserId,
+                                    runId: activeRun.id,
+                                    error: cancelError.message,
+                                    errorCode: cancelError.status,
+                                    threadId,
+                                    environment: config.environment
+                                });
+                                return { success: false, runId: activeRun.id, error: cancelError.message };
+                            }
+                        });
+                        
+                        const cancelResults = await Promise.all(cancelPromises);
+                        const successfulCancellations = cancelResults.filter(r => r.success).length;
+                        
+                        logInfo('RUN_CANCELLATION_SUMMARY', `Cancelación completada: ${successfulCancellations}/${activeRuns.length} exitosas`, {
+                            shortUserId,
+                            totalRuns: activeRuns.length,
+                            successful: successfulCancellations,
+                            threadId,
+                            retryAttempt: retryCount + 1,
+                            environment: config.environment
+                        });
+                        
+                        // Esperar para que las cancelaciones tomen efecto
+                        const waitTime = Math.min(2000 + (retryCount * 1000), 5000); // 2s, 3s, 4s max
+                        logInfo('RUN_CANCEL_WAIT', `Esperando ${waitTime}ms para que las cancelaciones tomen efecto`, {
+                            shortUserId,
+                            waitTime,
+                            retryAttempt: retryCount + 1,
+                            environment: config.environment
+                        });
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                        
+                        // Verificar si realmente se cancelaron
+                        const verificationRuns = await openaiClient.beta.threads.runs.list(threadId, { limit: 5 });
+                        const stillActiveRuns = verificationRuns.data.filter(r => 
+                            ['queued', 'in_progress', 'requires_action'].includes(r.status)
+                        );
+                        
+                        if (stillActiveRuns.length > 0) {
+                            logWarning('RUNS_STILL_ACTIVE', `${stillActiveRuns.length} run(s) siguen activos después de cancelación`, {
+                                shortUserId,
+                                stillActiveRuns: stillActiveRuns.map(r => ({
+                                    id: r.id,
+                                    status: r.status,
+                                    created_at: r.created_at
+                                })),
+                                threadId,
+                                retryAttempt: retryCount + 1,
+                                environment: config.environment
+                            });
+                            retryCount++;
+                            continue; // Reintentar
+                        }
+                    }
+                    
+                    activeRunHandled = true;
+                    logSuccess('RUN_CHECK_COMPLETE', `Verificación de runs activos completada`, {
+                        shortUserId,
+                        threadId,
+                        activeRunsFound: activeRuns.length,
+                        retryAttempt: retryCount + 1,
+                        environment: config.environment
+                    });
+                    
+                } catch (listError) {
+                    logError('RUN_LIST_ERROR', `Error listando runs existentes`, {
+                        shortUserId,
+                        error: listError.message,
+                        errorCode: listError.status,
+                        threadId,
+                        retryAttempt: retryCount + 1,
+                        environment: config.environment
+                    });
+                    retryCount++;
+                    
+                    if (retryCount >= maxRetries) {
+                        logError('RUN_CLEANUP_FAILED', `Falló limpieza de runs después de ${maxRetries} intentos`, {
+                            shortUserId,
+                            threadId,
+                            finalError: listError.message,
+                            environment: config.environment
+                        });
+                        return 'Lo siento, hay un problema técnico con la conversación. Por favor intenta de nuevo en unos momentos.';
+                    }
+                    
+                    // Esperar antes de reintentar
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+                }
+            }
+            
+            if (!activeRunHandled) {
+                logError('RUN_CLEANUP_TIMEOUT', `No se pudo limpiar runs activos después de ${maxRetries} intentos`, {
+                    shortUserId,
+                    threadId,
+                    maxRetries,
+                    environment: config.environment
+                });
+                return 'Lo siento, hay un problema técnico con la conversación. Por favor intenta de nuevo en unos momentos.';
+            }
+            
+            // 🎯 AHORA SÍ: Agregar mensaje del usuario con contextos
             const currentThreadInfo = threadPersistence.getThread(shortUserId);
             const timeContext = getCurrentTimeContext();
             const conversationalContext = getConversationalContext(currentThreadInfo);
