@@ -546,13 +546,10 @@ function formatOptimizedResponse(result: OptimizedResult, startDate: string, end
     
     response += `\n🔄 *Beds24 - ${consultaDateTime}*`;
     
-    // Log para análisis (solo en logs, no en consola)
-    logInfo('BEDS24_DEBUG_OUTPUT', 'Respuesta formateada para OpenAI', {
-        responsePreview: response.substring(0, 200),
-        responseLength: response.length,
-        hasCompleteOptions: result.completeOptions.length > 0,
-        hasSplitOptions: result.splitOptions.length > 0
-    });
+    // Log temporal para depuración
+    console.log('\n--- DEBUG: Salida para OpenAI ---\n');
+    console.log(response);
+    console.log('---------------------------------\n');
 
     // Log detallado para análisis
     logInfo('BEDS24_RESPONSE_DETAIL', 'Respuesta completa de Beds24 enviada a OpenAI', {
