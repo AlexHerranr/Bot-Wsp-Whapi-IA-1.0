@@ -351,3 +351,7 @@ Las contribuciones son bienvenidas. Por favor:
 ## 📄 Licencia
 
 MIT License - ver [LICENSE](./LICENSE) para detalles.
+
+---
+
+**📅 Última actualización:** Enero 2025 - Versión unificada restaurada con todas las funcionalidades
