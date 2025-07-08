@@ -73,6 +73,8 @@ const MAX_BUFFER_SIZE = 10; // 🚨 Límite máximo de mensajes por buffer (anti
 const MAX_BOT_MESSAGES = 1000; // 🛡️ Límite de seguridad para tracking de mensajes
 const MAX_MESSAGE_LENGTH = 5000; // 📏 Límite de caracteres por mensaje
 
+
+
 // 🛡️ FUNCIÓN SEGURA PARA TRACKING DE MENSAJES DEL BOT (previene memory leak)
 const trackBotMessage = (messageId: string) => {
     botSentMessages.add(messageId);
