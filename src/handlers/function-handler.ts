@@ -2,8 +2,7 @@ import axios from 'axios';
 import { whapiLabels } from '../utils/whapi/index.js';
 import { enhancedLog } from '../utils/core/index.js';
 import { threadPersistence } from '../utils/persistence/index.js';
-import { handleAvailabilityCheck } from './integrations/beds24-availability.js';
-import { EscalationServiceMinimal } from '../services/escalation/escalation-minimal.service.js';
+import { executeFunction } from '../functions/registry/function-registry.js';
 
 export class FunctionHandler {
   private n8nWebhook = process.env.N8N_WEBHOOK_URL;
@@ -13,89 +12,14 @@ export class FunctionHandler {
     enhancedLog('info', 'FUNCTION_HANDLER', `Argumentos: ${JSON.stringify(args)}`);
 
     try {
-      switch (name) {
-        case 'check_availability':
-          return await this.handleCheckAvailability(args);
-        
-        case 'escalate_to_human':
-          return await this.handleEscalateToHuman(args);
-        
-        // FUNCIONES DE ETIQUETAS ELIMINADAS - Sistema optimizado a solo 2 funciones esenciales
-        // case 'update_client_labels': - REMOVIDA (no se usa en RAG)
-        // case 'get_available_labels': - REMOVIDA (no se usa en RAG)
-        
-        default:
-          enhancedLog('error', 'FUNCTION_HANDLER', `Función '${name}' no encontrada`);
-          return { error: `Función '${name}' no encontrada.` };
-      }
-    } catch (error) {
-      enhancedLog('error', 'FUNCTION_HANDLER', `Error ejecutando función ${name}: ${error.message}`);
-      return { error: `Error ejecutando función: ${error.message}` };
-    }
-  }
-
-  /**
-   * Manejar escalamiento a humano
-   */
-  private async handleEscalateToHuman(args: any): Promise<any> {
-    try {
-      const { reason, context } = args;
-
-      if (!reason) {
-        return { error: 'reason es requerido' };
-      }
-
-      enhancedLog('info', 'FUNCTION_HANDLER', 
-        `Escalando a humano por razón: ${reason}`);
-
-      // Preparar contexto simple
-      const escalationContext = {
-        userId: context?.userId || 'unknown',
-        userName: context?.userName || 'Usuario',
-        chatId: context?.chatId || 'unknown',
-        reason: reason,
-        context: context
-      };
-
-      // Ejecutar escalamiento
-      const success = await EscalationServiceMinimal.escalateToHuman(reason, escalationContext);
-
-      if (success) {
-        enhancedLog('success', 'FUNCTION_HANDLER', 
-          `Escalamiento exitoso para razón: ${reason}`);
-        
-        return {
-          success: true,
-          message: 'Escalamiento procesado exitosamente',
-          reason: reason,
-          timestamp: new Date().toISOString()
-        };
-      } else {
-        throw new Error('Error procesando escalamiento');
-      }
-
-    } catch (error) {
-      enhancedLog('error', 'FUNCTION_HANDLER', `Error en escalamiento: ${error.message}`);
-      return { 
-        error: `Error procesando escalamiento: ${error.message}`,
-        success: false 
-      };
-    }
-  }
-
-  /**
-   * Manejar consulta de disponibilidad (directa con Beds24)
-   */
-  private async handleCheckAvailability(args: any): Promise<any> {
-    try {
-      // Usar el handler directo de Beds24
-      const result = await handleAvailabilityCheck(args);
+      // Usar el registro central para ejecutar funciones
+      const result = await executeFunction(name, args);
       
-      enhancedLog('success', 'FUNCTION_HANDLER', `Consulta de disponibilidad Beds24 completada`);
+      enhancedLog('success', 'FUNCTION_HANDLER', `Función ${name} ejecutada exitosamente`);
       
       // Log detallado del contenido exacto enviado a OpenAI
-      enhancedLog('info', 'OPENAI_FUNCTION_OUTPUT', `Contenido exacto enviado a OpenAI después de check_availability`, {
-        functionName: 'check_availability',
+      enhancedLog('info', 'OPENAI_FUNCTION_OUTPUT', `Contenido exacto enviado a OpenAI después de ${name}`, {
+        functionName: name,
         args: args,
         resultType: typeof result,
         resultLength: Array.isArray(result) ? result.length : 'N/A',
@@ -103,18 +27,19 @@ export class FunctionHandler {
         timestamp: new Date().toISOString()
       });
       
-      return {
-        success: true,
-        data: result
-      };
+      return result;
+      
     } catch (error) {
-      enhancedLog('error', 'FUNCTION_HANDLER', `Error en disponibilidad Beds24: ${error.message}`);
+      enhancedLog('error', 'FUNCTION_HANDLER', `Error ejecutando función ${name}: ${error.message}`);
       return { 
         success: false,
-        error: 'Hubo un error al consultar la disponibilidad en tiempo real.' 
+        error: `Error ejecutando función: ${error.message}` 
       };
     }
   }
+
+  // Métodos antiguos eliminados - ahora se usa el registro central de funciones
+  // Los handlers específicos están en src/functions/*/
 
   /**
    * FUNCIÓN DESHABILITADA - Actualizar etiquetas de un cliente

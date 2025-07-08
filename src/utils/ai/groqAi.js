@@ -152,85 +152,8 @@ export const toAsk = async (assistantId, userMsg, userJid) => {
         // Crear y ejecutar run con function calling habilitado
         enhancedLog('info', 'OPENAI_RUN', `Creando run para thread ${threadId}...`, undefined, userJid);
         let run = await openai.beta.threads.runs.create(threadId, {
-            assistant_id: assistantId,
-            tools: [
-                {
-                    type: 'function',
-                    function: {
-                        name: 'check_availability',
-                        description: 'Consulta disponibilidad en tiempo real de propiedades en Beds24',
-                        parameters: {
-                            type: 'object',
-                            properties: {
-                                startDate: {
-                                    type: 'string',
-                                    description: 'Fecha de inicio en formato YYYY-MM-DD'
-                                },
-                                endDate: {
-                                    type: 'string',
-                                    description: 'Fecha de fin en formato YYYY-MM-DD'
-                                },
-                                propertyId: {
-                                    type: 'number',
-                                    description: 'ID específico de la propiedad (opcional)'
-                                },
-                                roomId: {
-                                    type: 'number',
-                                    description: 'ID específico de la habitación (opcional)'
-                                }
-                            },
-                            required: ['startDate', 'endDate']
-                        }
-                    }
-                },
-                {
-                    type: 'function',
-                    function: {
-                        name: 'update_client_labels',
-                        description: 'Actualizar las etiquetas de WhatsApp Business del cliente según su estado actual',
-                        parameters: {
-                            type: 'object',
-                            properties: {
-                                userId: {
-                                    type: 'string',
-                                    description: 'ID del usuario (teléfono)'
-                                },
-                                removeLabels: {
-                                    type: 'array',
-                                    items: {
-                                        type: 'string'
-                                    },
-                                    description: 'Etiquetas a remover (nombres o IDs)'
-                                },
-                                addLabels: {
-                                    type: 'array',
-                                    items: {
-                                        type: 'string'
-                                    },
-                                    description: 'Etiquetas a agregar (nombres o IDs)'
-                                },
-                                reason: {
-                                    type: 'string',
-                                    description: 'Razón del cambio de etiqueta (opcional)'
-                                }
-                            },
-                            required: ['userId']
-                        }
-                    }
-                },
-                {
-                    type: 'function',
-                    function: {
-                        name: 'get_available_labels',
-                        description: 'Obtener todas las etiquetas disponibles en WhatsApp Business',
-                        parameters: {
-                            type: 'object',
-                            properties: {},
-                            required: []
-                        }
-                    }
-                }
-            ]
+            assistant_id: assistantId
+            // Las funciones se configuran en el Assistant, no aquí
         });
         
         enhancedLog('info', 'OPENAI_RUN', `Run creado: ${run.id} con estado: ${run.status}`, undefined, userJid);

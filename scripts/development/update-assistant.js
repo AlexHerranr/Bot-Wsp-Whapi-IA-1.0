@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import OpenAI from 'openai';
+import { generateOpenAISchemas } from '../../src/functions/registry/function-registry.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -7,32 +8,8 @@ const openai = new OpenAI({
 
 const assistantId = process.env.ASSISTANT_ID;
 
-const functions = [{
-  "name": "check_availability",
-  "description": "Consulta disponibilidad en tiempo real de propiedades en Beds24",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "startDate": { 
-        "type": "string", 
-        "description": "Fecha de inicio en formato YYYY-MM-DD" 
-      },
-      "endDate": { 
-        "type": "string", 
-        "description": "Fecha de fin en formato YYYY-MM-DD" 
-      },
-      "propertyId": { 
-        "type": "number", 
-        "description": "ID específico de la propiedad (opcional)" 
-      },
-      "roomId": { 
-        "type": "number", 
-        "description": "ID específico de la habitación (opcional)" 
-      }
-    },
-    "required": ["startDate", "endDate"]
-  }
-}];
+// Obtener funciones desde el registro central
+const functions = generateOpenAISchemas();
 
 async function updateAssistant() {
   if (!assistantId) {
