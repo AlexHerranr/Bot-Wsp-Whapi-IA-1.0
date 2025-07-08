@@ -500,67 +500,303 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             environment: config.environment
         });
 
-        // Log compacto en consola con información del buffer
-        const timestamp = getCompactTimestamp();
-        console.log(`${LOG_COLORS.TIMESTAMP}${timestamp}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}🤖 Bot:${LOG_COLORS.RESET} ${buffer.messages.length} msgs → OpenAI`);
+        // 🎯 Log compacto - Inicio con colores
+        const timestamp1 = getCompactTimestamp();
+        console.log(`${LOG_COLORS.TIMESTAMP}${timestamp1}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} 🤖 ${buffer.messages.length} msgs → OpenAI`);
+        
+        // Enviar a OpenAI con el userId original y la información completa del cliente
+        const startTime = Date.now();
+        const response = await processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.name);
+        const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
+        
+        // 🎯 Log compacto - Resultado con preview
+        const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
+        const timestamp2 = getCompactTimestamp();
+        
+        // Verificar si la respuesta será dividida en párrafos
+        const paragraphs = response.split(/\n\n+/).filter(p => p.trim().length > 0);
+        const willSplit = paragraphs.length > 1;
+        
+        if (willSplit) {
+            console.log(`${LOG_COLORS.TIMESTAMP}${timestamp2}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Completado (${aiDuration}s) → 💬 ${paragraphs.length} párrafos`);
+        } else {
+            console.log(`${LOG_COLORS.TIMESTAMP}${timestamp2}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Completado (${aiDuration}s) → 💬 "${preview}"`);
+        }
+        
+        // Enviar respuesta a WhatsApp usando la función mejorada
+        await sendWhatsAppMessage(buffer.chatId, response);
 
+        // Limpiar buffer
+        userMessageBuffers.delete(userId);
+        userActivityTimers.delete(userId);
+        logBufferActivity(shortUserId, 'buffer_cleared');
+    }
+
+    // --- 🎯 FUNCIÓN PARA OBTENER INFORMACIÓN ENRIQUECIDA DEL CONTACTO ---
+    const getEnhancedContactInfo = async (userId: string, chatId: string) => {
         try {
-            // Procesar con OpenAI usando el mensaje combinado
-            const response = await processWithOpenAI(
-                combinedMessage, 
-                userId, 
-                buffer.chatId, 
-                buffer.name
-            );
-
-            if (response && response.trim()) {
-                await sendWhatsAppMessage(buffer.chatId, response);
-                
-                // Log de respuesta exitosa
-                const responsePreview = response.length > 50 ? response.substring(0, 50) + '...' : response;
-                console.log(`${LOG_COLORS.TIMESTAMP}${getCompactTimestamp()}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}🤖 Bot:${LOG_COLORS.RESET} "${responsePreview}"`);
-                
-                logSuccess('BUFFER_PROCESSED', `Buffer procesado exitosamente para ${shortUserId}`, {
-                    messageCount: buffer.messages.length,
-                    responseLength: response.length,
-                    environment: config.environment
-                });
-            } else {
-                logWarning('EMPTY_RESPONSE', 'OpenAI devolvió respuesta vacía para buffer', {
-                    userId,
-                    chatId: buffer.chatId,
-                    messageCount: buffer.messages.length
-                });
-            }
-        } catch (error) {
-            logError('MESSAGE_PROCESSING_ERROR', 'Error procesando mensajes agrupados', {
-                error: error.message,
-                userId,
-                chatId: buffer.chatId,
-                messageCount: buffer.messages.length,
+            const endpoint = `${WHAPI_API_URL}/chats/${encodeURIComponent(chatId)}`;
+            
+            logDebug('CONTACT_API', `Obteniendo info adicional del contacto ${userId}`, {
+                endpoint,
                 environment: config.environment
             });
             
-            // Enviar mensaje de error al usuario
-            try {
-                await sendWhatsAppMessage(buffer.chatId, 'Lo siento, hubo un problema procesando tus mensajes. Por favor intenta de nuevo.');
-            } catch (sendError) {
-                logError('ERROR_MESSAGE_SEND_FAILED', 'No se pudo enviar mensaje de error', {
-                    error: sendError.message,
-                    chatId: buffer.chatId
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${WHAPI_TOKEN}`
+                }
+            });
+            
+            if (response.ok) {
+                const chatData = await response.json() as any;
+                
+                const enhancedInfo = {
+                    name: cleanContactName(chatData.name || chatData.first_name || 'Usuario'),
+                    labels: chatData.labels || [],
+                    lastSeen: chatData.last_message?.timestamp,
+                    isContact: !!chatData.name,
+                    profilePic: chatData.profile_pic_url
+                };
+                
+                logInfo('CONTACT_API_DETAILED', `Información detallada del contacto ${userId}`, {
+                    name: enhancedInfo.name,
+                    labels: enhancedInfo.labels,
+                    labelsCount: enhancedInfo.labels.length,
+                    lastSeen: enhancedInfo.lastSeen,
+                    isContact: enhancedInfo.isContact,
+                    profilePic: enhancedInfo.profilePic ? 'Sí' : 'No',
+                    environment: config.environment
+                });
+                
+                logSuccess('CONTACT_API', `Info adicional obtenida para ${userId}`, {
+                    hasName: !!enhancedInfo.name,
+                    hasLabels: enhancedInfo.labels.length > 0,
+                    isContact: enhancedInfo.isContact,
+                    environment: config.environment
+                });
+                
+                return enhancedInfo;
+            } else {
+                logWarning('CONTACT_API', `No se pudo obtener info adicional para ${userId}: ${response.status}`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    environment: config.environment
                 });
             }
-        }
-
-        // Limpiar buffer y timer
-        userMessageBuffers.delete(userId);
-        userActivityTimers.delete(userId);
-        
-        if (config.enableDetailedLogs) {
-            logInfo('BUFFER_CLEANUP', `Buffer limpiado para ${shortUserId}`, {
-                userId,
+        } catch (error) {
+            logError('CONTACT_API', `Error obteniendo info del contacto ${userId}`, { 
+                error: error.message,
                 environment: config.environment
             });
+        }
+        
+        return { name: 'Usuario', labels: [], isContact: false };
+    };
+
+    // --- 🎯 FUNCIÓN PARA ENVÍO INTELIGENTE DE MENSAJES CON DIVISIÓN ---
+    async function sendWhatsAppMessage(chatId: string, message: string) {
+        const shortUserId = getShortUserId(chatId);
+        
+        try {
+            // 🔧 DIVISIÓN INTELIGENTE DE MENSAJES LARGOS
+            let chunks: string[] = [];
+            
+            // Primero intentar dividir por doble salto de línea
+            const paragraphs = message.split(/\n\n+/).map(chunk => chunk.trim()).filter(chunk => chunk.length > 0);
+            
+            // Si hay párrafos claramente separados, usarlos
+            if (paragraphs.length > 1) {
+                chunks = paragraphs;
+            } else {
+                // Si no hay párrafos, buscar listas con bullets
+                const lines = message.split('\n');
+                let currentChunk = '';
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const nextLine = lines[i + 1];
+                    
+                    // Si la línea actual termina con ":" y la siguiente empieza con bullet
+                    if (line.endsWith(':') && nextLine && nextLine.trim().match(/^[•\-\*]/)) {
+                        // Agregar la línea de título al chunk actual
+                        if (currentChunk) {
+                            chunks.push(currentChunk.trim());
+                        }
+                        currentChunk = line;
+                    } 
+                    // Si es una línea de bullet
+                    else if (line.trim().match(/^[•\-\*]/)) {
+                        currentChunk += '\n' + line;
+                        
+                        // Si la siguiente línea NO es un bullet, cerrar el chunk
+                        if (!nextLine || !nextLine.trim().match(/^[•\-\*]/)) {
+                            chunks.push(currentChunk.trim());
+                            currentChunk = '';
+                        }
+                    }
+                    // Línea normal
+                    else {
+                        if (currentChunk) {
+                            currentChunk += '\n' + line;
+                        } else {
+                            currentChunk = line;
+                        }
+                    }
+                }
+                
+                // Agregar cualquier chunk restante
+                if (currentChunk) {
+                    chunks.push(currentChunk.trim());
+                }
+            }
+            
+            // Filtrar chunks vacíos
+            chunks = chunks.filter(chunk => chunk.length > 0);
+            
+            // Si no se pudo dividir bien, usar el mensaje original
+            if (chunks.length === 0) {
+                chunks = [message];
+            }
+            
+            // 🔧 ENVÍO ÚNICO O MÚLTIPLE SEGÚN DIVISIÓN
+            if (chunks.length === 1) {
+                // Mensaje simple
+                logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
+                    chatId,
+                    messageLength: message.length,
+                    preview: message.substring(0, 100) + '...',
+                    environment: config.environment
+                });
+                
+                const response = await fetch(`${WHAPI_API_URL}/messages/text`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${WHAPI_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        to: chatId,
+                        body: message,
+                        typing_time: 3
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json() as any;
+                    
+                    // 🔧 TRACKING: Registrar ID del mensaje enviado por el bot
+                    if (result.sent && result.message?.id) {
+                        botSentMessages.add(result.message.id);
+                        logDebug('BOT_MESSAGE_TRACKED', `Mensaje del bot registrado para tracking anti-duplicación`, {
+                            shortUserId: shortUserId,
+                            messageId: result.message.id,
+                            messageLength: message.length,
+                            timestamp: new Date().toISOString(),
+                            environment: config.environment
+                        });
+                        
+                        // Limpiar después de 10 minutos
+                        setTimeout(() => {
+                            botSentMessages.delete(result.message.id);
+                        }, 10 * 60 * 1000);
+                    }
+                    
+                    logSuccess('WHATSAPP_SEND', `Mensaje enviado exitosamente`, {
+                        shortUserId: shortUserId,
+                        messageLength: message.length,
+                        messageId: result.message?.id,
+                        environment: config.environment
+                    });
+                    return true;
+                } else {
+                    const errorText = await response.text();
+                    logError('WHATSAPP_SEND', `Error enviando mensaje a ${shortUserId}`, { 
+                        status: response.status,
+                        statusText: response.statusText,
+                        error: errorText,
+                        environment: config.environment
+                    });
+                    return false;
+                }
+            } else {
+                // 🎯 MÚLTIPLES PÁRRAFOS - Enviar como mensajes separados
+                logInfo('WHATSAPP_CHUNKS', `Dividiendo mensaje largo en ${chunks.length} párrafos`, { 
+                    chatId: chatId,
+                    shortUserId: shortUserId,
+                    totalChunks: chunks.length,
+                    originalLength: message.length,
+                    environment: config.environment
+                });
+                
+                // Enviar cada chunk como mensaje independiente
+                for (let i = 0; i < chunks.length; i++) {
+                    const chunk = chunks[i];
+                    const isLastChunk = i === chunks.length - 1;
+                    
+                    logDebug('WHATSAPP_CHUNK', `Enviando párrafo ${i + 1}/${chunks.length}`, {
+                        shortUserId: shortUserId,
+                        chunkLength: chunk.length,
+                        preview: chunk.substring(0, 50) + '...',
+                        environment: config.environment
+                    });
+                    
+                    const response = await fetch(`${WHAPI_API_URL}/messages/text`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${WHAPI_TOKEN}`
+                        },
+                        body: JSON.stringify({
+                            to: chatId,
+                            body: chunk,
+                            typing_time: i === 0 ? 3 : 2
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json() as any;
+                        
+                        // 🔧 TRACKING: Registrar ID del mensaje enviado por el bot
+                        if (result.sent && result.message?.id) {
+                            botSentMessages.add(result.message.id);
+                            setTimeout(() => {
+                                botSentMessages.delete(result.message.id);
+                            }, 10 * 60 * 1000);
+                        }
+                    } else {
+                        const errorText = await response.text();
+                        logError('WHATSAPP_CHUNK_ERROR', `Error enviando chunk ${i + 1}/${chunks.length}`, { 
+                            shortUserId: shortUserId,
+                            status: response.status,
+                            error: errorText,
+                            environment: config.environment
+                        });
+                    }
+                    
+                    // Delay natural entre párrafos
+                    if (!isLastChunk) {
+                        await new Promise(resolve => setTimeout(resolve, 150));
+                    }
+                }
+                
+                logSuccess('WHATSAPP_CHUNKS_COMPLETE', `Todos los párrafos enviados`, {
+                    shortUserId: shortUserId,
+                    totalChunks: chunks.length,
+                    originalLength: message.length,
+                    environment: config.environment
+                });
+                return true;
+            }
+        } catch (error) {
+            logError('WHATSAPP_SEND', `Error de red enviando a ${shortUserId}`, { 
+                error: error.message,
+                stack: error.stack,
+                environment: config.environment
+            });
+            return false;
         }
     }
 
@@ -595,6 +831,31 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 
                 saveThreadId(userJid, threadId, chatId, userName);
                 
+                // 🆕 OBTENER ETIQUETAS INMEDIATAMENTE PARA NUEVO THREAD
+                try {
+                    const enhancedInfo = await getEnhancedContactInfo(shortUserId, chatId);
+                    if (enhancedInfo.labels && enhancedInfo.labels.length > 0) {
+                        threadPersistence.updateThreadMetadata(shortUserId, {
+                            name: enhancedInfo.name,
+                            userName: userName,
+                            labels: enhancedInfo.labels
+                        });
+                        logInfo('NEW_THREAD_LABELS', `Labels establecidas para nuevo thread`, {
+                            shortUserId,
+                            threadId,
+                            labelsCount: enhancedInfo.labels.length,
+                            labels: enhancedInfo.labels,
+                            environment: config.environment
+                        });
+                    }
+                } catch (err) {
+                    logWarning('NEW_THREAD_LABELS_ERROR', `Error obteniendo labels para nuevo thread`, {
+                        shortUserId,
+                        error: err.message,
+                        environment: config.environment
+                    });
+                }
+                
                 logOpenAIRequest(shortUserId, 'thread_created');
                 logSuccess('THREAD_NEW', `Nuevo thread creado para ${shortUserId} (${userName})`, { 
                     threadId,
@@ -604,6 +865,43 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     userName: userName
                 });
             } else {
+                // 🆕 ACTUALIZACIÓN DE ETIQUETAS CADA 24 HORAS
+                const threadInfo = threadPersistence.getThread(shortUserId);
+                if (threadInfo && threadInfo.lastActivity) {
+                    const lastActivityDate = new Date(threadInfo.lastActivity);
+                    const now = new Date();
+                    const hoursSinceLastActivity = (now.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60);
+                    
+                    if (hoursSinceLastActivity > 24) {
+                        logInfo('LABELS_24H_UPDATE', `Han pasado ${Math.floor(hoursSinceLastActivity)} horas, actualizando etiquetas`, {
+                            shortUserId,
+                            lastActivity: threadInfo.lastActivity,
+                            environment: config.environment
+                        });
+                        
+                        try {
+                            const enhancedInfo = await getEnhancedContactInfo(shortUserId, chatId);
+                            threadPersistence.updateThreadMetadata(shortUserId, {
+                                name: enhancedInfo.name,
+                                userName: userName,
+                                labels: enhancedInfo.labels
+                            });
+                            logInfo('LABELS_24H_UPDATED', `Etiquetas actualizadas después de 24h`, {
+                                shortUserId,
+                                labelsCount: enhancedInfo.labels?.length || 0,
+                                labels: enhancedInfo.labels,
+                                environment: config.environment
+                            });
+                        } catch (err) {
+                            logWarning('LABELS_24H_ERROR', `Error actualizando etiquetas después de 24h`, {
+                                shortUserId,
+                                error: err.message,
+                                environment: config.environment
+                            });
+                        }
+                    }
+                }
+                
                 logSuccess('THREAD_REUSE', `Reutilizando thread existente para ${shortUserId} (${userName || 'Usuario'})`, {
                     threadId,
                     userJid: userJid,
@@ -695,14 +993,405 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 return 'Lo siento, no pude generar una respuesta adecuada.';
                 
             } else if (run.status === 'requires_action') {
-                logWarning('FUNCTION_CALLING_NOT_IMPLEMENTED', `Run requiere function calling (no implementado aún)`, {
+                // 🎯 FUNCTION CALLING COMPLETO con manejo avanzado
+                const toolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
+                
+                if (!toolCalls || toolCalls.length === 0) {
+                    logError('FUNCTION_CALLING_NO_TOOLS', `Run requires_action pero sin tool_calls`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        required_action: run.required_action
+                    });
+                    return 'Lo siento, hubo un problema procesando la consulta. Por favor intenta de nuevo.';
+                }
+                
+                logInfo('FUNCTION_CALLING_START', `OpenAI requiere ejecutar ${toolCalls.length} función(es)`, {
                     shortUserId,
                     threadId,
                     runId: run.id,
-                    status: run.status
+                    toolCallsCount: toolCalls.length,
+                    functions: toolCalls.map(tc => ({
+                        id: tc.id,
+                        name: tc.function.name,
+                        argsLength: tc.function.arguments.length
+                    })),
+                    expires_at: run.expires_at,
+                    environment: config.environment
                 });
                 
-                return 'Lo siento, esta consulta requiere funciones avanzadas que aún no están implementadas en esta versión.';
+                try {
+                    // 🔧 PROCESAMIENTO PARALELO de tool calls con error handling
+                    const toolOutputPromises = toolCalls.map(async (toolCall, index) => {
+                        const startTime = Date.now();
+                        
+                        if (toolCall.type !== 'function') {
+                            logWarning('FUNCTION_CALL_SKIP', `Tool call tipo '${toolCall.type}' no soportado`, {
+                                shortUserId,
+                                toolCallId: toolCall.id,
+                                type: toolCall.type,
+                                index
+                            });
+                            return {
+                                tool_call_id: toolCall.id,
+                                output: JSON.stringify({ 
+                                    error: `Tool call tipo '${toolCall.type}' no soportado`,
+                                    success: false 
+                                })
+                            };
+                        }
+                        
+                        const functionName = toolCall.function.name;
+                        let functionArgs;
+                        
+                        try {
+                            functionArgs = JSON.parse(toolCall.function.arguments);
+                        } catch (parseError) {
+                            logError('FUNCTION_ARGS_PARSE_ERROR', `Error parseando argumentos para ${functionName}`, {
+                                shortUserId,
+                                functionName,
+                                toolCallId: toolCall.id,
+                                rawArgs: toolCall.function.arguments,
+                                parseError: parseError.message
+                            });
+                            return {
+                                tool_call_id: toolCall.id,
+                                output: JSON.stringify({ 
+                                    error: 'Error parseando argumentos de la función',
+                                    success: false 
+                                })
+                            };
+                        }
+                        
+                        logInfo('FUNCTION_EXECUTION_START', `Ejecutando función ${functionName} [${index + 1}/${toolCalls.length}]`, {
+                            shortUserId,
+                            functionName,
+                            args: functionArgs,
+                            toolCallId: toolCall.id,
+                            index: index + 1,
+                            total: toolCalls.length,
+                            environment: config.environment
+                        });
+                        
+                        try {
+                            // Ejecutar la función usando FunctionHandler
+                            const { FunctionHandler } = await import('./handlers/function-handler.js');
+                            const functionHandler = new FunctionHandler();
+                            const result = await functionHandler.handleFunction(functionName, functionArgs);
+                            
+                            const executionTime = Date.now() - startTime;
+                            
+                            // 🔧 FORMATEO ROBUSTO del resultado
+                            let formattedResult;
+                            if (typeof result === 'string') {
+                                formattedResult = result;
+                            } else if (result && typeof result === 'object') {
+                                formattedResult = JSON.stringify(result);
+                            } else {
+                                formattedResult = String(result || 'success');
+                            }
+                            
+                            logSuccess('FUNCTION_EXECUTION_COMPLETE', `Función ${functionName} ejecutada exitosamente`, {
+                                shortUserId,
+                                functionName,
+                                toolCallId: toolCall.id,
+                                executionTime,
+                                resultLength: formattedResult.length,
+                                resultPreview: formattedResult.substring(0, 200) + (formattedResult.length > 200 ? '...' : ''),
+                                index: index + 1,
+                                total: toolCalls.length,
+                                environment: config.environment
+                            });
+                            
+                            return {
+                                tool_call_id: toolCall.id,
+                                output: formattedResult
+                            };
+                            
+                        } catch (functionError) {
+                            const executionTime = Date.now() - startTime;
+                            
+                            logError('FUNCTION_EXECUTION_ERROR', `Error ejecutando función ${functionName}`, {
+                                shortUserId,
+                                functionName,
+                                toolCallId: toolCall.id,
+                                error: functionError.message,
+                                stack: functionError.stack,
+                                executionTime,
+                                args: functionArgs,
+                                index: index + 1,
+                                total: toolCalls.length,
+                                environment: config.environment
+                            });
+                            
+                            return {
+                                tool_call_id: toolCall.id,
+                                output: JSON.stringify({ 
+                                    error: 'Error ejecutando la función',
+                                    details: functionError.message,
+                                    success: false 
+                                })
+                            };
+                        }
+                    });
+                    
+                    // Esperar a que todas las funciones terminen
+                    const toolOutputs = await Promise.all(toolOutputPromises);
+                    
+                    // Log detallado del contenido enviado a OpenAI
+                    logInfo('OPENAI_TOOL_OUTPUTS_DETAIL', `Contenido exacto enviado a OpenAI en tool_outputs`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        toolOutputsCount: toolOutputs.length,
+                        toolOutputsDetail: toolOutputs.map((output, i) => ({
+                            tool_call_id: output.tool_call_id,
+                            outputLength: output.output.length,
+                            isError: output.output.includes('"error"') || output.output.includes('"success":false'),
+                            fullContent: output.output,
+                            contentType: typeof output.output
+                        })),
+                        timestamp: new Date().toISOString(),
+                        environment: config.environment
+                    });
+                    
+                    logInfo('FUNCTION_CALLING_OUTPUTS_READY', `Todas las funciones completadas, enviando resultados`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        toolOutputsCount: toolOutputs.length,
+                        outputSummary: toolOutputs.map((output, i) => ({
+                            tool_call_id: output.tool_call_id,
+                            outputLength: output.output.length,
+                            isError: output.output.includes('"error"') || output.output.includes('"success":false')
+                        })),
+                        environment: config.environment
+                    });
+                    
+                    // 🔧 ENVÍO CON TIMEOUT Y RETRY
+                    let submitAttempts = 0;
+                    const maxSubmitAttempts = 3;
+                    let submitSuccess = false;
+                    
+                    while (!submitSuccess && submitAttempts < maxSubmitAttempts) {
+                        try {
+                            submitAttempts++;
+                            
+                            logInfo('FUNCTION_SUBMIT_ATTEMPT', `Enviando tool outputs [intento ${submitAttempts}/${maxSubmitAttempts}]`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                attempt: submitAttempts,
+                                environment: config.environment
+                            });
+                            
+                            run = await openaiClient.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+                                tool_outputs: toolOutputs
+                            });
+                            
+                            submitSuccess = true;
+                            
+                            logSuccess('FUNCTION_SUBMIT_SUCCESS', `Tool outputs enviados exitosamente`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                toolOutputsCount: toolOutputs.length,
+                                newRunStatus: run.status,
+                                attempt: submitAttempts,
+                                environment: config.environment
+                            });
+                            
+                        } catch (submitError) {
+                            logError('FUNCTION_SUBMIT_ERROR', `Error enviando tool outputs [intento ${submitAttempts}]`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                error: submitError.message,
+                                errorCode: submitError.status,
+                                attempt: submitAttempts,
+                                maxAttempts: maxSubmitAttempts,
+                                environment: config.environment
+                            });
+                            
+                            if (submitAttempts >= maxSubmitAttempts) {
+                                return 'Lo siento, hubo un problema enviando los resultados de la consulta. Por favor intenta de nuevo.';
+                            }
+                            
+                            // Esperar antes de reintentar
+                            await new Promise(resolve => setTimeout(resolve, 1000 * submitAttempts));
+                        }
+                    }
+                    
+                    // 🔧 CONTINUAR ESPERANDO HASTA COMPLETION con timeout de 10 minutos
+                    const submitTime = Date.now();
+                    const maxWaitTime = 10 * 60 * 1000; // 10 minutos (límite de OpenAI)
+                    attempts = 0;
+                    const maxWaitAttempts = Math.floor(maxWaitTime / 500); // 500ms por intento
+                    
+                    logInfo('FUNCTION_WAITING_COMPLETION', `Esperando completion después de function calling`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        currentStatus: run.status,
+                        maxWaitMinutes: 10,
+                        environment: config.environment
+                    });
+                    
+                    while (['queued', 'in_progress'].includes(run.status) && attempts < maxWaitAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        try {
+                            run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
+                        } catch (retrieveError: any) {
+                            // Manejar rate limit en retrieve
+                            if (retrieveError?.code === 'rate_limit_exceeded') {
+                                const retryAfter = 2; // Default 2 segundos
+                                logWarning('RATE_LIMIT_RETRIEVE', `Rate limit en retrieve, esperando ${retryAfter}s`, {
+                                    shortUserId,
+                                    retryAfter,
+                                    error: retrieveError.message,
+                                    environment: config.environment
+                                });
+                                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                                continue;
+                            }
+                            throw retrieveError;
+                        }
+                        
+                        attempts++;
+                        
+                        // Log periódico cada 30 segundos
+                        if (attempts % 60 === 0) {
+                            const waitedMinutes = Math.floor((Date.now() - submitTime) / 60000);
+                            logInfo('FUNCTION_WAITING_UPDATE', `Esperando completion: ${waitedMinutes} min transcurridos`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                currentStatus: run.status,
+                                waitedMinutes,
+                                attempts: attempts,
+                                maxWaitMinutes: 10,
+                                environment: config.environment
+                            });
+                        }
+                    }
+                    
+                    const functionDuration = Date.now() - startTime;
+                    
+                    logInfo('FUNCTION_CALLING_FINAL_STATUS', `Function calling completado`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        finalStatus: run.status,
+                        totalDuration: functionDuration,
+                        toolCallsCount: toolCalls.length,
+                        waitAttempts: attempts,
+                        environment: config.environment
+                    });
+                    
+                    // Continuar con el procesamiento normal después del function calling
+                    
+                    // Verificar el estado final del run después del function calling
+                    if (run.status === 'completed') {
+                        logSuccess('FUNCTION_CALLING_COMPLETED', `Function calling completado exitosamente`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            finalStatus: run.status,
+                            totalDuration: functionDuration,
+                            toolCallsCount: toolCalls.length,
+                            environment: config.environment
+                        });
+                        
+                        // Obtener la respuesta final del asistente
+                        const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
+                        const assistantMessage = messages.data[0];
+                        
+                        if (assistantMessage && assistantMessage.content && assistantMessage.content.length > 0) {
+                            const content = assistantMessage.content[0];
+                            if (content.type === 'text') {
+                                const responseText = content.text.value;
+                                
+                                logSuccess('FUNCTION_CALLING_RESPONSE', `Respuesta final recibida después de function calling`, {
+                                    shortUserId,
+                                    threadId,
+                                    responseLength: responseText.length,
+                                    totalDuration: functionDuration,
+                                    toolCallsExecuted: toolCalls.length,
+                                    environment: config.environment
+                                });
+                                
+                                return responseText;
+                            }
+                        }
+                        
+                        logWarning('FUNCTION_CALLING_NO_RESPONSE', `Function calling completado pero sin respuesta de texto`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            messageContent: assistantMessage?.content
+                        });
+                        
+                        return 'Las funciones se ejecutaron correctamente, pero no pude generar una respuesta final.';
+                        
+                    } else if (run.status === 'failed') {
+                        logError('FUNCTION_CALLING_FAILED', `Function calling falló`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            finalStatus: run.status,
+                            lastError: run.last_error,
+                            totalDuration: functionDuration,
+                            toolCallsCount: toolCalls.length,
+                            environment: config.environment
+                        });
+                        
+                        return 'Lo siento, hubo un problema ejecutando las funciones requeridas. Por favor intenta de nuevo.';
+                        
+                    } else if (run.status === 'expired') {
+                        logError('FUNCTION_CALLING_EXPIRED', `Function calling expiró`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            finalStatus: run.status,
+                            totalDuration: functionDuration,
+                            toolCallsCount: toolCalls.length,
+                            maxWaitMinutes: 10,
+                            environment: config.environment
+                        });
+                        
+                        return 'Lo siento, la consulta tardó demasiado en procesarse. Por favor intenta de nuevo con una consulta más específica.';
+                        
+                    } else {
+                        logWarning('FUNCTION_CALLING_UNEXPECTED_STATUS', `Function calling terminó con estado inesperado`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            finalStatus: run.status,
+                            totalDuration: functionDuration,
+                            toolCallsCount: toolCalls.length,
+                            environment: config.environment
+                        });
+                        
+                        return 'Lo siento, hubo un problema procesando la consulta. Por favor intenta de nuevo.';
+                    }
+                    
+                } catch (functionError) {
+                    const functionDuration = Date.now() - startTime;
+                    
+                    logError('FUNCTION_CALLING_CRITICAL_ERROR', `Error crítico en function calling`, {
+                        shortUserId,
+                        error: functionError.message,
+                        stack: functionError.stack,
+                        threadId,
+                        runId: run.id,
+                        duration: functionDuration,
+                        toolCallsCount: toolCalls?.length || 0,
+                        environment: config.environment
+                    });
+                    
+                    return 'Lo siento, hubo un problema ejecutando la consulta. Por favor intenta de nuevo.';
+                }
                 
             } else {
                 logError('OPENAI_RUN_ERROR', `Run falló o expiró`, {
@@ -775,6 +1464,159 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     });
                 }
                 
+                // 🔧 PROCESAR MENSAJES MANUALES DEL AGENTE (from_me: true)
+                if (message.from_me && message.type === 'text' && message.text?.body) {
+                    
+                    // 🚫 FILTRAR: Verificar si es un mensaje del bot (no manual)
+                    if (botSentMessages.has(message.id)) {
+                        logDebug('BOT_MESSAGE_FILTERED', `Mensaje del bot ignorado: ${message.id}`, {
+                            environment: config.environment
+                        });
+                        continue; // Saltar, no es un mensaje manual real
+                    }
+                    
+                    // ✅ Es un mensaje manual real del agente
+                    const chatId = message.chat_id;
+                    const text = message.text.body.trim();
+                    const fromName = message.from_name || 'Agente';
+                    const shortClientId = getShortUserId(chatId);
+                    
+                    // Verificar si hay thread activo
+                    const threadId = getThreadId(chatId);
+                    if (!threadId) {
+                        const timestamp3 = getCompactTimestamp();
+                        console.log(`${LOG_COLORS.TIMESTAMP}${timestamp3}${LOG_COLORS.RESET} ${LOG_COLORS.AGENT}[AGENT]${LOG_COLORS.RESET} ⚠️  Sin conversación activa con ${shortClientId}`);
+                        logWarning('MANUAL_NO_THREAD', `No hay conversación activa`, { 
+                            shortClientId: shortClientId,
+                            agentName: fromName,
+                            reason: 'cliente_debe_escribir_primero',
+                            environment: config.environment
+                        });
+                        continue;
+                    }
+                    
+                    // 🎯 Log compacto - Solo primer mensaje del grupo
+                    if (!manualMessageBuffers.has(chatId)) {
+                        // Obtener nombre del cliente en lugar del número
+                        const threadInfo = threadPersistence.getThread(shortClientId);
+                        const clientName = threadInfo?.userName || 'Cliente';
+                        const timestamp4 = getCompactTimestamp();
+                        console.log(`${LOG_COLORS.TIMESTAMP}${timestamp4}${LOG_COLORS.RESET} ${LOG_COLORS.AGENT}[AGENT]${LOG_COLORS.RESET} 🔧 ${fromName} → ${clientName}: "${text.substring(0, 25)}${text.length > 25 ? '...' : ''}"`);
+                    }
+                    
+                    logInfo('MANUAL_DETECTED', `Mensaje manual del agente detectado`, {
+                        shortClientId: shortClientId,
+                        agentName: fromName,
+                        messageText: text.substring(0, 100),
+                        messageLength: text.length,
+                        timestamp: new Date().toISOString(),
+                        chatId: chatId,
+                        environment: config.environment
+                    });
+                    
+                    // 📦 AGRUPAR MENSAJES MANUALES
+                    if (!manualMessageBuffers.has(chatId)) {
+                        manualMessageBuffers.set(chatId, {
+                            messages: [],
+                            agentName: fromName,
+                            timestamp: Date.now()
+                        });
+                        logInfo('MANUAL_BUFFER_CREATE', `Buffer manual creado`, { 
+                            shortClientId: shortClientId, 
+                            agentName: fromName,
+                            environment: config.environment
+                        });
+                    }
+                    
+                    const buffer = manualMessageBuffers.get(chatId)!;
+                    buffer.messages.push(text);
+                    
+                    logInfo('MANUAL_BUFFERING', `Mensaje manual agregado al buffer`, {
+                        shortClientId: shortClientId,
+                        bufferCount: buffer.messages.length,
+                        agentName: fromName,
+                        timeoutSeconds: MANUAL_MESSAGE_TIMEOUT / 1000,
+                        environment: config.environment
+                    });
+                    
+                    // Cancelar timer anterior si existe
+                    if (manualTimers.has(chatId)) {
+                        clearTimeout(manualTimers.get(chatId)!);
+                    }
+                    
+                    // Establecer nuevo timer
+                    const timerId = setTimeout(async () => {
+                        const finalBuffer = manualMessageBuffers.get(chatId);
+                        if (finalBuffer && finalBuffer.messages.length > 0) {
+                            const combinedMessage = finalBuffer.messages.join(' ');
+                            
+                            try {
+                                logInfo('MANUAL_PROCESSING', `Procesando mensajes manuales agrupados`, {
+                                    shortClientId: shortClientId,
+                                    messageCount: finalBuffer.messages.length,
+                                    agentName: finalBuffer.agentName,
+                                    combinedLength: combinedMessage.length,
+                                    preview: combinedMessage.substring(0, 100),
+                                    threadId: threadId,
+                                    environment: config.environment
+                                });
+                                
+                                // 1. Agregar contexto del sistema
+                                await openaiClient.beta.threads.messages.create(threadId, {
+                                    role: 'user',
+                                    content: `[NOTA DEL SISTEMA: Un agente humano (${finalBuffer.agentName}) ha respondido directamente al cliente]`
+                                });
+                                
+                                // 2. Agregar el mensaje manual agrupado
+                                await openaiClient.beta.threads.messages.create(threadId, {
+                                    role: 'assistant',
+                                    content: combinedMessage
+                                });
+                                
+                                // 3. Actualizar thread
+                                const threadInfo = threadPersistence.getThread(shortClientId);
+                                if (threadInfo) {
+                                    threadPersistence.setThread(shortClientId, threadId, chatId, finalBuffer.agentName);
+                                }
+                                
+                                // 🎯 Log compacto final
+                                const msgCount = finalBuffer.messages.length > 1 ? `${finalBuffer.messages.length} msgs` : '1 msg';
+                                const timestamp5 = getCompactTimestamp();
+                                console.log(`${LOG_COLORS.TIMESTAMP}${timestamp5}${LOG_COLORS.RESET} ${LOG_COLORS.BOT}[BOT]${LOG_COLORS.RESET} ✅ Enviado a 🤖 OpenAI → Contexto actualizado (${msgCount})`);
+                                
+                                logSuccess('MANUAL_SYNC_SUCCESS', `Mensajes manuales sincronizados exitosamente`, {
+                                    shortClientId: shortClientId,
+                                    agentName: finalBuffer.agentName,
+                                    messageCount: finalBuffer.messages.length,
+                                    totalLength: combinedMessage.length,
+                                    preview: combinedMessage.substring(0, 100),
+                                    threadId: threadId,
+                                    timestamp: new Date().toISOString(),
+                                    environment: config.environment
+                                });
+                                
+                            } catch (error) {
+                                const timestamp6 = getCompactTimestamp();
+                                console.log(`${LOG_COLORS.TIMESTAMP}${timestamp6}${LOG_COLORS.RESET} ${LOG_COLORS.AGENT}[AGENT]${LOG_COLORS.RESET} ❌ Error sincronizando con OpenAI: ${error.message}`);
+                                logError('MANUAL_SYNC_ERROR', `Error sincronizando mensajes manuales`, {
+                                    error: error.message,
+                                    threadId: threadId,
+                                    chatId: shortClientId,
+                                    messageCount: finalBuffer.messages.length,
+                                    environment: config.environment
+                                });
+                            }
+                        }
+                        
+                        // Limpiar buffers
+                        manualMessageBuffers.delete(chatId);
+                        manualTimers.delete(chatId);
+                    }, MANUAL_MESSAGE_TIMEOUT);
+                    
+                    manualTimers.set(chatId, timerId);
+                    continue; // Procesar siguiente mensaje
+                }
+                
                 // Solo procesar mensajes de texto que no sean del bot
                 if (message.type === 'text' && !message.from_me && message.text?.body) {
                     const userJid = message.from;
@@ -792,6 +1634,35 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                             name: userName,
                             lastActivity: Date.now()
                         });
+                        
+                        // 🆕 SISTEMA DE ETIQUETAS: Obtener info adicional para usuarios nuevos
+                        const existingThread = threadPersistence.getThread(getShortUserId(userJid));
+                        if (!existingThread) {
+                            logDebug('NEW_USER', `Usuario nuevo detectado: ${getShortUserId(userJid)}, obteniendo info adicional`, {
+                                environment: config.environment
+                            });
+                            
+                            // Obtener etiquetas de forma asíncrona (no bloquear el procesamiento)
+                            setTimeout(async () => {
+                                try {
+                                    const enhancedInfo = await getEnhancedContactInfo(getShortUserId(userJid), chatId);
+                                    if (enhancedInfo.labels && enhancedInfo.labels.length > 0) {
+                                        logInfo('NEW_USER_LABELS', `Etiquetas obtenidas para usuario nuevo`, {
+                                            shortUserId: getShortUserId(userJid),
+                                            labelsCount: enhancedInfo.labels.length,
+                                            labels: enhancedInfo.labels,
+                                            environment: config.environment
+                                        });
+                                    }
+                                } catch (error) {
+                                    logWarning('NEW_USER_LABELS_ERROR', `Error obteniendo etiquetas para usuario nuevo`, {
+                                        shortUserId: getShortUserId(userJid),
+                                        error: error.message,
+                                        environment: config.environment
+                                    });
+                                }
+                            }, 1000);
+                        }
                         
                         if (config.enableDetailedLogs) {
                             logInfo('BUFFER_CREATE', `Buffer creado para ${userName}`, {
@@ -853,44 +1724,6 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             });
         }
     });
-
-    // Función para enviar mensajes de WhatsApp
-    async function sendWhatsAppMessage(chatId: string, message: string) {
-        try {
-            const response = await fetch(`${WHAPI_API_URL}/messages/text`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${WHAPI_TOKEN}`
-                },
-                body: JSON.stringify({
-                    to: chatId,
-                    body: message
-                })
-            });
-            
-            if (response.ok) {
-                const result = await response.json() as any;
-                logSuccess('WHATSAPP_SEND', 'Mensaje enviado exitosamente', {
-                    chatId,
-                    messageLength: message.length,
-                    messageId: result?.id || 'unknown',
-                    environment: config.environment
-                });
-                return result;
-            } else {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-        } catch (error) {
-            logError('WHATSAPP_SEND_ERROR', 'Error enviando mensaje de WhatsApp', {
-                error: error.message,
-                chatId,
-                messageLength: message.length,
-                environment: config.environment
-            });
-            throw error;
-        }
-    }
 
     // Endpoint para información de configuración (solo en desarrollo)
     if (config.isLocal) {
