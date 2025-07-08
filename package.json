@@ -5,8 +5,10 @@
   "type": "commonjs",
   "main": "src/app.ts",
   "scripts": {
-    "dev": "tsx --watch src/app.ts",
-    "dev:all": "concurrently -k -n BOT,NGROK -c green,cyan \"npm run dev\" \"ngrok http 3008 --domain=actual-bobcat-handy.ngrok-free.app\"",
+    "dev": "tsx --watch src/app-unified.ts",
+    "dev:local": "concurrently -k -n BOT,NGROK -c green,cyan \"npm run dev\" \"ngrok http 3008 --domain=actual-bobcat-handy.ngrok-free.app\"",
+    "dev:cloud": "NODE_ENV=production tsx --watch src/app-unified.ts",
+    "dev:old": "tsx --watch src/app.ts",
     "build": "rollup -c rollup.config.mjs",
     "start": "node dist/app.js",
     "test": "node scripts/development/test-env.js",
@@ -14,8 +16,11 @@
     "create-assistant": "node scripts/create-new-assistant-v2.js",
     "check-docs": "node scripts/check-docs.js",
     "pre-deploy": "powershell -ExecutionPolicy Bypass -File scripts/pre-deploy.ps1",
-    "deploy": "npm run pre-deploy && git push origin master",
-    "health-check": "node -e \"require('http').get('http://localhost:8080/health', (res) => { console.log('Status:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1) })\""
+    "deploy": "npm run build && npm run pre-deploy && git push origin master",
+    "deploy:auto": "npm run build && gcloud run deploy bot-wsp-whapi-ia --source . --region northamerica-northeast1 --allow-unauthenticated",
+    "health-check": "node -e \"require('http').get('http://localhost:8080/health', (res) => { console.log('Status:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1) })\"",
+    "health-check:local": "node -e \"require('http').get('http://localhost:3008/health', (res) => { console.log('Status:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1) })\"",
+    "config": "node -e \"console.log('Environment Config:'); console.log(require('./src/config/environment.js').config);\""
   },
   "keywords": [
     "whatsapp",

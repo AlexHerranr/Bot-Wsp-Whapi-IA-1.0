@@ -4,7 +4,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 
 export default {
-    input: 'src/app.ts',
+    input: 'src/app-unified.ts',
     output: {
         dir: 'dist',
         format: 'cjs',
