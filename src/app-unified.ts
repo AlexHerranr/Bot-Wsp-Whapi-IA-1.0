@@ -36,6 +36,9 @@ import {
 } from './utils/logger.js';
 import { threadPersistence } from './utils/persistence/index.js';
 
+// Importar sistema de monitoreo
+import { botDashboard } from './utils/monitoring/dashboard.js';
+
 // --- Configuración Unificada ---
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';

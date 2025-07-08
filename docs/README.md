@@ -145,32 +145,59 @@ Bot de WhatsApp inteligente para gestión de reservas hoteleras, integrado con O
 contextualMessage = `[CONTEXTO: Cliente se llama ${message.from_name}]\n${message.text.body}`;
 ```
 
+## ✅ MEJORAS COMPLETADAS (Enero 2025)
+
+### 1. **Sistema Unificado de Aplicación**
+- **✅ Completado:** Un solo archivo principal (`app-unified.ts`)
+- **✅ Beneficio:** Detección automática de entorno (local vs Cloud Run)
+- **✅ Resultado:** Configuración dinámica de puertos y timeouts
+
+### 2. **Deployment Optimizado para Cloud Run**
+- **✅ Completado:** Sistema de build con TypeScript Compiler
+- **✅ Beneficio:** Build más rápido y confiable
+- **✅ Resultado:** Deployment automatizado sin errores
+
+### 3. **Function Calling Completo**
+- **✅ Completado:** Integración con Beds24 API
+- **✅ Beneficio:** Consultas de disponibilidad en tiempo real
+- **✅ Resultado:** Respuestas precisas con precios actuales
+
+### 4. **Sistema de Buffers Inteligente**
+- **✅ Completado:** Agrupación de mensajes (8s local, 6s Cloud Run)
+- **✅ Beneficio:** Respuestas más naturales y contextualizadas
+- **✅ Resultado:** Mejor experiencia de usuario
+
+### 5. **Reorganización Completa del Proyecto**
+- **✅ Completado:** Archivos históricos archivados en `/archive/`
+- **✅ Beneficio:** Proyecto limpio y mantenible
+- **✅ Resultado:** Estructura clara para desarrollo futuro
+
 ## 🔄 Mejoras Pendientes
 
 ### 1. **Sistema de Memoria a Largo Plazo**
-- **Estado actual:** Memoria básica en RAM
+- **Estado actual:** Memoria básica en threads OpenAI
 - **Objetivo:** Base de datos persistente con perfiles detallados
 - **Beneficio:** Recordar preferencias, historial, fechas importantes
 
-### 2. **Deployment sin Puerto Local**
-- **Estado actual:** Requiere ngrok para túnel
-- **Objetivo:** Deploy en cloud (Firebase Functions, AWS Lambda)
-- **Beneficio:** URL persistente, alta disponibilidad
+### 2. **Escalamiento a Humanos**
+- **Estado actual:** Especificación completa lista
+- **Objetivo:** Función `escalate_to_human()` implementada
+- **Beneficio:** Derivación automática para casos complejos
 
-### 3. **URL de Webhook Persistente**
-- **Estado actual:** URL cambia con cada sesión de ngrok
-- **Solución:** Ngrok Pro o deployment en cloud
-- **Costo:** ~$10/mes ngrok Pro o hosting cloud
+### 3. **Sistema Multi-Assistant**
+- **Estado actual:** Un assistant para todo
+- **Objetivo:** Assistants especializados (pricing, availability, info)
+- **Beneficio:** Respuestas más rápidas y precisas
 
-### 4. **Function Calling para Disponibilidad**
-- **Estado actual:** Solo respuestas de texto
-- **Objetivo:** Consultar disponibilidad real via n8n
-- **Beneficio:** Respuestas precisas sobre habitaciones
+### 4. **Dashboard de Monitoreo**
+- **Estado actual:** Solo logs de Cloud Run
+- **Objetivo:** Interface web para monitoreo en tiempo real
+- **Beneficio:** Visibilidad completa del sistema
 
-### 5. **Extracción Inteligente de Contexto**
-- **Estado actual:** Solo guarda nombre
-- **Objetivo:** IA extrae fechas, preferencias, grupo familiar
-- **Beneficio:** Personalización profunda
+### 5. **Analytics y Métricas**
+- **Estado actual:** Logs básicos
+- **Objetivo:** Métricas de uso, patrones de consulta, success rate
+- **Beneficio:** Optimización basada en datos reales
 
 ## 🆕 Nuevas Posibilidades con Whapi
 
@@ -251,7 +278,7 @@ GET /statuses/{MessageID} - Ver quién leyó en grupos
 
 ```bash
 # Clonar repositorio
-git clone https://github.com/tu-usuario/bot-whatsapp-ia
+git clone https://github.com/AlexHerranr/Bot-Wsp-Whapi-IA-1.0
 
 # Instalar dependencias
 npm install
@@ -260,12 +287,14 @@ npm install
 cp .env.example .env
 # Editar .env con tus credenciales
 
-# Desarrollo local
-npm run dev
+# Desarrollo local (detección automática de entorno)
+npm run dev          # Puerto 3008 + detección automática
+npm run dev:local    # Puerto 3008 + ngrok automático
+npm run dev:cloud    # Simula Cloud Run en puerto 8080
 
-# Para producción (requiere ngrok)
-ngrok http 3008
-# Copiar URL en configuración de Whapi
+# Build y deploy
+npm run build        # Compilación TypeScript
+npm run deploy       # Deploy automático a Cloud Run
 ```
 
 ### Variables de Entorno Requeridas
