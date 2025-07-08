@@ -211,11 +211,14 @@ const formatSimpleConsoleEntry = (entry: LogEntry): string => {
         'BOT_MESSAGE_FILTERED', 'BOT_MESSAGE_CLEANUP', 'MANUAL_DETECTED',
         'MANUAL_BUFFER_CREATE', 'MANUAL_BUFFERING', 'MANUAL_PROCESSING',
         'MANUAL_SYNC_START', 'MANUAL_SYNC_SUCCESS', 'MANUAL_SYNC_ERROR',
-        'MANUAL_NO_THREAD', 'WHATSAPP_SEND', 'AI_PROCESSING', 'WHATSAPP_OUT'
+        'MANUAL_NO_THREAD', 'WHATSAPP_SEND', 'AI_PROCESSING', 'WHATSAPP_OUT',
+        'BEDS24_DEBUG_OUTPUT', 'RESPONSE_SANITIZED', 'MESSAGE_SANITIZED', 
+        'BEDS24_RESPONSE_DETAIL', 'CONTACT_API', 'CONTACT_API_DETAILED',
+        'CONTEXT_LABELS', 'NEW_THREAD_LABELS', 'LABELS_24H'
     ];
     
     if (ignoreCategories.includes(category) || entry.level === 'DEBUG') {
-        return ''; // No mostrar en consola
+        return ''; // No mostrar en consola, solo guardar en logs
     }
     
     // === NO MOSTRAR FALLBACK ===
