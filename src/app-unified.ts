@@ -219,6 +219,12 @@ async function initializeBot() {
         
         console.log(`🤖 OpenAI configurado (timeout: ${config.openaiTimeout}ms, retries: ${config.openaiRetries})`);
         
+        // 🔧 PROGRAMAR RECUPERACIÓN DE RUNS HUÉRFANOS (después de que se definan las funciones)
+        setTimeout(() => {
+            console.log('🔍 Iniciando recuperación post-reinicio...');
+            // La lógica de recuperación se ejecutará después de setupWebhooks()
+        }, 2000);
+        
         // Cargar threads de forma no bloqueante
         setTimeout(() => {
             try {
@@ -294,6 +300,8 @@ async function initializeBot() {
                 environment: config.environment
             });
         }
+        
+
         
     } catch (error) {
         console.error('❌ Error en inicialización:', error);
@@ -931,6 +939,46 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 });
             }
             
+            // 🔧 VERIFICAR RUNS ACTIVOS (solo si hay conflicto real)
+            try {
+                const runs = await openaiClient.beta.threads.runs.list(threadId, { limit: 5 });
+                const activeRuns = runs.data.filter(r => 
+                    ['in_progress', 'requires_action'].includes(r.status)
+                );
+                
+                if (activeRuns.length > 0) {
+                    logWarning('ACTIVE_RUNS_CONFLICT', `${activeRuns.length} run(s) activo(s) en conflicto, cancelando`, {
+                        shortUserId, threadId, 
+                        activeRuns: activeRuns.map(r => ({ id: r.id, status: r.status })),
+                        environment: config.environment
+                    });
+                    
+                    // Cancelar runs que están en conflicto
+                    for (const run of activeRuns) {
+                        try {
+                            await openaiClient.beta.threads.runs.cancel(threadId, run.id);
+                            logInfo('CONFLICT_RUN_CANCELLED', `Run en conflicto cancelado: ${run.id}`, {
+                                shortUserId, threadId, runId: run.id,
+                                environment: config.environment
+                            });
+                        } catch (cancelError) {
+                            logError('CONFLICT_CANCEL_ERROR', `Error cancelando run ${run.id}`, {
+                                shortUserId, threadId, runId: run.id,
+                                error: cancelError.message,
+                                environment: config.environment
+                            });
+                        }
+                    }
+                    
+                    // Breve espera para que las cancelaciones tomen efecto
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            } catch (error) {
+                logError('ACTIVE_RUNS_CHECK_ERROR', `Error verificando runs activos`, { 
+                    shortUserId, threadId, error: error.message 
+                });
+            }
+            
             // Agregar mensaje del usuario con contextos
             logOpenAIRequest(shortUserId, 'adding_message');
             
@@ -973,6 +1021,153 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 
                 if (attempts % 10 === 0) {
                     logInfo('OPENAI_POLLING', `Esperando respuesta para ${shortUserId}, intento ${attempts}/${maxAttempts}, estado: ${run.status}`);
+                }
+            }
+            
+            // 🎯 MANEJO DE FUNCTION CALLS (loop completo para múltiples ciclos)
+            while (run.status === 'requires_action') {
+                const toolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
+                
+                if (!toolCalls || toolCalls.length === 0) {
+                    logError('FUNCTION_CALLING_NO_TOOLS', `Run requires_action pero sin tool_calls`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        required_action: run.required_action,
+                        environment: config.environment
+                    });
+                    return sanitizeResponseForClient('Lo siento, hubo un problema procesando la consulta. Por favor intenta de nuevo.');
+                }
+                
+                logInfo('FUNCTION_CALLING_START', `OpenAI requiere ejecutar ${toolCalls.length} función(es)`, {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    toolCallsCount: toolCalls.length,
+                    functions: toolCalls.map(tc => ({
+                        id: tc.id,
+                        name: tc.function.name,
+                        argsLength: tc.function.arguments.length
+                    })),
+                    environment: config.environment
+                });
+                
+                // Ejecutar cada function call
+                const toolOutputs = [];
+                
+                for (const toolCall of toolCalls) {
+                    try {
+                        const functionName = toolCall.function.name;
+                        const functionArgs = JSON.parse(toolCall.function.arguments);
+                        
+                        logInfo('FUNCTION_EXECUTING', `Ejecutando función: ${functionName}`, {
+                            shortUserId,
+                            functionName,
+                            args: functionArgs,
+                            environment: config.environment
+                        });
+                        
+                        // Importar FunctionHandler dinámicamente
+                        const { FunctionHandler } = await import('./handlers/function-handler.js');
+                        const functionHandler = new FunctionHandler();
+                        
+                        // Ejecutar la función
+                        const result = await functionHandler.handleFunction(functionName, functionArgs);
+                        
+                        logSuccess('FUNCTION_EXECUTED', `Función ${functionName} ejecutada exitosamente`, {
+                            shortUserId,
+                            functionName,
+                            resultType: typeof result,
+                            environment: config.environment
+                        });
+                        
+                        toolOutputs.push({
+                            tool_call_id: toolCall.id,
+                            output: JSON.stringify(result)
+                        });
+                        
+                    } catch (error) {
+                        logError('FUNCTION_ERROR', `Error ejecutando función ${toolCall.function.name}`, {
+                            shortUserId,
+                            functionName: toolCall.function.name,
+                            error: error.message,
+                            environment: config.environment
+                        });
+                        
+                        toolOutputs.push({
+                            tool_call_id: toolCall.id,
+                            output: JSON.stringify({ 
+                                success: false,
+                                error: `Error ejecutando función: ${error.message}` 
+                            })
+                        });
+                    }
+                }
+                
+                // Enviar resultados a OpenAI
+                try {
+                    logInfo('FUNCTION_SUBMITTING', `Enviando resultados de ${toolOutputs.length} funciones a OpenAI`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        toolOutputsCount: toolOutputs.length,
+                        environment: config.environment
+                    });
+                    
+                    await openaiClient.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+                        tool_outputs: toolOutputs
+                    });
+                    
+                    logSuccess('FUNCTION_SUBMITTED', `Resultados enviados exitosamente`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        environment: config.environment
+                    });
+                    
+                    // Continuar esperando hasta completion o nueva requires_action
+                    attempts = 0;
+                    while (['queued', 'in_progress'].includes(run.status) && attempts < maxAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
+                        attempts++;
+                        
+                        if (attempts % 10 === 0) {
+                            logInfo('FUNCTION_WAITING', `Esperando completion después de function calling, intento ${attempts}/${maxAttempts}, estado: ${run.status}`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                environment: config.environment
+                            });
+                        }
+                    }
+                    
+                    // Si vuelve a requires_action, el while principal lo manejará
+                    if (run.status === 'requires_action') {
+                        logInfo('FUNCTION_NESTED_CALL', `Función requiere llamadas adicionales`, {
+                            shortUserId,
+                            threadId,
+                            runId: run.id,
+                            environment: config.environment
+                        });
+                        continue; // Continuar el while principal para procesar nuevas function calls
+                    }
+                    
+                } catch (submitError) {
+                    logError('FUNCTION_SUBMIT_ERROR', `Error enviando resultados de funciones`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        error: submitError.message,
+                        environment: config.environment
+                    });
+                    
+                    return sanitizeResponseForClient('Lo siento, hubo un problema enviando los resultados de la consulta. Por favor intenta de nuevo.');
+                }
+                
+                // Si el run está completed después del function call, salir del while
+                if (run.status === 'completed') {
+                    break;
                 }
             }
             
@@ -1658,6 +1853,224 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             res.json(liveStats);
         });
     }
+    
+    // 🔧 RECUPERACIÓN DE RUNS HUÉRFANOS AL INICIAR (solo después de reinicio)
+    setTimeout(async () => {
+        try {
+            console.log('🔍 Buscando runs huérfanos después del reinicio...');
+            const stats = threadPersistence.getStats();
+            let totalOrphanedRuns = 0;
+            let totalRecoveredResponses = 0;
+            const sentResponses = new Set<string>(); // Evitar duplicados por contenido
+            
+            // Revisar cada thread activo
+            for (const [userId, threadInfo] of Object.entries(threadPersistence.getAllThreads())) {
+                try {
+                    const runs = await openaiClient.beta.threads.runs.list(threadInfo.threadId, { limit: 10 });
+                    const orphanedRuns = runs.data.filter(r => 
+                        ['in_progress', 'requires_action'].includes(r.status) &&
+                        (Date.now() - r.created_at * 1000) > 60000 // Más de 1 minuto
+                    );
+                    
+                    if (orphanedRuns.length > 0) {
+                        totalOrphanedRuns += orphanedRuns.length;
+                        
+                        logWarning('STARTUP_ORPHANED_RUNS', `${orphanedRuns.length} runs huérfanos encontrados para ${userId}`, {
+                            userId,
+                            threadId: threadInfo.threadId,
+                            orphanedRuns: orphanedRuns.map(r => ({
+                                id: r.id,
+                                status: r.status,
+                                age: Math.floor((Date.now() - r.created_at * 1000) / 1000 / 60) + 'm'
+                            }))
+                        });
+                        
+                        // Procesar runs huérfanos
+                        for (const run of orphanedRuns) {
+                            try {
+                                if (run.status === 'requires_action') {
+                                    // 🎯 REENVIAR A OPENAI: Obligar a que complete la respuesta
+                                    logInfo('STARTUP_RUN_RESUBMIT', `Reenviando run requires_action a OpenAI: ${run.id}`, {
+                                        userId,
+                                        threadId: threadInfo.threadId,
+                                        runId: run.id,
+                                        previousStatus: run.status
+                                    });
+                                    
+                                    // Simplemente crear un nuevo run con el mismo thread
+                                    const newRun = await openaiClient.beta.threads.runs.create(threadInfo.threadId, {
+                                        assistant_id: ASSISTANT_ID
+                                    });
+                                    
+                                    // Esperar a que complete
+                                    let attempts = 0;
+                                    let currentRun = newRun;
+                                    while (['queued', 'in_progress'].includes(currentRun.status) && attempts < 60) {
+                                        await new Promise(resolve => setTimeout(resolve, 1000));
+                                        currentRun = await openaiClient.beta.threads.runs.retrieve(threadInfo.threadId, currentRun.id);
+                                        attempts++;
+                                    }
+                                    
+                                    if (currentRun.status === 'completed') {
+                                        // Obtener la respuesta
+                                        const messages = await openaiClient.beta.threads.messages.list(threadInfo.threadId, { limit: 1 });
+                                        const lastMessage = messages.data[0];
+                                        
+                                        if (lastMessage?.content[0]?.type === 'text') {
+                                            const response = lastMessage.content[0].text.value;
+                                            const sanitizedResponse = sanitizeResponseForClient(response);
+                                            
+                                            if (sanitizedResponse.trim().length > 0) {
+                                                const responseHash = `${userId}:${sanitizedResponse.substring(0, 50)}`;
+                                                
+                                                if (!sentResponses.has(responseHash)) {
+                                                    const sendSuccess = await sendWhatsAppMessage(threadInfo.chatId, sanitizedResponse);
+                                                    
+                                                    if (sendSuccess) {
+                                                        sentResponses.add(responseHash);
+                                                        totalRecoveredResponses++;
+                                                        logSuccess('STARTUP_RUN_COMPLETED', `Run reactivado y respuesta enviada: ${run.id}`, {
+                                                            userId,
+                                                            threadId: threadInfo.threadId,
+                                                            oldRunId: run.id,
+                                                            newRunId: currentRun.id,
+                                                            responseLength: sanitizedResponse.length
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Cancelar el run original
+                                    await openaiClient.beta.threads.runs.cancel(threadInfo.threadId, run.id);
+                                    
+                                } else {
+                                    // Para runs in_progress, simplemente cancelar
+                                    await openaiClient.beta.threads.runs.cancel(threadInfo.threadId, run.id);
+                                    logInfo('STARTUP_RUN_CANCELLED', `Run huérfano cancelado: ${run.id}`, {
+                                        userId,
+                                        threadId: threadInfo.threadId,
+                                        runId: run.id,
+                                        previousStatus: run.status
+                                    });
+                                }
+                            } catch (cancelError) {
+                                logError('STARTUP_CANCEL_ERROR', `Error procesando run huérfano ${run.id}`, {
+                                    userId,
+                                    threadId: threadInfo.threadId,
+                                    runId: run.id,
+                                    error: cancelError.message
+                                });
+                            }
+                        }
+                    }
+                    
+                    // Buscar respuestas completed recientes que no se enviaron
+                    const completedRuns = runs.data.filter(r => 
+                        r.status === 'completed' &&
+                        (Date.now() - r.created_at * 1000) < 10 * 60 * 1000 && // Últimos 10 minutos
+                        (Date.now() - r.created_at * 1000) > 60000 // Más de 1 minuto
+                    );
+                    
+                    for (const run of completedRuns) {
+                        try {
+                            const messages = await openaiClient.beta.threads.messages.list(threadInfo.threadId, { 
+                                limit: 5,
+                                order: 'desc'
+                            });
+                            
+                            const lastMessage = messages.data.find(m => 
+                                m.role === 'assistant' && 
+                                m.created_at > run.created_at &&
+                                m.created_at < (run.created_at + 120) // Dentro de 2 minutos del run
+                            );
+                            
+                            if (lastMessage?.content[0]?.type === 'text') {
+                                const response = lastMessage.content[0].text.value;
+                                const sanitizedResponse = sanitizeResponseForClient(response);
+                                
+                                if (sanitizedResponse.trim().length > 0) {
+                                    // 🛡️ DEDUPLICACIÓN: Verificar si ya enviamos esta respuesta
+                                    const responseHash = `${userId}:${sanitizedResponse.substring(0, 50)}`;
+                                    
+                                    if (sentResponses.has(responseHash)) {
+                                        logInfo('STARTUP_RESPONSE_DUPLICATE', `Respuesta duplicada omitida para ${userId}`, {
+                                            userId,
+                                            threadId: threadInfo.threadId,
+                                            runId: run.id,
+                                            responseLength: sanitizedResponse.length,
+                                            responseAge: Math.floor((Date.now() - run.created_at * 1000) / 1000 / 60) + 'm',
+                                            reason: 'contenido_duplicado'
+                                        });
+                                        continue; // Saltar respuesta duplicada
+                                    }
+                                    
+                                    logInfo('STARTUP_RESPONSE_RECOVERY', `Recuperando respuesta perdida para ${userId}`, {
+                                        userId,
+                                        threadId: threadInfo.threadId,
+                                        runId: run.id,
+                                        responseLength: sanitizedResponse.length,
+                                        responseAge: Math.floor((Date.now() - run.created_at * 1000) / 1000 / 60) + 'm'
+                                    });
+                                    
+                                    // Enviar la respuesta recuperada
+                                    const sendSuccess = await sendWhatsAppMessage(threadInfo.chatId, sanitizedResponse);
+                                    
+                                    if (sendSuccess) {
+                                        sentResponses.add(responseHash); // Marcar como enviada
+                                        totalRecoveredResponses++;
+                                        logSuccess('STARTUP_RESPONSE_SENT', `Respuesta recuperada enviada a ${userId}`, {
+                                            userId,
+                                            threadId: threadInfo.threadId,
+                                            runId: run.id,
+                                            responseLength: sanitizedResponse.length
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (messageError) {
+                            logError('STARTUP_MESSAGE_ERROR', `Error recuperando mensaje para run ${run.id}`, {
+                                userId,
+                                threadId: threadInfo.threadId,
+                                runId: run.id,
+                                error: messageError.message
+                            });
+                        }
+                    }
+                    
+                    // Pequeña pausa entre threads para no sobrecargar la API
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                } catch (threadError) {
+                    logError('STARTUP_THREAD_ERROR', `Error procesando thread ${threadInfo.threadId}`, {
+                        userId,
+                        threadId: threadInfo.threadId,
+                        error: threadError.message
+                    });
+                }
+            }
+            
+            if (totalOrphanedRuns > 0 || totalRecoveredResponses > 0) {
+                logSuccess('STARTUP_RECOVERY_COMPLETE', `Recuperación post-reinicio completada`, {
+                    totalThreadsChecked: stats.totalThreads,
+                    totalOrphanedRuns,
+                    totalRecoveredResponses,
+                    environment: config.environment
+                });
+                
+                console.log(`✅ Recuperación completada: ${totalOrphanedRuns} runs cancelados, ${totalRecoveredResponses} respuestas recuperadas`);
+            } else {
+                console.log('✅ No se encontraron runs huérfanos');
+            }
+            
+        } catch (recoveryError) {
+            logError('STARTUP_RECOVERY_ERROR', `Error en recuperación post-reinicio`, {
+                error: recoveryError.message,
+                environment: config.environment
+            });
+        }
+    }, 3000); // Esperar 3 segundos después de la inicialización completa
 }
 
 // --- Manejo de Errores del Servidor ---
