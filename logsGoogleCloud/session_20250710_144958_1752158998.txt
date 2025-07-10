@@ -1,0 +1,26 @@
+================================================================================
+SESIÓN DEL BOT - 2025-07-10 14:49:58 (Colombia)
+================================================================================
+Session ID: session-1752158998
+Deployment: 
+Duración: 0:00:06.842032
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 1
+Warnings: 0
+================================================================================
+
+[2025-07-10 14:50:04] ℹ️ INFO: ?? Logs enviados a Google Cloud Console
+[2025-07-10 14:50:05] ℹ️ INFO: ? Iniciando TeAlquilamos Bot...
+[2025-07-10 14:50:05] ℹ️ INFO: ? Configuraci?n del Entorno:
+[2025-07-10 14:50:05] ℹ️ INFO:    ? Entorno: cloud-run
+[2025-07-10 14:50:05] ℹ️ INFO:    ? Puerto: 8080
+[2025-07-10 14:50:05] ℹ️ INFO:    ? Webhook: https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app/hook
+[2025-07-10 14:50:05] ℹ️ INFO:    ? Log Level: production
+[2025-07-10 14:50:05] ℹ️ INFO:    ? Logs Detallados: S?
+[2025-07-10 14:50:05] ℹ️ INFO:    ??  Modo: Cloud Run
+[2025-07-10 14:50:05] ℹ️ INFO:    ? Producci?n: Activo
+
+================================================================================
+FIN DE SESIÓN
+================================================================================

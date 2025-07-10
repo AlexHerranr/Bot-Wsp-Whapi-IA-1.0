@@ -1,0 +1,32 @@
+================================================================================
+SESIÓN DEL BOT - 2025-07-10 15:10:28 (Colombia)
+================================================================================
+Session ID: session-1752160228
+Deployment: bot-wsp-whapi-ia-00033-jvs
+Duración: 0:01:20.045376
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 0
+Warnings: 0
+================================================================================
+
+[2025-07-10 15:10:28] 🚀 START: ? Bot completamente inicializado
+[2025-07-10 15:10:28] ℹ️ INFO: ? Servidor escuchando en cloud-run mode
+[2025-07-10 15:10:28] ℹ️ INFO: [94m7/10 [15:10][0m [36m? 573003913251:[0m "puede ser" ? ? 10s...
+[2025-07-10 15:10:30] ℹ️ INFO: ? Iniciando recuperaci?n post-reinicio...
+[2025-07-10 15:10:30] ℹ️ INFO: [94m7/10 [15:10][0m [36m? 573003913251:[0m "contactamenlo" ? ? 10s...
+[2025-07-10 15:10:37] ℹ️ INFO: ? Buscando runs hu?rfanos despu?s del reinicio...
+[2025-07-10 15:10:37] ℹ️ INFO: ? No se encontraron runs hu?rfanos
+[2025-07-10 15:10:37] ℹ️ INFO: ? Verificando mensajes pendientes del reinicio anterior...
+[2025-07-10 15:10:37] ℹ️ INFO: ? Recuperando 1 mensajes pendientes del reinicio anterior...
+[2025-07-10 15:10:37] ℹ️ INFO: [33m?? 1 mensajes pendientes encontrados[0m
+[2025-07-10 15:10:37] ℹ️ INFO: ? Recuperando mensaje de 573003913251 (hace 0min)...
+[2025-07-10 15:10:38] ℹ️ INFO: [94m7/10 [15:10][0m [32m[BOT][0m ? 2 msgs ? OpenAI
+[2025-07-10 15:10:49] ℹ️ INFO: [94m7/10 [15:10][0m [32m[BOT][0m ? 2 msgs ? OpenAI
+[2025-07-10 15:11:32] ℹ️ INFO: [94m7/10 [15:11][0m [32m[BOT][0m ? Completado (53.7s) ? ? "?Hola! Claro, puedo ayudarte. ?Podr?as indicarme s..."
+[2025-07-10 15:11:41] ℹ️ INFO: ? 1 mensajes pendientes recuperados exitosamente
+[2025-07-10 15:11:43] ℹ️ INFO: [94m7/10 [15:11][0m [32m[BOT][0m ? Completado (54.1s) ? ? "Entiendo que deseas que te contacte. Lamentablemen..."
+
+================================================================================
+FIN DE SESIÓN
+================================================================================

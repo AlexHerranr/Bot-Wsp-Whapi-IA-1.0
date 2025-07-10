@@ -1,0 +1,27 @@
+================================================================================
+SESIÓN DEL BOT - 2025-07-10 15:10:27 (Colombia)
+================================================================================
+Session ID: session-1752160227
+Deployment: bot-wsp-whapi-ia-00033-jvs
+Duración: 0:00:00.859300
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 0
+Warnings: 0
+================================================================================
+
+[2025-07-10 15:10:28] ℹ️ INFO: ?? Logs enviados a Google Cloud Console
+[2025-07-10 15:10:28] ℹ️ INFO: ? Iniciando TeAlquilamos Bot...
+[2025-07-10 15:10:28] ℹ️ INFO: ? Configuraci?n del Entorno:
+[2025-07-10 15:10:28] ℹ️ INFO:    ? Entorno: cloud-run
+[2025-07-10 15:10:28] ℹ️ INFO:    ? Puerto: 8080
+[2025-07-10 15:10:28] ℹ️ INFO:    ? Webhook: https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app/hook
+[2025-07-10 15:10:28] ℹ️ INFO:    ? Log Level: production
+[2025-07-10 15:10:28] ℹ️ INFO:    ? Logs Detallados: S?
+[2025-07-10 15:10:28] ℹ️ INFO:    ??  Modo: Cloud Run
+[2025-07-10 15:10:28] ℹ️ INFO:    ? Producci?n: Activo
+[2025-07-10 15:10:28] ℹ️ INFO: Default STARTUP TCP probe succeeded after 1 attempt for container "placeholder-1" on port 8080.
+
+================================================================================
+FIN DE SESIÓN
+================================================================================

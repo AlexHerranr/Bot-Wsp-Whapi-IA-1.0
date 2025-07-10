@@ -1,0 +1,115 @@
+# Configuración del Parser de Logs - Bot WhatsApp
+# Controla qué logs técnicos mostrar/ocultar para obtener logs limpios como desarrollo local
+
+# LOGS A INCLUIR (mostrar siempre)
+include:
+  # Flujo principal de mensajes
+  - MESSAGE_RECEIVED        # Mensajes de usuarios
+  - MESSAGE_PROCESS        # Procesamiento de mensajes agrupados
+  - WHATSAPP_SEND          # Envío de respuestas
+  
+  # Flujo OpenAI completo
+  - OPENAI_REQUEST         # adding_message, creating_run
+  - OPENAI_RESPONSE        # Respuestas y run completado
+  - OPENAI_RUN_COMPLETED   # Estados de completion
+  
+  # Funciones y llamadas
+  - FUNCTION_CALLING_START # Inicio de ejecución de funciones
+  - FUNCTION_EXECUTING     # Ejecución de funciones
+  - FUNCTION_HANDLER       # Manejo de funciones
+  
+  # Integración Beds24 (CRÍTICO - mostrar TODO)
+  - BEDS24_REQUEST         # Consultas a Beds24
+  - BEDS24_API_CALL        # Llamadas API
+  - BEDS24_RESPONSE_DETAIL # Respuestas completas (datos crudos)
+  
+  # Gestión de threads
+  - THREAD_CREATED         # Creación de threads
+  - THREAD_CLEANUP         # Limpieza de threads
+  
+  # Estados críticos
+  - ERROR                  # Todos los errores
+  - WARNING                # Advertencias
+  - SUCCESS                # Operaciones exitosas
+
+# LOGS A EXCLUIR (ocultar para limpieza)
+exclude:
+  # Logs repetitivos sin valor
+  - USER_ID_EXTRACTION     # Extracción de IDs (si es muy repetitivo)
+  - BOT_MESSAGE_FILTERED   # Mensajes del bot ignorados
+  - WEBHOOK_STATUS         # Status de webhooks vacíos
+  - HEALTH_CHECK           # Health checks del sistema
+  
+  # Metadata de infraestructura (YA FILTRADA)
+  - HTTP_REQUEST           # Metadata HTTP
+  - CLOUD_RUN_METADATA     # Metadata de Cloud Run
+  - TRACE_SPANS            # Información de tracing
+  - BUILD_INFO             # Información de build
+
+# NIVEL DE DETALLE POR CATEGORÍA
+detail_level:
+  # Mostrar datos completos (como logs locales)
+  BEDS24_RESPONSE_DETAIL: full      # Mostrar respuesta completa de Beds24
+  FUNCTION_ARGS: full               # Mostrar argumentos completos de funciones
+  FUNCTION_RESULT: full             # Mostrar resultados completos
+  
+  # Mostrar solo preview para logs largos
+  OPENAI_RESPONSE: preview          # Solo preview de respuestas largas
+  MESSAGE_CONTENT: full             # Contenido completo de mensajes
+  
+  # Mostrar información técnica
+  THREAD_INFO: full                 # Información completa de threads
+  ERROR_DETAILS: full               # Detalles completos de errores
+
+# FORMATO DE SALIDA
+output_format:
+  # Formato exacto como logs locales
+  timestamp_format: "ISO"           # 2025-07-10T19:10:20.000Z
+  level_format: "brackets"          # [INFO], [ERROR], [SUCCESS]
+  category_format: "uppercase"      # MESSAGE_RECEIVED, BEDS24_REQUEST
+  source_format: "brackets"         # [webhook], [app-unified.ts]
+  
+  # Colores para terminal
+  colors:
+    INFO: "cyan"
+    ERROR: "red"
+    WARNING: "yellow"
+    SUCCESS: "green"
+    CATEGORY: "magenta"
+    JSON: "blue"
+
+# FILTROS AVANZADOS
+advanced_filters:
+  # Filtrar logs HTTP que no tienen contenido útil
+  filter_empty_http: true
+  
+  # Mantener solo logs con información técnica
+  technical_logs_only: true
+  
+  # Mostrar JSON de datos cuando esté disponible
+  include_json_data: true
+  
+  # Filtrar logs duplicados
+  deduplicate_logs: false
+
+# CONFIGURACIÓN DE SESIONES
+session_config:
+  # Mostrar inicio y fin de sesión
+  show_session_headers: true
+  
+  # Mostrar resumen de sesión
+  show_session_summary: true
+  
+  # Agrupar logs por sesión
+  group_by_session: true
+
+# CONFIGURACIÓN DE DESARROLLO
+development:
+  # Mostrar logs de debug para desarrollo del parser
+  debug_parser: false
+  
+  # Mostrar logs que no se pudieron parsear
+  show_unparsed_logs: false
+  
+  # Mostrar estadísticas de filtrado
+  show_filter_stats: true 

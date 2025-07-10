@@ -1,0 +1,223 @@
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 13:53:27 (Colombia)
+Session ID: session-1752155607
+Deployment: bot-wsp-whapi-ia-00032-xc6
+==================================================
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 13:53:27 (Colombia)
+Session ID: session-1752155607
+Duración: 0:00:00.002648
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 1
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 13:53:27 (Colombia)
+Session ID: session-1752155607
+Deployment: bot-wsp-whapi-ia-00032-xc6
+==================================================
+[2025-07-10T13:53:27.462Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Hola" | {"from":"unknown","type":"text","body":"Hola","timestamp":1752155607,"userId":"573003913251"}
+[2025-07-10T13:53:27.468Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Que tal" | {"from":"unknown","type":"text","body":"Que tal","timestamp":1752155607,"userId":"573003913251"}
+[2025-07-10T13:53:27.786Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "?" | {"from":"unknown","type":"text","body":"?","timestamp":1752155607,"userId":"573003913251"}
+[2025-07-10T13:53:56.730Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":3,"userId":"unknown"}
+[2025-07-10T13:54:01.930Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":3,"userId":"unknown"}
+[2025-07-10T13:54:51.350Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "?" | {"from":"unknown","type":"text","body":"?","timestamp":1752155691,"userId":"573003913251"}
+[2025-07-10T13:55:01.430Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [13:55] [BOT] ? Completado (64.1s) ? ? "?Hola! ? ?Para qu? fechas buscas apartamento en C..."
+[2025-07-10T13:55:06.430Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":4,"userId":"unknown"}
+[2025-07-10T13:55:21.531Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [13:55] [BOT] ? Completado (79.5s) ? ? "?Hola! ? ?Para qu? fechas buscas apartamento en C..."
+[2025-07-10T13:55:25.350Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "2 de julio de 26" | {"from":"unknown","type":"text","body":"2 de julio de 26","timestamp":1752155725,"userId":"573003913251"}
+[2025-07-10T13:55:32.031Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [13:55] [BOT] ? Completado (25.3s) ? ? "?Hola! ? ?Para qu? fechas necesitas el apartament..."
+[2025-07-10T13:58:37.399Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Hola c?mo vas" | {"from":"unknown","type":"text","body":"Hola c?mo vas","timestamp":1752155917,"userId":"573003913251"}
+[2025-07-10T13:58:47.402Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":1,"userId":"unknown"}
+[2025-07-10T13:59:04.130Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [13:59] [BOT] ? Completado (16.3s) ? ? "?Hola! Estoy aqu? para ayudarte. ?En qu? puedo asi..."
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 13:59:10 (Colombia)
+Session ID: session-1752155607
+Duración: 0:05:42.981749
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 0
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:10:20 (Colombia)
+Session ID: session-1752156620
+Deployment: bot-wsp-whapi-ia-00032-xc6
+==================================================
+[2025-07-10T14:10:20.379Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Me gustar?a consultar disponibilidad" | {"from":"unknown","type":"text","body":"Me gustar?a consultar disponibilidad","timestamp":1752156620,"userId":"573003913251"}
+[2025-07-10T14:10:26.034Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Del 15 de julio al 20" | {"from":"unknown","type":"text","body":"Del 15 de julio al 20","timestamp":1752156626,"userId":"573003913251"}
+[2025-07-10T14:10:36.037Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":2,"userId":"unknown"}
+[2025-07-10T14:11:04.930Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [14:11] [BOT] ? Completado (28.5s) ? ? "Para las fechas del 15 al 20 de julio de 2025, no ..."
+[2025-07-10T14:11:37.137Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Si del 20 al 25" | {"from":"unknown","type":"text","body":"Si del 20 al 25","timestamp":1752156697,"userId":"573003913251"}
+[2025-07-10T14:11:47.138Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":1,"userId":"unknown"}
+[2025-07-10T14:12:15.832Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [14:12] [BOT] ? Completado (28.2s) ? ? 4 p?rrafos
+[2025-07-10T14:12:53.551Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Cuales son esas opciones con cambio" | {"from":"unknown","type":"text","body":"Cuales son esas opciones con cambio","timestamp":1752156773,"userId":"573003913251"}
+[2025-07-10T14:13:03.553Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":1,"userId":"unknown"}
+[2025-07-10T14:13:13.630Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [14:13] [BOT] ? Completado (9.9s) ? ? 3 p?rrafos
+[2025-07-10T14:15:04.280Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Mm no d?jalo as?" | {"from":"unknown","type":"text","body":"Mm no d?jalo as?","timestamp":1752156904,"userId":"573003913251"}
+[2025-07-10T14:15:14.282Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":1,"userId":"unknown"}
+[2025-07-10T14:15:18.423Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Que comodidades tiene el 1317" | {"from":"unknown","type":"text","body":"Que comodidades tiene el 1317","timestamp":1752156918,"userId":"573003913251"}
+[2025-07-10T14:15:29.331Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":2,"userId":"unknown"}
+[2025-07-10T14:15:32.640Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [14:15] [BOT] ? Completado (18.0s) ? ? "Perfecto, entonces dejamos la opci?n sin cambio de..."
+[2025-07-10T14:15:44.931Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [14:15] [BOT] ? Completado (15.5s) ? ? 2 p?rrafos
+[2025-07-10T14:16:27.191Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "Si" | {"from":"unknown","type":"text","body":"Si","timestamp":1752156987,"userId":"573003913251"}
+[2025-07-10T14:16:37.194Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":1,"userId":"unknown"}
+[2025-07-10T14:16:57.330Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [14:16] [BOT] ? Completado (19.9s) ? ? 2 p?rrafos
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:17:05 (Colombia)
+Session ID: session-1752156620
+Duración: 0:06:45.516046
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 0
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:32:12 (Colombia)
+Session ID: session-1752157932
+Deployment: bot-wsp-whapi-ia-00032-xc6
+==================================================
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:32:12 (Colombia)
+Session ID: session-1752157932
+Duración: 0:00:00.001375
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 0
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:49:58 (Colombia)
+Session ID: session-1752158998
+==================================================
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:50:05 (Colombia)
+Session ID: session-1752158998
+Duración: 0:00:06.842032
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 1
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:50:05 (Colombia)
+Session ID: session-1752159005
+Deployment: bot-wsp-whapi-ia-00033-jvs
+==================================================
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:50:05 (Colombia)
+Session ID: session-1752159005
+Duración: 0:00:00.002101
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 1
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:50:05 (Colombia)
+Session ID: session-1752159005
+Deployment: bot-wsp-whapi-ia-00033-jvs
+==================================================
+[2025-07-10T14:50:05.217Z] [ERROR] BEDS24_RESPONSE_DETAIL [None]: BEDS24_TOKEN', 'value': '9PZwkszF7O4xYdrPfWunFZcink0iaDLp/yQiATL8Gm8elTgRg+2orjSH8RdUdvFxXg96xV2YyoadxfazTlsCuC700LRxNQpWHcAUcdaGq+jyIr7WbEB72cjukXwEHNoN8Dl/D8QhZV+ichDY5J0KxRxRpEFrP32GXWQZMqW589w='}, {'name': 'BEDS24_API_URL', 'value': 'https://api.beds24.com/v2'}], 'image': 'northamerica-northeast1-docker.pkg.dev/gen-lang-client-0318357688/cloud-run-source-deploy/bot-wsp-whapi-ia-1.0/bot-wsp-whapi-ia@sha256:72c1d31f555a5e129bdbde0adf3d7b00a01b72e61cd58148e3c76727ca0324eb', 'name': 'placeholder-1', 'ports': [{'containerPort': 8080, 'name': 'http1'}], 'resources': {'limits': {'cpu': '1000m', 'memory': '1Gi'}}, 'startupProbe': {'failureThreshold': 1, 'periodSeconds': 240, 'tcpSocket': {'port': 8080}, 'timeoutSeconds': 240}}], 'serviceAccountName': '908808352514-compute@developer.gserviceaccount.com', 'timeoutSeconds': 300}, 'status': {'conditions': [{'lastTransitionTime': '2025-07-10T19:50:05.206455Z', 'message': 'Deploying revision succeeded in 6.45s.', 'status': 'True', 'type': 'Ready'}, {'lastTransitionTime': '2025-07-10T19:50:05.155291Z', 'message': 'Containers became healthy in 1.58s.', 'status': 'True', 'type': 'ContainerHealthy'}, {'lastTransitionTime': '2025-07-10T19:50:01.912854Z', 'message': 'Container image import completed in 2.53s.', 'status': 'True', 'type': 'ContainerReady'}, {'lastTransitionTime': '2025-07-10T19:50:03.319377Z', 'message': 'Provisioning imported containers completed in 1.41s. Checking container health. This will wait for up to 4m for the configured startup probe, including an initial delay of 0s.', 'status': 'True', 'type': 'ResourcesAvailable'}], 'containerStatuses': [{'imageDigest': 'northamerica-northeast1-docker.pkg.dev/gen-lang-client-0318357688/cloud-run-source-deploy/bot-wsp-whapi-ia-1.0/bot-wsp-whapi-ia@sha256:72c1d31f555a5e129bdbde0adf3d7b00a01b72e61cd58148e3c76727ca0324eb', 'name': 'placeholder-1'}], 'imageDigest': 'northamerica-northeast1-docker.pkg.dev/gen-lang-client-0318357688/cloud-run-source-deploy/bot-wsp-whapi-ia-1.0/bot-wsp-whapi-ia@sha256:72c1d31f555a5e129bdbde0adf3d7b00a01b72e61cd58148e3c76727ca0324eb', 'logUrl': 'https://console.cloud.google.com/logs/viewer?project=gen-lang-client-0318357688&resource=cloud_run_revision/service_name/bot-wsp-whapi-ia/revision_name/bot-wsp-whapi-ia-00033-jvs&advancedFilter=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22bot-wsp-whapi-ia%22%0Aresource.labels.revision_name%3D%22bot-wsp-whapi-ia-00033-jvs%22', 'observedGeneration': 1}}, 'serviceName': 'run.googleapis.com', 'status': {'message': 'Ready condition status changed to True for Revision bot-wsp-whapi-ia-00033-jvs with message: Deploying revision succeeded in 6.45s.'}}, 'receiveTimestamp': '2025-07-10T19:50:06.217696180Z', 'resource': {'labels': {'configuration_name': 'bot-wsp-whapi-ia', 'location': 'northamerica-northeast1', 'project_id': 'gen-lang-client-0318357688', 'revision_name': 'bot-wsp-whapi-ia-00033-jvs', 'service_name': 'bot-wsp-whapi-ia'}, 'type': 'cloud_run_revision'}, 'severity': 'INFO', 'timestamp': '2025-07-10T19:50:05.217714Z'}
+[2025-07-10T14:50:06.559Z] [ERROR] BEDS24_RESPONSE_DETAIL [None]: BEDS24_TOKEN', 'value': '9PZwkszF7O4xYdrPfWunFZcink0iaDLp/yQiATL8Gm8elTgRg+2orjSH8RdUdvFxXg96xV2YyoadxfazTlsCuC700LRxNQpWHcAUcdaGq+jyIr7WbEB72cjukXwEHNoN8Dl/D8QhZV+ichDY5J0KxRxRpEFrP32GXWQZMqW589w='}, {'name': 'BEDS24_API_URL', 'value': 'https://api.beds24.com/v2'}], 'image': 'northamerica-northeast1-docker.pkg.dev/gen-lang-client-0318357688/cloud-run-source-deploy/bot-wsp-whapi-ia-1.0/bot-wsp-whapi-ia:f7eb5a402fb61ff64e743e6739aaef44291a00ee', 'name': 'placeholder-1', 'ports': [{'containerPort': 8080, 'name': 'http1'}], 'resources': {'limits': {'cpu': '1000m', 'memory': '1Gi'}}, 'startupProbe': {'failureThreshold': 1, 'periodSeconds': 240, 'tcpSocket': {'port': 8080}, 'timeoutSeconds': 240}}], 'serviceAccountName': '908808352514-compute@developer.gserviceaccount.com', 'timeoutSeconds': 300}}, 'traffic': [{'latestRevision': True, 'percent': 100}]}, 'status': {'address': {'url': 'https://bot-wsp-whapi-ia-5ydonvm2xa-nn.a.run.app'}, 'conditions': [{'lastTransitionTime': '2025-07-10T19:50:06.542600Z', 'status': 'True', 'type': 'Ready'}, {'lastTransitionTime': '2025-07-10T19:50:05.796703Z', 'status': 'True', 'type': 'ConfigurationsReady'}, {'lastTransitionTime': '2025-07-10T19:50:06.499974Z', 'status': 'True', 'type': 'RoutesReady'}], 'latestCreatedRevisionName': 'bot-wsp-whapi-ia-00033-jvs', 'latestReadyRevisionName': 'bot-wsp-whapi-ia-00033-jvs', 'observedGeneration': 34, 'traffic': [{'latestRevision': True, 'percent': 100, 'revisionName': 'bot-wsp-whapi-ia-00033-jvs'}], 'url': 'https://bot-wsp-whapi-ia-5ydonvm2xa-nn.a.run.app'}}, 'serviceName': 'run.googleapis.com', 'status': {'message': 'Ready condition status changed to True for Service bot-wsp-whapi-ia.'}}, 'receiveTimestamp': '2025-07-10T19:50:07.233787781Z', 'resource': {'labels': {'configuration_name': '', 'location': 'northamerica-northeast1', 'project_id': 'gen-lang-client-0318357688', 'revision_name': '', 'service_name': 'bot-wsp-whapi-ia'}, 'type': 'cloud_run_revision'}, 'severity': 'INFO', 'timestamp': '2025-07-10T19:50:06.559999Z'}
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 14:50:09 (Colombia)
+Session ID: session-1752159005
+Duración: 0:00:04.003041
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 2
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 15:05:08 (Colombia)
+Session ID: session-1752159908
+Deployment: bot-wsp-whapi-ia-00033-jvs
+==================================================
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 15:05:08 (Colombia)
+Session ID: session-1752159908
+Duración: 0:00:00.000991
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 0
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 15:10:27 (Colombia)
+Session ID: session-1752160227
+Deployment: bot-wsp-whapi-ia-00033-jvs
+==================================================
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 15:10:28 (Colombia)
+Session ID: session-1752160227
+Duración: 0:00:00.859300
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 0
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 15:10:28 (Colombia)
+Session ID: session-1752160228
+Deployment: bot-wsp-whapi-ia-00033-jvs
+==================================================
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 15:10:28 (Colombia)
+Session ID: session-1752160228
+Duración: 0:00:00.002108
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 1
+Warnings: 0
+==================================================
+
+=== NUEVA SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 15:10:28 (Colombia)
+Session ID: session-1752160228
+Deployment: bot-wsp-whapi-ia-00033-jvs
+==================================================
+[2025-07-10T15:10:28.312Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "puede ser" | {"from":"unknown","type":"text","body":"puede ser","timestamp":1752160228,"userId":"573003913251"}
+[2025-07-10T15:10:30.240Z] [INFO] MESSAGE_RECEIVED [webhook]: Usuario 573003913251: "contactamenlo" | {"from":"unknown","type":"text","body":"contactamenlo","timestamp":1752160230,"userId":"573003913251"}
+[2025-07-10T15:10:38.342Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":2,"userId":"unknown"}
+[2025-07-10T15:10:49.542Z] [INFO] MESSAGE_PROCESS [app-unified.ts]: Procesando mensajes agrupados | {"messageCount":2,"userId":"unknown"}
+[2025-07-10T15:11:32.243Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [15:11] [BOT] ? Completado (53.7s) ? ? "?Hola! Claro, puedo ayudarte. ?Podr?as indicarme s..."
+[2025-07-10T15:11:43.843Z] [SUCCESS] OPENAI_RESPONSE [None]: 7/10 [15:11] [BOT] ? Completado (54.1s) ? ? "Entiendo que deseas que te contacte. Lamentablemen..."
+==================================================
+=== FIN DE SESIÓN DEL BOT ===
+Timestamp: 2025-07-10 15:11:48 (Colombia)
+Session ID: session-1752160228
+Duración: 0:01:20.045376
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 0
+Warnings: 0
+==================================================
+
+=== RESUMEN DE SESIONES ===
+Total sesiones: 11
+Sesiones con errores: 5
+Usuarios únicos totales: 0
+Mensajes procesados: 0
+Total errores: 6
+==================================================
