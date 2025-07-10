@@ -34,7 +34,7 @@ import {
     logWhatsAppMessage,
     logBufferActivity
 } from './utils/logger.js';
-import { threadPersistence } from './utils/persistence/index.js';
+import { threadPersistence, pendingMessagesPersistence } from './utils/persistence/index.js';
 
 // Importar sistema de monitoreo
 import { botDashboard } from './utils/monitoring/dashboard.js';
@@ -143,14 +143,19 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/', (req, res) => {
+    const stats = threadPersistence.getStats();
+    const pendingStats = pendingMessagesPersistence.getStats();
+    
     res.json({
         service: 'TeAlquilamos Bot',
-        version: '1.0.0-unified',
+        version: '1.0.0-unified-pending-messages',
         environment: config.environment,
         status: isServerInitialized ? 'ready' : 'initializing',
         port: config.port,
         webhookUrl: config.webhookUrl,
-        baseUrl: config.baseUrl
+        baseUrl: config.baseUrl,
+        pendingMessages: pendingStats, // ✨ NUEVO: Estadísticas de mensajes pendientes
+        threads: stats
     });
 });
 
@@ -281,6 +286,9 @@ async function initializeBot() {
                     }
                 });
                 
+                // ✨ NUEVO: Limpiar mensajes pendientes antiguos
+                pendingMessagesPersistence.cleanOldPendingMessages();
+
                 if (cleanedBuffers > 0 || cleanedTimers > 0) {
                     logInfo('MEMORY_CLEANUP', 'Limpieza periódica de memoria completada', {
                         cleanedBuffers,
@@ -419,10 +427,6 @@ function setupWebhooks() {
     const getShortUserId = (jid: string): string => {
         if (typeof jid === 'string') {
             const cleaned = jid.split('@')[0] || jid;
-            logDebug('USER_ID_EXTRACTION', `Extrayendo ID de usuario`, { 
-                original: jid, 
-                cleaned: cleaned 
-            });
             return cleaned;
         }
         return 'unknown';
@@ -527,7 +531,7 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         
         if (labels && labels.length > 0) {
             context += `ETIQUETAS: ${labels.join(', ')}\n`;
-            
+            // Se mantiene logInfo existente
             logInfo('CONTEXT_LABELS', `Etiquetas incluidas en contexto conversacional`, {
                 userId: threadInfo.userId || 'unknown',
                 name: name,
@@ -535,12 +539,12 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 labels: labels,
                 labelsCount: labels.length
             });
-        } else {
+        } else if (config.enableDetailedLogs) {
             logDebug('CONTEXT_LABELS', `Sin etiquetas para incluir en contexto`, {
                 userId: threadInfo.userId || 'unknown',
                 name: name,
                 userName: userName,
-                labels: labels || []
+                labels: []
             });
         }
         
@@ -565,9 +569,11 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             // Encadenar la nueva operación
             const newQueue = currentQueue
                 .then(() => {
-                    logDebug('RUN_QUEUE', `Ejecutando operación en cola para ${shortUserId}`, {
-                        environment: config.environment
-                    });
+                    if (config.enableDetailedLogs) {
+                        logDebug('RUN_QUEUE', `Ejecutando operación en cola para ${shortUserId}`, {
+                            environment: config.environment
+                        });
+                    }
                     return operation();
                 })
                 .catch(error => {
@@ -581,9 +587,11 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     // Limpiar la cola si es la última operación
                     if (this.userQueues.get(userId) === newQueue) {
                         this.userQueues.delete(userId);
-                        logDebug('RUN_QUEUE', `Cola limpiada para ${shortUserId}`, {
-                            environment: config.environment
-                        });
+                        if (config.enableDetailedLogs) {
+                            logDebug('RUN_QUEUE', `Cola limpiada para ${shortUserId}`, {
+                                environment: config.environment
+                            });
+                        }
                     }
                 });
             
@@ -1520,6 +1528,9 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         // Enviar respuesta a WhatsApp usando la función mejorada
         await sendWhatsAppMessage(buffer.chatId, response);
 
+        // ✨ NUEVO: Eliminar de mensajes pendientes si existe
+        pendingMessagesPersistence.removePendingMessage(userId);
+
         // Limpiar buffer
         userMessageBuffers.delete(userId);
         userActivityTimers.delete(userId);
@@ -1547,10 +1558,10 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             const { messages, presences } = req.body;
             
             if (!messages || !Array.isArray(messages)) {
-                logWarning('WEBHOOK', 'Webhook recibido sin mensajes válidos', { 
-                    body: req.body,
-                    environment: config.environment
-                });
+                // Reducir ruido: solo loggear en modo detallado local
+                if (config.enableDetailedLogs && config.isLocal) {
+                    logDebug('WEBHOOK_STATUS', 'Webhook recibido sin mensajes válidos', { body: req.body });
+                }
                 return;
             }
             
@@ -1575,9 +1586,6 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     
                     // 🚫 FILTRAR: Verificar si es un mensaje del bot (no manual)
                     if (botSentMessages.has(message.id)) {
-                        logDebug('BOT_MESSAGE_FILTERED', `Mensaje del bot ignorado: ${message.id}`, {
-                            environment: config.environment
-                        });
                         continue; // Saltar, no es un mensaje manual real
                     }
                     
@@ -1833,6 +1841,9 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     buffer.messages.push(messageText);
                     buffer.lastActivity = Date.now();
 
+                    // ✨ NUEVO: Guardar en persistencia por si el bot se reinicia
+                    pendingMessagesPersistence.savePendingMessage(userJid, buffer);
+
                     // Cancelar timer anterior si existe
                     if (userActivityTimers.has(userJid)) {
                         clearTimeout(userActivityTimers.get(userJid)!);
@@ -1899,6 +1910,7 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         // Endpoint para estadísticas en vivo
         app.get('/stats', (req, res) => {
             const stats = threadPersistence.getStats();
+            const pendingStats = pendingMessagesPersistence.getStats();
             const liveStats = {
                 timestamp: new Date().toISOString(),
                 environment: config.environment,
@@ -1913,6 +1925,7 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     total: userActivityTimers.size + manualTimers.size
                 },
                 threads: stats,
+                pendingMessages: pendingStats, // ✨ NUEVO: Estadísticas de mensajes pendientes
                 tracking: {
                     botMessages: botSentMessages.size,
                     typing: userTypingState.size
@@ -1926,6 +1939,46 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         });
     }
     
+    // 🔧 NUEVO: Recuperar mensajes pendientes del reinicio anterior
+    setTimeout(async () => {
+        console.log('🔍 Verificando mensajes pendientes del reinicio anterior...');
+        
+        await pendingMessagesPersistence.processPendingMessages(async (userId, pendingData) => {
+            try {
+                // Recrear el buffer con los datos guardados
+                const buffer = {
+                    messages: pendingData.messages,
+                    chatId: pendingData.chatId,
+                    name: pendingData.userName,
+                    lastActivity: pendingData.timestamp
+                };
+                
+                // Guardar temporalmente en el buffer
+                userMessageBuffers.set(userId, buffer);
+                
+                logInfo('PENDING_MESSAGE_REPROCESS', `Reprocesando mensaje pendiente`, {
+                    userId,
+                    userName: pendingData.userName,
+                    messageCount: pendingData.messages.length,
+                    ageMinutes: Math.floor((Date.now() - pendingData.timestamp) / 1000 / 60)
+                });
+                
+                // Procesar el mensaje
+                await processUserMessages(userId);
+                
+            } catch (error) {
+                logError('PENDING_REPROCESS_ERROR', `Error reprocesando mensaje pendiente`, {
+                    userId,
+                    error: error.message
+                });
+            }
+        });
+        
+        // Limpiar mensajes muy antiguos
+        pendingMessagesPersistence.cleanOldPendingMessages();
+        
+    }, 4000); // 4 segundos después del inicio, después de la recuperación de runs
+
     // 🔧 RECUPERACIÓN DE RUNS HUÉRFANOS AL INICIAR (solo después de reinicio)
     setTimeout(async () => {
         try {

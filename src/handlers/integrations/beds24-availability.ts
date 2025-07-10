@@ -88,18 +88,8 @@ async function getAvailabilityAndPricesOptimized(
         totalNights
     });
     
-    // Obtener nombres de propiedades
-    const propertiesResponse = await fetch(`${BEDS24_API_URL}/properties`, {
-        headers: { 'Accept': 'application/json', 'token': BEDS24_TOKEN }
-    });
-    const propertiesData = await propertiesResponse.json() as any;
-    
-    if (!propertiesData.success) {
-        throw new Error(`Error obteniendo propiedades: ${propertiesData.error}`);
-    }
-    
-    // Usar fechas originales para la consulta a Beds24
-    const calendarResponse = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar?startDate=${startDate}&endDate=${endDate}&includeNumAvail=true&includePrices=true`, {
+    // ✨ OPTIMIZACIÓN: Usar SOLO el endpoint calendar (ya incluye nombres reales)
+    const calendarResponse = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar?startDate=${startDate}&endDate=${endDate}&includeNumAvail=true&includePrices=true&includeMinStay=true&includeMaxStay=true&includeMultiplier=true&includeOverride=true`, {
         headers: { 'Accept': 'application/json', 'token': BEDS24_TOKEN }
     });
     const calendarData = await calendarResponse.json() as any;
@@ -108,12 +98,13 @@ async function getAvailabilityAndPricesOptimized(
         throw new Error(`Error obteniendo calendario: ${calendarData.error}`);
     }
 
-    // Logging básico de conexión
-    logInfo('BEDS24_API_CALL', 'Consulta exitosa a Beds24', {
+    // Logging optimizado de conexión
+    logInfo('BEDS24_API_CALL', 'Consulta optimizada a Beds24 (solo calendar)', {
         success: calendarData.success,
         totalProperties: calendarData.data?.length || 0,
         dateRange: `${startDate} - ${endDate}`,
-        nightsCalculated: totalNights
+        nightsCalculated: totalNights,
+        optimization: 'single-endpoint'
     });
 
     // Mapear los datos de Beds24 a las noches reales de estadía
@@ -131,8 +122,8 @@ async function getAvailabilityAndPricesOptimized(
             if (!propertyData[propertyId]) {
                 propertyData[propertyId] = {
                     propertyId: propertyId,
-                    propertyName: propertiesData.data.find(p => p.id === propertyId)?.name || `Propiedad ${propertyId}`,
-                    roomName: `Habitación ${roomId}`,
+                    propertyName: roomData.name || `Propiedad ${propertyId}`, // ✨ OPTIMIZACIÓN: Usar nombre directo del calendar
+                    roomName: roomData.name || `Habitación ${roomId}`, // ✨ Usar nombre real de la habitación
                     roomId: roomId,
                     availability: {},
                     prices: {}
@@ -142,16 +133,23 @@ async function getAvailabilityAndPricesOptimized(
             // Procesar calendario para disponibilidad y precios
             if (roomData.calendar) {
                 roomData.calendar.forEach((calItem: any) => {
-                    // Usar la fecha directamente de Beds24
-                    const dateToProcess = calItem.from;
+                    // 🔧 CORRECCIÓN: Procesar rango de fechas from-to de Beds24
+                    const fromDate = new Date(calItem.from);
+                    const toDate = new Date(calItem.to || calItem.from);
                     
-                    if (dateRange.includes(dateToProcess)) {
-                        // Disponibilidad basada en numAvail (0 = ocupado, 1+ = disponible)
-                        propertyData[propertyId].availability[dateToProcess] = (calItem.numAvail || 0) > 0;
+                    // Generar todas las fechas cubiertas por esta entrada
+                    for (let date = new Date(fromDate); date <= toDate; date.setDate(date.getDate() + 1)) {
+                        const dateStr = date.toISOString().split('T')[0];
                         
-                        // Precios
-                        if (calItem.price1) {
-                            propertyData[propertyId].prices[dateToProcess] = calItem.price1;
+                        // Solo procesar fechas que están en nuestro rango de noches
+                        if (dateRange.includes(dateStr)) {
+                            // Disponibilidad basada en numAvail (0 = ocupado, 1+ = disponible)
+                            propertyData[propertyId].availability[dateStr] = (calItem.numAvail || 0) > 0;
+                            
+                            // Precios
+                            if (calItem.price1) {
+                                propertyData[propertyId].prices[dateStr] = calItem.price1;
+                            }
                         }
                     }
                 });

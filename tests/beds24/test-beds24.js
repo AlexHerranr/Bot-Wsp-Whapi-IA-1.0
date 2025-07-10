@@ -645,14 +645,28 @@ async function testCrudeData(startDate, endDate) {
         const BEDS24_TOKEN = process.env.BEDS24_TOKEN || '';
         const BEDS24_API_URL = 'https://api.beds24.com/v2';
         
-        console.log('\n📋 LLAMADA A LA API:');
+        // 🔧 PARÁMETROS COMPLETOS SEGÚN DOCUMENTACIÓN OFICIAL
+        const allParams = [
+            `startDate=${startDate}`,
+            `endDate=${endDate}`,
+            `includeNumAvail=true`,
+            `includePrices=true`,
+            `includeMinStay=true`,
+            `includeMaxStay=true`,
+            `includeMultiplier=true`,
+            `includeOverride=true`,
+            `includeLinkedPrices=true`,
+            `includeChannels=true`
+        ].join('&');
+        
+        console.log('\n📋 LLAMADA A LA API CON TODOS LOS PARÁMETROS:');
         console.log(`URL: ${BEDS24_API_URL}/inventory/rooms/calendar`);
-        console.log(`Parámetros: startDate=${startDate}&endDate=${endDate}&includeNumAvail=true&includePrices=true`);
+        console.log(`Parámetros COMPLETOS: ${allParams}`);
         console.log(`Timestamp de consulta: ${new Date().toISOString()}`);
         console.log(`Hora Colombia: ${new Date(Date.now() - 5*60*60*1000).toISOString()}`);
         
-        // Obtener datos del calendario - EXACTOS
-        const calendarResponse = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar?startDate=${startDate}&endDate=${endDate}&includeNumAvail=true&includePrices=true`, {
+        // Obtener datos del calendario - CON TODOS LOS PARÁMETROS
+        const calendarResponse = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar?${allParams}`, {
             headers: { 'Accept': 'application/json', 'token': BEDS24_TOKEN }
         });
         const calendarData = await calendarResponse.json();
@@ -684,9 +698,42 @@ async function testCrudeData(startDate, endDate) {
                         console.log(`      📅 from: ${calItem.from}`);
                         console.log(`      📅 to: ${calItem.to || calItem.from}`);
                         console.log(`      📊 numAvail: ${calItem.numAvail}`);
-                        console.log(`      💰 price1: ${calItem.price1}`);
+                        
+                        // 💰 TODOS LOS PRECIOS
+                        if (calItem.price1) console.log(`      💰 price1: ${calItem.price1}`);
                         if (calItem.price2) console.log(`      💰 price2: ${calItem.price2}`);
                         if (calItem.price3) console.log(`      💰 price3: ${calItem.price3}`);
+                        if (calItem.price4) console.log(`      💰 price4: ${calItem.price4}`);
+                        if (calItem.price5) console.log(`      💰 price5: ${calItem.price5}`);
+                        if (calItem.price6) console.log(`      💰 price6: ${calItem.price6}`);
+                        if (calItem.price7) console.log(`      💰 price7: ${calItem.price7}`);
+                        if (calItem.price8) console.log(`      💰 price8: ${calItem.price8}`);
+                        if (calItem.price9) console.log(`      💰 price9: ${calItem.price9}`);
+                        if (calItem.price10) console.log(`      💰 price10: ${calItem.price10}`);
+                        if (calItem.price11) console.log(`      💰 price11: ${calItem.price11}`);
+                        if (calItem.price12) console.log(`      💰 price12: ${calItem.price12}`);
+                        if (calItem.price13) console.log(`      💰 price13: ${calItem.price13}`);
+                        if (calItem.price14) console.log(`      💰 price14: ${calItem.price14}`);
+                        if (calItem.price15) console.log(`      💰 price15: ${calItem.price15}`);
+                        if (calItem.price16) console.log(`      💰 price16: ${calItem.price16}`);
+                        
+                        // 🏨 RESTRICCIONES DE ESTADÍA
+                        if (calItem.minStay !== undefined) console.log(`      🔒 minStay: ${calItem.minStay}`);
+                        if (calItem.maxStay !== undefined) console.log(`      🔒 maxStay: ${calItem.maxStay}`);
+                        
+                        // 📊 MULTIPLICADORES Y OVERRIDES
+                        if (calItem.multiplier !== undefined) console.log(`      📊 multiplier: ${calItem.multiplier}`);
+                        if (calItem.override !== undefined) console.log(`      🔧 override: ${calItem.override}`);
+                        
+                        // 🌐 CANALES (SI EXISTEN)
+                        if (calItem.channels) {
+                            console.log(`      🌐 channels: ${Object.keys(calItem.channels).length} canales`);
+                            Object.entries(calItem.channels).forEach(([channel, data]) => {
+                                if (data.maxBookings !== undefined) {
+                                    console.log(`         📺 ${channel}: maxBookings=${data.maxBookings}`);
+                                }
+                            });
+                        }
                     });
                 } else {
                     console.log(`   ❌ Sin datos de calendario`);

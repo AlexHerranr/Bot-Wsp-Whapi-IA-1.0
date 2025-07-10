@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { LogConfig, shouldLog } from './log-config';
 
 // --- Tipos ---
 export type LogLevel = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'DEBUG';
@@ -239,7 +240,8 @@ const formatSimpleConsoleEntry = (entry: LogEntry): string => {
         'MANUAL_NO_THREAD', 'WHATSAPP_SEND', 'AI_PROCESSING', 'WHATSAPP_OUT',
         'BEDS24_DEBUG_OUTPUT', 'RESPONSE_SANITIZED', 'MESSAGE_SANITIZED', 
         'BEDS24_RESPONSE_DETAIL', 'CONTACT_API', 'CONTACT_API_DETAILED',
-        'CONTEXT_LABELS', 'NEW_THREAD_LABELS', 'LABELS_24H'
+        'CONTEXT_LABELS', 'NEW_THREAD_LABELS', 'LABELS_24H',
+        'WEBHOOK_STATUS', 'THREAD_DETAILS', 'OPENAI_INTERNAL', 'RUN_QUEUE', 'BUFFER_TIMER_RESET'
     ];
     
     if (ignoreCategories.includes(category) || entry.level === 'DEBUG') {
@@ -308,6 +310,11 @@ export const detailedLog = (
     message: string,
     details?: any
 ): void => {
+    const levelForFilter = (level === 'SUCCESS' ? 'INFO' : level) as 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
+    // Skip completely if configuration indicates so
+    if (!shouldLog(category, levelForFilter)) {
+        return;
+    }
     const timestamp = getISOTimestamp();
     const source = getCallerInfo();
     
