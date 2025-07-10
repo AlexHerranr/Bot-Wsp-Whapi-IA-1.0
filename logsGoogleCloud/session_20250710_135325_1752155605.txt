@@ -1,0 +1,29 @@
+================================================================================
+SESIÓN DEL BOT - 2025-07-10 13:53:25 (Colombia)
+================================================================================
+Session ID: session-1752155605
+Deployment: bot-wsp-whapi-ia-00032-xc6
+Duración: 0:00:01.304397
+Eventos procesados: 0
+Usuarios únicos: 0
+Errores: 0
+Warnings: 0
+================================================================================
+
+[2025-07-10 13:53:25] ℹ️ INFO: {'httpRequest': {'latency': '1.262975540s', 'protocol': 'HTTP/1.1', 'remoteIp': '37.27.141.248', 'requestMethod': 'POST', 'requestSize': '694', 'requestUrl': 'https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app/hook', 'responseSize': '280', 'serverIp': '34.143.78.2', 'status': 200}, 'insertId': '68700c27000633029ecbc3ad', 'labels': {'commit-sha': '50ec7ce01ec71e32e93069f7e2e95590167ef573', 'gcb-build-id': '9fdd119a-fed4-4a48-918c-0527b20ef9dc', 'gcb-trigger-id': '74be7dec-5672-4e64-af72-12e5307d59e4', 'gcb-trigger-region': 'global', 'instanceId': '0069c7a988c013e6c00cfdaf1d866eb04562e42b6bb3b82b1a2c670d968446c91834034fcc9ada18a0da2f9bcbd83667b0f5710d3e248a9f002a05615bdf1ea4daeaea1161bb9150921700862e2906aa5ceb', 'managed-by': 'gcp-cloud-build-deploy-cloud-run'}, 'logName': 'projects/gen-lang-client-0318357688/logs/run.googleapis.com%2Frequests', 'receiveTimestamp': '2025-07-10T18:53:27.411187086Z', 'resource': {'labels': {'configuration_name': 'bot-wsp-whapi-ia', 'location': 'northamerica-northeast1', 'project_id': 'gen-lang-client-0318357688', 'revision_name': 'bot-wsp-whapi-ia-00032-xc6', 'service_name': 'bot-wsp-whapi-ia'}, 'type': 'cloud_run_revision'}, 'severity': 'INFO', 'spanId': '545ba8108d160cf0', 'timestamp': '2025-07-10T18:53:25.984365Z', 'trace': 'projects/gen-lang-client-0318357688/traces/af41fb2dfe07e556c686f66a07d6985b', 'traceSampled': True}
+[2025-07-10 13:53:26] ℹ️ INFO: {'httpRequest': {'latency': '0.060277998s', 'protocol': 'HTTP/1.1', 'remoteIp': '37.27.141.248', 'requestMethod': 'POST', 'requestSize': '698', 'requestUrl': 'https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app/hook', 'responseSize': '280', 'serverIp': '34.143.75.2', 'status': 200}, 'insertId': '68700c27000721e8c636543b', 'labels': {'commit-sha': '50ec7ce01ec71e32e93069f7e2e95590167ef573', 'gcb-build-id': '9fdd119a-fed4-4a48-918c-0527b20ef9dc', 'gcb-trigger-id': '74be7dec-5672-4e64-af72-12e5307d59e4', 'gcb-trigger-region': 'global', 'instanceId': '0069c7a988c013e6c00cfdaf1d866eb04562e42b6bb3b82b1a2c670d968446c91834034fcc9ada18a0da2f9bcbd83667b0f5710d3e248a9f002a05615bdf1ea4daeaea1161bb9150921700862e2906aa5ceb', 'managed-by': 'gcp-cloud-build-deploy-cloud-run'}, 'logName': 'projects/gen-lang-client-0318357688/logs/run.googleapis.com%2Frequests', 'receiveTimestamp': '2025-07-10T18:53:27.743879849Z', 'resource': {'labels': {'configuration_name': 'bot-wsp-whapi-ia', 'location': 'northamerica-northeast1', 'project_id': 'gen-lang-client-0318357688', 'revision_name': 'bot-wsp-whapi-ia-00032-xc6', 'service_name': 'bot-wsp-whapi-ia'}, 'type': 'cloud_run_revision'}, 'severity': 'INFO', 'spanId': '399f4ae288083cbe', 'timestamp': '2025-07-10T18:53:26.821410Z', 'trace': 'projects/gen-lang-client-0318357688/traces/2979aaa9573937c3ea81ac838b6c90b9'}
+[2025-07-10 13:53:27] ℹ️ INFO: ?? Logs enviados a Google Cloud Console
+[2025-07-10 13:53:27] ℹ️ INFO: ? Iniciando TeAlquilamos Bot...
+[2025-07-10 13:53:27] ℹ️ INFO: ? Configuraci?n del Entorno:
+[2025-07-10 13:53:27] ℹ️ INFO:    ? Entorno: cloud-run
+[2025-07-10 13:53:27] ℹ️ INFO:    ? Puerto: 8080
+[2025-07-10 13:53:27] ℹ️ INFO:    ? Webhook: https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app/hook
+[2025-07-10 13:53:27] ℹ️ INFO:    ? Log Level: production
+[2025-07-10 13:53:27] ℹ️ INFO:    ? Logs Detallados: S?
+[2025-07-10 13:53:27] ℹ️ INFO:    ??  Modo: Cloud Run
+[2025-07-10 13:53:27] ℹ️ INFO:    ? Producci?n: Activo
+[2025-07-10 13:53:27] ℹ️ INFO: Default STARTUP TCP probe succeeded after 1 attempt for container "placeholder-1" on port 8080.
+
+================================================================================
+FIN DE SESIÓN
+================================================================================
