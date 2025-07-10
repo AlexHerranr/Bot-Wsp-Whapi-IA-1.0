@@ -91,7 +91,21 @@ from collections import defaultdict
 import pyperclip
 import time
 import hashlib
-from colorama import Fore, Style
+try:
+    from colorama import Fore, Style
+except ImportError:
+    # Fallback si colorama no está disponible
+    class Fore:
+        BLUE = ''
+        GREEN = ''
+        RED = ''
+        YELLOW = ''
+        CYAN = ''
+        WHITE = ''
+        LIGHTBLACK_EX = ''
+    
+    class Style:
+        RESET_ALL = ''
 
 # Configuración de colores ANSI
 class Colors:
@@ -1087,7 +1101,7 @@ class CloudRunLogParser:
             return []
     
     def _parse_raw_logs(self, raw_logs: List[Dict]) -> List[LogEntry]:
-        """Parsea logs raw de Google Cloud"""
+        """ETAPA 4: Parsea logs raw de Google Cloud con extracción técnica mejorada"""
         logs = []
         
         for raw_log in raw_logs:
@@ -1095,7 +1109,7 @@ class CloudRunLogParser:
                 timestamp = raw_log.get('timestamp', '')
                 severity = raw_log.get('severity', 'INFO')
                 
-                # Extraer mensaje del log
+                # PASO 1: Extraer mensaje básico del log
                 message = ""
                 if 'textPayload' in raw_log:
                     message = raw_log['textPayload']
@@ -1108,37 +1122,52 @@ class CloudRunLogParser:
                 else:
                     message = str(raw_log)
                 
-                # ARREGLAR CODIFICACIÓN DE CARACTERES - Restaurar emojis y caracteres especiales
-                if isinstance(message, str):
-                    # Restaurar emojis específicos del bot
-                    message = message.replace('? Bot completamente inicializado', 'Bot completamente inicializado')
-                    message = message.replace('? Servidor escuchando', 'Servidor escuchando')
-                    message = message.replace('?? No hay conversación activa', 'No hay conversación activa')
-                    message = message.replace('? No hay conversación activa', 'No hay conversación activa')
-                    message = message.replace('? Iniciando recuperación', 'Iniciando recuperación')
-                    message = message.replace('? Buscando runs', 'Buscando runs')
-                    message = message.replace('? No se encontraron runs', 'No se encontraron runs')
-                    message = message.replace('? Verificando mensajes', 'Verificando mensajes')
-                    message = message.replace('? mensajes pendientes', 'mensajes pendientes')
-                    message = message.replace('?? Logs enviados', 'Logs enviados')
-                    
-                    # Restaurar caracteres especiales comunes
-                    message = message.replace('recuperaci?n', 'recuperación')
-                    message = message.replace('hu?rfanos', 'huérfanos')
-                    message = message.replace('conversaci?n', 'conversación')
-                    message = message.replace('verificaci?n', 'verificación')
-                    message = message.replace('funci?n', 'función')
-                    message = message.replace('ejecuci?n', 'ejecución')
-                    message = message.replace('creaci?n', 'creación')
-                    message = message.replace('operaci?n', 'operación')
-                    
-                    # Limpiar caracteres de interrogación restantes que no sean parte del contenido
-                    import re
-                    # Solo reemplazar ? al inicio de línea seguido de espacio (emojis mal convertidos)
-                    message = re.sub(r'^(\s*)\?\s+', r'\1', message, flags=re.MULTILINE)
+                # PASO 2: Extraer información técnica profunda
+                technical_logs = self.extract_technical_logs(raw_log)
                 
-                log_entry = LogEntry(timestamp, severity, message, raw_log)
-                logs.append(log_entry)
+                # PASO 3: Si hay información técnica, crear logs reconstruidos
+                if technical_logs:
+                    for tech_data in technical_logs:
+                        reconstructed_event = self.reconstruct_technical_event(tech_data)
+                        if reconstructed_event:
+                            # Crear LogEntry para el evento técnico reconstruido
+                            tech_log_entry = LogEntry(timestamp, severity, reconstructed_event, raw_log)
+                            logs.append(tech_log_entry)
+                
+                # PASO 4: Crear log básico limpio (sin información técnica duplicada)
+                # Solo si no es puramente técnico
+                if not technical_logs or not any(tech['type'] in ['FUNCTION_CALLING_START', 'BEDS24_RESPONSE_DETAIL', 'OPENAI_REQUEST'] for tech in technical_logs):
+                    # Limpiar mensaje básico
+                    if isinstance(message, str):
+                        # Restaurar emojis específicos del bot
+                        message = message.replace('? Bot completamente inicializado', 'Bot completamente inicializado')
+                        message = message.replace('? Servidor escuchando', 'Servidor escuchando')
+                        message = message.replace('?? No hay conversación activa', 'No hay conversación activa')
+                        message = message.replace('? No hay conversación activa', 'No hay conversación activa')
+                        message = message.replace('? Iniciando recuperación', 'Iniciando recuperación')
+                        message = message.replace('? Buscando runs', 'Buscando runs')
+                        message = message.replace('? No se encontraron runs', 'No se encontraron runs')
+                        message = message.replace('? Verificando mensajes', 'Verificando mensajes')
+                        message = message.replace('? mensajes pendientes', 'mensajes pendientes')
+                        message = message.replace('?? Logs enviados', 'Logs enviados')
+                        
+                        # Restaurar caracteres especiales comunes
+                        message = message.replace('recuperaci?n', 'recuperación')
+                        message = message.replace('hu?rfanos', 'huérfanos')
+                        message = message.replace('conversaci?n', 'conversación')
+                        message = message.replace('verificaci?n', 'verificación')
+                        message = message.replace('funci?n', 'función')
+                        message = message.replace('ejecuci?n', 'ejecución')
+                        message = message.replace('creaci?n', 'creación')
+                        message = message.replace('operaci?n', 'operación')
+                        
+                        # Limpiar caracteres de interrogación restantes que no sean parte del contenido
+                        import re
+                        # Solo reemplazar ? al inicio de línea seguido de espacio (emojis mal convertidos)
+                        message = re.sub(r'^(\s*)\?\s+', r'\1', message, flags=re.MULTILINE)
+                    
+                    log_entry = LogEntry(timestamp, severity, message, raw_log)
+                    logs.append(log_entry)
                 
             except Exception as e:
                 print(f"{Colors.RED}Error parsing log entry: {e}{Colors.END}")
@@ -1434,6 +1463,386 @@ class CloudRunLogParser:
         except Exception as e:
             print(f"{Colors.RED}❌ Error en limpieza automática: {e}{Colors.END}")
     
+    def extract_technical_logs(self, log_entry):
+        """ETAPA 2: Extrae información técnica de diferentes formatos de Cloud Run"""
+        technical_info = []
+        
+        # Buscar en diferentes ubicaciones posibles del log
+        locations = [
+            log_entry.get('textPayload', ''),
+            log_entry.get('jsonPayload', {}).get('message', ''),
+            log_entry.get('jsonPayload', {}).get('data', ''),
+            log_entry.get('jsonPayload', {}).get('details', ''),
+            str(log_entry.get('jsonPayload', {}))
+        ]
+        
+        for location in locations:
+            if not isinstance(location, str):
+                continue
+                
+            # FUNCTION CALLING - Buscar patrones completos
+            if 'FUNCTION_CALLING_START' in location:
+                # Buscar función y argumentos
+                func_match = re.search(r'OpenAI requiere ejecutar (\d+) función.*?"([^"]+)"', location)
+                args_match = re.search(r'"args":\s*(\{[^}]*\}|\{[^}]*\{[^}]*\}[^}]*\})', location)
+                if func_match:
+                    technical_info.append({
+                        'type': 'FUNCTION_CALLING_START',
+                        'function_count': func_match.group(1),
+                        'function_name': func_match.group(2) if len(func_match.groups()) > 1 else 'unknown',
+                        'arguments': args_match.group(1) if args_match else None,
+                        'timestamp': log_entry.get('timestamp', ''),
+                        'raw_location': location[:200] + '...'
+                    })
+            
+            if 'FUNCTION_EXECUTING' in location or 'FUNCTION_HANDLER' in location:
+                # Buscar función ejecutándose
+                func_match = re.search(r'Ejecutando función[:\s]*([a-zA-Z_][a-zA-Z0-9_]*)', location)
+                args_match = re.search(r'Argumentos:\s*(\{.*?\})', location)
+                if func_match:
+                    technical_info.append({
+                        'type': 'FUNCTION_EXECUTING',
+                        'function_name': func_match.group(1),
+                        'arguments': args_match.group(1) if args_match else None,
+                        'timestamp': log_entry.get('timestamp', ''),
+                        'raw_location': location[:200] + '...'
+                    })
+            
+            if 'FUNCTION_EXECUTED' in location:
+                # Buscar función completada
+                func_match = re.search(r'función\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*ejecutada exitosamente', location)
+                if func_match:
+                    technical_info.append({
+                        'type': 'FUNCTION_EXECUTED',
+                        'function_name': func_match.group(1),
+                        'timestamp': log_entry.get('timestamp', ''),
+                        'raw_location': location[:200] + '...'
+                    })
+            
+            # BEDS24 - Buscar respuestas completas
+            if 'BEDS24_RESPONSE_DETAIL' in location:
+                response_match = re.search(r'fullResponse["\']:\s*["\']([^"\']+)["\']', location)
+                if response_match:
+                    technical_info.append({
+                        'type': 'BEDS24_RESPONSE_DETAIL',
+                        'full_response': response_match.group(1),
+                        'timestamp': log_entry.get('timestamp', ''),
+                        'raw_location': location[:200] + '...'
+                    })
+            
+            if 'BEDS24_REQUEST' in location:
+                # Buscar parámetros de consulta
+                dates_match = re.search(r'startDate["\']:\s*["\']([^"\']+)["\'].*?endDate["\']:\s*["\']([^"\']+)["\']', location)
+                if dates_match:
+                    technical_info.append({
+                        'type': 'BEDS24_REQUEST',
+                        'start_date': dates_match.group(1),
+                        'end_date': dates_match.group(2),
+                        'timestamp': log_entry.get('timestamp', ''),
+                        'raw_location': location[:200] + '...'
+                    })
+            
+            # OPENAI - Buscar estados detallados
+            if 'OPENAI_REQUEST' in location:
+                # Buscar diferentes estados
+                if 'adding_message' in location:
+                    user_match = re.search(r'adding_message para\s*(\d+)', location)
+                    if user_match:
+                        technical_info.append({
+                            'type': 'OPENAI_REQUEST',
+                            'state': 'adding_message',
+                            'user_id': user_match.group(1),
+                            'timestamp': log_entry.get('timestamp', ''),
+                            'raw_location': location[:200] + '...'
+                        })
+                
+                elif 'creating_run' in location:
+                    user_match = re.search(r'creating_run para\s*(\d+)', location)
+                    if user_match:
+                        technical_info.append({
+                            'type': 'OPENAI_REQUEST',
+                            'state': 'creating_run',
+                            'user_id': user_match.group(1),
+                            'timestamp': log_entry.get('timestamp', ''),
+                            'raw_location': location[:200] + '...'
+                        })
+                
+                elif 'run_started' in location:
+                    user_match = re.search(r'run_started para\s*(\d+)', location)
+                    if user_match:
+                        technical_info.append({
+                            'type': 'OPENAI_REQUEST',
+                            'state': 'run_started',
+                            'user_id': user_match.group(1),
+                            'timestamp': log_entry.get('timestamp', ''),
+                            'raw_location': location[:200] + '...'
+                        })
+            
+            if 'OPENAI_RUN_COMPLETED' in location:
+                # Buscar run completado con duración
+                run_match = re.search(r'Run completado.*?threadId["\']:\s*["\']([^"\']+)["\'].*?duration["\']:\s*(\d+)', location)
+                if run_match:
+                    technical_info.append({
+                        'type': 'OPENAI_RUN_COMPLETED',
+                        'thread_id': run_match.group(1),
+                        'duration': run_match.group(2),
+                        'timestamp': log_entry.get('timestamp', ''),
+                        'raw_location': location[:200] + '...'
+                    })
+            
+            # THREADS - Buscar operaciones de thread
+            if 'thread_' in location.lower():
+                thread_match = re.search(r'thread[_\s]*([a-zA-Z0-9_]+)', location, re.IGNORECASE)
+                if thread_match:
+                    # Determinar operación
+                    operation = 'unknown'
+                    if 'encontrado' in location.lower():
+                        operation = 'found'
+                    elif 'creado' in location.lower():
+                        operation = 'created'
+                    elif 'reutilizado' in location.lower():
+                        operation = 'reused'
+                    
+                    technical_info.append({
+                        'type': 'THREAD_OPERATION',
+                        'thread_id': thread_match.group(1),
+                        'operation': operation,
+                        'timestamp': log_entry.get('timestamp', ''),
+                        'raw_location': location[:200] + '...'
+                    })
+            
+            # RUNS - Buscar IDs de run
+            if 'run_' in location.lower():
+                run_match = re.search(r'run[_\s]*([a-zA-Z0-9_]+)', location, re.IGNORECASE)
+                if run_match and len(run_match.group(1)) > 10:  # Solo IDs largos
+                    technical_info.append({
+                        'type': 'RUN_ID',
+                        'run_id': run_match.group(1),
+                        'timestamp': log_entry.get('timestamp', ''),
+                        'raw_location': location[:200] + '...'
+                    })
+        
+        return technical_info
+    
+    def reconstruct_technical_event(self, technical_data):
+        """ETAPA 3: Reconstruye un evento técnico en formato idéntico a logs locales"""
+        
+        if not technical_data:
+            return None
+            
+        # Extraer timestamp y convertir a formato local
+        timestamp = technical_data.get('timestamp', '')
+        if timestamp:
+            try:
+                # Convertir timestamp de Cloud Run a formato local
+                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                # Convertir a hora de Colombia (UTC-5)
+                colombia_time = dt.replace(tzinfo=timezone.utc) - timedelta(hours=5)
+                timestamp_str = colombia_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+            except:
+                timestamp_str = timestamp
+        else:
+            timestamp_str = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        
+        event_type = technical_data.get('type', 'UNKNOWN')
+        
+        # FUNCTION CALLING - Reconstruir en formato local
+        if event_type == 'FUNCTION_CALLING_START':
+            function_name = technical_data.get('function_name', 'unknown')
+            function_count = technical_data.get('function_count', '1')
+            arguments = technical_data.get('arguments', '{}')
+            
+            return f"[{timestamp_str}] [INFO] FUNCTION_CALLING_START [app-unified.ts]: OpenAI requiere ejecutar {function_count} función(es) | {{\"functions\":[{{\"name\":\"{function_name}\",\"args\":{arguments}}}]}}"
+        
+        elif event_type == 'FUNCTION_EXECUTING':
+            function_name = technical_data.get('function_name', 'unknown')
+            arguments = technical_data.get('arguments', '{}')
+            
+            return f"[{timestamp_str}] [INFO] FUNCTION_HANDLER [index.ts]: Ejecutando función: {function_name}\n[{timestamp_str}] [INFO] FUNCTION_HANDLER [index.ts]: Argumentos: {arguments}"
+        
+        elif event_type == 'FUNCTION_EXECUTED':
+            function_name = technical_data.get('function_name', 'unknown')
+            
+            return f"[{timestamp_str}] [SUCCESS] FUNCTION_EXECUTED [app-unified.ts]: Función {function_name} ejecutada exitosamente"
+        
+        # BEDS24 - Reconstruir en formato local
+        elif event_type == 'BEDS24_REQUEST':
+            start_date = technical_data.get('start_date', 'unknown')
+            end_date = technical_data.get('end_date', 'unknown')
+            
+            return f"[{timestamp_str}] [INFO] BEDS24_REQUEST [beds24-availability.ts]: Procesando consulta de disponibilidad | {{\"startDate\":\"{start_date}\",\"endDate\":\"{end_date}\"}}"
+        
+        elif event_type == 'BEDS24_RESPONSE_DETAIL':
+            full_response = technical_data.get('full_response', '')
+            response_length = len(full_response)
+            
+            return f"[{timestamp_str}] [INFO] BEDS24_RESPONSE_DETAIL [beds24-availability.ts]: Respuesta completa de Beds24 enviada a OpenAI | {{\"responseLength\":{response_length},\"fullResponse\":\"{full_response[:100]}...\"}}"
+        
+        # OPENAI - Reconstruir en formato local
+        elif event_type == 'OPENAI_REQUEST':
+            state = technical_data.get('state', 'unknown')
+            user_id = technical_data.get('user_id', 'unknown')
+            
+            return f"[{timestamp_str}] [INFO] OPENAI_REQUEST [app-unified.ts]: {state} para {user_id}"
+        
+        elif event_type == 'OPENAI_RUN_COMPLETED':
+            thread_id = technical_data.get('thread_id', 'unknown')
+            duration = technical_data.get('duration', '0')
+            
+            return f"[{timestamp_str}] [SUCCESS] OPENAI_RUN_COMPLETED [app-unified.ts]: Run completado | {{\"threadId\":\"{thread_id}\",\"duration\":{duration}}}"
+        
+        # THREADS - Reconstruir en formato local
+        elif event_type == 'THREAD_OPERATION':
+            thread_id = technical_data.get('thread_id', 'unknown')
+            operation = technical_data.get('operation', 'unknown')
+            
+            if operation == 'found':
+                return f"[{timestamp_str}] [INFO] THREAD_GET [app-unified.ts]: Thread encontrado: {thread_id}"
+            elif operation == 'created':
+                return f"[{timestamp_str}] [SUCCESS] THREAD_CREATE [app-unified.ts]: Thread creado: {thread_id}"
+            elif operation == 'reused':
+                return f"[{timestamp_str}] [SUCCESS] THREAD_REUSE [app-unified.ts]: Reutilizando thread existente: {thread_id}"
+            else:
+                return f"[{timestamp_str}] [INFO] THREAD_OPERATION [app-unified.ts]: {operation} | {{\"threadId\":\"{thread_id}\"}}"
+        
+        # RUN IDs - Reconstruir en formato local
+        elif event_type == 'RUN_ID':
+            run_id = technical_data.get('run_id', 'unknown')
+            
+            return f"[{timestamp_str}] [INFO] RUN_DEBUG [app-unified.ts]: Run ID detectado: {run_id}"
+        
+        # Evento desconocido
+        else:
+            return f"[{timestamp_str}] [INFO] TECHNICAL_EVENT [cloud-parser]: {event_type} | {technical_data}"
+    
+    def validate_extraction(self, sessions: List[BotSession]) -> Dict[str, Any]:
+        """ETAPA 5: Valida que estamos extrayendo toda la información técnica"""
+        
+        print(f"{Colors.CYAN}=== VALIDANDO EXTRACCIÓN DE INFORMACIÓN TÉCNICA ==={Colors.END}")
+        
+        # Patrones requeridos que deben aparecer en logs técnicos
+        required_patterns = {
+            'FUNCTION_CALLING_START': 0,
+            'FUNCTION_EXECUTING': 0,
+            'FUNCTION_EXECUTED': 0,
+            'BEDS24_REQUEST': 0,
+            'BEDS24_RESPONSE_DETAIL': 0,
+            'OPENAI_REQUEST': 0,
+            'OPENAI_RUN_COMPLETED': 0,
+            'THREAD_OPERATION': 0,
+            'RUN_ID': 0
+        }
+        
+        # Estadísticas de extracción
+        extraction_stats = {
+            'total_logs': 0,
+            'technical_logs': 0,
+            'sessions_analyzed': len(sessions),
+            'patterns_found': {},
+            'missing_patterns': [],
+            'extraction_rate': 0.0
+        }
+        
+        # Analizar cada sesión
+        for session in sessions:
+            for log in session.logs:
+                extraction_stats['total_logs'] += 1
+                
+                # Verificar si contiene información técnica
+                is_technical = False
+                
+                for pattern in required_patterns.keys():
+                    if pattern in log.message:
+                        required_patterns[pattern] += 1
+                        is_technical = True
+                        
+                        if pattern not in extraction_stats['patterns_found']:
+                            extraction_stats['patterns_found'][pattern] = 0
+                        extraction_stats['patterns_found'][pattern] += 1
+                
+                if is_technical:
+                    extraction_stats['technical_logs'] += 1
+        
+        # Calcular tasa de extracción
+        if extraction_stats['total_logs'] > 0:
+            extraction_stats['extraction_rate'] = (extraction_stats['technical_logs'] / extraction_stats['total_logs']) * 100
+        
+        # Identificar patrones faltantes
+        for pattern, count in required_patterns.items():
+            if count == 0:
+                extraction_stats['missing_patterns'].append(pattern)
+        
+        # Mostrar resultados
+        print(f"\n{Colors.BOLD}=== ESTADÍSTICAS DE EXTRACCIÓN ==={Colors.END}")
+        print(f"Total logs analizados: {extraction_stats['total_logs']}")
+        print(f"Logs técnicos encontrados: {extraction_stats['technical_logs']}")
+        print(f"Tasa de extracción técnica: {extraction_stats['extraction_rate']:.1f}%")
+        print(f"Sesiones analizadas: {extraction_stats['sessions_analyzed']}")
+        
+        print(f"\n{Colors.BOLD}=== PATRONES TÉCNICOS ENCONTRADOS ==={Colors.END}")
+        for pattern, count in extraction_stats['patterns_found'].items():
+            status = f"{Colors.GREEN}✅" if count > 0 else f"{Colors.RED}❌"
+            print(f"{status} {pattern}: {count} ocurrencias{Colors.END}")
+        
+        if extraction_stats['missing_patterns']:
+            print(f"\n{Colors.BOLD}{Colors.RED}=== PATRONES FALTANTES ==={Colors.END}")
+            for pattern in extraction_stats['missing_patterns']:
+                print(f"{Colors.RED}❌ {pattern}: No encontrado{Colors.END}")
+            
+            print(f"\n{Colors.YELLOW}⚠️ RECOMENDACIONES:{Colors.END}")
+            print(f"{Colors.YELLOW}1. Verificar que los patrones de búsqueda sean correctos{Colors.END}")
+            print(f"{Colors.YELLOW}2. Revisar si los logs contienen esta información en diferente formato{Colors.END}")
+            print(f"{Colors.YELLOW}3. Ajustar los extractores para capturar estos patrones{Colors.END}")
+        else:
+            print(f"\n{Colors.GREEN}✅ TODOS LOS PATRONES TÉCNICOS ENCONTRADOS{Colors.END}")
+        
+        # Validación específica por tipo de patrón
+        validation_details = {}
+        
+        # Validar flujo de Function Calling
+        if extraction_stats['patterns_found'].get('FUNCTION_CALLING_START', 0) > 0:
+            func_start = extraction_stats['patterns_found'].get('FUNCTION_CALLING_START', 0)
+            func_exec = extraction_stats['patterns_found'].get('FUNCTION_EXECUTING', 0)
+            func_end = extraction_stats['patterns_found'].get('FUNCTION_EXECUTED', 0)
+            
+            validation_details['function_calling_flow'] = {
+                'start': func_start,
+                'executing': func_exec,
+                'completed': func_end,
+                'complete_flow': func_start > 0 and func_exec > 0 and func_end > 0
+            }
+        
+        # Validar flujo de Beds24
+        if extraction_stats['patterns_found'].get('BEDS24_REQUEST', 0) > 0:
+            beds24_req = extraction_stats['patterns_found'].get('BEDS24_REQUEST', 0)
+            beds24_resp = extraction_stats['patterns_found'].get('BEDS24_RESPONSE_DETAIL', 0)
+            
+            validation_details['beds24_flow'] = {
+                'requests': beds24_req,
+                'responses': beds24_resp,
+                'complete_flow': beds24_req > 0 and beds24_resp > 0
+            }
+        
+        # Validar flujo de OpenAI
+        if extraction_stats['patterns_found'].get('OPENAI_REQUEST', 0) > 0:
+            openai_req = extraction_stats['patterns_found'].get('OPENAI_REQUEST', 0)
+            openai_comp = extraction_stats['patterns_found'].get('OPENAI_RUN_COMPLETED', 0)
+            
+            validation_details['openai_flow'] = {
+                'requests': openai_req,
+                'completions': openai_comp,
+                'complete_flow': openai_req > 0 and openai_comp > 0
+            }
+        
+        extraction_stats['validation_details'] = validation_details
+        
+        print(f"\n{Colors.BOLD}=== VALIDACIÓN DE FLUJOS ==={Colors.END}")
+        for flow_name, flow_data in validation_details.items():
+            status = f"{Colors.GREEN}✅" if flow_data.get('complete_flow', False) else f"{Colors.RED}❌"
+            print(f"{status} {flow_name.replace('_', ' ').title()}: {'Completo' if flow_data.get('complete_flow', False) else 'Incompleto'}{Colors.END}")
+        
+        return extraction_stats
+    
     def copy_to_clipboard(self, content: str):
         """Copia contenido al portapapeles"""
         try:
@@ -1443,6 +1852,95 @@ class CloudRunLogParser:
             print(f"{Colors.GREEN}📋 Contenido copiado al portapapeles{Colors.END}")
         except Exception as e:
             print(f"{Colors.RED}❌ Error copiando al portapapeles: {e}{Colors.END}")
+    
+    def analyze_raw_logs(self, hours: int = 1, limit: int = 100):
+        """DEBUGGING TEMPORAL: Analiza logs crudos para encontrar patrones técnicos ocultos"""
+        print(f"{Colors.CYAN}=== ANALIZANDO LOGS CRUDOS DE CLOUD RUN ==={Colors.END}")
+        print(f"{Colors.CYAN}Buscando patrones técnicos en últimas {hours} horas...{Colors.END}")
+        
+        # Obtener logs crudos sin filtrar
+        start_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+        timestamp_filter = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        
+        import platform
+        if platform.system() == "Windows":
+            gcloud_cmd = r'C:\Users\alex-\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+        else:
+            gcloud_cmd = 'gcloud'
+        
+        cmd = [
+            gcloud_cmd, 'logging', 'read',
+            f'resource.type=cloud_run_revision AND resource.labels.service_name={self.service_name} AND timestamp>="{timestamp_filter}"',
+            '--format=json',
+            f'--project={self.project_id}',
+            f'--limit={limit}',
+            '--order=asc'
+        ]
+        
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            raw_logs = json.loads(result.stdout)
+            print(f"{Colors.GREEN}✅ Obtenidos {len(raw_logs)} logs crudos{Colors.END}")
+            
+            # Patrones técnicos que buscamos
+            technical_patterns = [
+                'FUNCTION_CALLING_START',
+                'FUNCTION_EXECUTING', 
+                'FUNCTION_HANDLER',
+                'BEDS24_REQUEST',
+                'BEDS24_RESPONSE_DETAIL',
+                'OPENAI_REQUEST',
+                'OPENAI_RUN_COMPLETED',
+                'adding_message',
+                'creating_run',
+                'run_started',
+                'thread_',
+                'run_',
+                'check_availability',
+                'fullResponse',
+                'args',
+                'arguments'
+            ]
+            
+            found_patterns = {}
+            
+            for i, log in enumerate(raw_logs):
+                log_str = json.dumps(log, ensure_ascii=False)
+                
+                for pattern in technical_patterns:
+                    if pattern.lower() in log_str.lower():
+                        if pattern not in found_patterns:
+                            found_patterns[pattern] = []
+                        
+                        # Guardar información del log que contiene el patrón
+                        found_patterns[pattern].append({
+                            'index': i,
+                            'timestamp': log.get('timestamp', 'unknown'),
+                            'severity': log.get('severity', 'unknown'),
+                            'sample': log_str[:300] + '...' if len(log_str) > 300 else log_str
+                        })
+            
+            # Mostrar resultados
+            print(f"\n{Colors.BOLD}=== PATRONES TÉCNICOS ENCONTRADOS ==={Colors.END}")
+            for pattern, occurrences in found_patterns.items():
+                print(f"\n{Colors.YELLOW}🔍 {pattern}: {len(occurrences)} ocurrencias{Colors.END}")
+                for i, occurrence in enumerate(occurrences[:2]):  # Mostrar solo 2 ejemplos
+                    print(f"  {Colors.GRAY}Ejemplo {i+1}: {occurrence['timestamp']}{Colors.END}")
+                    print(f"  {Colors.GRAY}Sample: {occurrence['sample']}{Colors.END}")
+            
+            print(f"\n{Colors.BOLD}=== ESTADÍSTICAS ==={Colors.END}")
+            print(f"Total logs analizados: {len(raw_logs)}")
+            print(f"Patrones únicos encontrados: {len(found_patterns)}")
+            print(f"Logs con información técnica: {len(set(occ['index'] for occs in found_patterns.values() for occ in occs))}")
+            
+            return found_patterns
+            
+        except subprocess.CalledProcessError as e:
+            print(f"{Colors.RED}❌ Error ejecutando gcloud: {e}{Colors.END}")
+            return {}
+        except json.JSONDecodeError as e:
+            print(f"{Colors.RED}❌ Error parsing JSON: {e}{Colors.END}")
+            return {}
 
 def main():
     """Función principal"""
@@ -1483,6 +1981,10 @@ Ejemplos de uso:
                        help='Guardar también archivo consolidado (además de individuales)')
     parser.add_argument('--max-session-files', type=int, default=10,
                        help='Máximo número de archivos de sesión a conservar (default: 10)')
+    parser.add_argument('--analyze-raw', action='store_true',
+                       help='DEBUGGING: Analizar logs crudos para encontrar patrones técnicos ocultos')
+    parser.add_argument('--validate-extraction', action='store_true',
+                       help='Validar que se está extrayendo toda la información técnica')
     
     args = parser.parse_args()
     
@@ -1501,6 +2003,13 @@ Ejemplos de uso:
     
     # Inicializar parser
     log_parser = CloudRunLogParser()
+    
+    # Si se solicita análisis de logs crudos, ejecutar y salir
+    if args.analyze_raw:
+        hours_to_analyze = args.hours if args.hours else 1
+        found_patterns = log_parser.analyze_raw_logs(hours_to_analyze, args.limit)
+        print(f"\n{Colors.GREEN}✅ Análisis de logs crudos completado{Colors.END}")
+        return
     
     # Determinar cuántas horas buscar basado en sesiones solicitadas
     if args.hours:
@@ -1552,6 +2061,15 @@ Ejemplos de uso:
     
     # Mostrar en consola
     print(full_output)
+    
+    # Ejecutar validación de extracción si se solicita
+    if args.validate_extraction:
+        validation_stats = log_parser.validate_extraction(sessions)
+        print(f"\n{Colors.GREEN}✅ Validación de extracción completada{Colors.END}")
+        if validation_stats['missing_patterns']:
+            print(f"{Colors.YELLOW}⚠️ Se encontraron patrones faltantes - revisar extractores{Colors.END}")
+        else:
+            print(f"{Colors.GREEN}✅ Todos los patrones técnicos están siendo extraídos correctamente{Colors.END}")
     
     # Guardar sesiones individuales en logsGoogleCloud (comportamiento por defecto)
     if not args.no_save:
