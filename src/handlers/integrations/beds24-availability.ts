@@ -77,54 +77,53 @@ async function getAvailabilityAndPricesOptimized(
     const BEDS24_TOKEN = process.env.BEDS24_TOKEN || '';
     const BEDS24_API_URL = 'https://api.beds24.com/v2';
     
+    // Usar las fechas originales directamente - sin ajustes de timezone
     const dateRange = generateDateRange(startDate, endDate);
     const totalNights = dateRange.length;
     
+    logInfo('BEDS24_NIGHTS_CALCULATION', 'Calculando noches de estadía', {
+        startDate,
+        endDate,
+        nightsRange: dateRange,
+        totalNights
+    });
+    
     // Obtener nombres de propiedades
-    const propertyNames: Record<number, string> = {};
-    try {
-        const propsResponse = await axios.get(`${BEDS24_API_URL}/properties`, {
-            headers: { 'Accept': 'application/json', 'token': BEDS24_TOKEN },
-            timeout: 15000
-        });
-        
-        if (propsResponse.data.success && propsResponse.data.data) {
-            propsResponse.data.data.forEach((property: any) => {
-                propertyNames[property.id] = property.name;
-            });
-        }
-    } catch (error) {
-        logError('AVAILABILITY_HANDLER', 'Error obteniendo propiedades:', error);
+    const propertiesResponse = await fetch(`${BEDS24_API_URL}/properties`, {
+        headers: { 'Accept': 'application/json', 'token': BEDS24_TOKEN }
+    });
+    const propertiesData = await propertiesResponse.json() as any;
+    
+    if (!propertiesData.success) {
+        throw new Error(`Error obteniendo propiedades: ${propertiesData.error}`);
     }
     
-    // Consulta única optimizada: solo calendar (incluye disponibilidad + precios)
-    const calendarResponse = await axios.get(`${BEDS24_API_URL}/inventory/rooms/calendar`, {
-        headers: { 'Accept': 'application/json', 'token': BEDS24_TOKEN },
-        params: { 
-            startDate, 
-            endDate,
-            includePrices: true,
-            includeNumAvail: true,
-            includeMinStay: true,
-            includeMaxStay: true,
-            includeChannels: true,
-            ...(propertyId && { propertyId })
-        },
-        timeout: 15000
+    // Usar fechas originales para la consulta a Beds24
+    const calendarResponse = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar?startDate=${startDate}&endDate=${endDate}&includeNumAvail=true&includePrices=true`, {
+        headers: { 'Accept': 'application/json', 'token': BEDS24_TOKEN }
     });
+    const calendarData = await calendarResponse.json() as any;
+    
+    if (!calendarData.success) {
+        throw new Error(`Error obteniendo calendario: ${calendarData.error}`);
+    }
 
     // Logging básico de conexión
     logInfo('BEDS24_API_CALL', 'Consulta exitosa a Beds24', {
-        success: calendarResponse.data.success,
-        totalProperties: calendarResponse.data.data?.length || 0,
-        dateRange: `${startDate} - ${endDate}`
+        success: calendarData.success,
+        totalProperties: calendarData.data?.length || 0,
+        dateRange: `${startDate} - ${endDate}`,
+        nightsCalculated: totalNights
     });
-    
-    // Procesar datos del calendar (disponibilidad + precios + restricciones)
+
+    // Mapear los datos de Beds24 a las noches reales de estadía
+    const mappedCalendarData = mapBeds24DataToStayNights(calendarData.data || [], startDate, endDate);
+
+    // Procesar datos de disponibilidad y precios
     const propertyData: Record<number, PropertyData> = {};
     
-    if (calendarResponse.data.success && calendarResponse.data.data) {
-        calendarResponse.data.data.forEach((roomData: any) => {
+    if (calendarData.success && mappedCalendarData) {
+        mappedCalendarData.forEach((roomData: any) => {
             const propertyId = roomData.propertyId;
             const roomId = roomData.roomId;
             
@@ -132,7 +131,7 @@ async function getAvailabilityAndPricesOptimized(
             if (!propertyData[propertyId]) {
                 propertyData[propertyId] = {
                     propertyId: propertyId,
-                    propertyName: propertyNames[propertyId] || `Propiedad ${propertyId}`,
+                    propertyName: propertiesData.data.find(p => p.id === propertyId)?.name || `Propiedad ${propertyId}`,
                     roomName: `Habitación ${roomId}`,
                     roomId: roomId,
                     availability: {},
@@ -143,18 +142,18 @@ async function getAvailabilityAndPricesOptimized(
             // Procesar calendario para disponibilidad y precios
             if (roomData.calendar) {
                 roomData.calendar.forEach((calItem: any) => {
-                    const dates = generateDateRange(calItem.from, calItem.to || calItem.from);
-                    dates.forEach(date => {
-                        if (dateRange.includes(date)) {
-                            // Disponibilidad basada en numAvail (0 = ocupado, 1+ = disponible)
-                            propertyData[propertyId].availability[date] = (calItem.numAvail || 0) > 0;
-                            
-                            // Precios
-                            if (calItem.price1) {
-                                propertyData[propertyId].prices[date] = calItem.price1;
-                            }
+                    // Usar la fecha directamente de Beds24
+                    const dateToProcess = calItem.from;
+                    
+                    if (dateRange.includes(dateToProcess)) {
+                        // Disponibilidad basada en numAvail (0 = ocupado, 1+ = disponible)
+                        propertyData[propertyId].availability[dateToProcess] = (calItem.numAvail || 0) > 0;
+                        
+                        // Precios
+                        if (calItem.price1) {
+                            propertyData[propertyId].prices[dateToProcess] = calItem.price1;
                         }
-                    });
+                    }
                 });
             }
         });
@@ -163,19 +162,22 @@ async function getAvailabilityAndPricesOptimized(
     // Logging básico de procesamiento
     logInfo('BEDS24_PROCESSING', 'Datos procesados correctamente', {
         totalProperties: Object.keys(propertyData).length,
-        dateRange: dateRange
+        nightsRange: dateRange,
+        totalNights
     });
 
-    // Clasificar opciones
+    // Clasificar opciones - CORRECCIÓN: Solo considerar noches reales
     const completeOptions: PropertyData[] = [];
     const partialOptions: PropertyData[] = [];
     
     Object.values(propertyData).forEach(property => {
+        // CORRECCIÓN: Verificar disponibilidad solo para noches de estadía
         const isFullyAvailableAndPriced = dateRange.every(date => property.availability[date] && property.prices[date] > 0);
         
         if (isFullyAvailableAndPriced) {
             completeOptions.push(property);
         } else {
+            // CORRECCIÓN: Verificar disponibilidad parcial solo para noches reales
             const isPartiallyAvailable = dateRange.some(date => property.availability[date] && property.prices[date] > 0);
             if (isPartiallyAvailable) {
                 partialOptions.push(property);
@@ -187,7 +189,8 @@ async function getAvailabilityAndPricesOptimized(
     logInfo('BEDS24_CLASSIFICATION', 'Propiedades clasificadas', {
         completeOptions: completeOptions.length,
         partialOptions: partialOptions.length,
-        willGenerateSplits: completeOptions.length === 0 ? true : completeOptions.length <= 2
+        willGenerateSplits: completeOptions.length === 0 ? true : completeOptions.length <= 2,
+        nightsAnalyzed: totalNights
     });
 
     // Generar opciones de split según nueva lógica:
@@ -531,7 +534,7 @@ function formatOptimizedResponse(result: OptimizedResult, startDate: string, end
     const { completeOptions, splitOptions, totalNights } = result;
     
     // Usar las fechas originales de entrada y salida (no las noches)
-    let response = `📅 **${formatDateRange(startDate, endDate)} (${totalNights} noches)**\n\n`;
+    let response = `📅 **${formatDateRange(startDate, endDate)} (${totalNights} ${totalNights === 1 ? 'noche' : 'noches'})**\n\n`;
     
     // 1. Mostrar siempre las opciones de estancia completa si existen
     if (completeOptions.length > 0) {
@@ -578,7 +581,7 @@ function formatOptimizedResponse(result: OptimizedResult, startDate: string, end
     
     // 3. Mensaje final si no se encontró absolutamente nada
     if (completeOptions.length === 0 && splitOptions.length === 0) {
-        response += `❌ **Sin disponibilidad para ${totalNights} noches**\n`;
+        response += `❌ **Sin disponibilidad para ${totalNights} ${totalNights === 1 ? 'noche' : 'noches'}**\n`;
         response += `💡 Considera fechas alternativas\n`;
     }
     
@@ -619,6 +622,39 @@ function formatOptimizedResponse(result: OptimizedResult, startDate: string, end
 }
 
 /**
+ * Procesa los datos de Beds24 para las noches de estadía
+ * Simplificado: usar los datos tal como vienen de Beds24
+ */
+function mapBeds24DataToStayNights(calendarData: any[], originalStartDate: string, originalEndDate: string): any[] {
+    logInfo('BEDS24_DATA_MAPPING', 'Procesando datos de Beds24', {
+        originalStartDate,
+        originalEndDate,
+        beds24DataCount: calendarData.length
+    });
+    
+    // Retornar los datos tal como vienen de Beds24
+    // El procesamiento posterior se encargará de usar las fechas correctas
+    return calendarData;
+}
+
+/**
+ * Genera rango de fechas para calendarios (inclusivo)
+ * Usado para procesar datos del calendario de Beds24 donde ambas fechas son inclusivas
+ */
+function generateDateRangeInclusive(startDate: string, endDate: string): string[] {
+    const dates: string[] = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Para calendarios, incluir fecha de fin
+    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+        dates.push(date.toISOString().split('T')[0]);
+    }
+    
+    return dates;
+}
+
+/**
  * Genera rango de fechas
  */
 function generateDateRange(startDate: string, endDate: string): string[] {
@@ -626,7 +662,9 @@ function generateDateRange(startDate: string, endDate: string): string[] {
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+    // IMPORTANTE: No incluir la fecha de fin (día de checkout)
+    // Del 15 al 18 = 3 noches (15, 16, 17), el 18 es checkout
+    for (let date = new Date(start); date < end; date.setDate(date.getDate() + 1)) {
         dates.push(date.toISOString().split('T')[0]);
     }
     

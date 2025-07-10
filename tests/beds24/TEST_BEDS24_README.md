@@ -1,74 +1,33 @@
-# 🧪 Test Beds24 - Documentación de Endpoints de Disponibilidad
+# 🧪 Test Beds24 - Documentación Simplificada
 
 ## 📋 Información General
 
-Este documento describe los endpoints de disponibilidad de Beds24 y qué datos podemos obtener de cada uno para optimizar nuestras consultas.
+Este documento describe el sistema simplificado de consultas a Beds24 después de la optimización de julio 2025.
+
+**🎯 FILOSOFÍA ACTUAL:** Usar las fechas tal como vienen de Beds24, sin ajustes complejos de timezone.
 
 ---
 
-## 🔍 ENDPOINTS DE DISPONIBILIDAD DISPONIBLES
+## 🔍 ENDPOINT UTILIZADO
 
-### 1. **`GET /inventory/rooms/availability`**
-**Descripción:** Obtiene el estado de disponibilidad básico de las fechas
+### **`GET /inventory/rooms/calendar`** ⭐ **ÚNICO ENDPOINT**
+**Descripción:** Obtiene disponibilidad y precios con información completa
 
-#### ✅ **Datos disponibles:**
-- `roomId` - ID de la habitación
-- `propertyId` - ID de la propiedad  
-- `name` - Nombre de la habitación
-- `availability` - Disponibilidad por fecha (true/false)
-
-#### 📝 **Ejemplo de respuesta:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "roomId": 12345,
-      "propertyId": 1317,
-      "name": "Apartamento 1317",
-      "availability": {
-        "2025-07-08": true,
-        "2025-07-09": false,
-        "2025-07-10": true
-      }
-    }
-  ]
-}
-```
-
-#### ❌ **Limitaciones:**
-- Sin información de precios
-- Sin restricciones de noches (minStay/maxStay)
-- Sin información de canales de reserva
-- Sin número de unidades disponibles
-
----
-
-### 2. **`GET /inventory/rooms/calendar`** ⭐ **RECOMENDADO**
-**Descripción:** Obtiene valores por día del calendario con información completa
-
-#### ✅ **Datos disponibles:**
+#### ✅ **Datos que obtenemos:**
 - `propertyId` - ID de la propiedad
 - `roomId` - ID de la habitación
 - `from` / `to` - Rango de fechas
 - `numAvail` - Número de unidades disponibles (0 = ocupado)
-- `minStay` - Mínimo de noches requerido *(con `includeMinStay: true`)*
-- `maxStay` - Máximo de noches permitido *(con `includeMaxStay: true`)*
-- `price1` a `price16` - Precios por configuración *(con `includePrices: true`)*
-- `channels` - Información de canales de reserva *(con `includeChannels: true`)*
-- `override` - Sobrescrituras especiales *(con `includeOverride: true`)*
+- `price1` - Precio base
+- Información adicional según necesidad
 
-#### 🔧 **Parámetros importantes:**
+#### 🔧 **Parámetros que usamos:**
 ```javascript
 {
-  startDate: "2025-07-08",
-  endDate: "2025-07-12",
+  startDate: "2025-07-15",
+  endDate: "2025-07-17",
   includeNumAvail: true,        // Número de unidades disponibles
-  includeMinStay: true,         // Mínimo de noches
-  includeMaxStay: true,         // Máximo de noches
   includePrices: true,          // Precios
-  includeChannels: true,        // Info de canales
-  includeOverride: true         // Sobrescrituras
 }
 ```
 
@@ -82,19 +41,10 @@ Este documento describe los endpoints de disponibilidad de Beds24 y qué datos p
       "roomId": 12345,
       "calendar": [
         {
-          "from": "2025-07-08",
-          "to": "2025-07-08",
+          "from": "2025-07-15",
+          "to": "2025-07-15",
           "numAvail": 0,           // 0 = Ocupado
-          "minStay": 3,            // Mínimo 3 noches
-          "maxStay": 14,           // Máximo 14 noches
           "price1": 200000,        // Precio base
-          "override": "none",      // Sin sobrescrituras
-          "channels": {
-            "booking": { "maxBookings": 0 },
-            "airbnb": { "maxBookings": 0 },
-            "expedia": { "maxBookings": 0 },
-            "vrbo": { "maxBookings": 0 }
-          }
         }
       ]
     }
@@ -104,179 +54,143 @@ Este documento describe los endpoints de disponibilidad de Beds24 y qué datos p
 
 ---
 
-## 🎯 COMPARACIÓN Y RECOMENDACIONES
+## 🎯 SISTEMA SIMPLIFICADO DE DISPONIBILIDAD
 
-### **Endpoint `/availability` vs `/calendar`**
+### **🔧 Lógica Actual (Simplificada):**
 
-| Característica | `/availability` | `/calendar` |
-|---------------|-----------------|-------------|
-| Disponibilidad básica | ✅ | ✅ |
-| Precios | ❌ | ✅ |
-| Restricciones de noches | ❌ | ✅ |
-| Info de canales | ❌ | ✅ |
-| Número de unidades | ❌ | ✅ |
-| Sobrescrituras | ❌ | ✅ |
+1. **Consulta directa** a Beds24 con fechas originales
+2. **Procesamiento directo** de los datos sin mapeo complejo
+3. **Clasificación simple** en opciones completas vs parciales
+4. **Generación de splits** según reglas establecidas
 
-### **🏆 RECOMENDACIÓN:**
-**Usar solo `/inventory/rooms/calendar`** porque:
-- Proporciona **toda la información** de `/availability` y más
-- Permite mostrar **razones específicas** de no disponibilidad
-- Incluye **restricciones de estadía** (minStay/maxStay)
-- Muestra **información de canales** de reserva
+### **📋 Reglas de Splits (Sin Cambios):**
 
----
+| Opciones Completas | Alternativas Mostradas | Máximo Traslados |
+|-------------------|----------------------|------------------|
+| **0 completas** | Hasta 3 splits | 3 traslados |
+| **1 completa** | Hasta 2 splits | 1 traslado |
+| **2+ completas** | Hasta 1 split | 1 traslado |
 
-## 💡 CASOS DE USO PRÁCTICOS
+### **⚡ Beneficios de la Simplificación:**
 
-### **Caso 1: Consulta básica de disponibilidad**
-```javascript
-// Solo verificar disponibilidad y precios
-{
-  includeNumAvail: true,
-  includePrices: true
-}
-```
-
-### **Caso 2: Información completa para el usuario**
-```javascript
-// Mostrar razones específicas de no disponibilidad
-{
-  includeNumAvail: true,
-  includeMinStay: true,
-  includeMaxStay: true,
-  includePrices: true,
-  includeChannels: true
-}
-```
-
-### **Caso 3: Validación de restricciones**
-```javascript
-// Verificar si la estadía cumple con minStay/maxStay
-{
-  includeMinStay: true,
-  includeMaxStay: true
-}
-```
+- ✅ **Código más simple** y mantenible
+- ✅ **Menos puntos de falla** (sin lógica compleja de timezone)
+- ✅ **Más confiable** (usa datos tal como vienen de Beds24)
+- ✅ **Más rápido** (menos procesamiento)
 
 ---
 
-## 🚀 IMPLEMENTACIÓN ACTUAL
+## 🧪 TESTS DISPONIBLES
 
-Nuestro sistema actualmente usa **ambos endpoints en paralelo**:
-1. `/availability` - Para disponibilidad básica
-2. `/calendar` - Para precios y información adicional
-
-### **🔧 OPTIMIZACIÓN PROPUESTA:**
-- Eliminar consulta a `/availability`
-- Usar solo `/calendar` con todos los parámetros necesarios
-- Reducir latencia y uso de créditos API
-
----
-
-## 🔄 SISTEMA INTELIGENTE DE SPLITS Y ALTERNATIVAS
-
-### **🎯 Nueva Lógica de Alternativas con Traslado**
-
-El sistema ahora implementa una lógica inteligente para mostrar alternativas con traslado basada en la disponibilidad completa:
-
-#### **📋 Reglas de Splits:**
-
-| Opciones Completas | Alternativas Mostradas | Máximo Traslados | Propósito |
-|-------------------|----------------------|------------------|-----------|
-| **0 completas** | Hasta 3 splits | 3 traslados | Cubrir necesidad cuando no hay opciones ideales |
-| **1 completa** | Hasta 2 splits | 1 traslado | Ofrecer alternativas adicionales |
-| **2+ completas** | Hasta 1 split | 1 traslado | Mostrar alternativa económica |
-
-#### **🧠 Estrategias de Optimización:**
-
-1. **🏆 Maximizar Noches Consecutivas**: Busca la menor cantidad de traslados
-2. **💰 Minimizar Precio Total**: Encuentra la combinación más económica  
-3. **🎯 Diversificar Propiedades**: Ofrece opciones con diferentes apartamentos
-
-#### **⚡ Beneficios del Sistema:**
-
-- ✅ **Prioriza opciones sin traslados** cuando están disponibles
-- ✅ **Limita traslados** para mantener comodidad del huésped
-- ✅ **Ofrece alternativas económicas** cuando hay múltiples opciones
-- ✅ **Maximiza ocupación** utilizando disponibilidad parcial
-
-### **🧪 Test de Verificación de Splits:**
-
+### **Tests Principales:**
 ```bash
-npx tsx tests/beds24/test-beds24.js splits 2025-07-09 2025-07-11
+# Test general de disponibilidad
+npx tsx tests/beds24/test-beds24.js general 2025-07-15 2025-07-17
+
+# Test de verificación de splits
+npx tsx tests/beds24/test-beds24.js splits 2025-07-15 2025-07-17
+
+# Test de health check
+npx tsx tests/beds24/test-beds24.js health
 ```
 
-Este test específico verifica:
-- ✅ Aplicación correcta de reglas según opciones completas disponibles
-- ✅ Límites de traslados respetados
-- ✅ Calidad de alternativas generadas
-- ✅ Cobertura completa del rango de fechas solicitado
+### **Tests de Análisis:**
+```bash
+# Ver datos RAW de Beds24
+npx tsx tests/beds24/test-beds24.js raw 2025-07-15 2025-07-17
 
-### **📤 Formato de Salida a OpenAI:**
+# Ver datos completamente crudos
+npx tsx tests/beds24/test-beds24.js crude 2025-07-15 2025-07-17
 
-El sistema envía mensajes contextualizados a OpenAI para que entienda la situación:
-
-#### **🔴 Sin Disponibilidad Completa:**
+# Test de rendimiento
+npx tsx tests/beds24/test-beds24.js performance 2025-07-15 2025-07-17
 ```
+
+---
+
+## 📤 FORMATO DE SALIDA A OPENAI
+
+### **🟢 Con Disponibilidad Completa:**
+```
+📅 **15/07/2025 - 17/07/2025 (2 noches)**
+
+🥇 **Apartamentos Disponibles (1 opciones)**
+✅ **1722 B** - $850.000
+   📊 $425.000/noche
+
+🔄 *Beds24 - 9/7, 23:37*
+```
+
+### **🔴 Sin Disponibilidad:**
+```
+📅 **15/07/2025 - 17/07/2025 (2 noches)**
+
+❌ **Sin disponibilidad para 2 noches**
+💡 Considera fechas alternativas
+
+🔄 *Beds24 - 9/7, 23:37*
+```
+
+### **🟡 Solo Alternativas con Traslado:**
+```
+📅 **15/07/2025 - 17/07/2025 (2 noches)**
+
 ❌ **No hay Disponibilidad Completa - Solo Parcial con Opción de Traslado**
 💡 *Alternativas con cambio de apartamento (ofrecer solo como opción adicional al huésped)*
 
 🔄 **Alternativa 1**: 1 traslado - $630.000
-   🏠 1722 A: 2025-07-09 a 2025-07-10 - $420.000
-   🔄 1317: 2025-07-11 - $210.000
-```
+   🏠 1722 A: 15/07/2025 - $420.000
+   🔄 1317: 16/07/2025 - $210.000
 
-#### **🟢 Con Disponibilidad Completa:**
+🔄 *Beds24 - 9/7, 23:37*
 ```
-🥇 **Apartamentos Disponibles (1 opciones)**
-✅ **1722 B** - $850.000
-   📊 $170.000/noche
-
-🔄 **Opciones Adicionales con Traslado**
-💡 *Alternativas económicas con cambio de apartamento (opcional para el huésped)*
-```
-
-#### **⚫ Sin Disponibilidad:**
-```
-❌ **Sin disponibilidad para 4 noches**
-💡 Considera fechas alternativas
-```
-
-**Propósito del contexto:**
-- ✅ OpenAI entiende cuándo NO hay disponibilidad ideal
-- ✅ Sabe cómo presentar alternativas (como opción adicional)
-- ✅ Maneja expectativas del huésped correctamente
-- ✅ Prioriza opciones completas cuando existen
 
 ---
 
-## 📊 INFORMACIÓN DE CANALES DISPONIBLES
+## 🚫 LIMITACIONES ACEPTADAS
 
-El endpoint `/calendar` con `includeChannels: true` proporciona información de **25+ canales**:
+### **Problema de Timezone:**
+- **Realidad:** Beds24 usa UTC, Colombia usa UTC-5
+- **Problema:** A las 11 PM en Colombia = 4 AM UTC del día siguiente
+- **Consecuencia:** Beds24 puede no devolver datos para "hoy" muy tarde
+- **Solución:** **ACEPTADA** - Es una limitación de la API, no intentamos "arreglarla"
 
-- **Booking.com** (`booking`)
-- **Airbnb** (`airbnb`)
-- **Expedia** (`expedia`)
-- **VRBO** (`vrbo`)
-- **Agoda** (`agoda`)
-- **Despegar** (`despegar`)
-- **TripAdvisor** (`tripadvisorrentals`)
-- Y muchos más...
+### **Enfoque Adoptado:**
+- ✅ **Transparencia:** Si no hay datos, informar claramente
+- ✅ **Simplicidad:** No lógica compleja que pueda fallar
+- ✅ **Confiabilidad:** Usar datos tal como vienen de Beds24
+- ✅ **Alternativas:** Sugerir fechas alternativas cuando no hay disponibilidad
+
+---
+
+## 📊 LOGS Y DEBUGGING
+
+### **Logs Generados:**
+- `BEDS24_NIGHTS_CALCULATION` - Cálculo de noches
+- `BEDS24_API_CALL` - Llamadas a API exitosas
+- `BEDS24_PROCESSING` - Procesamiento de datos
+- `BEDS24_CLASSIFICATION` - Clasificación de opciones
+- `BEDS24_SPLITS` - Generación de splits
+
+### **Ubicación de Logs:**
+```
+logs/bot-session-YYYY-MM-DDTHH-MM-SS.log
+```
 
 ---
 
 ## 🎯 PRÓXIMOS PASOS
 
-1. **Implementar consulta única** a `/calendar`
-2. **Agregar validación** de `minStay`/`maxStay`
-3. **Mostrar información específica** de canales
-4. **Optimizar respuestas** para el usuario final
+1. **✅ Simplificación completada** (Julio 2025)
+2. **Monitoreo** del comportamiento en producción
+3. **Optimizaciones menores** según feedback
+4. **Documentación de casos edge** si aparecen
 
 ---
 
 ## 📝 NOTAS IMPORTANTES
 
-- **Créditos API:** Cada consulta consume créditos, usar `/calendar` únicamente es más eficiente
-- **Restricciones:** `minStay` y `maxStay` se obtienen del calendario o de la configuración de la habitación
-- **Canales:** La información de canales ayuda a entender por qué una fecha no está disponible
-- **numAvail:** Valor 0 = ocupado, 1+ = disponible (número de unidades) 
+- **Créditos API:** Cada consulta consume créditos de Beds24
+- **Zona horaria:** Sistema acepta limitación UTC de Beds24
+- **Fechas:** Usar siempre formato YYYY-MM-DD
+- **Logs:** Revisar logs para debugging detallado 

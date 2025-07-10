@@ -16,8 +16,16 @@ interface LogEntry {
 // --- Detectar entorno ---
 const isCloudRun = !!process.env.K_SERVICE || process.env.NODE_ENV === 'production';
 
+// --- Función para obtener timestamp en zona horaria de Colombia ---
+const getColombiaNowTimestamp = (): string => {
+    const now = new Date();
+    // Ajustar a zona horaria de Colombia (UTC-5)
+    const colombiaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    return colombiaTime.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+};
+
 // --- Configuración de Sesión ---
-const SESSION_TIMESTAMP = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+const SESSION_TIMESTAMP = getColombiaNowTimestamp();
 const SESSION_ID = `session-${SESSION_TIMESTAMP}`;
 const LOG_DIR = 'logs';
 const LOG_FILE = path.join(LOG_DIR, `bot-session-${SESSION_TIMESTAMP}.log`);
@@ -105,7 +113,7 @@ const initializeSession = (): void => {
         // Escribir header de sesión
         const sessionHeader = `
 === NUEVA SESIÓN DEL BOT ===
-Timestamp: ${new Date().toISOString()}
+Timestamp: ${getColombiaNowTimestamp().replace(/-/g, ':').replace('T', ' ')} (Colombia UTC-5)
 Session ID: ${SESSION_ID}
 PID: ${process.pid}
 Node Version: ${process.version}
@@ -133,7 +141,10 @@ Node Version: ${process.version}
 
 // --- Utilidades ---
 const getISOTimestamp = (): string => {
-    return new Date().toISOString();
+    const now = new Date();
+    // Ajustar a zona horaria de Colombia (UTC-5)
+    const colombiaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    return colombiaTime.toISOString();
 };
 
 const getCallerInfo = (): string => {
@@ -421,7 +432,7 @@ const cleanup = (): void => {
         const sessionFooter = `
 =============================
 === FIN DE SESIÓN DEL BOT ===
-Timestamp: ${new Date().toISOString()}
+Timestamp: ${getColombiaNowTimestamp().replace(/-/g, ':').replace('T', ' ')} (Colombia UTC-5)
 Session ID: ${SESSION_ID}
 Duración: ${Math.round((Date.now() - new Date(SESSION_TIMESTAMP.replace(/-/g, ':')).getTime()) / 1000)}s
 =============================

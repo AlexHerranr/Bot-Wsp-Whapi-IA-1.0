@@ -1114,7 +1114,8 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                         environment: config.environment
                     });
                     
-                    await openaiClient.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+                    // Enviar tool outputs y obtener el run actualizado
+                    run = await openaiClient.beta.threads.runs.submitToolOutputs(threadId, run.id, {
                         tool_outputs: toolOutputs
                     });
                     
@@ -1122,10 +1123,23 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                         shortUserId,
                         threadId,
                         runId: run.id,
+                        newRunStatus: run.status,
+                        toolOutputsCount: toolOutputs.length,
                         environment: config.environment
                     });
                     
-                    // Continuar esperando hasta completion o nueva requires_action
+                    // 🔧 DEBUG: Log para verificar que no hay duplicación
+                    logInfo('FUNCTION_SUBMIT_DEBUG', `Tool outputs enviados para ${toolOutputs.length} calls`, {
+                        shortUserId,
+                        threadId,
+                        runId: run.id,
+                        submittedCallIds: toolOutputs.map(to => to.tool_call_id),
+                        runStatusAfterSubmit: run.status,
+                        environment: config.environment
+                    });
+                    
+                    // IMPORTANTE: Después de submitToolOutputs, el run pasa a "queued" o "in_progress"
+                    // Necesitamos esperar a que complete o requiera más acciones
                     attempts = 0;
                     while (['queued', 'in_progress'].includes(run.status) && attempts < maxAttempts) {
                         await new Promise(resolve => setTimeout(resolve, 500));
@@ -1133,24 +1147,67 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                         attempts++;
                         
                         if (attempts % 10 === 0) {
-                            logInfo('FUNCTION_WAITING', `Esperando completion después de function calling, intento ${attempts}/${maxAttempts}, estado: ${run.status}`, {
+                            logInfo('FUNCTION_WAITING', `Esperando después de function calling para ${shortUserId}, estado: ${run.status}`, {
                                 shortUserId,
                                 threadId,
                                 runId: run.id,
+                                attempts: `${attempts}/${maxAttempts}`,
                                 environment: config.environment
                             });
                         }
                     }
                     
-                    // Si vuelve a requires_action, el while principal lo manejará
+                    // AHORA sí verificar el estado final
                     if (run.status === 'requires_action') {
-                        logInfo('FUNCTION_NESTED_CALL', `Función requiere llamadas adicionales`, {
-                            shortUserId,
-                            threadId,
-                            runId: run.id,
-                            environment: config.environment
-                        });
-                        continue; // Continuar el while principal para procesar nuevas function calls
+                        // Solo procesar si REALMENTE hay nuevas acciones requeridas
+                        const newToolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
+                        if (newToolCalls && newToolCalls.length > 0) {
+                            // Verificar si son tool calls diferentes a los que acabamos de procesar
+                            const currentToolCallIds = toolCalls.map(tc => tc.id);
+                            const newToolCallIds = newToolCalls.map(tc => tc.id);
+                            const hasNewCalls = newToolCallIds.some(id => !currentToolCallIds.includes(id));
+                            
+                            // 🔧 DEBUG: Log detallado para verificar detección de duplicación
+                            logInfo('FUNCTION_DUPLICATE_CHECK', `Verificando duplicación de tool calls`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                currentCallIds: currentToolCallIds,
+                                newCallIds: newToolCallIds,
+                                hasNewCalls,
+                                environment: config.environment
+                            });
+                            
+                            if (hasNewCalls) {
+                                logInfo('FUNCTION_ADDITIONAL_CALLS', `OpenAI requiere funciones adicionales`, {
+                                    shortUserId,
+                                    threadId,
+                                    runId: run.id,
+                                    previousCallsCount: toolCalls.length,
+                                    newCallsCount: newToolCalls.length,
+                                    environment: config.environment
+                                });
+                                continue; // Procesar NUEVAS function calls
+                            } else {
+                                logWarning('FUNCTION_DUPLICATE_CALLS', `Detectadas tool calls duplicadas, ignorando`, {
+                                    shortUserId,
+                                    threadId,
+                                    runId: run.id,
+                                    duplicateCallIds: currentToolCallIds,
+                                    environment: config.environment
+                                });
+                                // Forzar salida del while para evitar loop infinito
+                                break;
+                            }
+                        } else {
+                            logWarning('FUNCTION_NO_NEW_CALLS', `Run en requires_action pero sin nuevas tool calls`, {
+                                shortUserId,
+                                threadId,
+                                runId: run.id,
+                                environment: config.environment
+                            });
+                            break;
+                        }
                     }
                     
                 } catch (submitError) {
@@ -1205,14 +1262,29 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 return sanitizeResponseForClient('Lo siento, no pude generar una respuesta adecuada.');
                 
             } else {
-                logError('OPENAI_RUN_ERROR', `Run falló o expiró`, {
-                    shortUserId,
-                    threadId,
+                // Capturar información completa del error
+                const errorDetails = {
                     runId: run.id,
+                    threadId,
                     status: run.status,
                     duration,
-                    attempts
-                });
+                    attempts,
+                    // Campos críticos para diagnóstico
+                    last_error: run.last_error,
+                    failed_at: run.failed_at,
+                    incomplete_details: run.incomplete_details,
+                    usage: run.usage
+                };
+
+                logError('OPENAI_RUN_ERROR', `Run falló: ${run.last_error?.message || 'Sin mensaje de error'}`, errorDetails);
+
+                // Log adicional si hay detalles del error
+                if (run.last_error) {
+                    logError('OPENAI_RUN_ERROR_DETAIL', `Detalles específicos del error`, {
+                        error_code: run.last_error.code,
+                        error_message: run.last_error.message
+                    });
+                }
                 
                 return sanitizeResponseForClient('Lo siento, hubo un problema procesando tu consulta. Por favor intenta de nuevo.');
             }
