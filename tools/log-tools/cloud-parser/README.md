@@ -228,6 +228,43 @@ botlogs --max-session-files 20  # Mantener 20 archivos
 botlogs --no-individual-files   # Solo archivo consolidado
 ```
 
+#### 🔧 Extracción Técnica Avanzada (v2.1)
+
+##### 🎯 Problema Resuelto
+Los logs de Cloud Run contienen la misma información técnica que los logs locales, pero enterrada en diferentes formatos JSON. La versión anterior perdía información crítica para debugging.
+
+##### 🛠️ Información Técnica Extraída
+- **FUNCTION_CALLING_START**: Funciones y argumentos completos
+- **FUNCTION_EXECUTING**: Nombre de función y parámetros
+- **BEDS24_REQUEST**: Fechas y parámetros de consulta
+- **BEDS24_RESPONSE_DETAIL**: Respuesta completa (no preview)
+- **OPENAI_REQUEST**: Estados detallados (adding_message, creating_run, run_started)
+- **Thread IDs**: Identificadores completos (thread_xyz...)
+- **Run IDs**: Identificadores completos (run_abc...)
+- **Errores**: Contexto completo con stack traces
+
+##### 🔍 Comandos de Debugging Avanzado
+```bash
+# Análisis de logs crudos para debugging
+python parse_bot_logs.py --analyze-raw --hours 2
+
+# Validar extracción técnica
+python parse_bot_logs.py --sessions 10 --validate-extraction
+
+# Análisis normal con extracción técnica mejorada
+python parse_bot_logs.py --sessions 10
+```
+
+##### 🏗️ Arquitectura de Extracción (5 Etapas)
+1. **analyze_raw_logs()**: Debugging temporal de logs crudos
+2. **extract_technical_logs()**: Búsqueda en TODAS las ubicaciones JSON
+3. **reconstruct_technical_event()**: Reconstrucción en formato local
+4. **parse_cloud_log()**: Parser mejorado con nuevos extractores
+5. **validate_extraction()**: Verificación de extracción completa
+
+##### 🎯 Resultado Final
+Los logs procesados se ven **EXACTAMENTE** como los logs locales, con toda la información técnica pero sin la basura HTTP de Cloud Run.
+
 ---
 
 ## 🎯 Ejemplos Prácticos
