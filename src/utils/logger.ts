@@ -275,6 +275,9 @@ const flushBuffer = (): void => {
         } catch (error) {
             console.error(`Error escribiendo logs: ${error}`);
         }
+    } else if (LogConfig.enableDetailedLogs) {
+        // En Cloud Run, emitir cada línea detallada a stdout para Cloud Logging
+        entries.forEach(line => console.log(line));
     }
     
     // Limpiar timer
