@@ -1075,11 +1075,7 @@ class CloudRunLogParser:
         
         # CONSULTA MEJORADA: Obtener TODOS los logs, no solo HTTP
         # Incluir logs de aplicación donde están los patrones técnicos
-        filter_query = f'''
-        resource.type=cloud_run_revision AND 
-        resource.labels.service_name={self.service_name} AND 
-        timestamp>="{timestamp_filter}"
-        '''
+        filter_query = f'resource.type=cloud_run_revision AND resource.labels.service_name={self.service_name} AND timestamp>="{timestamp_filter}"'
         
         cmd = [
             gcloud_cmd, 'logging', 'read',
@@ -2212,7 +2208,7 @@ class CloudRunLogParser:
             print(f"{Colors.RED}❌ Error copiando al portapapeles: {e}{Colors.END}")
     
     def analyze_raw_logs(self, hours: int = 1, limit: int = 100):
-        """DEBUGGING TEMPORAL: Analiza logs crudos para encontrar patrones técnicos ocultos"""
+        """DEBUGGING TEMPORAL: Analiza logs crudos para encontrar patrones técnicos ocultos - MEJORADO"""
         print(f"{Colors.CYAN}=== ANALIZANDO LOGS CRUDOS DE CLOUD RUN ==={Colors.END}")
         print(f"{Colors.CYAN}Buscando patrones técnicos en últimas {hours} horas...{Colors.END}")
         
@@ -2226,9 +2222,12 @@ class CloudRunLogParser:
         else:
             gcloud_cmd = 'gcloud'
         
+        # CONSULTA MEJORADA: Buscar específicamente logs de aplicación
+        filter_query = f'resource.type=cloud_run_revision AND resource.labels.service_name={self.service_name} AND timestamp>="{timestamp_filter}" AND (textPayload!="" OR jsonPayload.message!="")'
+        
         cmd = [
             gcloud_cmd, 'logging', 'read',
-            f'resource.type=cloud_run_revision AND resource.labels.service_name={self.service_name} AND timestamp>="{timestamp_filter}"',
+            filter_query.strip(),
             '--format=json',
             f'--project={self.project_id}',
             f'--limit={limit}',
@@ -2240,13 +2239,15 @@ class CloudRunLogParser:
             raw_logs = json.loads(result.stdout)
             print(f"{Colors.GREEN}✅ Obtenidos {len(raw_logs)} logs crudos{Colors.END}")
             
-            # Patrones técnicos que buscamos
+            # Patrones técnicos específicos que buscamos
             technical_patterns = [
                 'FUNCTION_CALLING_START',
                 'FUNCTION_EXECUTING', 
                 'FUNCTION_HANDLER',
+                'FUNCTION_EXECUTED',
                 'BEDS24_REQUEST',
                 'BEDS24_RESPONSE_DETAIL',
+                'BEDS24_API_CALL',
                 'OPENAI_REQUEST',
                 'OPENAI_RUN_COMPLETED',
                 'adding_message',
@@ -2255,41 +2256,107 @@ class CloudRunLogParser:
                 'thread_',
                 'run_',
                 'check_availability',
+                'make_booking',
+                'escalate_to_human',
                 'fullResponse',
                 'args',
-                'arguments'
+                'arguments',
+                'textPayload',
+                'jsonPayload'
             ]
             
             found_patterns = {}
+            log_structure_analysis = {
+                'textPayload_logs': 0,
+                'jsonPayload_logs': 0,
+                'httpRequest_only': 0,
+                'empty_logs': 0,
+                'useful_content': 0
+            }
             
             for i, log in enumerate(raw_logs):
                 log_str = json.dumps(log, ensure_ascii=False)
                 
+                # Analizar estructura del log
+                if 'textPayload' in log and log['textPayload'].strip():
+                    log_structure_analysis['textPayload_logs'] += 1
+                    log_structure_analysis['useful_content'] += 1
+                elif 'jsonPayload' in log and log['jsonPayload'].get('message', '').strip():
+                    log_structure_analysis['jsonPayload_logs'] += 1
+                    log_structure_analysis['useful_content'] += 1
+                elif 'httpRequest' in log:
+                    log_structure_analysis['httpRequest_only'] += 1
+                else:
+                    log_structure_analysis['empty_logs'] += 1
+                
+                # Buscar patrones técnicos
                 for pattern in technical_patterns:
                     if pattern.lower() in log_str.lower():
                         if pattern not in found_patterns:
                             found_patterns[pattern] = []
+                        
+                        # Extraer contenido útil del log
+                        useful_content = ""
+                        if 'textPayload' in log:
+                            useful_content = log['textPayload'][:500]
+                        elif 'jsonPayload' in log and 'message' in log['jsonPayload']:
+                            useful_content = log['jsonPayload']['message'][:500]
+                        else:
+                            useful_content = log_str[:500]
                         
                         # Guardar información del log que contiene el patrón
                         found_patterns[pattern].append({
                             'index': i,
                             'timestamp': log.get('timestamp', 'unknown'),
                             'severity': log.get('severity', 'unknown'),
-                            'sample': log_str[:300] + '...' if len(log_str) > 300 else log_str
+                            'useful_content': useful_content,
+                            'log_type': 'textPayload' if 'textPayload' in log else 'jsonPayload' if 'jsonPayload' in log else 'other'
                         })
             
-            # Mostrar resultados
-            print(f"\n{Colors.BOLD}=== PATRONES TÉCNICOS ENCONTRADOS ==={Colors.END}")
-            for pattern, occurrences in found_patterns.items():
-                print(f"\n{Colors.YELLOW}🔍 {pattern}: {len(occurrences)} ocurrencias{Colors.END}")
-                for i, occurrence in enumerate(occurrences[:2]):  # Mostrar solo 2 ejemplos
-                    print(f"  {Colors.GRAY}Ejemplo {i+1}: {occurrence['timestamp']}{Colors.END}")
-                    print(f"  {Colors.GRAY}Sample: {occurrence['sample']}{Colors.END}")
+            # Mostrar análisis de estructura
+            print(f"\n{Colors.BOLD}=== ANÁLISIS DE ESTRUCTURA DE LOGS ==={Colors.END}")
+            print(f"📄 Logs con textPayload: {log_structure_analysis['textPayload_logs']}")
+            print(f"📦 Logs con jsonPayload: {log_structure_analysis['jsonPayload_logs']}")
+            print(f"🌐 Logs solo HTTP: {log_structure_analysis['httpRequest_only']}")
+            print(f"❌ Logs vacíos: {log_structure_analysis['empty_logs']}")
+            print(f"✅ Logs con contenido útil: {log_structure_analysis['useful_content']}")
             
-            print(f"\n{Colors.BOLD}=== ESTADÍSTICAS ==={Colors.END}")
+            # Mostrar resultados de patrones técnicos
+            print(f"\n{Colors.BOLD}=== PATRONES TÉCNICOS ENCONTRADOS ==={Colors.END}")
+            
+            if found_patterns:
+                for pattern, occurrences in found_patterns.items():
+                    print(f"\n{Colors.YELLOW}🔍 {pattern}: {len(occurrences)} ocurrencias{Colors.END}")
+                    for i, occurrence in enumerate(occurrences[:2]):  # Mostrar solo 2 ejemplos
+                        print(f"  {Colors.GRAY}Ejemplo {i+1}: {occurrence['timestamp']} ({occurrence['log_type']}){Colors.END}")
+                        print(f"  {Colors.GRAY}Contenido: {occurrence['useful_content'][:200]}...{Colors.END}")
+            else:
+                print(f"{Colors.RED}❌ NO SE ENCONTRARON PATRONES TÉCNICOS{Colors.END}")
+                print(f"{Colors.YELLOW}⚠️ Esto significa que los logs técnicos del bot no están llegando a Cloud Logging{Colors.END}")
+                print(f"{Colors.YELLOW}⚠️ Posibles causas:{Colors.END}")
+                print(f"{Colors.YELLOW}   1. El bot no está generando logs técnicos{Colors.END}")
+                print(f"{Colors.YELLOW}   2. Los logs se están perdiendo en el pipeline{Colors.END}")
+                print(f"{Colors.YELLOW}   3. Los logs están en un formato diferente{Colors.END}")
+            
+            print(f"\n{Colors.BOLD}=== ESTADÍSTICAS FINALES ==={Colors.END}")
             print(f"Total logs analizados: {len(raw_logs)}")
             print(f"Patrones únicos encontrados: {len(found_patterns)}")
             print(f"Logs con información técnica: {len(set(occ['index'] for occs in found_patterns.values() for occ in occs))}")
+            
+            # Mostrar ejemplos de logs útiles si los hay
+            if log_structure_analysis['useful_content'] > 0:
+                print(f"\n{Colors.BOLD}=== EJEMPLOS DE LOGS ÚTILES ==={Colors.END}")
+                useful_count = 0
+                for log in raw_logs:
+                    if useful_count >= 3:
+                        break
+                    
+                    if 'textPayload' in log and log['textPayload'].strip():
+                        print(f"{Colors.CYAN}📄 textPayload: {log['textPayload'][:200]}...{Colors.END}")
+                        useful_count += 1
+                    elif 'jsonPayload' in log and log['jsonPayload'].get('message', '').strip():
+                        print(f"{Colors.CYAN}📦 jsonPayload.message: {log['jsonPayload']['message'][:200]}...{Colors.END}")
+                        useful_count += 1
             
             return found_patterns
             
