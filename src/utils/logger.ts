@@ -132,10 +132,8 @@ Node Version: ${process.version}
         } catch (error) {
             console.error('Error inicializando sesión:', error);
         }
-    } else {
-        // En Cloud Run: solo marcar como inicializado
-        console.log(`☁️ Logs enviados a Google Cloud Console`);
     }
+    // En Cloud Run: solo marcar como inicializado (sin mensaje innecesario)
     
     sessionInitialized = true;
 };
@@ -472,9 +470,8 @@ Duración: ${Math.round((Date.now() - new Date(SESSION_TIMESTAMP.replace(/-/g, '
         } catch (error) {
             console.error('Error guardando logs:', error);
         }
-    } else {
-        console.log(`☁️ Logs enviados a Google Cloud Console`);
     }
+    // En Cloud Run: logs se envían automáticamente (sin mensaje innecesario)
 };
 
 process.on('exit', cleanup);

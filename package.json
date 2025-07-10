@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx --watch src/app-unified.ts",
     "dev:local": "concurrently -k -n BOT,NGROK -c green,cyan \"npm run dev\" \"ngrok http 3008 --domain=actual-bobcat-handy.ngrok-free.app\"",
-    "dev:cloud": "NODE_ENV=production tsx --watch src/app-unified.ts",
+    "dev:cloud": "cross-env NODE_ENV=production tsx --watch src/app-unified.ts",
     "dev:old": "tsx --watch src/app.ts",
     "build": "tsc --outDir dist",
     "start": "node dist/app-unified.js",
@@ -53,6 +53,7 @@
     "@types/node": "^22.10.2",
     "@types/uuid": "^9.0.8",
     "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
     "rollup": "^4.27.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
