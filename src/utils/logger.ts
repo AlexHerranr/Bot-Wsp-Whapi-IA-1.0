@@ -332,12 +332,19 @@ export const detailedLog = (
     
     // Mostrar en consola (súper simple)
     const consoleOutput = formatConsoleEntry(entry);
-    if (consoleOutput) { // Solo mostrar si no está vacío
+    if (consoleOutput) {
         console.log(consoleOutput);
     }
-    
-    // Agregar al buffer para archivo (formato técnico completo)
+
+    // Crear línea completa para archivo/logs
     const fileEntry = formatLogEntry(entry);
+
+    // En Cloud Run, si se requieren logs detallados, imprimir inmediatamente la línea completa
+    if (isCloudRun && LogConfig.enableDetailedLogs) {
+        console.log(fileEntry);
+    }
+
+    // Agregar al buffer para archivo (solo sentido en local)
     addToBuffer(fileEntry);
 };
 
