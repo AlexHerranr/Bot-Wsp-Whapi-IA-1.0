@@ -51,7 +51,7 @@ import { threadPersistence, pendingMessagesPersistence } from './utils/persisten
 
 // Importar sistema de monitoreo
 import { botDashboard } from './utils/monitoring/dashboard.js';
-import metricsRouter, { metricsCollector } from './routes/metrics.js';
+import metricsRouter, { recordLog, updateActiveThreads } from './routes/metrics';
 
 // --- Configuración Unificada ---
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? '';
