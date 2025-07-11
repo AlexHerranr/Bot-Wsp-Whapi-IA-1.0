@@ -50,6 +50,19 @@ const VALID_CATEGORIES_SET = new Set([
     'RUN_QUEUE',
     'CONTEXT_LABELS',
     
+    // 🚨 CATEGORÍAS CRÍTICAS AGREGADAS (FIX REINICIOS)
+    'CONTACT_API',
+    'CONTACT_API_DETAILED',
+    'BUFFER_TIMER_RESET',
+    'THREAD_STATE',
+    'BEDS24_DEBUG_OUTPUT',
+    'OPENAI_FUNCTION_OUTPUT',
+    'WHATSAPP_CHUNKS',
+    'AVAILABILITY_HANDLER',
+    'USER_DEBUG',
+    'MESSAGE_BUFFER',
+    'FUNCTION_SUBMITTED',
+    
     // Errores y Warnings
     'ERROR',
     'WARNING',
@@ -113,6 +126,21 @@ const USE_LEGACY_LOGGING = process.env.USE_LEGACY_LOGGING === 'true';
 // ✨ CACHE DE WARNINGS PARA CATEGORÍAS INVÁLIDAS
 const invalidCategoryWarnings = new Set<string>();
 
+// ✨ MAPEO DE CATEGORÍAS OBSOLETAS A VÁLIDAS
+const CATEGORY_MAPPING: Record<string, string> = {
+    'USER_DEBUG': 'DEBUG',
+    'BEDS24_DEBUG_OUTPUT': 'BEDS24_RESPONSE_DETAIL',
+    'THREAD_STATE': 'THREAD_OPERATION',
+    'MESSAGE_BUFFER': 'MESSAGE_PROCESS',
+    'WHATSAPP_CHUNKS': 'WHATSAPP_CHUNKS_COMPLETE',
+    'CONTACT_API': 'CONTACT_API',  // Mantener como está
+    'CONTACT_API_DETAILED': 'CONTACT_API_DETAILED',  // Mantener como está
+    'BUFFER_TIMER_RESET': 'BUFFER_TIMER_RESET',  // Mantener como está
+    'OPENAI_FUNCTION_OUTPUT': 'OPENAI_FUNCTION_OUTPUT',  // Mantener como está
+    'AVAILABILITY_HANDLER': 'AVAILABILITY_HANDLER',  // Mantener como está
+    'FUNCTION_SUBMITTED': 'FUNCTION_SUBMITTED'  // Mantener como está
+};
+
 export function cloudLog(level: LogLevel, category: string, message: string, details?: any): void {
     const startTime = Date.now();
     
@@ -133,22 +161,30 @@ export function cloudLog(level: LogLevel, category: string, message: string, det
         LogFilterMetrics.recordTotal();
         loggingMetrics.totalLogs++;
         
-        // ✨ VALIDACIÓN MEJORADA - NO USAR ERROR COMO FALLBACK
+        // ✨ VALIDACIÓN MEJORADA CON MAPEO DE CATEGORÍAS
         if (!VALID_CATEGORIES_SET.has(category)) {
-            // Solo mostrar warning una vez por categoría inválida para evitar spam
-            if (!invalidCategoryWarnings.has(category)) {
-                console.warn(`⚠️ INVALID CATEGORY: ${category}. Continuing with original category for compatibility.`);
-                console.warn(`   Valid categories: ${Array.from(VALID_CATEGORIES_SET).join(', ')}`);
-                invalidCategoryWarnings.add(category);
+            // Intentar mapear categoría obsoleta a válida
+            const mappedCategory = CATEGORY_MAPPING[category];
+            if (mappedCategory && VALID_CATEGORIES_SET.has(mappedCategory)) {
+                // Solo mostrar warning una vez por categoría mapeada
+                if (!invalidCategoryWarnings.has(category)) {
+                    console.warn(`🔄 CATEGORY MAPPED: ${category} → ${mappedCategory}`);
+                    invalidCategoryWarnings.add(category);
+                }
+                category = mappedCategory;
+            } else {
+                // Solo mostrar warning una vez por categoría inválida para evitar spam
+                if (!invalidCategoryWarnings.has(category)) {
+                    console.warn(`⚠️ INVALID CATEGORY: ${category}. Continuing with original category for compatibility.`);
+                    console.warn(`   Valid categories: ${Array.from(VALID_CATEGORIES_SET).join(', ')}`);
+                    invalidCategoryWarnings.add(category);
+                }
+                
+                // En desarrollo, mostrar error detallado pero no fallar
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn(`   📍 This log will still be processed but should be updated to use a valid category.`);
+                }
             }
-            
-            // En desarrollo, mostrar error detallado pero no fallar
-            if (process.env.NODE_ENV === 'development') {
-                console.warn(`   📍 This log will still be processed but should be updated to use a valid category.`);
-            }
-            
-            // NO cambiar la categoría - mantener la original para compatibilidad
-            // category = 'ERROR'; // REMOVIDO - no usar ERROR como fallback
         }
         
         // Determinar entorno
@@ -196,7 +232,37 @@ export function cloudLog(level: LogLevel, category: string, message: string, det
             SanitizationMetrics.recordFieldRedaction();
         }
         
-        // 4. Crear entrada estructurada
+        // 4. Filtrar metadata excesivo de Cloud Build antes de crear entrada
+        if (sanitizedDetails && typeof sanitizedDetails === 'object') {
+            // ✨ FILTRAR METADATA SPAM - Remover información de build innecesaria
+            const filteredDetails = { ...sanitizedDetails };
+            
+            // Remover metadata de Cloud Build
+            delete filteredDetails['commit-sha'];
+            delete filteredDetails['gcb-build-id'];
+            delete filteredDetails['gcb-trigger-id'];
+            delete filteredDetails['managed-by'];
+            
+            // Remover labels de deployment si contienen información excesiva
+            if (filteredDetails.labels && typeof filteredDetails.labels === 'object') {
+                const labels = { ...filteredDetails.labels };
+                delete labels['managed-by'];
+                delete labels['gcb-build-id'];
+                delete labels['gcb-trigger-id'];
+                delete labels['deployment-tool'];
+                
+                // Solo mantener labels si no está vacío
+                if (Object.keys(labels).length > 0) {
+                    filteredDetails.labels = labels;
+                } else {
+                    delete filteredDetails.labels;
+                }
+            }
+            
+            sanitizedDetails = filteredDetails;
+        }
+
+        // 5. Crear entrada estructurada
     const entry: LogEntry = {
         timestamp: new Date().toISOString(),
         level,
@@ -217,7 +283,7 @@ export function cloudLog(level: LogLevel, category: string, message: string, det
             loggingMetrics.droppedLogs++;
         }
         
-        // 5. Decidir si usar agregación o emitir directamente
+        // 6. Decidir si usar agregación o emitir directamente
         const shouldAggregate = environment === 'production' && !isHighPriorityLog(level, category);
         
         if (shouldAggregate) {
@@ -481,15 +547,14 @@ function formatGoogleCloudLogEntry(entry: LogEntry): string {
             ...(details?.error && { 'errorType': getErrorType(details.error) })
         },
         
-        // ✨ RESOURCE METADATA COMPLETO - Para Cloud Run
+        // ✨ RESOURCE METADATA FILTRADO - Reducir ruido en logs
         resource: {
             type: 'cloud_run_revision',
             labels: {
                 'service_name': process.env.K_SERVICE || 'bot-wsp-whapi-ia',
                 'revision_name': deployment,
-                'location': process.env.GOOGLE_CLOUD_REGION || process.env.GCLOUD_REGION || 'us-central1',
-                'configuration_name': process.env.K_CONFIGURATION || 'bot-wsp-whapi-ia',
-                'project_id': process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || 'unknown'
+                'location': process.env.GOOGLE_CLOUD_REGION || process.env.GCLOUD_REGION || 'us-central1'
+                // ✨ FILTRADO: Removido metadata excesivo (configuration_name, project_id)
             }
         },
         
@@ -751,6 +816,73 @@ export const logOpenAIRunCompleted = (message: string, details?: any) => {
 export const logThreadReuse = (message: string, details?: any) => {
     if (process.env.K_SERVICE) {
         cloudLog('SUCCESS', 'THREAD_REUSE', message, details);
+    }
+};
+
+// 🚨 NUEVAS CATEGORÍAS CRÍTICAS AGREGADAS - FUNCIONES DE CONVENIENCIA
+export const logContactApi = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'CONTACT_API', message, details);
+    }
+};
+
+export const logContactApiDetailed = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'CONTACT_API_DETAILED', message, details);
+    }
+};
+
+export const logBufferTimerReset = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'BUFFER_TIMER_RESET', message, details);
+    }
+};
+
+export const logThreadState = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'THREAD_STATE', message, details);
+    }
+};
+
+export const logBeds24DebugOutput = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'BEDS24_DEBUG_OUTPUT', message, details);
+    }
+};
+
+export const logOpenAIFunctionOutput = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'OPENAI_FUNCTION_OUTPUT', message, details);
+    }
+};
+
+export const logWhatsAppChunks = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'WHATSAPP_CHUNKS', message, details);
+    }
+};
+
+export const logAvailabilityHandler = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'AVAILABILITY_HANDLER', message, details);
+    }
+};
+
+export const logUserDebug = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'USER_DEBUG', message, details);
+    }
+};
+
+export const logMessageBuffer = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'MESSAGE_BUFFER', message, details);
+    }
+};
+
+export const logFunctionSubmitted = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'FUNCTION_SUBMITTED', message, details);
     }
 };
 

@@ -1754,7 +1754,16 @@ class CloudRunLogParser:
                             message_clean = re.sub(r'\?\s*\?\s*', ' → ', message_clean)
                             message_clean = re.sub(r'^(\s*)\?\s+', r'\1', message_clean)
                             message_clean = re.sub(r'\s+\?\s+', ' → ', message_clean)
+                            
+                            # 🚨 FIX TIMESTAMP DUPLICADO - Eliminar timestamp interno del mensaje
+                            # Patrón: [2025-07-11T10:42:45.838Z] [INFO] mensaje
+                            message_clean = re.sub(r'^\[20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]\s*\[INFO\]\s*', '', message_clean)
+                            message_clean = re.sub(r'^\[20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]\s*\[SUCCESS\]\s*', '', message_clean)
+                            message_clean = re.sub(r'^\[20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]\s*\[ERROR\]\s*', '', message_clean)
+                            message_clean = re.sub(r'^\[20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]\s*\[WARNING\]\s*', '', message_clean)
+                            message_clean = re.sub(r'^\[20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]\s*\[TECH\]\s*', '', message_clean)
                         
+                        # 🚨 FIX TIMESTAMP DUPLICADO - Solo usar timestamp limpio del parser
                         session_content.append(f"[{time_str}] {prefix}: {message_clean}")
                     
                     session_content.append("")

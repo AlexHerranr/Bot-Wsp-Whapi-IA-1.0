@@ -221,7 +221,7 @@ async function createTestLogs(testCase) {
         
         // 1. Test Console Logger (desarrollo local)
         delete process.env.K_SERVICE;
-        const { formatConsoleLogEntry, shouldShowInConsole } = require(path.join(loggingPath, 'formatters'));
+        const { formatConsoleLogEntry, shouldShowInConsole } = require(path.join(loggingPath, 'formatters.ts'));
         
         if (shouldShowInConsole(testCase.category)) {
             mockLogs.console = formatConsoleLogEntry(testCase.level, testCase.category, testCase.message, testCase.details);
@@ -230,7 +230,7 @@ async function createTestLogs(testCase) {
         }
         
         // 2. Test File Logger (desarrollo local)
-        const { formatTechnicalLogEntry } = require(path.join(loggingPath, 'formatters'));
+        const { formatTechnicalLogEntry } = require(path.join(loggingPath, 'formatters.ts'));
         const mockLogEntry = {
             timestamp: new Date().toISOString(),
             level: testCase.level,
