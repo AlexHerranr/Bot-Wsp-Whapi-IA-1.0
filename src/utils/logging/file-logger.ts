@@ -8,6 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { LogLevel, LogEntry, SessionMetadata } from './types';
+import { formatTechnicalLogEntry } from './formatters';
 
 // === CONFIGURACIÓN ===
 const LOG_DIR = 'logs/local-development/sessions';
@@ -46,8 +47,8 @@ export function fileLog(level: LogLevel, category: string, message: string, deta
         environment: 'development'
     };
     
-    // Formatear para archivo
-    const formattedEntry = formatDetailedLogEntry(entry);
+    // Formatear usando formato técnico unificado (igual que Cloud)
+    const formattedEntry = formatTechnicalLogEntry(entry);
     
     // Agregar al buffer
     addToBuffer(formattedEntry);
@@ -86,34 +87,15 @@ function initializeSession(): void {
 }
 
 /**
- * 📝 FORMATEAR ENTRADA DE LOG DETALLADA
+ * 📝 FORMATEAR ENTRADA DE LOG DETALLADA - DEPRECATED
  * 
- * Convierte LogEntry en formato técnico completo para archivo.
- * Incluye timestamp, nivel, categoría, fuente, mensaje y detalles JSON.
+ * NOTA: Esta función ha sido reemplazada por formatTechnicalLogEntry()
+ * del archivo formatters.ts para unificar el formato entre File y Cloud logs.
+ * 
+ * OBJETIVO: File Logs = Cloud Logs (formato técnico idéntico)
  */
-function formatDetailedLogEntry(entry: LogEntry): string {
-    const { timestamp, level, category, source, message, details } = entry;
-    
-    // Formato: [TIMESTAMP] [LEVEL] CATEGORY [source]: Message | {json}
-    let formatted = `[${timestamp}] [${level}] ${category}`;
-    
-    if (source) {
-        formatted += ` [${source}]`;
-    }
-    
-    formatted += `: ${message}`;
-    
-    if (details) {
-        try {
-            const jsonDetails = JSON.stringify(details, null, 0);
-            formatted += ` | ${jsonDetails}`;
-        } catch (error) {
-            formatted += ` | {details_serialization_error}`;
-        }
-    }
-    
-    return formatted;
-}
+// function formatDetailedLogEntry() - REMOVIDO
+// Ahora usa formatTechnicalLogEntry() de formatters.ts
 
 /**
  * 📋 CREAR HEADER DE SESIÓN
@@ -294,12 +276,16 @@ export function finalizeSession(): void {
 }
 
 /**
- * 🤖 PARA IAs: ESTE LOGGER
+ * 🤖 PARA IAs: ESTE LOGGER - ACTUALIZADO V2.0
  * 
  * - Guarda TODOS los logs técnicos en archivos locales
- * - Formato detallado: [timestamp] [level] CATEGORY [source]: message | {json}
+ * - Formato JSON estructurado: IDÉNTICO a Cloud Logs para análisis consistente
  * - Sesiones individuales con limpieza automática
  * - Buffer optimizado para rendimiento
  * - Información completa para debugging
  * - Se complementa con console-logger.ts para terminal limpio
+ * 
+ * CAMBIO CLAVE: Ahora usa formatTechnicalLogEntry() de formatters.ts
+ * OBJETIVO: File Logs = Cloud Logs (formato técnico idéntico)
+ * FORMATO: JSON idéntico a Cloud para análisis consistente
  */ 

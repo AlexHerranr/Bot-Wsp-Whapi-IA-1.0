@@ -48,7 +48,7 @@ export const LOGGING_CONFIG: LogConfig = {
         level: 'DEBUG',
         directory: 'logs/local-development/sessions',
         maxSessions: 5,
-        format: 'detailed'  // Formato técnico completo
+        format: 'structured'  // ACTUALIZADO: Formato JSON idéntico a Cloud
     },
     
     cloud: {

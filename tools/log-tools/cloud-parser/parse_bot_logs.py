@@ -1272,14 +1272,40 @@ class CloudRunLogParser:
                 timestamp = raw_log.get('timestamp', '')
                 severity = raw_log.get('severity', 'INFO')
                 
-                # PASO 1: Extraer mensaje básico del log
+                # PASO 1: Extraer mensaje básico del log - ACTUALIZADO para formato JSON unificado
                 message = ""
                 if 'textPayload' in raw_log:
                     message = raw_log['textPayload']
                 elif 'jsonPayload' in raw_log:
                     json_payload = raw_log['jsonPayload']
+                    
+                    # ✨ NUEVO: Soporte para formato JSON unificado (File Logs = Cloud Logs)
                     if 'message' in json_payload:
                         message = json_payload['message']
+                        
+                        # Agregar información estructurada del formato unificado
+                        if 'category' in json_payload:
+                            category = json_payload['category']
+                            if not message.startswith(f'[{category}]'):
+                                message = f'[{category}] {message}'
+                        
+                        # Agregar detalles técnicos del formato unificado si están disponibles
+                        if 'details' in json_payload and json_payload['details']:
+                            try:
+                                details = json_payload['details']
+                                if isinstance(details, dict) and details:
+                                    # Extraer información más relevante
+                                    relevant_details = {}
+                                    for key, value in details.items():
+                                        if key in ['userId', 'threadId', 'runId', 'functionName', 'startDate', 'endDate', 
+                                                 'duration', 'status', 'error', 'messageCount', 'chunks']:
+                                            relevant_details[key] = value
+                                    
+                                    if relevant_details:
+                                        details_str = json.dumps(relevant_details, ensure_ascii=False)
+                                        message += f' | {details_str}'
+                            except:
+                                pass
                     else:
                         message = json.dumps(json_payload, indent=2, ensure_ascii=False)
                 else:

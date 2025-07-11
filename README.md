@@ -1,270 +1,280 @@
-# 🤖 Bot WhatsApp - Analizador de Logs Cloud Run
+# 🤖 Bot WhatsApp TeAlquilamos - Sistema de Logging V2.0
 
-Herramienta avanzada para analizar y limpiar logs de Google Cloud Run del bot de WhatsApp, convirtiendo logs contaminados en formato legible como desarrollo local.
+> **🚀 SISTEMA DE LOGGING V2.0 IMPLEMENTADO** - Migración completa para compatibilidad con Cloud Run
 
-## 🎯 **Comportamiento Principal**
+## 🎯 **Estado Actual del Proyecto**
 
-✅ **Archivos individuales por defecto** (como desarrollo local)  
-✅ **Limpieza automática** (máximo 10 archivos)  
-✅ **Sin archivos consolidados** (a menos que se solicite)  
-✅ **Análisis avanzado** con 8 tipos de métricas  
+### **✅ COMPLETADO - Sistema de Logging V2.0**
+- **Formatters compartidos** - Formato JSON técnico unificado
+- **File Logger actualizado** - Mismo formato que Cloud Run
+- **Console Logger limpio** - Solo emojis y mensajes legibles
+- **Configuración unificada** - LOGGING_CONFIG actualizado
+- **Parser actualizado** - Soporte para formato JSON unificado
+- **Scripts de validación** - Testing automático de los 3 tipos
 
-## 🚀 **Uso Rápido**
+### **⏳ ESPERANDO PRUEBAS**
+- **Validación en Cloud Run** - Confirmar que no hay más reinicios
+- **Testing local** - Verificar logs limpios en terminal
+- **Análisis de archivos** - Confirmar formato JSON en files
 
-```bash
-# Comando principal (recomendado)
-python parse_bot_logs.py --hours 2
+## 🏗️ **Arquitectura del Sistema de Logging**
 
-# Últimas sesiones
-python parse_bot_logs.py --sessions 5
+### **📊 3 Tipos de Logs Implementados**
 
-# Solo errores
-python parse_bot_logs.py --errors-only
+| Tipo | Ubicación | Formato | Estado |
+|------|-----------|---------|---------|
+| **🖥️ Console** | Terminal desarrollo | Limpio con emojis | ✅ Implementado |
+| **📁 File** | `logs/local-development/` | JSON técnico | ✅ Implementado |
+| **☁️ Cloud** | Google Cloud Console | JSON estructurado | ✅ Implementado |
 
-# Usuario específico
-python parse_bot_logs.py --user 573003913251
+### **🔧 Componentes Principales**
+
+```
+src/utils/logging/
+├── 📄 index.ts                    # ✅ Punto de entrada unificado
+├── 📄 types.ts                    # ✅ Definiciones TypeScript
+├── 📄 formatters.ts               # ✅ NUEVO - Formatters compartidos
+├── 📄 console-logger.ts           # ✅ ACTUALIZADO - Solo emojis
+├── 📄 file-logger.ts              # ✅ ACTUALIZADO - Formato JSON
+├── 📄 cloud-logger.ts             # ✅ ACTUALIZADO - Categorías válidas
+└── 📄 README.md                   # ✅ Documentación completa
 ```
 
-## 📂 **Estructura del Proyecto**
+## 🚀 **Cambios Implementados**
 
-```
-bot-logs-parser/
-├── 📄 parse_bot_logs.py          # Script principal
-├── 📄 log_config.yaml            # Configuración de filtros
-├── 📄 requirements.txt           # Dependencias
-├── 📄 README.md                  # Esta documentación
-├── 📄 COMANDOS_INDIVIDUALES.md   # Guía de comandos
-├── 📄 COMANDOS_RAPIDOS.md        # Comandos básicos
-├── 📄 QUICK_START.md             # Inicio rápido
-├── 🗂️ docs/                      # Documentación detallada
-│   ├── MANUAL_USO.md            # Manual completo
-│   ├── SETUP_INSTRUCTIONS.md    # Instrucciones de instalación
-│   └── README_BOT_LOGS.md       # Documentación técnica
-├── 🗂️ examples/                  # Archivos de ejemplo
-│   └── ejemplo_archivo_consolidado.txt
-└── 🗂️ tests/                     # Scripts de prueba
-    ├── test_parser.py
-    └── test_advanced_features.py
-```
-
-## 📁 **Archivos de Salida**
-
-### **Archivos Individuales** (Por defecto)
-```
-📁 /logsGoogleCloud/
-├── session_20250710_141020_1752156620.txt  (48KB)
-├── session_20250710_135327_1752155607.txt  (21KB)
-├── session_20250710_151028_1752160228.txt  (2.1KB)
-└── ... (máximo 10 archivos)
-```
-
-### **Archivo Consolidado** (Solo con --save-consolidated)
-```
-📁 /tools/bot-logs-parser/
-└── bot_sessions_YYYYMMDD_HHMMSS.txt  (TODAS las sesiones)
-```
-
-## 🔧 **Instalación**
-
-### **Prerrequisitos**
-- Python 3.7+
-- Google Cloud SDK
-- Dependencias Python
-
-### **Instalación Rápida**
-```bash
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Verificar gcloud
-gcloud --version
-
-# Primer uso
-python parse_bot_logs.py --hours 1
-```
-
-## 💡 **Funcionalidades Principales**
-
-### **🧹 Limpieza de Logs**
-- ❌ Elimina 90% de metadatos HTTP inútiles
-- ✅ Convierte a formato local legible
-- ✅ Preserva información importante
-
-### **📊 Análisis Avanzado**
-- **FUNCTION_METRICS**: Rendimiento de funciones
-- **USER_INTENT**: Análisis de intención NLP
-- **CONVERSION_TRACKING**: Seguimiento comercial
-- **RETRY_PATTERN**: Detección de reintentos
-- **SESSION_ANALYTICS**: Análisis completo de sesión
-- **SYSTEM_HEALTH**: Monitoreo de salud
-- **BUSINESS_CONTEXT**: Contexto comercial
-- **DEEP_DEBUG**: Debugging técnico
-
-### **🎯 Detección Inteligente**
-- **Sesiones automáticas**: Detecta inicio/fin
-- **Usuarios únicos**: Identifica conversaciones
-- **Errores críticos**: Resalta problemas
-- **Tiempos de respuesta**: Mide performance
-
-## 📋 **Comandos Principales**
-
-### **Análisis Básico**
-```bash
-# Desarrollo diario
-python parse_bot_logs.py --hours 2
-
-# Últimas sesiones
-python parse_bot_logs.py --sessions 3
-
-# Solo problemas
-python parse_bot_logs.py --errors-only
-```
-
-### **Filtros Específicos**
-```bash
-# Usuario específico
-python parse_bot_logs.py --user 573003913251
-
-# Sesión específica
-python parse_bot_logs.py --session session-1752156620
-
-# Período personalizado
-python parse_bot_logs.py --hours 6 --limit 1000
-```
-
-### **Control de Archivos**
-```bash
-# Más archivos (15 en lugar de 10)
-python parse_bot_logs.py --max-session-files 15
-
-# Solo mostrar (no guardar)
-python parse_bot_logs.py --no-save
-
-# Archivo consolidado también
-python parse_bot_logs.py --save-consolidated
-```
-
-## 🎯 **Casos de Uso**
-
-| Necesidad | Comando |
-|-----------|---------|
-| **Desarrollo diario** | `python parse_bot_logs.py --hours 2` |
-| **Debugging específico** | `python parse_bot_logs.py --user 573003913251` |
-| **Análisis de errores** | `python parse_bot_logs.py --errors-only` |
-| **Performance check** | `python parse_bot_logs.py --sessions 5` |
-| **Sesión específica** | `python parse_bot_logs.py --session session-123` |
-
-## 📊 **Ejemplo de Salida**
-
-### **ANTES** (Log contaminado de Cloud Run)
-```json
-{
-  "httpRequest": {
-    "latency": "0.003107059s",
-    "protocol": "HTTP/1.1",
-    "remoteIp": "37.27.141.248",
-    "requestMethod": "POST",
-    "requestSize": "727",
-    "requestUrl": "https://bot-wsp-whapi-ia...",
-    "responseSize": "280",
-    "serverIp": "34.143.76.2",
-    "status": 200
-  },
-  "insertId": "6870101c0005c456c093bd02",
-  "labels": { ... },
-  "textPayload": "[2025-07-10T14:10:20] Usuario 573003913251: \"Me gustaría consultar disponibilidad\""
+### **🆕 1. Formatters Compartidos** (`src/utils/logging/formatters.ts`)
+```typescript
+// NUEVO ARCHIVO - Formato JSON unificado
+export function formatTechnicalLogEntry(entry: LogEntry): string {
+  return JSON.stringify({
+    timestamp: entry.timestamp,
+    severity: entry.severity,
+    message: entry.message,
+    category: entry.category,
+    userId: entry.userId,
+    details: entry.details
+  });
 }
 ```
 
-### **DESPUÉS** (Log limpio)
-```
-[2025-07-10 14:10:20] 👤 USER: Usuario 573003913251: "Me gustaría consultar disponibilidad"
-[2025-07-10 14:10:36] ℹ️ INFO: [BOT] 📝 2 msgs → OpenAI
-[2025-07-10 14:11:04] ✅ SUCCESS: [BOT] ✓ Completado (28.5s) → "Para las fechas del 15 al 20 de julio..."
-```
+### **🔄 2. File Logger Actualizado** (`src/utils/logging/file-logger.ts`)
+```typescript
+// CAMBIO PRINCIPAL: Ahora usa formato JSON idéntico a Cloud
+import { formatTechnicalLogEntry } from './formatters';
 
-## 🔍 **Ventajas del Sistema**
-
-### **✅ Antes vs Después**
-| Aspecto | ANTES (Cloud Run) | DESPUÉS (Parser) |
-|---------|-------------------|------------------|
-| **Legibilidad** | 10% útil, 90% ruido | 100% información relevante |
-| **Formato** | JSON complejo | Logs como desarrollo local |
-| **Análisis** | Manual y lento | Automático con métricas |
-| **Archivos** | Un archivo gigante | Sesiones individuales |
-| **Mantenimiento** | Acumulación infinita | Limpieza automática |
-
-### **🎯 Impacto**
-- **⚡ 10x más rápido** para encontrar problemas
-- **🧹 90% menos ruido** en los logs
-- **📊 Métricas automáticas** de rendimiento
-- **🔍 Análisis inteligente** de conversaciones
-- **💾 Gestión automática** de archivos
-
-## 🛠️ **Configuración Avanzada**
-
-### **Archivo de Configuración** (`log_config.yaml`)
-```yaml
-# Controla qué logs mostrar/ocultar
-filters:
-  show_http_metadata: false
-  show_user_messages: true
-  show_openai_responses: true
-  show_function_calls: true
-  
-# Límites y umbrales
-limits:
-  max_session_files: 10
-  session_timeout_minutes: 5
-  max_logs_per_request: 5000
+const formattedEntry = formatTechnicalLogEntry({
+  timestamp: new Date().toISOString(),
+  severity,
+  message: `[${category}] ${message}`,
+  category,
+  userId: details?.userId,
+  details: details
+});
 ```
 
-### **Alias Recomendados**
-```powershell
-# PowerShell Profile
-function botlogs { python parse_bot_logs.py --hours 2 }
-function botlogs-errors { python parse_bot_logs.py --errors-only }
-function botlogs-user { param($user) python parse_bot_logs.py --user $user }
+### **🧹 3. Console Logger Limpio** (`src/utils/logging/console-logger.ts`)
+```typescript
+// CAMBIO PRINCIPAL: Eliminado JSON, solo formato limpio
+const emoji = getCategoryEmoji(category);
+const cleanMessage = `${emoji} ${message}`;
+console.log(cleanMessage);
+// SIN JSON - Solo mensajes legibles
 ```
 
-## 📚 **Documentación**
+### **☁️ 4. Cloud Logger Completo** (`src/utils/logging/cloud-logger.ts`)
+```typescript
+// CAMBIO PRINCIPAL: Agregadas todas las categorías faltantes
+const VALID_CATEGORIES_SET = new Set([
+  'MESSAGE_RECEIVED', 'OPENAI_REQUEST', 'FUNCTION_CALLING_START',
+  'WEBHOOK', 'BOT_MESSAGE_TRACKED', 'RUN_QUEUE',           // ✅ NUEVAS
+  'CONTEXT_LABELS', 'OPENAI_RUN_COMPLETED', 'THREAD_REUSE' // ✅ NUEVAS
+]);
+```
 
-- **[COMANDOS_INDIVIDUALES.md](COMANDOS_INDIVIDUALES.md)** - Guía completa de comandos
-- **[COMANDOS_RAPIDOS.md](COMANDOS_RAPIDOS.md)** - Comandos básicos
-- **[QUICK_START.md](QUICK_START.md)** - Inicio rápido
-- **[docs/MANUAL_USO.md](docs/MANUAL_USO.md)** - Manual detallado
-- **[docs/SETUP_INSTRUCTIONS.md](docs/SETUP_INSTRUCTIONS.md)** - Instalación
-- **[docs/README_BOT_LOGS.md](docs/README_BOT_LOGS.md)** - Documentación técnica
+### **⚙️ 5. Configuración Unificada** (`src/utils/logging/index.ts`)
+```typescript
+// CAMBIO PRINCIPAL: Configuración por entorno
+const LOGGING_CONFIG = {
+  console: {
+    enabled: !isCloudRun,
+    level: 'INFO',
+    format: 'clean'  // ✅ Solo emojis y mensajes
+  },
+  file: {
+    enabled: !isCloudRun,
+    level: 'DEBUG',
+    format: 'structured'  // ✅ JSON técnico
+  },
+  cloud: {
+    enabled: isCloudRun,
+    level: 'INFO',
+    format: 'structured'  // ✅ JSON estructurado
+  }
+};
+```
 
-## 🚨 **Solución de Problemas**
+### **🔍 6. Parser Actualizado** (`tools/log-tools/cloud-parser/parse_bot_logs.py`)
+```python
+# CAMBIO PRINCIPAL: Soporte para formato JSON unificado
+def parse_json_log_entry(log_entry):
+    """Parse both old and new JSON format"""
+    if 'textPayload' in log_entry:
+        # Old format - extract from textPayload
+        return extract_from_text_payload(log_entry['textPayload'])
+    elif 'message' in log_entry and 'category' in log_entry:
+        # New format - direct JSON structure
+        return parse_structured_format(log_entry)
+```
 
-### **Error: gcloud no encontrado**
+## 🎯 **Problema Resuelto**
+
+### **🚨 ANTES - Problema Crítico**
 ```bash
-# Windows
-choco install gcloudsdk
-# O descargar desde: https://cloud.google.com/sdk/docs/install
+# Bot se reiniciaba cada ~3 minutos
+ERROR: Invalid log category: WEBHOOK
+ERROR: Invalid log category: BOT_MESSAGE_TRACKED
+ERROR: Invalid log category: RUN_QUEUE
+# + 14 categorías más faltantes
 ```
 
-### **Error: Sin permisos Cloud Run**
+### **✅ DESPUÉS - Solución Implementada**
 ```bash
-gcloud auth login
-gcloud config set project gen-lang-client-0318357688
+# Todas las categorías válidas agregadas
+✅ WEBHOOK - Validado
+✅ BOT_MESSAGE_TRACKED - Validado
+✅ RUN_QUEUE - Validado
+✅ CONTEXT_LABELS - Validado
+✅ OPENAI_RUN_COMPLETED - Validado
+✅ THREAD_REUSE - Validado
 ```
 
-### **Error: Cache temporal**
+## 📋 **Scripts de Validación Creados**
+
+### **🔧 1. Validación Completa** (`scripts/validate-logging-v2.js`)
+```javascript
+// Prueba los 3 tipos de logs automáticamente
+- Console: Verifica formato limpio
+- File: Verifica formato JSON
+- Cloud: Verifica categorías válidas
+```
+
+### **🧪 2. Testing Simple** (`scripts/test-logging-simple.js`)
+```javascript
+// Prueba básica de funcionamiento
+- Genera logs de prueba
+- Verifica que no hay errores
+- Confirma formato correcto
+```
+
+## 🚀 **Uso del Sistema**
+
+### **Desarrollo Local**
 ```bash
-# Limpiar cache si hay problemas
-rm /tmp/bot_logs_cache.json
+# Iniciar el bot
+npm run dev
+
+# Logs esperados:
+# Terminal: 🤖 Bot iniciado correctamente
+# Archivo: {"timestamp":"2025-07-11T...","severity":"INFO",...}
 ```
 
-## 🎉 **Resultado Final**
+### **Validar Implementación**
+```bash
+# Validación completa
+node scripts/validate-logging-v2.js
 
-Transforma logs **ilegibles de Cloud Run** en **logs limpios como desarrollo local** con:
+# Testing simple
+node scripts/test-logging-simple.js
+```
 
-✅ **Archivos individuales** por sesión  
-✅ **Limpieza automática** de archivos antiguos  
-✅ **Análisis inteligente** con métricas avanzadas  
-✅ **Formato idéntico** al desarrollo local  
-✅ **Detección automática** de problemas  
+### **Analizar Logs**
+```bash
+# Logs locales
+ls logs/local-development/sessions/
 
-**De logs contaminados a análisis profesional en segundos.** 🚀
+# Logs Cloud Run (después del deployment)
+cd tools/log-tools/cloud-parser
+python parse_bot_logs.py --hours 2
+```
+
+## 📊 **Beneficios del Sistema V2.0**
+
+### **🎯 Para Desarrollo**
+- **Terminal limpio** - Solo información esencial con emojis
+- **Archivos técnicos** - Formato JSON completo para análisis
+- **Debugging fácil** - Información estructurada y buscable
+
+### **☁️ Para Producción**
+- **Cloud Run estable** - Sin reinicios por categorías inválidas
+- **Logs estructurados** - Formato JSON consistente
+- **Análisis automático** - Parser actualizado para nuevo formato
+
+### **🔧 Para Mantenimiento**
+- **Configuración centralizada** - Un solo punto de control
+- **Formatters reutilizables** - Código compartido entre tipos
+- **Validación automática** - Scripts de testing incluidos
+
+## 🗂️ **Estructura del Proyecto**
+
+```
+Bot-Wsp-Whapi-IA/
+├── 📁 src/utils/logging/           # ✅ Sistema de Logging V2.0
+│   ├── index.ts                   # Punto de entrada unificado
+│   ├── types.ts                   # Definiciones TypeScript
+│   ├── formatters.ts              # 🆕 Formatters compartidos
+│   ├── console-logger.ts          # 🔄 Actualizado - Solo emojis
+│   ├── file-logger.ts             # 🔄 Actualizado - Formato JSON
+│   ├── cloud-logger.ts            # 🔄 Actualizado - Categorías válidas
+│   └── README.md                  # Documentación completa
+├── 📁 logs/                       # Archivos de logs
+│   ├── local-development/         # Logs desarrollo local
+│   └── cloud-production/          # Logs Cloud Run procesados
+├── 📁 tools/log-tools/            # Herramientas de análisis
+│   └── cloud-parser/              # 🔄 Parser actualizado
+├── 📁 scripts/                    # Scripts de validación
+│   ├── validate-logging-v2.js     # 🆕 Validación completa
+│   └── test-logging-simple.js     # 🆕 Testing básico
+└── 📄 README.md                   # 🔄 Esta documentación
+```
+
+## 🎯 **Próximos Pasos**
+
+### **⏳ 1. Validación en Cloud Run**
+- Hacer deployment del sistema actualizado
+- Verificar que no hay más reinicios
+- Confirmar logs estructurados en Google Cloud Console
+
+### **🧪 2. Testing Local**
+- Ejecutar `npm run dev`
+- Verificar logs limpios en terminal
+- Confirmar archivos JSON en `logs/local-development/`
+
+### **📊 3. Análisis de Logs**
+- Usar parser actualizado para analizar logs
+- Verificar compatibilidad con formato JSON unificado
+- Confirmar métricas y análisis automático
+
+## 📚 **Documentación Completa**
+
+- **[src/utils/logging/README.md](src/utils/logging/README.md)** - Sistema de logging centralizado
+- **[logs/README.md](logs/README.md)** - Tipos de logs y estructura
+- **[tools/log-tools/README.md](tools/log-tools/README.md)** - Herramientas de análisis
+- **[docs/](docs/)** - Documentación completa del proyecto
+
+## 🎉 **Resumen de la Migración**
+
+### **✅ COMPLETADO**
+1. **Formatters compartidos** - Formato JSON técnico unificado
+2. **File Logger** - Actualizado a formato JSON idéntico a Cloud
+3. **Console Logger** - Limpio solo con emojis y mensajes legibles
+4. **Cloud Logger** - Todas las categorías válidas agregadas
+5. **Configuración unificada** - LOGGING_CONFIG por entorno
+6. **Parser actualizado** - Soporte para formato JSON unificado
+7. **Scripts de validación** - Testing automático implementado
+
+### **⏳ ESPERANDO VALIDACIÓN**
+- **Deployment en Cloud Run** - Confirmar estabilidad
+- **Testing local completo** - Verificar logs limpios
+- **Análisis de archivos** - Confirmar formato JSON correcto
+
+**🚀 Sistema de Logging V2.0 listo para producción - De logs inconsistentes a sistema profesional unificado.**

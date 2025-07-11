@@ -31,7 +31,7 @@ export interface FileLogConfig {
     level: LogLevel;
     directory: string;
     maxSessions: number;
-    format: 'detailed';  // Formato técnico completo
+    format: 'detailed' | 'structured';  // ACTUALIZADO: Soporta formato JSON idéntico a Cloud
 }
 
 /**

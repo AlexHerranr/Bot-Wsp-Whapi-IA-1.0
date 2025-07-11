@@ -6,6 +6,7 @@
  */
 
 import { LogLevel, LogEntry } from './types';
+import { formatConsoleLogEntry, shouldShowInConsole } from './formatters';
 
 // === COLORES PARA TERMINAL ===
 const colors = {
@@ -20,14 +21,21 @@ const colors = {
 };
 
 /**
- * 🎯 FUNCIÓN PRINCIPAL CONSOLE LOG
+ * 🎯 FUNCIÓN PRINCIPAL CONSOLE LOG - ACTUALIZADA V2.0
  * 
  * Muestra logs súper limpios en terminal, solo información esencial.
  * Perfecto para desarrollo donde necesitas ver el flujo sin ruido.
+ * 
+ * CAMBIO: Ahora usa formatters.ts para formato unificado
  */
 export function consoleLog(level: LogLevel, category: string, message: string, details?: any): void {
-    // Formatear según el tipo de log
-    const output = formatSimpleConsoleEntry({ level, category, message, details });
+    // Solo mostrar categorías relevantes
+    if (!shouldShowInConsole(category)) {
+        return;
+    }
+    
+    // Formatear usando formatter unificado
+    const output = formatConsoleLogEntry(level, category, message, details);
     
     if (output) {
         console.log(output);
@@ -35,93 +43,15 @@ export function consoleLog(level: LogLevel, category: string, message: string, d
 }
 
 /**
- * 🎨 FORMATEADOR SIMPLE PARA TERMINAL
+ * 🎨 FORMATEADOR SIMPLE PARA TERMINAL - DEPRECATED
  * 
- * Convierte logs técnicos en formato súper legible para humanos.
- * Ejemplo: "✅ Usuario 573003913251: 'Consulta disponibilidad' → 10s..."
+ * NOTA: Esta función ha sido reemplazada por formatConsoleLogEntry()
+ * del archivo formatters.ts para unificar el sistema de formateo.
+ * 
+ * OBJETIVO: Separación clara entre experiencia de desarrollo y análisis técnico
  */
-function formatSimpleConsoleEntry(entry: Partial<LogEntry>): string {
-    const { level, category, message, details } = entry;
-    
-    // === MENSAJES DE USUARIO ===
-    if (category === 'MESSAGE_RECEIVED') {
-        const userId = extractUserId(message);
-        const userMessage = extractUserMessage(message);
-        return `${colors.INFO}👤 Usuario ${userId}:${colors.RESET} "${userMessage}" → ⏱️ 10s...`;
-    }
-    
-    // === RESPUESTAS DEL BOT ===
-    if (category === 'WHATSAPP_CHUNKS_COMPLETE' || category === 'OPENAI_RESPONSE') {
-        const duration = extractDuration(details);
-        const preview = extractResponsePreview(message);
-        return `${colors.SUCCESS}🤖 Bot → Completado (${duration}s) →${colors.RESET} "${preview}"`;
-    }
-    
-    // === PROCESAMIENTO OPENAI ===
-    if (category === 'OPENAI_REQUEST' && message.includes('creating_run')) {
-        const userId = extractUserId(details?.shortUserId || 'unknown');
-        return `${colors.INFO}🤖 Bot → Procesando mensajes → OpenAI${colors.RESET}`;
-    }
-    
-    // === FUNCIONES EJECUTÁNDOSE ===
-    if (category === 'FUNCTION_CALLING_START') {
-        const functionName = extractFunctionName(message);
-        return `${colors.INFO}⚙️ Ejecutando función: ${functionName}${colors.RESET}`;
-    }
-    
-    // === CONSULTAS BEDS24 ===
-    if (category === 'BEDS24_REQUEST') {
-        return `${colors.INFO}🏨 Consultando disponibilidad Beds24...${colors.RESET}`;
-    }
-    
-    if (category === 'BEDS24_RESPONSE_DETAIL') {
-        const options = extractAvailabilityOptions(details);
-        return `${colors.SUCCESS}✅ Beds24 → ${options} opciones encontradas${colors.RESET}`;
-    }
-    
-    // === ERRORES ===
-    if (level === 'ERROR') {
-        return `${colors.ERROR}❌ Error: ${message}${colors.RESET}`;
-    }
-    
-    // === WARNINGS IMPORTANTES ===
-    if (level === 'WARNING' && !message.includes('Webhook recibido sin mensajes')) {
-        return `${colors.WARNING}⚠️ ${message}${colors.RESET}`;
-    }
-    
-    // === ÉXITOS IMPORTANTES ===
-    if (level === 'SUCCESS' && (
-        category.includes('SERVER_START') || 
-        category.includes('BOT_READY') ||
-        category.includes('THREAD_PERSIST')
-    )) {
-        return `${colors.SUCCESS}✅ ${message}${colors.RESET}`;
-    }
-    
-    // === IGNORAR LOGS TÉCNICOS ===
-    const ignoreCategories = [
-        'WEBHOOK', 'NAME_EXTRACTION', 'USER_ID_EXTRACTION', 'WEBHOOK_USER',
-        'MESSAGE_BUFFER', 'USER_DEBUG', 'THREAD_LOOKUP', 'THREAD_GET', 
-        'THREAD_CHECK', 'MESSAGE_DETAIL', 'WEBHOOK_SKIP', 'DEBUG_FILE',
-        'STARTUP', 'CONFIG', 'APP_INIT', 'OPENAI_INIT', 'LOGGER_INIT',
-        'THREADS_INFO', 'THREADS_DETAIL', 'MESSAGE_PROCESS', 'CONVERSATION_FLOW',
-        'TIMER', 'BOT_MESSAGE_TRACKED', 'BOT_MESSAGE_FILTERED', 'BOT_MESSAGE_CLEANUP',
-        'MANUAL_DETECTED', 'MANUAL_BUFFER_CREATE', 'MANUAL_BUFFERING',
-        'MANUAL_PROCESSING', 'MANUAL_SYNC_START', 'MANUAL_SYNC_SUCCESS',
-        'MANUAL_SYNC_ERROR', 'MANUAL_NO_THREAD', 'AI_PROCESSING', 'WHATSAPP_OUT',
-        'BEDS24_DEBUG_OUTPUT', 'RESPONSE_SANITIZED', 'MESSAGE_SANITIZED',
-        'CONTACT_API', 'CONTACT_API_DETAILED', 'CONTEXT_LABELS',
-        'NEW_THREAD_LABELS', 'LABELS_24H', 'WEBHOOK_STATUS', 'THREAD_DETAILS',
-        'OPENAI_INTERNAL', 'RUN_QUEUE', 'BUFFER_TIMER_RESET'
-    ];
-    
-    if (ignoreCategories.includes(category) || level === 'DEBUG') {
-        return ''; // No mostrar en consola
-    }
-    
-    // === FALLBACK - NO MOSTRAR ===
-    return '';
-}
+// function formatSimpleConsoleEntry() - REMOVIDO
+// Ahora usa formatConsoleLogEntry() de formatters.ts
 
 // === FUNCIONES AUXILIARES ===
 
@@ -159,11 +89,13 @@ function extractAvailabilityOptions(details: any): string {
 }
 
 /**
- * 🤖 PARA IAs: ESTE LOGGER
+ * 🤖 PARA IAs: ESTE LOGGER - ACTUALIZADO V2.0
  * 
- * - Muestra SOLO información esencial en terminal
+ * - Muestra SOLO información esencial en terminal con emojis
  * - Ignora logs técnicos para evitar ruido  
- * - Usa colores para mejor legibilidad
- * - Formato optimizado para humanos
- * - Se complementa con file-logger.ts para detalles técnicos
+ * - Formato optimizado para experiencia de desarrollo
+ * - Se complementa con file-logger.ts para análisis técnico
+ * 
+ * CAMBIO CLAVE: Ahora usa formatters.ts para formato unificado
+ * OBJETIVO: Terminal limpio vs Análisis técnico (File = Cloud)
  */ 
