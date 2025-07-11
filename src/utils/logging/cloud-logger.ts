@@ -24,6 +24,7 @@ const VALID_CATEGORIES_SET = new Set([
     // OpenAI y Funciones
     'OPENAI_REQUEST',
     'OPENAI_RESPONSE',
+    'OPENAI_RUN_COMPLETED',
     'FUNCTION_CALLING_START',
     'FUNCTION_EXECUTING',
     'FUNCTION_HANDLER',
@@ -38,8 +39,16 @@ const VALID_CATEGORIES_SET = new Set([
     'THREAD_CREATED',
     'THREAD_PERSIST',
     'THREAD_CLEANUP',
+    'THREAD_REUSE',
     'SERVER_START',
     'BOT_READY',
+    
+    // Sistema Interno
+    'WEBHOOK',
+    'BOT_MESSAGE_TRACKED',
+    'PENDING_MESSAGE_REMOVED',
+    'RUN_QUEUE',
+    'CONTEXT_LABELS',
     
     // Errores y Warnings
     'ERROR',
@@ -101,6 +110,9 @@ const DISABLE_DURATION = 30000; // 30 segundos
 // ✨ FEATURE FLAG PARA ROLLBACK
 const USE_LEGACY_LOGGING = process.env.USE_LEGACY_LOGGING === 'true';
 
+// ✨ CACHE DE WARNINGS PARA CATEGORÍAS INVÁLIDAS
+const invalidCategoryWarnings = new Set<string>();
+
 export function cloudLog(level: LogLevel, category: string, message: string, details?: any): void {
     const startTime = Date.now();
     
@@ -121,14 +133,22 @@ export function cloudLog(level: LogLevel, category: string, message: string, det
         LogFilterMetrics.recordTotal();
         loggingMetrics.totalLogs++;
         
-        // ✨ VALIDACIÓN ESTRICTA CON SET (MEJORA CRÍTICA)
+        // ✨ VALIDACIÓN MEJORADA - NO USAR ERROR COMO FALLBACK
         if (!VALID_CATEGORIES_SET.has(category)) {
-            console.error(`❌ INVALID CATEGORY: ${category}. Must be one of: ${Array.from(VALID_CATEGORIES_SET).join(', ')}`);
-            // En desarrollo, mostrar error. En producción, usar ERROR pero loggear el error
-            if (process.env.NODE_ENV === 'development') {
-                throw new Error(`Invalid logging category: ${category}`);
+            // Solo mostrar warning una vez por categoría inválida para evitar spam
+            if (!invalidCategoryWarnings.has(category)) {
+                console.warn(`⚠️ INVALID CATEGORY: ${category}. Continuing with original category for compatibility.`);
+                console.warn(`   Valid categories: ${Array.from(VALID_CATEGORIES_SET).join(', ')}`);
+                invalidCategoryWarnings.add(category);
             }
-            category = 'ERROR'; // Usar ERROR en lugar de OTHER para que sea visible
+            
+            // En desarrollo, mostrar error detallado pero no fallar
+            if (process.env.NODE_ENV === 'development') {
+                console.warn(`   📍 This log will still be processed but should be updated to use a valid category.`);
+            }
+            
+            // NO cambiar la categoría - mantener la original para compatibilidad
+            // category = 'ERROR'; // REMOVIDO - no usar ERROR como fallback
         }
         
         // Determinar entorno
@@ -177,11 +197,11 @@ export function cloudLog(level: LogLevel, category: string, message: string, det
         }
         
         // 4. Crear entrada estructurada
-        const entry: LogEntry = {
-            timestamp: new Date().toISOString(),
-            level,
-            category,
-            message,
+    const entry: LogEntry = {
+        timestamp: new Date().toISOString(),
+        level,
+        category,
+        message,
             details: sanitizedDetails,
             environment
         };
@@ -379,7 +399,7 @@ function formatGoogleCloudLogEntry(entry: LogEntry): string {
         // ✨ JSONPAYLOAD MEJORADO - Información estructurada para análisis
         jsonPayload: {
             // Información básica
-            category,
+        category,
             level,
             userId,
             environment,
@@ -554,7 +574,7 @@ function isHighPriorityLog(level: LogLevel, category: string): boolean {
 function mapLevelToGoogleSeverity(level: LogLevel): string {
     const mapping: Record<LogLevel, string> = {
         'DEBUG': 'DEBUG',
-        'INFO': 'INFO', 
+        'INFO': 'INFO',
         'SUCCESS': 'INFO',  // SUCCESS se mapea a INFO con categoría específica
         'WARNING': 'WARNING',
         'ERROR': 'ERROR'
@@ -578,63 +598,161 @@ function generateSessionId(): string {
  * Funciones helper para las categorías más comunes del README.
  */
 
-// Mensajes y Comunicación
-export const logMessageReceived = (message: string, details?: any) => 
-    cloudLog('INFO', 'MESSAGE_RECEIVED', message, details);
+// Mensajes y Comunicación - SOLO CLOUD RUN
+export const logMessageReceived = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'MESSAGE_RECEIVED', message, details);
+    }
+};
 
-export const logMessageProcess = (message: string, details?: any) => 
-    cloudLog('INFO', 'MESSAGE_PROCESS', message, details);
+export const logMessageProcess = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'MESSAGE_PROCESS', message, details);
+    }
+};
 
-export const logWhatsAppSend = (message: string, details?: any) => 
-    cloudLog('INFO', 'WHATSAPP_SEND', message, details);
+export const logWhatsAppSend = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'WHATSAPP_SEND', message, details);
+    }
+};
 
-export const logWhatsAppChunksComplete = (message: string, details?: any) => 
-    cloudLog('SUCCESS', 'WHATSAPP_CHUNKS_COMPLETE', message, details);
+export const logWhatsAppChunksComplete = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('SUCCESS', 'WHATSAPP_CHUNKS_COMPLETE', message, details);
+    }
+};
 
-// OpenAI y Funciones  
-export const logOpenAIRequest = (message: string, details?: any) => 
-    cloudLog('INFO', 'OPENAI_REQUEST', message, details);
+// OpenAI y Funciones - SOLO CLOUD RUN
+export const logOpenAIRequest = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'OPENAI_REQUEST', message, details);
+    }
+};
 
-export const logOpenAIResponse = (message: string, details?: any) => 
-    cloudLog('SUCCESS', 'OPENAI_RESPONSE', message, details);
+export const logOpenAIResponse = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('SUCCESS', 'OPENAI_RESPONSE', message, details);
+    }
+};
 
-export const logFunctionCallingStart = (message: string, details?: any) => 
-    cloudLog('INFO', 'FUNCTION_CALLING_START', message, details);
+export const logFunctionCallingStart = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'FUNCTION_CALLING_START', message, details);
+    }
+};
 
-export const logFunctionExecuting = (message: string, details?: any) => 
-    cloudLog('INFO', 'FUNCTION_EXECUTING', message, details);
+export const logFunctionExecuting = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'FUNCTION_EXECUTING', message, details);
+    }
+};
 
-export const logFunctionHandler = (message: string, details?: any) => 
-    cloudLog('INFO', 'FUNCTION_HANDLER', message, details);
+export const logFunctionHandler = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'FUNCTION_HANDLER', message, details);
+    }
+};
 
-// Integración Beds24
-export const logBeds24Request = (message: string, details?: any) => 
-    cloudLog('INFO', 'BEDS24_REQUEST', message, details);
+// Integración Beds24 - SOLO CLOUD RUN
+export const logBeds24Request = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'BEDS24_REQUEST', message, details);
+    }
+};
 
-export const logBeds24ApiCall = (message: string, details?: any) => 
-    cloudLog('INFO', 'BEDS24_API_CALL', message, details);
+export const logBeds24ApiCall = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'BEDS24_API_CALL', message, details);
+    }
+};
 
-export const logBeds24ResponseDetail = (message: string, details?: any) => 
-    cloudLog('INFO', 'BEDS24_RESPONSE_DETAIL', message, details);
+export const logBeds24ResponseDetail = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'BEDS24_RESPONSE_DETAIL', message, details);
+    }
+};
 
-export const logBeds24Processing = (message: string, details?: any) => 
-    cloudLog('INFO', 'BEDS24_PROCESSING', message, details);
+export const logBeds24Processing = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'BEDS24_PROCESSING', message, details);
+    }
+};
 
-// Sistema y Threads
-export const logThreadCreated = (message: string, details?: any) => 
-    cloudLog('SUCCESS', 'THREAD_CREATED', message, details);
+// Sistema y Threads - SOLO CLOUD RUN
+export const logThreadCreated = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('SUCCESS', 'THREAD_CREATED', message, details);
+    }
+};
 
-export const logThreadPersist = (message: string, details?: any) => 
-    cloudLog('INFO', 'THREAD_PERSIST', message, details);
+export const logThreadPersist = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'THREAD_PERSIST', message, details);
+    }
+};
 
-export const logThreadCleanup = (message: string, details?: any) => 
-    cloudLog('INFO', 'THREAD_CLEANUP', message, details);
+export const logThreadCleanup = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'THREAD_CLEANUP', message, details);
+    }
+};
 
-export const logServerStart = (message: string, details?: any) => 
-    cloudLog('SUCCESS', 'SERVER_START', message, details);
+export const logServerStart = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('SUCCESS', 'SERVER_START', message, details);
+    }
+};
 
-export const logBotReady = (message: string, details?: any) => 
-    cloudLog('SUCCESS', 'BOT_READY', message, details);
+export const logBotReady = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('SUCCESS', 'BOT_READY', message, details);
+    }
+};
+
+// ✨ FUNCIONES DE LOGGING PARA CATEGORÍAS FALTANTES
+// SOLO PARA CLOUD RUN - En local usan el sistema unificado
+export const logWebhook = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'WEBHOOK', message, details);
+    }
+};
+
+export const logBotMessageTracked = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'BOT_MESSAGE_TRACKED', message, details);
+    }
+};
+
+export const logPendingMessageRemoved = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'PENDING_MESSAGE_REMOVED', message, details);
+    }
+};
+
+export const logRunQueue = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'RUN_QUEUE', message, details);
+    }
+};
+
+export const logContextLabels = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('INFO', 'CONTEXT_LABELS', message, details);
+    }
+};
+
+export const logOpenAIRunCompleted = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('SUCCESS', 'OPENAI_RUN_COMPLETED', message, details);
+    }
+};
+
+export const logThreadReuse = (message: string, details?: any) => {
+    if (process.env.K_SERVICE) {
+        cloudLog('SUCCESS', 'THREAD_REUSE', message, details);
+    }
+};
 
 /**
  * 🤖 PARA IAs: ESTE LOGGER MEJORADO

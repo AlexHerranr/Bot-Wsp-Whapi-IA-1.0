@@ -55,11 +55,17 @@ Replicamos la experiencia de **logs locales** donde TODO es visible inmediatamen
 # 1. Instalar dependencias
 pip install -r requirements.txt
 
-# 2. Verificar configuración
+# 2. Configurar Google Cloud (SOLO LA PRIMERA VEZ)
+gcloud auth login
+
+# 3. Verificar configuración
 python parse_bot_logs.py --help
 
-# 3. ¡Listo para usar!
+# 4. ¡Listo para usar!
 ```
+
+### 🔧 Primera Configuración
+Si es la primera vez que usas el parser, sigue la [Guía de Configuración de Google Cloud](SETUP_GOOGLE_CLOUD.md).
 
 ### Verificación de Instalación
 

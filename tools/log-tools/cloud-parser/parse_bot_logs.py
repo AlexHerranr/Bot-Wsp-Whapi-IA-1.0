@@ -415,33 +415,33 @@ class LogEntry:
         
         # FUNCTION CALLING - Argumentos completos (solo si no se detectó nueva categoría)
         if parsed['type'] == 'unknown':
-            for pattern_name, pattern in EnhancedPatterns.FUNCTION_CALL_PATTERNS.items():
-                match = re.search(pattern, clean_message, re.IGNORECASE | re.DOTALL)
-                if match:
-                    parsed['type'] = 'function_calling'
-                    parsed['log_category'] = 'FUNCTION_CALLING'
-                    
-                    if pattern_name == 'function_start':
-                        parsed['function_name'] = match.group(1)
-                        parsed['technical_details']['function_state'] = 'starting'
-                    
-                    elif pattern_name == 'function_executing':
-                        parsed['function_name'] = match.group(1)
-                        parsed['technical_details']['function_state'] = 'executing'
-                    
-                    elif pattern_name == 'function_args':
-                        try:
-                            parsed['function_args'] = json.loads(match.group(1))
-                            parsed['technical_details']['args_parsed'] = True
-                        except:
-                            parsed['function_args'] = match.group(1)
-                            parsed['technical_details']['args_parsed'] = False
-                    
-                    elif pattern_name == 'function_result':
-                        parsed['function_result'] = match.group(1)
-                        parsed['technical_details']['function_state'] = 'completed'
-                    
-                    break
+        for pattern_name, pattern in EnhancedPatterns.FUNCTION_CALL_PATTERNS.items():
+            match = re.search(pattern, clean_message, re.IGNORECASE | re.DOTALL)
+            if match:
+                parsed['type'] = 'function_calling'
+                parsed['log_category'] = 'FUNCTION_CALLING'
+                
+                if pattern_name == 'function_start':
+                    parsed['function_name'] = match.group(1)
+                    parsed['technical_details']['function_state'] = 'starting'
+                
+                elif pattern_name == 'function_executing':
+                    parsed['function_name'] = match.group(1)
+                    parsed['technical_details']['function_state'] = 'executing'
+                
+                elif pattern_name == 'function_args':
+                    try:
+                        parsed['function_args'] = json.loads(match.group(1))
+                        parsed['technical_details']['args_parsed'] = True
+                    except:
+                        parsed['function_args'] = match.group(1)
+                        parsed['technical_details']['args_parsed'] = False
+                
+                elif pattern_name == 'function_result':
+                    parsed['function_result'] = match.group(1)
+                    parsed['technical_details']['function_state'] = 'completed'
+                
+                break
         
         # ============================================================================
         # EXTRACCIÓN TÉCNICA MEJORADA - BEDS24 COMPLETO

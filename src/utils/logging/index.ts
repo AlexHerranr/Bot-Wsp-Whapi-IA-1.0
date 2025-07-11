@@ -104,6 +104,37 @@ export const logWarning = (category: string, message: string, details?: any) =>
 export const logDebug = (category: string, message: string, details?: any) => 
     log('DEBUG', category, message, details);
 
+// === FUNCIONES ESPECÍFICAS POR CATEGORÍA ===
+// Exportar todas las funciones específicas del cloud-logger
+export { 
+    logMessageReceived,
+    logMessageProcess,
+    logWhatsAppSend,
+    logWhatsAppChunksComplete,
+    logOpenAIRequest,
+    logOpenAIResponse,
+    logFunctionCallingStart,
+    logFunctionExecuting,
+    logFunctionHandler,
+    logBeds24Request,
+    logBeds24ApiCall,
+    logBeds24ResponseDetail,
+    logBeds24Processing,
+    logThreadCreated,
+    logThreadPersist,
+    logThreadCleanup,
+    logServerStart,
+    logBotReady,
+    // Funciones para categorías faltantes
+    logWebhook,
+    logBotMessageTracked,
+    logPendingMessageRemoved,
+    logRunQueue,
+    logContextLabels,
+    logOpenAIRunCompleted,
+    logThreadReuse
+} from './cloud-logger';
+
 // === EXPORTACIONES LEGACY ===
 // Mantener compatibilidad con código existente
 export { detailedLog } from '../logger';
