@@ -1,5 +1,6 @@
 import { OpenAI } from 'openai';
 import { AiHandler, AiResponse } from './ai_handler.interface';
+import { logInfo } from '../utils/logging/index.js';
 
 export class OpenAiHandler implements AiHandler {
   private openai: OpenAI;
@@ -32,6 +33,11 @@ export class OpenAiHandler implements AiHandler {
     }
 
     // Añadir mensaje al thread
+    logInfo('OPENAI_PAYLOAD', 'Enviando payload completo a OpenAI', {
+      userId,
+      threadId,
+      content: message
+    });
     await this.openai.beta.threads.messages.create(threadId, {
       role: 'user',
       content: message
@@ -66,6 +72,11 @@ export class OpenAiHandler implements AiHandler {
     const responseContent = assistantMessages[0].content[0];
     
     if ('text' in responseContent) {
+      logInfo('OPENAI_RESPONSE_RAW', 'Respuesta cruda recibida de OpenAI', {
+        userId,
+        threadId,
+        content: responseContent.text.value
+      });
       return { text: responseContent.text.value };
     } else {
       return { text: "Recibí una respuesta en un formato no soportado." };

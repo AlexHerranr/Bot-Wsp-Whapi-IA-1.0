@@ -5,26 +5,64 @@ const DETAILED_LOGS = process.env.ENABLE_DETAILED_LOGS === 'true' || !IS_PRODUCT
 
 type LogLevel = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
 
+// --- Mapeo de etapas del flujo y helpers añadidos ---
+const STAGE_MAP: Record<string, string> = {
+    'MESSAGE_RECEIVED': '1_receive',
+    'MESSAGE_BUFFER': '2_buffer',
+    'MESSAGE_PROCESS': '3_process',
+    'BEDS24_REQUEST': '4_beds_request',
+    'BEDS24_RESPONSE': '5_beds_response',
+    'OPENAI_PAYLOAD': '6_ai_request',
+    'OPENAI_RESPONSE': '7_ai_response',
+    'WHATSAPP_SEND': '8_send',
+    'MESSAGE_SENT': '9_complete'
+};
+
+// Lleva la cuenta de la posición que ocupa cada log dentro de un mismo flujo (messageId)
+const messageSequenceMap = new Map<string, number>();
+
+function getFlowStage(category: string): string {
+    return STAGE_MAP[category.toUpperCase()] || '0_unknown';
+}
+
+function getSequenceNumber(category: string, messageId?: string): number | undefined {
+    if (!messageId) return undefined;
+    const key = String(messageId);
+    const seq = (messageSequenceMap.get(key) || 0) + 1;
+    messageSequenceMap.set(key, seq);
+    return seq;
+}
+
 function enrichedLog(
     category: string, 
     message: string, 
     details: Record<string, any> = {}, 
     level: LogLevel = 'INFO'
 ) {
+    const stage = getFlowStage(category);
+    const sequence = getSequenceNumber(category, details?.messageId);
+
     const logEntry = {
         timestamp: new Date().toISOString(),
+        severity: level,
         message: `[${category.toUpperCase()}] ${message}`,
         labels: {
             app: 'whatsapp-bot',
             category: category.toUpperCase(),
             level,
-            ...(details.userId && { userId: String(details.userId) }),
+            flow_stage: stage,
+            ...(details.messageId && { message_id: String(details.messageId) }),
+            ...(details.userId && { user_id: String(details.userId) }),
         },
         jsonPayload: {
             category: category.toUpperCase(),
             level,
-            ...(details.userId && { userId: String(details.userId) }),
-            details: Object.keys(details).length > 0 ? details : undefined,
+            timestamp: new Date().toISOString(),
+            flow: {
+                stage,
+                sequence,
+            },
+            ...(details && Object.keys(details).length > 0 ? details : {}),
             environment: IS_PRODUCTION ? 'cloud-run' : 'local',
         }
     };

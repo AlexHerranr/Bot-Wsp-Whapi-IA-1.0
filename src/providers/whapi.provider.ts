@@ -87,6 +87,13 @@ export class WhapiProvider extends EventEmitter {
         try {
             const cleanTo = to.replace(/@s\.whatsapp\.net$/, '');
             
+            logInfo('WHATSAPP_PAYLOAD', 'Payload final a enviar a WhatsApp', {
+                chatId: cleanTo,
+                message,
+                length: message.length,
+                chunks: message.split(/\n\n+/).length
+            });
+
             const response = await axios.post(`${this.apiUrl}/messages/text`, {
                 to: cleanTo,
                 body: message
