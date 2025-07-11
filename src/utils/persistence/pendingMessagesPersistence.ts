@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { logInfo, logError, logWarning, logSuccess } from '../logger.js';
+import fs from 'fs';
+import path from 'path';
+import { logInfo, logError, logWarning, logSuccess } from '../logging/index.js';
 
 interface PendingMessage {
     userId: string;

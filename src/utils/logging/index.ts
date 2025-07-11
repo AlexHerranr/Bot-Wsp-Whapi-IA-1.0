@@ -19,7 +19,7 @@ export * from './cloud-logger';    // Tipo 3: Logs Cloud Run
 export * from './types';           // Tipos TypeScript compartidos
 
 // === CONFIGURACIÓN UNIFICADA ===
-import { LogConfig } from './types';
+import { LogConfig, Environment } from './types';
 
 /**
  * 🎯 CONFIGURACIÓN PRINCIPAL DEL SISTEMA DE LOGGING
@@ -30,12 +30,12 @@ import { LogConfig } from './types';
  */
 export const LOGGING_CONFIG: LogConfig = {
     // Detección automática de entorno
-    environment: process.env.NODE_ENV || 'development',
+    environment: (process.env.NODE_ENV === 'production' ? 'production' : 'development') as Environment,
     isCloudRun: !!process.env.K_SERVICE,
     
     // Configuración por tipo de log
     console: {
-        enabled: true,
+        enabled: !process.env.K_SERVICE, // Solo en local, NO en Cloud Run
         level: 'INFO',
         colors: true,
         format: 'simple'  // Formato súper limpio

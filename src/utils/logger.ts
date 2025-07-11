@@ -54,6 +54,7 @@ const colors = {
     GREEN: '\x1b[32m',     // Green
     YELLOW: '\x1b[33m',    // Yellow
     BLUE: '\x1b[34m',      // Blue
+    CYAN: '\x1b[36m',      // Cyan
     WHITE: '\x1b[37m',     // White
     RED: '\x1b[31m'        // Red
 };
@@ -215,6 +216,88 @@ const formatSimpleConsoleEntry = (entry: LogEntry): string => {
         return ''; // No mostrar en consola
     }
     
+    // === OPENAI Y FUNCIONES === 
+    if (category === 'OPENAI_REQUEST') {
+        const action = details?.action || message;
+        return `${colors.BLUE}🤖 OpenAI → ${action}${colors.RESET}`;
+    }
+    
+    if (category === 'OPENAI_RESPONSE' || category === 'OPENAI_RUN_COMPLETED') {
+        const duration = details?.duration;
+        if (duration) {
+            return `${colors.GREEN}✅ OpenAI → Respuesta completa (${duration}ms)${colors.RESET}`;
+        }
+        return `${colors.GREEN}✅ OpenAI → ${message}${colors.RESET}`;
+    }
+    
+    if (category === 'FUNCTION_CALLING_START') {
+        const count = details?.toolCallsCount || message.match(/\d+/)?.[0] || '?';
+        return `${colors.YELLOW}⚙️ Ejecutando ${count} función(es)...${colors.RESET}`;
+    }
+    
+    if (category === 'FUNCTION_EXECUTING') {
+        const functionName = details?.functionName || message.match(/función: (\w+)/)?.[1] || 'función';
+        const args = details?.arguments ? ` → ${JSON.stringify(details.arguments)}` : '';
+        return `${colors.YELLOW}  ↳ ${functionName}${args}${colors.RESET}`;
+    }
+    
+    if (category === 'FUNCTION_HANDLER' || category === 'FUNCTION_EXECUTED') {
+        const functionName = details?.functionName || message.match(/función (\w+)/)?.[1] || '';
+        return `${colors.GREEN}  ✓ ${functionName} completada${colors.RESET}`;
+    }
+    
+    // === BEDS24 ===
+    if (category === 'BEDS24_REQUEST') {
+        const dates = details?.dateFrom && details?.dateTo ? 
+            ` (${details.dateFrom} → ${details.dateTo})` : '';
+        return `${colors.CYAN}🏨 Beds24 → Consultando disponibilidad${dates}${colors.RESET}`;
+    }
+    
+    if (category === 'BEDS24_API_CALL') {
+        return `${colors.CYAN}  ↳ API Call: ${message}${colors.RESET}`;
+    }
+    
+    if (category === 'BEDS24_RESPONSE_DETAIL') {
+        const properties = details?.propertiesCount || details?.totalProperties || '?';
+        return `${colors.GREEN}  ✓ Beds24 → ${properties} propiedades procesadas${colors.RESET}`;
+    }
+    
+    if (category === 'BEDS24_RESPONSE_SUMMARY') {
+        return `${colors.GREEN}🏨 Beds24 → ${message}${colors.RESET}`;
+    }
+    
+    // === MENSAJES Y PROCESAMIENTO ===
+    if (category === 'MESSAGE_RECEIVED') {
+        const preview = details?.preview || details?.messagePreview || message;
+        const user = details?.userName || details?.userId || 'Usuario';
+        return `${colors.CYAN}📨 ${user}: "${preview}"${colors.RESET}`;
+    }
+    
+    if (category === 'MESSAGE_PROCESS') {
+        const count = details?.messageCount || '?';
+        return `${colors.YELLOW}⏳ Procesando ${count} mensajes agrupados...${colors.RESET}`;
+    }
+    
+    if (category === 'WHATSAPP_SEND' && entry.level === 'SUCCESS') {
+        const preview = details?.preview?.substring(0, 50) || message;
+        return `${colors.GREEN}✅ WhatsApp → Mensaje enviado${colors.RESET}`;
+    }
+    
+    if (category === 'WHATSAPP_CHUNKS_COMPLETE') {
+        const chunks = details?.totalChunks || message.match(/\d+/)?.[0] || '?';
+        return `${colors.GREEN}✅ WhatsApp → ${chunks} párrafos enviados${colors.RESET}`;
+    }
+    
+    // === THREAD MANAGEMENT ===
+    if (category === 'THREAD_CREATED') {
+        const threadId = details?.threadId || message.match(/thread_\w+/)?.[0] || '';
+        return `${colors.BLUE}🧵 Thread creado: ${threadId}${colors.RESET}`;
+    }
+    
+    if (category === 'THREAD_PERSIST' || category === 'THREAD_CLEANUP') {
+        return `${colors.DIM}💾 ${message}${colors.RESET}`;
+    }
+    
     // === ERRORES ===
     if (entry.level === 'ERROR') {
         return `${colors.RED}❌ Error: ${message}${colors.RESET}`;
@@ -226,20 +309,52 @@ const formatSimpleConsoleEntry = (entry: LogEntry): string => {
     
     // === IGNORAR LOGS TÉCNICOS ===
     const ignoreCategories = [
-        'WEBHOOK', 'NAME_EXTRACTION', 'USER_ID_EXTRACTION', 'WEBHOOK_USER',
-        'MESSAGE_BUFFER', 'USER_DEBUG', 'THREAD_LOOKUP', 'THREAD_GET', 
-        'THREAD_CHECK', 'OPENAI_REQUEST', 'MESSAGE_DETAIL', 'WEBHOOK_SKIP',
-        'DEBUG_FILE', 'STARTUP', 'CONFIG', 'APP_INIT', 'OPENAI_INIT',
-        'LOGGER_INIT', 'THREADS_INFO', 'THREADS_DETAIL', 'MESSAGE_PROCESS',
-        'OPENAI_RESPONSE', 'CONVERSATION_FLOW', 'TIMER', 'BOT_MESSAGE_TRACKED',
-        'BOT_MESSAGE_FILTERED', 'BOT_MESSAGE_CLEANUP', 'MANUAL_DETECTED',
-        'MANUAL_BUFFER_CREATE', 'MANUAL_BUFFERING', 'MANUAL_PROCESSING',
-        'MANUAL_SYNC_START', 'MANUAL_SYNC_SUCCESS', 'MANUAL_SYNC_ERROR',
-        'MANUAL_NO_THREAD', 'WHATSAPP_SEND', 'AI_PROCESSING', 'WHATSAPP_OUT',
-        'BEDS24_DEBUG_OUTPUT', 'RESPONSE_SANITIZED', 'MESSAGE_SANITIZED', 
-        'BEDS24_RESPONSE_DETAIL', 'CONTACT_API', 'CONTACT_API_DETAILED',
-        'CONTEXT_LABELS', 'NEW_THREAD_LABELS', 'LABELS_24H',
-        'WEBHOOK_STATUS', 'THREAD_DETAILS', 'OPENAI_INTERNAL', 'RUN_QUEUE', 'BUFFER_TIMER_RESET'
+        // Webhooks y status repetitivos
+        'WEBHOOK', 'WEBHOOK_SKIP', 'WEBHOOK_STATUS',
+        
+        // Health checks y metadata
+        'HEALTH_CHECK', 'HTTP_REQUEST', 'CLOUD_RUN_METADATA', 'TRACE_SPANS', 'BUILD_INFO',
+        
+        // Extracción de información básica
+        'USER_ID_EXTRACTION', 'NAME_EXTRACTION', 'USER_DEBUG',
+        
+        // Threads internos (mantener solo los críticos)
+        'THREAD_LOOKUP', 'THREAD_GET', 'THREAD_CHECK', 'THREAD_DETAILS',
+        
+        // Inicialización y configuración
+        'DEBUG_FILE', 'STARTUP', 'CONFIG', 'APP_INIT', 'OPENAI_INIT', 'LOGGER_INIT',
+        
+        // Buffers y timers internos
+        'MESSAGE_BUFFER', 'TIMER', 'BUFFER_TIMER_RESET',
+        
+        // Mensajes del bot
+        'BOT_MESSAGE_TRACKED', 'BOT_MESSAGE_FILTERED', 'BOT_MESSAGE_CLEANUP',
+        
+        // Procesamiento manual interno
+        'MANUAL_DETECTED', 'MANUAL_BUFFER_CREATE', 'MANUAL_BUFFERING', 
+        'MANUAL_PROCESSING', 'MANUAL_SYNC_START', 'MANUAL_SYNC_SUCCESS', 
+        'MANUAL_SYNC_ERROR', 'MANUAL_NO_THREAD',
+        
+        // Sanitización y limpieza
+        'RESPONSE_SANITIZED', 'MESSAGE_SANITIZED',
+        
+        // Detalles internos
+        'MESSAGE_DETAIL', 'THREADS_INFO', 'THREADS_DETAIL', 'CONVERSATION_FLOW',
+        'OPENAI_INTERNAL', 'RUN_QUEUE',
+        
+        // APIs de contacto detalladas
+        'CONTACT_API_DETAILED',
+        
+        // Etiquetas vacías
+        'CONTEXT_LABELS_EMPTY', 'NEW_THREAD_LABELS', 'LABELS_24H'
+        
+        // NOTA: Las siguientes categorías CRÍTICAS ya NO están siendo ignoradas:
+        // - FUNCTION_CALLING_START, FUNCTION_EXECUTING, FUNCTION_HANDLER
+        // - BEDS24_REQUEST, BEDS24_API_CALL, BEDS24_RESPONSE_DETAIL, BEDS24_RESPONSE_SUMMARY
+        // - OPENAI_REQUEST, OPENAI_RESPONSE, OPENAI_RUN_COMPLETED
+        // - MESSAGE_RECEIVED, MESSAGE_PROCESS, WHATSAPP_SEND, WHATSAPP_CHUNKS_COMPLETE
+        // - THREAD_CREATED, THREAD_REUSE, THREAD_CLEANUP, THREAD_PERSIST
+        // - ERROR, WARNING, SUCCESS
     ];
     
     if (ignoreCategories.includes(category) || entry.level === 'DEBUG') {

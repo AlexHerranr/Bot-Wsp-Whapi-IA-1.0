@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { EventEmitter } from 'events';
-import { logInfo, logError, logSuccess } from '../utils/logger.js';
+import { logInfo, logError, logSuccess } from '../utils/logging/index.js';
 
 export interface WhapiMessage {
     id: string;

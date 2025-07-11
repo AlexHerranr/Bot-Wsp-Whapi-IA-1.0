@@ -9,7 +9,7 @@ import {
     Beds24Config,
     Beds24Error 
 } from './beds24.types';
-import { logInfo, logError, logDebug, logSuccess } from '../../utils/logger';
+import { logInfo, logError, logDebug, logSuccess } from '../../utils/logging/index.js';
 
 export class Beds24Service {
     private apiClient: AxiosInstance;

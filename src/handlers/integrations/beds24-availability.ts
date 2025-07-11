@@ -4,7 +4,7 @@
 import { getBeds24Service } from '../../services/beds24/beds24.service';
 import { AvailabilityInfo, Beds24Error } from '../../services/beds24/beds24.types';
 import { getBeds24Config } from '../../config/integrations/beds24.config';
-import { logInfo, logError, logSuccess } from '../../utils/logger';
+import { logInfo, logError, logSuccess } from '../../utils/logging/index.js';
 import axios from 'axios';
 
 // Interfaces para la lógica optimizada
@@ -104,7 +104,31 @@ async function getAvailabilityAndPricesOptimized(
         totalProperties: calendarData.data?.length || 0,
         dateRange: `${startDate} - ${endDate}`,
         nightsCalculated: totalNights,
-        optimization: 'single-endpoint'
+        optimization: 'single-endpoint',
+        endpoint: 'inventory/rooms/calendar',
+        parameters: {
+            startDate,
+            endDate,
+            includeNumAvail: true,
+            includePrices: true,
+            includeMinStay: true,
+            includeMaxStay: true,
+            includeMultiplier: true,
+            includeOverride: true
+        }
+    });
+
+    // Log detallado de la respuesta cruda para análisis
+    logInfo('BEDS24_RESPONSE_RAW', 'Respuesta cruda de Beds24 API', {
+        firstRoom: calendarData.data?.[0] ? {
+            propertyId: calendarData.data[0].propertyId,
+            roomId: calendarData.data[0].roomId,
+            name: calendarData.data[0].name,
+            calendarEntries: calendarData.data[0].calendar?.length || 0,
+            sampleEntry: calendarData.data[0].calendar?.[0]
+        } : null,
+        totalRooms: calendarData.data?.length || 0,
+        responseStructure: calendarData.data?.length ? Object.keys(calendarData.data[0]) : []
     });
 
     // Mapear los datos de Beds24 a las noches reales de estadía
@@ -157,11 +181,27 @@ async function getAvailabilityAndPricesOptimized(
         });
     }
     
-    // Logging básico de procesamiento
+    // Logging detallado del procesamiento
     logInfo('BEDS24_PROCESSING', 'Datos procesados correctamente', {
         totalProperties: Object.keys(propertyData).length,
         nightsRange: dateRange,
-        totalNights
+        totalNights,
+        propertiesDetail: Object.values(propertyData).map(prop => ({
+            propertyId: prop.propertyId,
+            propertyName: prop.propertyName,
+            roomName: prop.roomName,
+            availableDates: Object.entries(prop.availability)
+                .filter(([_, available]) => available)
+                .map(([date]) => date),
+            priceRange: {
+                min: Math.min(...Object.values(prop.prices).filter(p => p > 0)),
+                max: Math.max(...Object.values(prop.prices).filter(p => p > 0)),
+                dates: Object.entries(prop.prices)
+                    .filter(([_, price]) => price > 0)
+                    .map(([date, price]) => ({ date, price }))
+                    .slice(0, 3) // Muestra solo los primeros 3 días como ejemplo
+            }
+        }))
     });
 
     // Clasificar opciones - CORRECCIÓN: Solo considerar noches reales
@@ -214,6 +254,23 @@ async function getAvailabilityAndPricesOptimized(
             averageTransfers: splitOptions.reduce((sum, split) => sum + split.transfers, 0) / splitOptions.length
         });
     }
+    
+    // Log resumen final de la respuesta
+    logInfo('BEDS24_RESPONSE_SUMMARY', `Encontradas ${completeOptions.length} opciones completas y ${splitOptions.length} opciones con traslado`, {
+        dateRange: `${startDate} al ${endDate}`,
+        totalNights,
+        completeOptionsDetail: completeOptions.slice(0, 3).map(opt => ({
+            propertyName: opt.propertyName,
+            totalPrice: Object.values(opt.prices).reduce((sum, price) => sum + price, 0),
+            pricePerNight: Math.round(Object.values(opt.prices).reduce((sum, price) => sum + price, 0) / totalNights)
+        })),
+        splitOptionsDetail: splitOptions.slice(0, 2).map(split => ({
+            type: split.type,
+            transfers: split.transfers,
+            totalPrice: split.totalPrice,
+            properties: split.properties.map(p => p.propertyName).join(' → ')
+        }))
+    });
     
     return {
         completeOptions,

@@ -21,19 +21,13 @@ import {
 } from './config/environment.js';
 
 // Importar utilidades existentes
-import { 
-    detailedLog, 
-    logInfo, 
-    logSuccess, 
-    logError, 
+import {
+    logInfo,
+    logSuccess,
+    logError,
     logWarning,
-    logDebug,
-    logThreadPersist,
-    logOpenAIRequest,
-    logOpenAIResponse,
-    logWhatsAppMessage,
-    logBufferActivity
-} from './utils/logger.js';
+    logDebug
+} from './utils/logging/index.js';
 import { threadPersistence, pendingMessagesPersistence } from './utils/persistence/index.js';
 
 // Importar sistema de monitoreo
@@ -925,13 +919,13 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             );
             
             if (!threadId) {
-                logOpenAIRequest(shortUserId, 'creating_new_thread');
+                logInfo('OPENAI_REQUEST', 'Creating new thread', { shortUserId });
                 const thread = await openaiClient.beta.threads.create();
                 threadId = thread.id;
                 
                 saveThreadId(userJid, threadId, chatId, userName);
                 
-                logOpenAIRequest(shortUserId, 'thread_created');
+                logInfo('OPENAI_REQUEST', 'Thread created', { shortUserId, threadId });
                 logSuccess('THREAD_NEW', `Nuevo thread creado para ${shortUserId} (${userName})`, { 
                     threadId,
                     userJid: userJid,
@@ -988,7 +982,7 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             }
             
             // Agregar mensaje del usuario con contextos
-            logOpenAIRequest(shortUserId, 'adding_message');
+            logInfo('OPENAI_REQUEST', 'Adding message to thread', { shortUserId });
             
             const currentThreadInfo = threadPersistence.getThread(shortUserId);
             const timeContext = getCurrentTimeContext();
@@ -1008,15 +1002,15 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 threadPersistence.setThread(shortUserId, threadId, threadInfo.chatId, threadInfo.userName);
             }
             
-            logOpenAIRequest(shortUserId, 'message_added');
+            logInfo('OPENAI_REQUEST', 'Message added to thread', { shortUserId });
             
             // Crear y ejecutar run
-            logOpenAIRequest(shortUserId, 'creating_run');
+            logInfo('OPENAI_REQUEST', 'Creating run', { shortUserId });
             let run = await openaiClient.beta.threads.runs.create(threadId, {
                 assistant_id: ASSISTANT_ID
             });
             
-            logOpenAIRequest(shortUserId, 'run_started');
+            logInfo('OPENAI_REQUEST', 'Run started', { shortUserId, runId: run.id });
             
             // Esperar respuesta
             let attempts = 0;
@@ -1072,6 +1066,10 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                             shortUserId,
                             functionName,
                             args: functionArgs,
+                            argsDetail: {
+                                keys: Object.keys(functionArgs),
+                                values: functionArgs
+                            },
                             environment: config.environment
                         });
                         
@@ -1086,6 +1084,11 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                             shortUserId,
                             functionName,
                             resultType: typeof result,
+                            resultPreview: typeof result === 'string' ? 
+                                (result.length > 200 ? result.substring(0, 200) + '...' : result) : 
+                                JSON.stringify(result).substring(0, 200),
+                            resultLength: typeof result === 'string' ? result.length : JSON.stringify(result).length,
+                            hasError: result?.error ? true : false,
                             environment: config.environment
                         });
                         
@@ -1111,6 +1114,20 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                         });
                     }
                 }
+                
+                // Log detallado de los outputs antes de enviar
+                logInfo('FUNCTION_OUTPUTS_DETAIL', `Outputs de funciones listos para enviar a OpenAI`, {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    outputs: toolOutputs.map(output => ({
+                        tool_call_id: output.tool_call_id,
+                        outputLength: output.output.length,
+                        outputPreview: output.output.substring(0, 500),
+                        outputComplete: output.output
+                    })),
+                    environment: config.environment
+                });
                 
                 // Enviar resultados a OpenAI
                 try {
@@ -1359,7 +1376,7 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         const name = userName || 'Usuario';
         
         threadPersistence.setThread(clientPhone, threadId, fullChatId, name);
-        logThreadPersist(clientPhone, threadId, 'saved');
+        logInfo('THREAD_PERSIST', `Thread saved for ${clientPhone}`, { threadId });
         
         const stats = threadPersistence.getStats();
         logInfo('THREAD_STATE', 'Estado de threads actualizado', stats);
@@ -1534,7 +1551,7 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         // Limpiar buffer
         userMessageBuffers.delete(userId);
         userActivityTimers.delete(userId);
-        logBufferActivity(shortUserId, 'buffer_cleared');
+        logInfo('MESSAGE_BUFFER', `Buffer cleared for ${shortUserId}`, { shortUserId });
     }
 
     // --- Webhook Principal ---
