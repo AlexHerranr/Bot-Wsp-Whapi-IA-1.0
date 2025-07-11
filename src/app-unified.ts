@@ -26,12 +26,32 @@ import {
     logSuccess,
     logError,
     logWarning,
-    logDebug
+    logDebug,
+    // Nuevas funciones específicas por categoría
+    logMessageReceived,
+    logMessageProcess,
+    logWhatsAppSend,
+    logWhatsAppChunksComplete,
+    logOpenAIRequest,
+    logOpenAIResponse,
+    logFunctionCallingStart,
+    logFunctionExecuting,
+    logFunctionHandler,
+    logBeds24Request,
+    logBeds24ApiCall,
+    logBeds24ResponseDetail,
+    logBeds24Processing,
+    logThreadCreated,
+    logThreadPersist,
+    logThreadCleanup,
+    logServerStart,
+    logBotReady
 } from './utils/logging/index.js';
 import { threadPersistence, pendingMessagesPersistence } from './utils/persistence/index.js';
 
 // Importar sistema de monitoreo
 import { botDashboard } from './utils/monitoring/dashboard.js';
+import metricsRouter, { metricsCollector } from './routes/metrics.js';
 
 // --- Configuración Unificada ---
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? '';
@@ -93,6 +113,9 @@ const trackBotMessage = (messageId: string) => {
 // --- Inicialización de Express ---
 const app = express();
 app.use(express.json());
+
+// Registrar rutas de métricas
+app.use('/metrics', metricsRouter);
 
 // --- Logging de Configuración al Inicio ---
 console.log('\n🚀 Iniciando TeAlquilamos Bot...');
@@ -179,7 +202,7 @@ const server = app.listen(config.port, config.host, () => {
     console.log(`🚀 Servidor HTTP iniciado en ${config.host}:${config.port}`);
     console.log(`🔗 Webhook URL: ${config.webhookUrl}`);
     
-    logSuccess('SERVER_START', 'Servidor HTTP iniciado', { 
+    logServerStart('Servidor HTTP iniciado', { 
         host: config.host,
         port: config.port,
         environment: config.environment,
@@ -240,7 +263,7 @@ async function initializeBot() {
         // Marcar como inicializado
         isServerInitialized = true;
         console.log('✅ Bot completamente inicializado');
-        logSuccess('BOT_READY', 'Bot completamente inicializado y listo', {
+        logBotReady('Bot completamente inicializado y listo', {
             environment: config.environment,
             port: config.port,
             webhookUrl: config.webhookUrl
@@ -767,10 +790,12 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             // 🔧 ENVÍO ÚNICO O MÚLTIPLE SEGÚN DIVISIÓN
             if (chunks.length === 1) {
                 // Mensaje simple
-                logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
+                logWhatsAppSend('Enviando mensaje', { 
+                    userId: shortUserId,
                     chatId,
                     messageLength: sanitizedMessage.length,
                     preview: sanitizedMessage.substring(0, 100) + '...',
+                    chunks: 1,
                     environment: config.environment
                 });
                 
@@ -802,10 +827,11 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                         });
                     }
                     
-                    logSuccess('WHATSAPP_SEND', `Mensaje enviado exitosamente`, {
-                        shortUserId: shortUserId,
+                    logWhatsAppSend('Mensaje enviado exitosamente', {
+                        userId: shortUserId,
                         messageLength: sanitizedMessage.length,
                         messageId: result.message?.id,
+                        success: true,
                         environment: config.environment
                     });
                     return true;
@@ -877,10 +903,11 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     }
                 }
                 
-                logSuccess('WHATSAPP_CHUNKS_COMPLETE', `Todos los párrafos enviados`, {
-                    shortUserId: shortUserId,
+                logWhatsAppChunksComplete('Todos los párrafos enviados', {
+                    userId: shortUserId,
                     totalChunks: chunks.length,
                     originalLength: sanitizedMessage.length,
+                    duration: Date.now() - Date.now(), // Se puede mejorar con timestamp real
                     environment: config.environment
                 });
                 return true;
@@ -922,19 +949,20 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             );
             
             if (!threadId) {
-                logInfo('OPENAI_REQUEST', 'Creating new thread', { shortUserId });
+                logOpenAIRequest('Creating new thread', { userId: shortUserId, state: 'creating_thread' });
                 const thread = await openaiClient.beta.threads.create();
                 threadId = thread.id;
                 
                 saveThreadId(userJid, threadId, chatId, userName);
                 
-                logInfo('OPENAI_REQUEST', 'Thread created', { shortUserId, threadId });
-                logSuccess('THREAD_NEW', `Nuevo thread creado para ${shortUserId} (${userName})`, { 
+                logOpenAIResponse('Thread created', { userId: shortUserId, threadId, state: 'thread_created' });
+                logThreadCreated(`Nuevo thread creado para ${shortUserId} (${userName})`, { 
+                    userId: shortUserId,
                     threadId,
                     userJid: userJid,
-                    cleanedId: shortUserId,
                     chatId: chatId,
-                    userName: userName
+                    userName: userName,
+                    environment: config.environment
                 });
             } else {
                 logSuccess('THREAD_REUSE', `Reutilizando thread existente para ${shortUserId} (${userName || 'Usuario'})`, {
@@ -985,7 +1013,7 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             }
             
             // Agregar mensaje del usuario con contextos
-            logInfo('OPENAI_REQUEST', 'Adding message to thread', { shortUserId });
+            logOpenAIRequest('Adding message to thread', { userId: shortUserId, state: 'adding_message' });
             
             const currentThreadInfo = threadPersistence.getThread(shortUserId);
             const timeContext = getCurrentTimeContext();
@@ -1005,15 +1033,15 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                 threadPersistence.setThread(shortUserId, threadId, threadInfo.chatId, threadInfo.userName);
             }
             
-            logInfo('OPENAI_REQUEST', 'Message added to thread', { shortUserId });
+            logOpenAIResponse('Message added to thread', { userId: shortUserId, state: 'message_added' });
             
             // Crear y ejecutar run
-            logInfo('OPENAI_REQUEST', 'Creating run', { shortUserId });
+            logOpenAIRequest('Creating run', { userId: shortUserId, state: 'creating_run' });
             let run = await openaiClient.beta.threads.runs.create(threadId, {
                 assistant_id: ASSISTANT_ID
             });
             
-            logInfo('OPENAI_REQUEST', 'Run started', { shortUserId, runId: run.id });
+            logOpenAIResponse('Run started', { userId: shortUserId, runId: run.id, state: 'run_started' });
             
             // Esperar respuesta
             let attempts = 0;
@@ -1044,8 +1072,8 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     return sanitizeResponseForClient('Lo siento, hubo un problema procesando la consulta. Por favor intenta de nuevo.');
                 }
                 
-                logInfo('FUNCTION_CALLING_START', `OpenAI requiere ejecutar ${toolCalls.length} función(es)`, {
-                    shortUserId,
+                logFunctionCallingStart(`OpenAI requiere ejecutar ${toolCalls.length} función(es)`, {
+                    userId: shortUserId,
                     threadId,
                     runId: run.id,
                     toolCallsCount: toolCalls.length,
@@ -1065,14 +1093,11 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                         const functionName = toolCall.function.name;
                         const functionArgs = JSON.parse(toolCall.function.arguments);
                         
-                        logInfo('FUNCTION_EXECUTING', `Ejecutando función: ${functionName}`, {
-                            shortUserId,
+                        logFunctionExecuting(`Ejecutando función: ${functionName}`, {
+                            userId: shortUserId,
                             functionName,
-                            args: functionArgs,
-                            argsDetail: {
-                                keys: Object.keys(functionArgs),
-                                values: functionArgs
-                            },
+                            arguments: functionArgs,
+                            callId: toolCall.id,
                             environment: config.environment
                         });
                         
@@ -1512,13 +1537,13 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         
         const combinedMessage = buffer.messages.join('\n\n');
 
-        logInfo('MESSAGE_PROCESS', `Procesando mensajes agrupados`, {
-            userId,
-            shortUserId,
+        logMessageProcess('Procesando mensajes agrupados', {
+            userId: shortUserId,
             chatId: buffer.chatId,
             messageCount: buffer.messages.length,
             totalLength: combinedMessage.length,
             preview: combinedMessage.substring(0, 100) + '...',
+            userName: buffer.name,
             environment: config.environment
         });
 
@@ -1593,11 +1618,14 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             // Procesar cada mensaje
             for (const message of messages) {
                 if (config.enableDetailedLogs) {
-                    logInfo('MESSAGE_RECEIVED', 'Mensaje recibido', {
+                    logMessageReceived('Mensaje recibido', {
+                        userId: getShortUserId(message.from),
                         from: message.from,
                         type: message.type,
                         timestamp: message.timestamp,
-                        body: message.text?.body?.substring(0, 100) + '...'
+                        body: message.text?.body?.substring(0, 100) + '...',
+                        messageId: message.id,
+                        chatId: message.chat_id
                     });
                 }
                 

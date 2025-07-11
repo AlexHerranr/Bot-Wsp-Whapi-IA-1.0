@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { enhancedLog } from '../core/index.js';
+import { logThreadPersist, logThreadCleanup } from '../logging/index.js';
 
 interface ThreadRecord {
     threadId: string;
@@ -48,8 +49,11 @@ export class ThreadPersistenceManager {
                 // ARREGLO: Convertir array a Map correctamente
                 this.threads = new Map(parsed);
                 
-                enhancedLog('success', 'THREAD_PERSIST', 
-                    `${this.threads.size} threads cargados desde archivo`);
+                logThreadPersist(`${this.threads.size} threads cargados desde archivo`, {
+                    threadsCount: this.threads.size,
+                    source: 'file_load',
+                    file: this.THREADS_FILE
+                });
                 
                 // LOG DE DEBUG: Mostrar threads cargados
                 for (const [userId, record] of this.threads.entries()) {
@@ -150,8 +154,11 @@ export class ThreadPersistenceManager {
             // Guardar con formato legible
             fs.writeFileSync(this.THREADS_FILE, JSON.stringify(data, null, 2));
             
-            enhancedLog('success', 'THREAD_PERSIST', 
-                `${this.threads.size} threads guardados`);
+            logThreadPersist(`${this.threads.size} threads guardados`, {
+                threadsCount: this.threads.size,
+                source: 'save_operation',
+                file: this.THREADS_FILE
+            });
             
         } catch (error) {
             enhancedLog('error', 'THREAD_PERSIST', 
@@ -240,8 +247,13 @@ export class ThreadPersistenceManager {
         // Solo marcar cambios para auto-save optimizado
         this.markAsChanged();
         
-        enhancedLog('info', 'THREAD_PERSIST', 
-            `Thread ${existing ? 'actualizado' : 'creado'} para ${userId} (${record.userName}): ${threadId}`);
+        logThreadPersist(`Thread ${existing ? 'actualizado' : 'creado'} para ${userId}`, {
+            userId,
+            threadId,
+            userName: record.userName,
+            chatId: record.chatId,
+            operation: existing ? 'updated' : 'created'
+        });
     }
     
     // 🆕 Actualizar metadatos específicos del thread (labels, nombre, etc.)

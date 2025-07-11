@@ -10,12 +10,14 @@
  * 3. ☁️  CLOUD LOGS - Logs de producción en Cloud Run
  * 
  * 🎯 PARA IAs: Cada tipo tiene su propio archivo y documentación
+ * 
+ * ACTUALIZADO: Incluye todas las funciones de conveniencia para categorías específicas
  */
 
 // === IMPORTACIONES CENTRALIZADAS ===
 export * from './console-logger';  // Tipo 1: Logs limpios terminal
 export * from './file-logger';     // Tipo 2: Logs detallados locales
-export * from './cloud-logger';    // Tipo 3: Logs Cloud Run
+export * from './cloud-logger';    // Tipo 3: Logs Cloud Run (ACTUALIZADO)
 export * from './types';           // Tipos TypeScript compartidos
 
 // === CONFIGURACIÓN UNIFICADA ===
@@ -86,7 +88,7 @@ export function log(level: string, category: string, message: string, details?: 
     }
 }
 
-// === FUNCIONES DE CONVENIENCIA ===
+// === FUNCIONES DE CONVENIENCIA BÁSICAS ===
 export const logInfo = (category: string, message: string, details?: any) => 
     log('INFO', category, message, details);
 
@@ -114,7 +116,12 @@ export { detailedLog } from '../logger';
  * 3. Examina cada tipo específico:
  *    - ./console-logger.ts - Logs limpios terminal
  *    - ./file-logger.ts - Logs detallados locales
- *    - ./cloud-logger.ts - Logs Cloud Run
+ *    - ./cloud-logger.ts - Logs Cloud Run (ACTUALIZADO con todas las categorías)
  * 4. Consulta los READMEs en /logs/ para ejemplos
  * 5. Revisa /tools/log-tools/ para herramientas de análisis
+ * 
+ * NUEVAS FUNCIONES DE CONVENIENCIA:
+ * - Todas las funciones específicas por categoría están disponibles desde cloud-logger
+ * - Ejemplo: logMessageReceived(), logOpenAIRequest(), logBeds24Request(), etc.
+ * - Úsalas directamente o a través de la función log() principal
  */ 

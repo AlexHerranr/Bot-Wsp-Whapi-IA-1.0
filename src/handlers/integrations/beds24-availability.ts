@@ -4,7 +4,15 @@
 import { getBeds24Service } from '../../services/beds24/beds24.service';
 import { AvailabilityInfo, Beds24Error } from '../../services/beds24/beds24.types';
 import { getBeds24Config } from '../../config/integrations/beds24.config';
-import { logInfo, logError, logSuccess } from '../../utils/logging/index.js';
+import { 
+    logInfo, 
+    logError, 
+    logSuccess,
+    logBeds24Request,
+    logBeds24ApiCall,
+    logBeds24ResponseDetail,
+    logBeds24Processing
+} from '../../utils/logging/index.js';
 import axios from 'axios';
 
 // Interfaces para la lógica optimizada
@@ -81,11 +89,12 @@ async function getAvailabilityAndPricesOptimized(
     const dateRange = generateDateRange(startDate, endDate);
     const totalNights = dateRange.length;
     
-    logInfo('BEDS24_NIGHTS_CALCULATION', 'Calculando noches de estadía', {
+    logBeds24Processing('Calculando noches de estadía', {
         startDate,
         endDate,
         nightsRange: dateRange,
-        totalNights
+        totalNights,
+        dateCalculation: 'stay_nights_only'
     });
     
     // ✨ OPTIMIZACIÓN: Usar SOLO el endpoint calendar (ya incluye nombres reales)
@@ -99,13 +108,14 @@ async function getAvailabilityAndPricesOptimized(
     }
 
     // Logging optimizado de conexión
-    logInfo('BEDS24_API_CALL', 'Consulta optimizada a Beds24 (solo calendar)', {
+    logBeds24ApiCall('Consulta optimizada a Beds24 (solo calendar)', {
         success: calendarData.success,
         totalProperties: calendarData.data?.length || 0,
         dateRange: `${startDate} - ${endDate}`,
         nightsCalculated: totalNights,
         optimization: 'single-endpoint',
         endpoint: 'inventory/rooms/calendar',
+        method: 'GET',
         parameters: {
             startDate,
             endDate,
@@ -119,7 +129,7 @@ async function getAvailabilityAndPricesOptimized(
     });
 
     // Log detallado de la respuesta cruda para análisis
-    logInfo('BEDS24_RESPONSE_RAW', 'Respuesta cruda de Beds24 API', {
+    logBeds24ResponseDetail('Respuesta cruda de Beds24 API', {
         firstRoom: calendarData.data?.[0] ? {
             propertyId: calendarData.data[0].propertyId,
             roomId: calendarData.data[0].roomId,
@@ -128,7 +138,9 @@ async function getAvailabilityAndPricesOptimized(
             sampleEntry: calendarData.data[0].calendar?.[0]
         } : null,
         totalRooms: calendarData.data?.length || 0,
-        responseStructure: calendarData.data?.length ? Object.keys(calendarData.data[0]) : []
+        responseStructure: calendarData.data?.length ? Object.keys(calendarData.data[0]) : [],
+        success: calendarData.success,
+        responseSize: JSON.stringify(calendarData).length
     });
 
     // Mapear los datos de Beds24 a las noches reales de estadía
@@ -182,10 +194,11 @@ async function getAvailabilityAndPricesOptimized(
     }
     
     // Logging detallado del procesamiento
-    logInfo('BEDS24_PROCESSING', 'Datos procesados correctamente', {
+    logBeds24Processing('Datos procesados correctamente', {
         totalProperties: Object.keys(propertyData).length,
         nightsRange: dateRange,
         totalNights,
+        processingStage: 'availability_and_prices_mapped',
         propertiesDetail: Object.values(propertyData).map(prop => ({
             propertyId: prop.propertyId,
             propertyName: prop.propertyName,
@@ -781,7 +794,7 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
     
     const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     
-    logInfo('BEDS24_REQUEST', 'Procesando consulta de disponibilidad', {
+    logBeds24Request('Procesando consulta de disponibilidad', {
         startDate,
         endDate,
         nights,
@@ -789,7 +802,8 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
         roomId,
         maxTransfers: maxTransfersLimit,
         hasSpecificProperty: propertyId !== null,
-        hasSpecificRoom: roomId !== null
+        hasSpecificRoom: roomId !== null,
+        requestType: 'availability_check'
     });
     
     try {

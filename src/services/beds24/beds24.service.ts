@@ -9,7 +9,16 @@ import {
     Beds24Config,
     Beds24Error 
 } from './beds24.types';
-import { logInfo, logError, logDebug, logSuccess } from '../../utils/logging/index.js';
+import { 
+    logInfo, 
+    logError, 
+    logDebug, 
+    logSuccess,
+    logBeds24Request,
+    logBeds24ApiCall,
+    logBeds24ResponseDetail,
+    logBeds24Processing
+} from '../../utils/logging/index.js';
 
 export class Beds24Service {
     private apiClient: AxiosInstance;
@@ -32,8 +41,11 @@ export class Beds24Service {
         // Interceptor para logs de requests
         this.apiClient.interceptors.request.use(
             (config) => {
-                logDebug('BEDS24_API', `Request: ${config.method?.toUpperCase()} ${config.url}`, {
-                    params: config.params
+                logBeds24ApiCall(`${config.method?.toUpperCase()} ${config.url}`, {
+                    method: config.method?.toUpperCase(),
+                    url: config.url,
+                    params: config.params,
+                    endpoint: config.url?.split('?')[0]
                 });
                 return config;
             },
@@ -46,9 +58,12 @@ export class Beds24Service {
         // Interceptor para logs de responses
         this.apiClient.interceptors.response.use(
             (response) => {
-                logDebug('BEDS24_API', `Response: ${response.status}`, {
+                logBeds24ResponseDetail(`Response: ${response.status}`, {
+                    status: response.status,
                     url: response.config.url,
-                    dataCount: response.data?.data?.length || 0
+                    dataCount: response.data?.data?.length || 0,
+                    success: response.data?.success,
+                    responseLength: JSON.stringify(response.data).length
                 });
                 return response;
             },
@@ -75,8 +90,12 @@ export class Beds24Service {
         const startTime = Date.now();
         
         try {
-            logInfo('BEDS24_AVAILABILITY', 'Consultando disponibilidad en tiempo real', {
-                query
+            logBeds24Request('Consultando disponibilidad en tiempo real', {
+                startDate: query.startDate,
+                endDate: query.endDate,
+                propertyId: query.propertyId,
+                roomId: query.roomId,
+                dateRange: `${query.startDate} to ${query.endDate}`
             });
 
             const response: AxiosResponse<Beds24ApiResponse<RoomAvailability>> = 
@@ -97,13 +116,23 @@ export class Beds24Service {
             }
 
             const availability = response.data.data || [];
+            
+            logBeds24Processing('Procesando datos de disponibilidad', {
+                rawDataCount: availability.length,
+                startDate: query.startDate,
+                endDate: query.endDate,
+                processingStarted: true
+            });
+            
             const transformedData = this.transformAvailabilityData(availability, query);
 
             const duration = Date.now() - startTime;
-            logSuccess('BEDS24_AVAILABILITY', 'Disponibilidad obtenida exitosamente', {
+            logBeds24Processing('Disponibilidad procesada exitosamente', {
                 roomsCount: availability.length,
+                transformedCount: transformedData.length,
                 duration: `${duration}ms`,
-                dateRange: `${query.startDate} a ${query.endDate}`
+                dateRange: `${query.startDate} a ${query.endDate}`,
+                success: true
             });
 
             return transformedData;
@@ -133,8 +162,10 @@ export class Beds24Service {
      */
     async getProperties(propertyIds?: number[]): Promise<Property[]> {
         try {
-            logInfo('BEDS24_PROPERTIES', 'Obteniendo información de propiedades', {
-                propertyIds: propertyIds || 'todas'
+            logBeds24Request('Obteniendo información de propiedades', {
+                propertyIds: propertyIds || 'todas',
+                requestType: 'properties',
+                hasFilters: !!propertyIds
             });
 
             const response: AxiosResponse<Beds24ApiResponse<Property>> = 
@@ -166,9 +197,12 @@ export class Beds24Service {
      */
     async getRooms(roomIds?: number[], propertyIds?: number[]): Promise<Room[]> {
         try {
-            logInfo('BEDS24_ROOMS', 'Obteniendo información de habitaciones', {
+            logBeds24Request('Obteniendo información de habitaciones', {
                 roomIds: roomIds || 'todas',
-                propertyIds: propertyIds || 'todas'
+                propertyIds: propertyIds || 'todas',
+                requestType: 'rooms',
+                hasRoomFilters: !!roomIds,
+                hasPropertyFilters: !!propertyIds
             });
 
             const response: AxiosResponse<Beds24ApiResponse<Room>> = 

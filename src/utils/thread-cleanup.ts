@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import { threadPersistence } from './persistence/index.js';
+import { logThreadCleanup } from './logging/index.js';
 
 dotenv.config();
 
@@ -56,6 +57,14 @@ export const cleanupAllThreads = async () => {
         console.log(`   - Errores: ${errors}`);
         console.log(`   - Storage local limpio: ✅`);
         
+        logThreadCleanup('Limpieza completa de threads ejecutada', {
+            operation: 'cleanup_all',
+            threadsFound: threadCount,
+            threadsDeleted: deletedCount,
+            errors: errors,
+            success: true
+        });
+        
         return {
             success: true,
             deleted: deletedCount,
@@ -93,6 +102,14 @@ export const cleanupSpecificThread = async (userId) => {
         threadPersistence.removeThread(userId);
         
         console.log(`✅ Thread ${threadInfo.threadId} eliminado exitosamente`);
+        
+        logThreadCleanup('Thread específico eliminado', {
+            operation: 'cleanup_specific',
+            userId,
+            threadId: threadInfo.threadId,
+            userName: threadInfo.userName,
+            success: true
+        });
         
         return {
             success: true,

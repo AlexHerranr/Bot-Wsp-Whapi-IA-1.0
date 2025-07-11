@@ -124,9 +124,38 @@ class Colors:
 # ============================================================================
 
 class EnhancedPatterns:
-    """Patrones mejorados para capturar información técnica completa"""
+    """Patrones mejorados para capturar información técnica completa - ACTUALIZADO CON NUEVAS CATEGORÍAS"""
     
-    # FUNCTION CALLING PATTERNS - Captura argumentos completos
+    # ✨ NUEVAS CATEGORÍAS DE LOGGING - Según README actualizado
+    NEW_CATEGORY_PATTERNS = {
+        # Mensajes y Comunicación
+        'message_received': r'\[MESSAGE_RECEIVED\].*Mensaje recibido.*userId["\']:\s*["\']([^"\']+)["\']',
+        'message_process': r'\[MESSAGE_PROCESS\].*Procesando mensajes agrupados.*messageCount["\']:\s*(\d+)',
+        'whatsapp_send': r'\[WHATSAPP_SEND\].*Enviando.*userId["\']:\s*["\']([^"\']+)["\']',
+        'whatsapp_chunks_complete': r'\[WHATSAPP_CHUNKS_COMPLETE\].*párrafos enviados.*totalChunks["\']:\s*(\d+)',
+        
+        # OpenAI y Funciones  
+        'openai_request': r'\[OPENAI_REQUEST\].*userId["\']:\s*["\']([^"\']+)["\'].*state["\']:\s*["\']([^"\']+)["\']',
+        'openai_response': r'\[OPENAI_RESPONSE\].*userId["\']:\s*["\']([^"\']+)["\'].*threadId["\']:\s*["\']([^"\']+)["\']',
+        'function_calling_start': r'\[FUNCTION_CALLING_START\].*userId["\']:\s*["\']([^"\']+)["\'].*toolCallsCount["\']:\s*(\d+)',
+        'function_executing': r'\[FUNCTION_EXECUTING\].*userId["\']:\s*["\']([^"\']+)["\'].*functionName["\']:\s*["\']([^"\']+)["\']',
+        'function_handler': r'\[FUNCTION_HANDLER\].*función.*([a-zA-Z_][a-zA-Z0-9_]*)',
+        
+        # Integración Beds24
+        'beds24_request': r'\[BEDS24_REQUEST\].*startDate["\']:\s*["\']([^"\']+)["\'].*endDate["\']:\s*["\']([^"\']+)["\']',
+        'beds24_api_call': r'\[BEDS24_API_CALL\].*method["\']:\s*["\']([^"\']+)["\'].*endpoint["\']:\s*["\']([^"\']+)["\']',
+        'beds24_response_detail': r'\[BEDS24_RESPONSE_DETAIL\].*status["\']:\s*(\d+).*dataCount["\']:\s*(\d+)',
+        'beds24_processing': r'\[BEDS24_PROCESSING\].*processingStage["\']:\s*["\']([^"\']+)["\']',
+        
+        # Sistema y Threads
+        'thread_created': r'\[THREAD_CREATED\].*userId["\']:\s*["\']([^"\']+)["\'].*threadId["\']:\s*["\']([^"\']+)["\']',
+        'thread_persist': r'\[THREAD_PERSIST\].*threadsCount["\']:\s*(\d+).*source["\']:\s*["\']([^"\']+)["\']',
+        'thread_cleanup': r'\[THREAD_CLEANUP\].*operation["\']:\s*["\']([^"\']+)["\'].*success["\']:\s*(true|false)',
+        'server_start': r'\[SERVER_START\].*host["\']:\s*["\']([^"\']+)["\'].*port["\']:\s*(\d+)',
+        'bot_ready': r'\[BOT_READY\].*environment["\']:\s*["\']([^"\']+)["\']',
+    }
+    
+    # FUNCTION CALLING PATTERNS - Captura argumentos completos (ACTUALIZADO)
     FUNCTION_CALL_PATTERNS = {
         'function_start': r'FUNCTION_CALLING_START.*OpenAI requiere ejecutar.*función.*"([^"]+)"',
         'function_executing': r'Ejecutando función[:\s]*([a-zA-Z_][a-zA-Z0-9_]*)',
@@ -134,10 +163,14 @@ class EnhancedPatterns:
         'function_complete': r'FUNCTION_CALLING_COMPLETE.*función\s*([a-zA-Z_][a-zA-Z0-9_]*)',
         'function_result': r'FUNCTION_RESULT.*"result":\s*"([^"]*)"',
         'function_output': r'OPENAI_FUNCTION_OUTPUT.*"([^"]*)"',
-        # Patrones específicos del manual
+        # Patrones específicos del manual ACTUALIZADOS
         'function_handler': r'FUNCTION_HANDLER.*Ejecutando función:\s*([a-zA-Z_][a-zA-Z0-9_]*)',
         'function_args_detail': r'FUNCTION_HANDLER.*Argumentos:\s*(\{.*?\})',
         'function_executed': r'FUNCTION_EXECUTED.*función\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*ejecutada exitosamente',
+        # NUEVOS patrones para categorías específicas
+        'new_function_calling_start': r'\[FUNCTION_CALLING_START\].*OpenAI requiere ejecutar.*función',
+        'new_function_executing': r'\[FUNCTION_EXECUTING\].*Ejecutando función.*functionName["\']:\s*["\']([^"\']+)["\']',
+        'new_function_handler': r'\[FUNCTION_HANDLER\].*función.*([a-zA-Z_][a-zA-Z0-9_]*)',
     }
     
     # BEDS24 PATTERNS - Captura respuestas completas
@@ -267,12 +300,123 @@ class LogEntry:
             parsed['user_id'] = user_match.group(1)
         
         # ============================================================================
-        # EXTRACCIÓN TÉCNICA MEJORADA - FUNCTION CALLING COMPLETO
+        # ✨ NUEVAS CATEGORÍAS DE LOGGING - PARSING ACTUALIZADO
         # ============================================================================
         
-        # FUNCTION CALLING - Argumentos completos
-        for pattern_name, pattern in EnhancedPatterns.FUNCTION_CALL_PATTERNS.items():
+        # NUEVAS CATEGORÍAS - Parsing específico
+        for pattern_name, pattern in EnhancedPatterns.NEW_CATEGORY_PATTERNS.items():
             match = re.search(pattern, clean_message, re.IGNORECASE | re.DOTALL)
+            if match:
+                parsed['log_category'] = pattern_name.upper()
+                parsed['technical_details']['new_category'] = True
+                
+                # Parsing específico por categoría
+                if pattern_name == 'message_received':
+                    parsed['type'] = 'message_received'
+                    parsed['user_id'] = match.group(1)
+                    parsed['technical_details']['category_type'] = 'messaging'
+                
+                elif pattern_name == 'message_process':
+                    parsed['type'] = 'message_process'
+                    parsed['technical_details']['message_count'] = int(match.group(1))
+                    parsed['technical_details']['category_type'] = 'messaging'
+                
+                elif pattern_name == 'whatsapp_send':
+                    parsed['type'] = 'whatsapp_send'
+                    parsed['user_id'] = match.group(1)
+                    parsed['technical_details']['category_type'] = 'messaging'
+                
+                elif pattern_name == 'whatsapp_chunks_complete':
+                    parsed['type'] = 'whatsapp_chunks_complete'
+                    parsed['technical_details']['total_chunks'] = int(match.group(1))
+                    parsed['technical_details']['category_type'] = 'messaging'
+                
+                elif pattern_name == 'openai_request':
+                    parsed['type'] = 'openai_request'
+                    parsed['user_id'] = match.group(1)
+                    parsed['openai_state'] = match.group(2)
+                    parsed['technical_details']['category_type'] = 'ai_processing'
+                
+                elif pattern_name == 'openai_response':
+                    parsed['type'] = 'openai_response'
+                    parsed['user_id'] = match.group(1)
+                    parsed['openai_thread_id'] = match.group(2)
+                    parsed['technical_details']['category_type'] = 'ai_processing'
+                
+                elif pattern_name == 'function_calling_start':
+                    parsed['type'] = 'function_calling_start'
+                    parsed['user_id'] = match.group(1)
+                    parsed['technical_details']['tool_calls_count'] = int(match.group(2))
+                    parsed['technical_details']['category_type'] = 'function_calling'
+                
+                elif pattern_name == 'function_executing':
+                    parsed['type'] = 'function_executing'
+                    parsed['user_id'] = match.group(1)
+                    parsed['function_name'] = match.group(2)
+                    parsed['technical_details']['category_type'] = 'function_calling'
+                
+                elif pattern_name == 'beds24_request':
+                    parsed['type'] = 'beds24_request'
+                    parsed['technical_details']['start_date'] = match.group(1)
+                    parsed['technical_details']['end_date'] = match.group(2)
+                    parsed['technical_details']['category_type'] = 'beds24_integration'
+                
+                elif pattern_name == 'beds24_api_call':
+                    parsed['type'] = 'beds24_api_call'
+                    parsed['technical_details']['method'] = match.group(1)
+                    parsed['technical_details']['endpoint'] = match.group(2)
+                    parsed['technical_details']['category_type'] = 'beds24_integration'
+                
+                elif pattern_name == 'beds24_response_detail':
+                    parsed['type'] = 'beds24_response_detail'
+                    parsed['technical_details']['status'] = int(match.group(1))
+                    parsed['technical_details']['data_count'] = int(match.group(2))
+                    parsed['technical_details']['category_type'] = 'beds24_integration'
+                
+                elif pattern_name == 'beds24_processing':
+                    parsed['type'] = 'beds24_processing'
+                    parsed['technical_details']['processing_stage'] = match.group(1)
+                    parsed['technical_details']['category_type'] = 'beds24_integration'
+                
+                elif pattern_name == 'thread_created':
+                    parsed['type'] = 'thread_created'
+                    parsed['user_id'] = match.group(1)
+                    parsed['openai_thread_id'] = match.group(2)
+                    parsed['technical_details']['category_type'] = 'thread_management'
+                
+                elif pattern_name == 'thread_persist':
+                    parsed['type'] = 'thread_persist'
+                    parsed['technical_details']['threads_count'] = int(match.group(1))
+                    parsed['technical_details']['source'] = match.group(2)
+                    parsed['technical_details']['category_type'] = 'thread_management'
+                
+                elif pattern_name == 'thread_cleanup':
+                    parsed['type'] = 'thread_cleanup'
+                    parsed['technical_details']['operation'] = match.group(1)
+                    parsed['technical_details']['success'] = match.group(2) == 'true'
+                    parsed['technical_details']['category_type'] = 'thread_management'
+                
+                elif pattern_name == 'server_start':
+                    parsed['type'] = 'server_start'
+                    parsed['technical_details']['host'] = match.group(1)
+                    parsed['technical_details']['port'] = int(match.group(2))
+                    parsed['technical_details']['category_type'] = 'system'
+                
+                elif pattern_name == 'bot_ready':
+                    parsed['type'] = 'bot_ready'
+                    parsed['technical_details']['environment'] = match.group(1)
+                    parsed['technical_details']['category_type'] = 'system'
+                
+                break  # Solo procesar la primera categoría que coincida
+        
+        # ============================================================================
+        # EXTRACCIÓN TÉCNICA MEJORADA - FUNCTION CALLING COMPLETO (FALLBACK)
+        # ============================================================================
+        
+                 # FUNCTION CALLING - Argumentos completos (solo si no se detectó nueva categoría)
+         if parsed['type'] == 'unknown':
+             for pattern_name, pattern in EnhancedPatterns.FUNCTION_CALL_PATTERNS.items():
+                 match = re.search(pattern, clean_message, re.IGNORECASE | re.DOTALL)
             if match:
                 parsed['type'] = 'function_calling'
                 parsed['log_category'] = 'FUNCTION_CALLING'

@@ -1,6 +1,6 @@
 # Implementaciones Pausadas - Sistema de Testing
 
-## 🚀 Inicio Rápido
+c 🚀 Inicio Rápido
 
 ### Para Pausar el Buffer (Velocidad Máxima)
 ```bash
