@@ -20,7 +20,8 @@
     "deploy:auto": "npm run build && gcloud run deploy bot-wsp-whapi-ia --source . --region northamerica-northeast1 --allow-unauthenticated",
     "health-check": "node -e \"require('http').get('http://localhost:8080/health', (res) => { console.log('Status:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1) })\"",
     "health-check:local": "node -e \"require('http').get('http://localhost:3008/health', (res) => { console.log('Status:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1) })\"",
-    "config": "node -e \"console.log('Environment Config:'); console.log(require('./src/config/environment.js').config);\""
+    "config": "node -e \"console.log('Environment Config:'); console.log(require('./src/config/environment.js').config);\"",
+    "cloud:logs": "python tools/log-tools/cloud-parser/parse_bot_logs.py --sessions 10 --hours 1"
   },
   "keywords": [
     "whatsapp",

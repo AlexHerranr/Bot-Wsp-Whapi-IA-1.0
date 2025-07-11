@@ -9,9 +9,61 @@
  */
 
 import "dotenv/config";
-import express from 'express';
+
+/**
+ * ⛔️ --- MANEJADORES DE ERRORES FATALES --- ⛔️
+ * Capturan errores no manejados que de otro modo causarían un cierre silencioso.
+ * Esto es CRÍTICO para diagnosticar reinicios inesperados en producción.
+ * Se colocan al inicio de todo para garantizar que se registren antes que cualquier otro código.
+ */
+process.on('uncaughtException', (error, origin) => {
+    const crashReport = {
+        level: 'CRITICAL',
+        category: 'SYSTEM_CRASH',
+        message: `⛔ Excepción no capturada que causa el cierre: ${error.message}`,
+        details: {
+            error: {
+                message: error.message,
+                stack: error.stack
+            },
+            origin: origin
+        }
+    };
+    console.error(JSON.stringify(crashReport, null, 2));
+
+    // Forzar el flush de logs antes de salir. Crítico para Cloud Run.
+    // Damos 1 segundo para que el log se envíe.
+    setTimeout(() => {
+        process.exit(1);
+    }, 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    // Si 'reason' es un objeto de error, lo manejamos. Si no, lo envolvemos.
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+
+    const crashReport = {
+        level: 'CRITICAL',
+        category: 'SYSTEM_CRASH',
+        message: `⛔ Rechazo de promesa no manejado que causa el cierre: ${error.message}`,
+        details: {
+            error: {
+                message: error.message,
+                stack: error.stack
+            },
+            promise: promise
+        }
+    };
+    console.error(JSON.stringify(crashReport, null, 2));
+
+    // Forzar el flush de logs antes de salir.
+    setTimeout(() => {
+        process.exit(1);
+    }, 1000);
+});
+
+import express, { Request, Response } from 'express';
 import OpenAI from 'openai';
-import fs from 'fs';
 
 // Importar sistema de configuración unificada
 import { 
@@ -370,12 +422,15 @@ function setupWebhooks() {
     };
 
     // Colores para logs de consola
+    // Desactivar colores cuando se ejecuta en Cloud Run (K_SERVICE definido)
+    const COLORS_ENABLED = !process.env.K_SERVICE;
+    const ansi = (code: string) => (COLORS_ENABLED ? code : '');
     const LOG_COLORS = {
-        USER: '\x1b[36m',    // Cyan
-        BOT: '\x1b[32m',     // Green
-        AGENT: '\x1b[33m',   // Yellow
-        TIMESTAMP: '\x1b[94m', // Light Blue
-        RESET: '\x1b[0m'     // Reset
+        USER: ansi('\x1b[36m'),    // Cyan
+        BOT: ansi('\x1b[32m'),     // Green
+        AGENT: ansi('\x1b[33m'),   // Yellow
+        TIMESTAMP: ansi('\x1b[94m'), // Light Blue
+        RESET: ansi('\x1b[0m')     // Reset
     };
 
     // --- Función de seguridad para prevenir filtrado de contexto interno ---

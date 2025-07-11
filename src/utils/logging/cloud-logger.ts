@@ -4,7 +4,7 @@
  * Logs estructurados para Google Cloud Run que van a Google Cloud Console.
  * Optimizados para ser procesados por el parser de logs.
  * 
- * ACTUALIZADO: Implementa TODAS las categorías del README
+ * ACTUALIZADO: Implementa sistema de normalización de categorías
  */
 
 import { LogLevel, LogEntry } from './types';
@@ -12,62 +12,12 @@ import { shouldLog, applyContextualFilters, checkUserSpecificFilters, LogFilterM
 import { LogAggregator } from './log-aggregator';
 import { sanitizeDetails as sanitizeData, containsSensitiveData, SanitizationMetrics } from './data-sanitizer';
 import { globalRateLimiter } from './rate-limiter';
-
-// ✨ VALIDACIÓN ESTRICTA CON SET (MEJORA CRÍTICA)
-const VALID_CATEGORIES_SET = new Set([
-    // Mensajes y Comunicación
-    'MESSAGE_RECEIVED',
-    'MESSAGE_PROCESS', 
-    'WHATSAPP_SEND',
-    'WHATSAPP_CHUNKS_COMPLETE',
-    
-    // OpenAI y Funciones
-    'OPENAI_REQUEST',
-    'OPENAI_RESPONSE',
-    'OPENAI_RUN_COMPLETED',
-    'FUNCTION_CALLING_START',
-    'FUNCTION_EXECUTING',
-    'FUNCTION_HANDLER',
-    
-    // Integración Beds24
-    'BEDS24_REQUEST',
-    'BEDS24_API_CALL',
-    'BEDS24_RESPONSE_DETAIL',
-    'BEDS24_PROCESSING',
-    
-    // Sistema y Threads
-    'THREAD_CREATED',
-    'THREAD_PERSIST',
-    'THREAD_CLEANUP',
-    'THREAD_REUSE',
-    'SERVER_START',
-    'BOT_READY',
-    
-    // Sistema Interno
-    'WEBHOOK',
-    'BOT_MESSAGE_TRACKED',
-    'PENDING_MESSAGE_REMOVED',
-    'RUN_QUEUE',
-    'CONTEXT_LABELS',
-    
-    // 🚨 CATEGORÍAS CRÍTICAS AGREGADAS (FIX REINICIOS)
-    'CONTACT_API',
-    'CONTACT_API_DETAILED',
-    'BUFFER_TIMER_RESET',
-    'THREAD_STATE',
-    'BEDS24_DEBUG_OUTPUT',
-    'OPENAI_FUNCTION_OUTPUT',
-    'WHATSAPP_CHUNKS',
-    'AVAILABILITY_HANDLER',
-    'USER_DEBUG',
-    'MESSAGE_BUFFER',
-    'FUNCTION_SUBMITTED',
-    
-    // Errores y Warnings
-    'ERROR',
-    'WARNING',
-    'SUCCESS'
-]);
+import { 
+    normalizeCategory, 
+    validateAndWarnCategory, 
+    VALID_CATEGORIES_SET,
+    getCategoryMappingStats 
+} from './category-mapper';
 
 // Array para compatibilidad con tipos
 const VALID_CATEGORIES = Array.from(VALID_CATEGORIES_SET);
@@ -89,12 +39,6 @@ process.on('SIGTERM', () => {
     process.exit(0);
 });
 
-/**
- * 🎯 FUNCIÓN PRINCIPAL CLOUD LOG - MEJORADA
- * 
- * Emite logs estructurados para Google Cloud Console con formato JSON optimizado.
- * Implementa TODAS las categorías especificadas en el README.
- */
 // ✨ MÉTRICAS DE PERFORMANCE DEL SISTEMA DE LOGGING
 interface LoggingMetrics {
     droppedLogs: number;
@@ -103,6 +47,7 @@ interface LoggingMetrics {
     totalLogs: number;
     sanitizedLogs: number;
     rateLimitedLogs: number;
+    categoriesNormalized: number;
 }
 
 const loggingMetrics: LoggingMetrics = {
@@ -111,7 +56,8 @@ const loggingMetrics: LoggingMetrics = {
     failedLogs: 0,
     totalLogs: 0,
     sanitizedLogs: 0,
-    rateLimitedLogs: 0
+    rateLimitedLogs: 0,
+    categoriesNormalized: 0
 };
 
 // ✨ CIRCUIT BREAKER PARA FALLOS
@@ -123,24 +69,12 @@ const DISABLE_DURATION = 30000; // 30 segundos
 // ✨ FEATURE FLAG PARA ROLLBACK
 const USE_LEGACY_LOGGING = process.env.USE_LEGACY_LOGGING === 'true';
 
-// ✨ CACHE DE WARNINGS PARA CATEGORÍAS INVÁLIDAS
-const invalidCategoryWarnings = new Set<string>();
-
-// ✨ MAPEO DE CATEGORÍAS OBSOLETAS A VÁLIDAS
-const CATEGORY_MAPPING: Record<string, string> = {
-    'USER_DEBUG': 'DEBUG',
-    'BEDS24_DEBUG_OUTPUT': 'BEDS24_RESPONSE_DETAIL',
-    'THREAD_STATE': 'THREAD_OPERATION',
-    'MESSAGE_BUFFER': 'MESSAGE_PROCESS',
-    'WHATSAPP_CHUNKS': 'WHATSAPP_CHUNKS_COMPLETE',
-    'CONTACT_API': 'CONTACT_API',  // Mantener como está
-    'CONTACT_API_DETAILED': 'CONTACT_API_DETAILED',  // Mantener como está
-    'BUFFER_TIMER_RESET': 'BUFFER_TIMER_RESET',  // Mantener como está
-    'OPENAI_FUNCTION_OUTPUT': 'OPENAI_FUNCTION_OUTPUT',  // Mantener como está
-    'AVAILABILITY_HANDLER': 'AVAILABILITY_HANDLER',  // Mantener como está
-    'FUNCTION_SUBMITTED': 'FUNCTION_SUBMITTED'  // Mantener como está
-};
-
+/**
+ * 🎯 FUNCIÓN PRINCIPAL CLOUD LOG - MEJORADA CON NORMALIZACIÓN
+ * 
+ * Emite logs estructurados para Google Cloud Console con formato JSON optimizado.
+ * Implementa normalización automática de categorías.
+ */
 export function cloudLog(level: LogLevel, category: string, message: string, details?: any): void {
     const startTime = Date.now();
     
@@ -161,31 +95,20 @@ export function cloudLog(level: LogLevel, category: string, message: string, det
         LogFilterMetrics.recordTotal();
         loggingMetrics.totalLogs++;
         
-        // ✨ VALIDACIÓN MEJORADA CON MAPEO DE CATEGORÍAS
-        if (!VALID_CATEGORIES_SET.has(category)) {
-            // Intentar mapear categoría obsoleta a válida
-            const mappedCategory = CATEGORY_MAPPING[category];
-            if (mappedCategory && VALID_CATEGORIES_SET.has(mappedCategory)) {
-                // Solo mostrar warning una vez por categoría mapeada
-                if (!invalidCategoryWarnings.has(category)) {
-                    console.warn(`🔄 CATEGORY MAPPED: ${category} → ${mappedCategory}`);
-                    invalidCategoryWarnings.add(category);
-                }
-                category = mappedCategory;
-            } else {
-                // Solo mostrar warning una vez por categoría inválida para evitar spam
-                if (!invalidCategoryWarnings.has(category)) {
-                    console.warn(`⚠️ INVALID CATEGORY: ${category}. Continuing with original category for compatibility.`);
-                    console.warn(`   Valid categories: ${Array.from(VALID_CATEGORIES_SET).join(', ')}`);
-                    invalidCategoryWarnings.add(category);
-                }
-                
-                // En desarrollo, mostrar error detallado pero no fallar
-                if (process.env.NODE_ENV === 'development') {
-                    console.warn(`   📍 This log will still be processed but should be updated to use a valid category.`);
-                }
-            }
+        // ✨ NORMALIZACIÓN DE CATEGORÍAS - NUEVA FUNCIONALIDAD
+        const originalCategory = category;
+        const normalizedCategory = normalizeCategory(category);
+        
+        // Validar y mostrar warning si es necesario (solo una vez por categoría)
+        validateAndWarnCategory(originalCategory, normalizedCategory);
+        
+        // Actualizar métricas si se normalizó
+        if (originalCategory !== normalizedCategory) {
+            loggingMetrics.categoriesNormalized++;
         }
+        
+        // Usar categoría normalizada
+        category = normalizedCategory;
         
         // Determinar entorno
         const environment = process.env.K_SERVICE ? 'production' : 'development';
@@ -269,7 +192,9 @@ export function cloudLog(level: LogLevel, category: string, message: string, det
         category,
         message,
             details: sanitizedDetails,
-            environment
+            environment,
+            // Agregar información de normalización si aplica
+            ...(originalCategory !== category && { originalCategory })
         };
         
         // ✨ VALIDACIÓN DE TAMAÑO - Google Cloud Logging límite 256KB
@@ -371,9 +296,6 @@ function handleLoggingError(error: any, level: LogLevel, category: string, messa
             console.error('LOGGING_ERROR:', backupEntry);
         }
         
-        // TODO: Implementar guardado en archivo local para backup
-        // saveToLocalBuffer(backupEntry);
-        
     } catch (backupError) {
         console.error('CRITICAL: Backup logging also failed', backupError);
     }
@@ -386,12 +308,14 @@ export function getLoggingMetrics(): LoggingMetrics & {
     rateLimiterStats: any; 
     sanitizationStats: any;
     filterStats: any;
+    categoryMappingStats: any;
 } {
     return {
         ...loggingMetrics,
         rateLimiterStats: globalRateLimiter.getStats(),
         sanitizationStats: SanitizationMetrics.getStats(),
-        filterStats: LogFilterMetrics.getStats()
+        filterStats: LogFilterMetrics.getStats(),
+        categoryMappingStats: getCategoryMappingStats()
     };
 }
 
@@ -405,6 +329,7 @@ export function resetLoggingMetrics(): void {
     loggingMetrics.totalLogs = 0;
     loggingMetrics.sanitizedLogs = 0;
     loggingMetrics.rateLimitedLogs = 0;
+    loggingMetrics.categoriesNormalized = 0;
     
     globalRateLimiter.reset();
     SanitizationMetrics.reset();
@@ -443,141 +368,171 @@ function sanitizeDetails(details: any): any {
 }
 
 /**
- * 🏗️ FORMATEAR ENTRADA PARA GOOGLE CLOUD LOGGING - OPTIMIZADO
+ * 🏗️ FORMATEAR ENTRADA PARA GOOGLE CLOUD LOGGING - VERSIÓN MEJORADA
  * 
- * Convierte LogEntry en formato JSON estructurado optimizado para Google Cloud.
- * MEJORAS: Labels mejorados, jsonPayload estructurado, resource metadata completo.
+ * Convierte LogEntry en formato JSON estructurado y limpio para Google Cloud.
+ * MEJORAS: Menos verboso, más estructurado, información útil concentrada.
  */
 function formatGoogleCloudLogEntry(entry: LogEntry): string {
-    const { timestamp, level, category, message, details } = entry;
+    const { timestamp, level, category, message, details, originalCategory } = entry;
     
-    // Extraer información contextual
+    // Extraer información contextual básica
     const userId = details?.userId || details?.shortUserId || 'system';
     const environment = entry.environment || (process.env.K_SERVICE ? 'production' : 'development');
     const deployment = process.env.K_REVISION || 'local';
     
-    // Estructura OPTIMIZADA para Google Cloud Logging
+    // Estructura OPTIMIZADA y LIMPIA para Google Cloud Logging
     const structuredEntry = {
         timestamp,
         severity: mapLevelToGoogleSeverity(level),
         message: `[${category}] ${message}`,
         
-        // ✨ JSONPAYLOAD MEJORADO - Información estructurada para análisis
+        // ✨ JSONPAYLOAD SIMPLIFICADO - Solo información esencial
         jsonPayload: {
-            // Información básica
         category,
             level,
             userId,
             environment,
-            deployment,
             
-            // Información contextual
-            sessionId: details?.sessionId || generateSessionId(),
-            source: details?.source || 'app-unified',
+            // Información de normalización si aplica
+            ...(originalCategory && { originalCategory }),
             
-            // Métricas de rendimiento si están disponibles
-            ...(details?.duration && { duration: details.duration }),
-            ...(details?.responseTime && { responseTime: details.responseTime }),
+            // Información contextual específica por tipo de log
+            ...(extractContextualInfo(category, details)),
             
-            // Información específica por categoría
-            ...(category.startsWith('MESSAGE_') && {
-                messageInfo: {
-                    messageType: details?.messageType || details?.type,
-                    messageLength: details?.messageLength || details?.body?.length,
-                    chatId: details?.chatId,
-                    chunks: details?.chunks || 1
-                }
-            }),
-            
-            ...(category.startsWith('OPENAI_') && {
-                openaiInfo: {
-                    threadId: details?.threadId,
-                    runId: details?.runId,
-                    state: details?.state,
-                    functionName: details?.functionName
-                }
-            }),
-            
-            ...(category.startsWith('BEDS24_') && {
-                beds24Info: {
-                    requestType: details?.requestType,
-                    startDate: details?.startDate,
-                    endDate: details?.endDate,
-                    propertyId: details?.propertyId,
-                    endpoint: details?.endpoint,
-                    method: details?.method
-                }
-            }),
-            
-            ...(category.startsWith('THREAD_') && {
-                threadInfo: {
-                    threadId: details?.threadId,
-                    operation: details?.operation,
-                    userName: details?.userName
-                }
-            }),
-            
-            // Detalles completos (sanitizados)
-            details: details || {}
+            // Detalles limpiados (sin metadata spam)
+            ...(details && { details: cleanDetailsForLogging(details) })
         },
         
-        // ✨ LABELS MEJORADOS - Para filtrado avanzado en Cloud Console
+        // ✨ LABELS ESENCIALES - Solo para filtrado
         labels: {
-            // Labels básicos
-            'app': 'whatsapp-bot',
-            'category': category,
-            'level': level,
-            'environment': environment,
-            'deployment': deployment,
+            app: 'whatsapp-bot',
+            category,
+            level,
+            userId,
+            component: getCategoryComponent(category),
             
-            // Labels contextuales
-            'userId': userId,
-            'component': getCategoryComponent(category),
-            
-            // Labels específicos por categoría
-            ...(category.startsWith('MESSAGE_') && { 'messageFlow': 'true' }),
-            ...(category.startsWith('OPENAI_') && { 'aiProcessing': 'true' }),
-            ...(category.startsWith('BEDS24_') && { 'beds24Integration': 'true' }),
-            ...(category.startsWith('THREAD_') && { 'threadManagement': 'true' }),
-            ...(category.startsWith('WHATSAPP_') && { 'whatsappAPI': 'true' }),
-            ...(category.startsWith('FUNCTION_') && { 'functionCalling': 'true' }),
-            
-            // Labels de error si aplica
-            ...(level === 'ERROR' && { 'hasError': 'true' }),
-            ...(details?.error && { 'errorType': getErrorType(details.error) })
-        },
-        
-        // ✨ RESOURCE METADATA FILTRADO - Reducir ruido en logs
-        resource: {
-            type: 'cloud_run_revision',
-            labels: {
-                'service_name': process.env.K_SERVICE || 'bot-wsp-whapi-ia',
-                'revision_name': deployment,
-                'location': process.env.GOOGLE_CLOUD_REGION || process.env.GCLOUD_REGION || 'us-central1'
-                // ✨ FILTRADO: Removido metadata excesivo (configuration_name, project_id)
-            }
-        },
-        
-        // ✨ METADATOS ADICIONALES - Para análisis avanzado
-        sourceLocation: details?.sourceLocation && {
-            file: details.sourceLocation.file,
-            line: details.sourceLocation.line,
-            function: details.sourceLocation.function
-        },
-        
-        // Información de request HTTP si está disponible
-        httpRequest: details?.httpRequest && {
-            requestMethod: details.httpRequest.method,
-            requestUrl: details.httpRequest.url,
-            status: details.httpRequest.status,
-            userAgent: details.httpRequest.userAgent
+            // Labels específicos solo si son útiles
+            ...(level === 'ERROR' && { hasError: 'true' }),
+            ...(category.startsWith('FUNCTION_') && { functionCalling: 'true' }),
+            ...(category.startsWith('BEDS24_') && { beds24Integration: 'true' }),
+            ...(category.startsWith('OPENAI_') && { aiProcessing: 'true' })
         }
     };
     
-    // Limpiar campos undefined/null para reducir tamaño
+    // Limpiar campos vacíos para reducir tamaño
     return JSON.stringify(structuredEntry, (key, value) => {
-        return value === undefined || value === null ? undefined : value;
+        if (value === undefined || value === null || value === '') return undefined;
+        if (typeof value === 'object' && Object.keys(value).length === 0) return undefined;
+        return value;
     });
+}
+
+/**
+ * 🔍 EXTRAER INFORMACIÓN CONTEXTUAL ESPECÍFICA
+ * 
+ * Extrae solo la información más relevante según el tipo de log.
+ */
+function extractContextualInfo(category: string, details: any): any {
+    if (!details) return {};
+    
+    const contextInfo: any = {};
+    
+    // Información específica por categoría
+    switch (true) {
+        case category.startsWith('MESSAGE_'):
+            if (details.messageLength) contextInfo.messageLength = details.messageLength;
+            if (details.messageCount) contextInfo.messageCount = details.messageCount;
+            if (details.chunks) contextInfo.chunks = details.chunks;
+            break;
+            
+        case category.startsWith('OPENAI_'):
+            if (details.threadId) contextInfo.threadId = details.threadId;
+            if (details.runId) contextInfo.runId = details.runId;
+            if (details.state) contextInfo.state = details.state;
+            if (details.duration) contextInfo.duration = details.duration;
+            break;
+            
+        case category.startsWith('FUNCTION_'):
+            if (details.functionName) contextInfo.functionName = details.functionName;
+            if (details.duration) contextInfo.duration = details.duration;
+            if (details.args && typeof details.args === 'object') {
+                // Solo argumentos esenciales, no todo el objeto
+                contextInfo.argsCount = Object.keys(details.args).length;
+            }
+            break;
+            
+        case category.startsWith('BEDS24_'):
+            if (details.startDate) contextInfo.startDate = details.startDate;
+            if (details.endDate) contextInfo.endDate = details.endDate;
+            if (details.propertyId) contextInfo.propertyId = details.propertyId;
+            if (details.method) contextInfo.method = details.method;
+            if (details.status) contextInfo.status = details.status;
+            break;
+            
+        case category.startsWith('THREAD_'):
+            if (details.threadId) contextInfo.threadId = details.threadId;
+            if (details.operation) contextInfo.operation = details.operation;
+            if (details.threadsCount) contextInfo.threadsCount = details.threadsCount;
+            break;
+    }
+    
+    // Información de rendimiento universal
+    if (details.duration && !contextInfo.duration) {
+        contextInfo.duration = details.duration;
+    }
+    
+    if (details.responseTime) {
+        contextInfo.responseTime = details.responseTime;
+    }
+    
+    return contextInfo;
+}
+
+/**
+ * 🧹 LIMPIAR DETALLES PARA LOGGING
+ * 
+ * Remueve información innecesaria y spam de metadata.
+ */
+function cleanDetailsForLogging(details: any): any {
+    if (!details || typeof details !== 'object') return details;
+    
+    const cleaned = { ...details };
+    
+    // Remover metadata de Cloud Build y deployment
+    const metadataSpam = [
+        'commit-sha', 'gcb-build-id', 'gcb-trigger-id', 'gcb-trigger-region',
+        'managed-by', 'instanceId', 'configuration_name', 'project_id',
+        'revision_name', 'service_name', 'location'
+    ];
+    
+    metadataSpam.forEach(field => {
+        delete cleaned[field];
+    });
+    
+    // Limpiar labels si contienen spam
+    if (cleaned.labels && typeof cleaned.labels === 'object') {
+        const cleanedLabels = { ...cleaned.labels };
+        metadataSpam.forEach(field => {
+            delete cleanedLabels[field];
+        });
+        
+        // Solo mantener si hay labels útiles
+        if (Object.keys(cleanedLabels).length > 0) {
+            cleaned.labels = cleanedLabels;
+        } else {
+            delete cleaned.labels;
+        }
+    }
+    
+    // Truncar campos muy largos
+    Object.keys(cleaned).forEach(key => {
+        if (typeof cleaned[key] === 'string' && cleaned[key].length > 1000) {
+            cleaned[key] = cleaned[key].substring(0, 1000) + '... [TRUNCATED]';
+        }
+    });
+    
+    return Object.keys(cleaned).length > 0 ? cleaned : undefined;
 }
 
 /**

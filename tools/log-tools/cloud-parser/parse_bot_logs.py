@@ -91,6 +91,7 @@ from collections import defaultdict
 import pyperclip
 import time
 import hashlib
+import shutil
 try:
     from colorama import Fore, Style
 except ImportError:
@@ -303,12 +304,89 @@ class LogEntry:
         # ✨ NUEVAS CATEGORÍAS DE LOGGING - PARSING ACTUALIZADO
         # ============================================================================
         
-        # NUEVAS CATEGORÍAS - Parsing específico
+        # Lista actualizada de categorías válidas (sincronizada con category-mapper.ts)
+        VALID_CATEGORIES_UPDATED = {
+            # Mensajes y Comunicación
+            'MESSAGE_RECEIVED', 'MESSAGE_PROCESS', 'WHATSAPP_SEND', 'WHATSAPP_CHUNKS_COMPLETE', 'WHATSAPP_CHUNKS',
+            
+            # OpenAI y Funciones
+            'OPENAI_REQUEST', 'OPENAI_RESPONSE', 'OPENAI_RUN_COMPLETED', 'FUNCTION_CALLING_START', 
+            'FUNCTION_EXECUTING', 'FUNCTION_HANDLER', 'FUNCTION_SUBMITTED',
+            
+            # Integración Beds24
+            'BEDS24_REQUEST', 'BEDS24_API_CALL', 'BEDS24_RESPONSE_DETAIL', 'BEDS24_PROCESSING', 
+            'BEDS24_DEBUG_OUTPUT', 'AVAILABILITY_HANDLER',
+            
+            # Sistema y Threads
+            'THREAD_CREATED', 'THREAD_PERSIST', 'THREAD_CLEANUP', 'THREAD_REUSE', 'THREAD_STATE',
+            
+            # Sistema General
+            'SERVER_START', 'BOT_READY', 'WEBHOOK', 'BOT_MESSAGE_TRACKED', 'PENDING_MESSAGE_REMOVED',
+            'RUN_QUEUE', 'CONTEXT_LABELS', 'CONTACT_API', 'CONTACT_API_DETAILED', 'BUFFER_TIMER_RESET',
+            'USER_DEBUG', 'MESSAGE_BUFFER',
+            
+            # Nuevas categorías específicas del bot
+            'AVAILABILITY_CHECK_START', 'AVAILABILITY_CHECK_COMPLETE', 'AVAILABILITY_FOUND', 'AVAILABILITY_NONE',
+            'BOOKING_INQUIRY', 'BOOKING_REQUEST', 'BOOKING_CONFIRMED', 'BOOKING_CANCELLED', 'BOOKING_MODIFIED',
+            'USER_GREETING', 'USER_QUESTION', 'USER_INTENT_DETECTED', 'BOT_SUGGESTION', 'BOT_CLARIFICATION',
+            'RECOVERY_START', 'RECOVERY_COMPLETE', 'SYSTEM_RESTART', 'SYSTEM_HEALTHY',
+            'RESPONSE_TIME', 'FUNCTION_PERFORMANCE', 'API_LATENCY', 'PROCESSING_COMPLETE',
+            'CONVERSATION_START', 'CONVERSATION_CONTINUE', 'CONVERSATION_END', 'CONTEXT_UPDATED',
+            'RATE_LIMIT_HIT', 'RATE_LIMIT_RESET', 'DUPLICATE_MESSAGE', 'SPAM_DETECTED',
+            
+            # Estados generales
+            'ERROR', 'WARNING', 'SUCCESS', 'INFO'
+        }
+        
+        # Mapeo automático de categorías (sincronizado con category-mapper.ts)
+        CATEGORY_MAPPINGS = {
+            'THREADS_LOADED': 'THREAD_PERSIST',
+            'PENDING_MESSAGES_FOUND': 'MESSAGE_PROCESS',
+            'NEW_USER_LABELS': 'CONTEXT_LABELS',
+            'BEDS24_RESPONSE_SUMMARY': 'BEDS24_RESPONSE_DETAIL',
+            'FUNCTION_EXECUTED': 'FUNCTION_HANDLER',
+            'FUNCTION_SUBMITTING': 'FUNCTION_EXECUTING',
+            'FUNCTION_SUBMIT_DEBUG': 'FUNCTION_HANDLER',
+            'WHATSAPP_CHUNK': 'WHATSAPP_CHUNKS',
+            'THREAD_OPERATION': 'THREAD_PERSIST',
+            'OPENAI_STATE': 'OPENAI_RESPONSE',
+            'USER_DETECTED': 'MESSAGE_RECEIVED',
+            'DURATION_DETECTED': 'RESPONSE_TIME',
+            'FUNCTION_DETECTED': 'FUNCTION_HANDLER',
+            'BEDS24_DETECTED': 'BEDS24_PROCESSING',
+            'JSON_DATA': 'INFO',
+            'ERROR_DETECTED': 'ERROR',
+            'RATE_LIMITED': 'RATE_LIMIT_HIT',
+        }
+        
+        # Función para normalizar categorías
+        def normalize_category(category):
+            if category in VALID_CATEGORIES_UPDATED:
+                return category
+            if category in CATEGORY_MAPPINGS:
+                return CATEGORY_MAPPINGS[category]
+            # Mapeo inteligente por contexto
+            if 'THREAD' in category: return 'THREAD_PERSIST'
+            if 'OPENAI' in category: return 'OPENAI_RESPONSE'
+            if 'BEDS24' in category: return 'BEDS24_PROCESSING'
+            if 'FUNCTION' in category: return 'FUNCTION_HANDLER'
+            if 'MESSAGE' in category: return 'MESSAGE_PROCESS'
+            if 'ERROR' in category: return 'ERROR'
+            if 'WARNING' in category: return 'WARNING'
+            if 'SUCCESS' in category: return 'SUCCESS'
+            return 'INFO'
+        
+        # NUEVAS CATEGORÍAS - Parsing específico mejorado
         for pattern_name, pattern in EnhancedPatterns.NEW_CATEGORY_PATTERNS.items():
             match = re.search(pattern, clean_message, re.IGNORECASE | re.DOTALL)
             if match:
-                parsed['log_category'] = pattern_name.upper()
-                parsed['technical_details']['new_category'] = True
+                # Normalizar categoría detectada
+                raw_category = pattern_name.upper()
+                normalized_category = normalize_category(raw_category)
+                
+                parsed['log_category'] = normalized_category
+                parsed['original_category'] = raw_category if raw_category != normalized_category else None
+                parsed['technical_details']['category_normalized'] = raw_category != normalized_category
                 
                 # Parsing específico por categoría
                 if pattern_name == 'message_received':
@@ -1754,7 +1832,7 @@ class CloudRunLogParser:
                             message_clean = re.sub(r'\?\s*\?\s*', ' → ', message_clean)
                             message_clean = re.sub(r'^(\s*)\?\s+', r'\1', message_clean)
                             message_clean = re.sub(r'\s+\?\s+', ' → ', message_clean)
-                            
+                        
                             # 🚨 FIX TIMESTAMP DUPLICADO - Eliminar timestamp interno del mensaje
                             # Patrón: [2025-07-11T10:42:45.838Z] [INFO] mensaje
                             message_clean = re.sub(r'^\[20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]\s*\[INFO\]\s*', '', message_clean)
@@ -2546,25 +2624,30 @@ class CloudRunLogParser:
             print(f"{Colors.RED}❌ Error parsing JSON: {e}{Colors.END}")
             return {}
 
+def _clean_processed_dir():
+    """Limpia la carpeta logs/cloud-production/processed antes de guardar nuevas sesiones"""
+    processed_dir = os.path.join('logs', 'cloud-production', 'processed')
+    if os.path.isdir(processed_dir):
+        for file_name in os.listdir(processed_dir):
+            file_path = os.path.join(processed_dir, file_name)
+            try:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+            except Exception as e:
+                print(f"No se pudo eliminar {file_name}: {e}")
+
 def main():
-    """Función principal"""
+    """Entry point del script"""
+    # Limpieza automática de sesiones procesadas antiguas
+    _clean_processed_dir()
+    
     parser = argparse.ArgumentParser(
         description='Analizador de logs de Google Cloud Run para Bot WhatsApp',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Ejemplos de uso:
-  python parse_bot_logs.py                    # últimas 10 sesiones (archivos individuales)
-  python parse_bot_logs.py --sessions 5      # últimas 5 sesiones (archivos individuales)
-  python parse_bot_logs.py --hours 6         # últimas 6 horas (archivos individuales)
-  python parse_bot_logs.py --user 573003913251  # logs de un usuario
-  python parse_bot_logs.py --errors-only      # solo sesiones problemáticas
-  python parse_bot_logs.py --session session-123  # sesión específica
-  python parse_bot_logs.py --save-consolidated  # guardar también archivo consolidado
-        """
     )
-    
-    parser.add_argument('--hours', type=int,
-                       help='Horas hacia atrás para obtener logs')
+    parser.add_argument('--hours', type=float, default=None,
+                        help='Horas hacia atrás para obtener logs')
+    parser.add_argument('--minutes', type=int, default=None,
+                        help='Minutos hacia atrás para obtener logs (tiene prioridad sobre --hours)')
     parser.add_argument('--sessions', type=int, default=10,
                        help='Número de sesiones más recientes a mostrar (default: 10)')
     parser.add_argument('--user', type=str,
@@ -2592,6 +2675,12 @@ Ejemplos de uso:
     
     args = parser.parse_args()
     
+    # Determinar ventana de tiempo
+    if args.minutes is not None:
+        hours_back = args.minutes / 60.0
+    else:
+        hours_back = args.hours if args.hours is not None else 2
+
     # Verificar dependencias
     try:
         import platform
@@ -2616,9 +2705,9 @@ Ejemplos de uso:
         return
     
     # Determinar cuántas horas buscar basado en sesiones solicitadas
-    if args.hours:
-        hours_to_search = args.hours
-        print(f"{Colors.CYAN}🔍 Buscando por tiempo: últimas {hours_to_search} horas{Colors.END}")
+    if args.hours or args.minutes is not None:
+        hours_to_search = hours_back
+        print(f"{Colors.CYAN}🔍 Buscando por tiempo: últimas {hours_to_search:.2f} horas{Colors.END}")
     else:
         # Estimar horas basado en sesiones (asumiendo ~1 sesión por hora)
         hours_to_search = max(args.sessions * 2, 8)  # Mínimo 8 horas para 10 sesiones

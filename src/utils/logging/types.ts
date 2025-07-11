@@ -75,6 +75,7 @@ export interface LogEntry {
     sessionId?: string;
     userId?: string;
     environment?: Environment;
+    originalCategory?: string; // Para tracking de categorías normalizadas
 }
 
 // === METADATOS ADICIONALES ===
