@@ -61,9 +61,11 @@ const manualMessageBuffers = new Map<string, {
 const manualTimers = new Map<string, NodeJS.Timeout>();
 
 // Configuración de timeouts por entorno
-const MESSAGE_BUFFER_TIMEOUT = 10000; // 10s en TODOS lados (consistente local y Cloud Run)
-const MANUAL_MESSAGE_TIMEOUT = 8000;
+// 🔧 PAUSAR BUFFER: Usar DISABLE_MESSAGE_BUFFER=true para pruebas de velocidad
+const MESSAGE_BUFFER_TIMEOUT = process.env.DISABLE_MESSAGE_BUFFER === 'true' ? 0 : 10000;
+const MANUAL_MESSAGE_TIMEOUT = process.env.DISABLE_MESSAGE_BUFFER === 'true' ? 0 : 8000;
 const MAX_BUFFER_SIZE = 10; // 🚨 Límite máximo de mensajes por buffer (anti-spam)
+const BUFFER_DISABLED = process.env.DISABLE_MESSAGE_BUFFER === 'true';
 const MAX_BOT_MESSAGES = 1000; // 🛡️ Límite de seguridad para tracking de mensajes
 const MAX_MESSAGE_LENGTH = 5000; // 📏 Límite de caracteres por mensaje
 
@@ -121,6 +123,7 @@ app.get('/health', (req, res) => {
         trackedBotMessages: botSentMessages.size,
         threadStats: stats,
         bufferTimeout: MESSAGE_BUFFER_TIMEOUT,
+        bufferDisabled: BUFFER_DISABLED, // 🔧 NUEVO: Estado del buffer
         systemHealth: {
             userBuffers: userMessageBuffers.size,
             manualBuffers: manualMessageBuffers.size,

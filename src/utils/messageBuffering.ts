@@ -17,6 +17,11 @@ const MESSAGE_ENDINGS: MessageEndingPatterns = {
 
 // Calcular timeout dinámico basado en la longitud del mensaje
 export const calculateDynamicTimeout = (messageLength: number, hasTypingSupport: boolean = false): number => {
+    // 🔧 PAUSAR BUFFERING INTELIGENTE: Si está desactivado, retornar 0
+    if (process.env.DISABLE_MESSAGE_BUFFER === 'true') {
+        return 0; // Sin timeout - procesamiento inmediato
+    }
+    
     // Si tiene soporte de typing, usar timeouts más agresivos
     if (hasTypingSupport) {
         if (messageLength <= 5) return 1000;   // 1 segundo
@@ -115,6 +120,11 @@ export const getRecommendedTimeout = (
     lastMessage: string,
     hasTypingSupport: boolean = false
 ): number => {
+    // 🔧 PAUSAR BUFFERING INTELIGENTE: Si está desactivado, retornar 0
+    if (process.env.DISABLE_MESSAGE_BUFFER === 'true') {
+        return 0; // Sin timeout - procesamiento inmediato
+    }
+    
     // Si el mensaje parece final, timeout corto pero no demasiado
     if (isLikelyFinalMessage(lastMessage)) {
         return hasTypingSupport ? 800 : 2000; // Con typing: 0.8s, sin typing: 2s

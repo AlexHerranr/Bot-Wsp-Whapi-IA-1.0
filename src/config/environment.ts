@@ -130,6 +130,15 @@ export const logEnvironmentConfig = () => {
     console.log(`   📊 Log Level: ${config.logLevel}`);
     console.log(`   🔍 Logs Detallados: ${config.enableDetailedLogs ? 'Sí' : 'No'}`);
     
+    // 🔧 NUEVO: Mostrar estado del buffer de mensajes
+    const bufferDisabled = process.env.DISABLE_MESSAGE_BUFFER === 'true';
+    if (bufferDisabled) {
+        console.log('   ⚡ Buffer de Mensajes: PAUSADO (Respuesta inmediata)');
+        console.log('   ⚠️  Modo de Prueba: Velocidad máxima activada');
+    } else {
+        console.log('   ⏱️  Buffer de Mensajes: Activo (10s)');
+    }
+    
     if (config.isLocal) {
         console.log('   🏠 Modo: Desarrollo Local');
         console.log('   🚇 Ngrok: Activo');
