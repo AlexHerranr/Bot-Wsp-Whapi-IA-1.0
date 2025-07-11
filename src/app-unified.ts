@@ -115,6 +115,9 @@ const WHAPI_API_URL = process.env.WHAPI_API_URL ?? 'https://gate.whapi.cloud/';
 let isServerInitialized = false;
 let openaiClient: OpenAI;
 
+//  Cache de runs activos para evitar conflictos
+const activeRuns = new Map<string, { id: string; status: string; startTime: number; userId: string }>();
+
 // Estado global para buffers y tracking
 const userMessageBuffers = new Map<string, {
     messages: string[],
@@ -376,6 +379,32 @@ async function initializeBot() {
                 cleanupThresholdHours: 1,
                 environment: config.environment
             });
+            
+            // 🧹 NUEVO: Limpieza periódica de runs activos "atascados"
+            setInterval(() => {
+                const now = Date.now();
+                const timeout = 5 * 60 * 1000; // 5 minutos
+                let cleanedRuns = 0;
+                
+                activeRuns.forEach((runInfo, threadId) => {
+                    if (now - runInfo.startTime > timeout) {
+                        logWarning('OPENAI_RUN_CLEANUP', 'Limpiando run antiguo del cache', {
+                            threadId,
+                            runId: runInfo.id,
+                            age: Math.round((now - runInfo.startTime) / 1000) + 's',
+                            userId: runInfo.userId
+                        });
+                        activeRuns.delete(threadId);
+                        cleanedRuns++;
+                    }
+                });
+
+                if (cleanedRuns > 0) {
+                    logInfo('RUN_CACHE_CLEANUP', `${cleanedRuns} run(s) antiguos limpiados del cache`, {
+                        remainingActiveRuns: activeRuns.size
+                    });
+                }
+            }, 60000); // Cada minuto
         }
         
 
@@ -624,75 +653,6 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         
         return context;
     };
-
-    // 🚨 COLA DE RUNS DE OPENAI para evitar runs concurrentes
-    class OpenAIRunQueue {
-        private userQueues: Map<string, Promise<any>> = new Map();
-        
-        /**
-         * Ejecuta una operación de OpenAI en cola para evitar runs concurrentes
-         */
-        async executeInQueue<T>(userId: string, operation: () => Promise<T>): Promise<T> {
-            const shortUserId = getShortUserId(userId);
-            
-            // Obtener la promesa actual o crear una resuelta
-            const currentQueue = this.userQueues.get(userId) || Promise.resolve();
-            
-            // Encadenar la nueva operación
-            const newQueue = currentQueue
-                .then(() => {
-                    if (config.enableDetailedLogs) {
-                        logDebug('RUN_QUEUE', `Ejecutando operación en cola para ${shortUserId}`, {
-                            environment: config.environment
-                        });
-                    }
-                    return operation();
-                })
-                .catch(error => {
-                    logError('RUN_QUEUE_ERROR', `Error en cola de runs para ${shortUserId}`, {
-                        error: error.message,
-                        environment: config.environment
-                    });
-                    throw error;
-                })
-                .finally(() => {
-                    // Limpiar la cola si es la última operación
-                    if (this.userQueues.get(userId) === newQueue) {
-                        this.userQueues.delete(userId);
-                        if (config.enableDetailedLogs) {
-                            logDebug('RUN_QUEUE', `Cola limpiada para ${shortUserId}`, {
-                                environment: config.environment
-                            });
-                        }
-                    }
-                });
-            
-            // Actualizar la cola
-            this.userQueues.set(userId, newQueue);
-            
-            return newQueue;
-        }
-        
-        /**
-         * Verifica si hay operaciones pendientes para un usuario
-         */
-        hasPendingOperations(userId: string): boolean {
-            return this.userQueues.has(userId);
-        }
-        
-        /**
-         * Obtener estadísticas de la cola
-         */
-        getStats() {
-            return {
-                activeQueues: this.userQueues.size,
-                users: Array.from(this.userQueues.keys()).map(getShortUserId)
-            };
-        }
-    }
-
-    // Crear instancia global de la cola
-    const openAIQueue = new OpenAIRunQueue();
 
     // 🛡️ RATE LIMITER SIMPLE para prevenir spam por usuario
     class SimpleRateLimiter {
@@ -977,472 +937,198 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
     // --- Función principal de procesamiento con OpenAI
     const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string | null = null, userName: string | null = null): Promise<string> => {
         const shortUserId = getShortUserId(userJid);
-        
-        // 🚨 USAR COLA para evitar runs concurrentes
-        return openAIQueue.executeInQueue(userJid, async () => {
-            const startTime = Date.now();
-        
-        logInfo('USER_DEBUG', `UserJid para búsqueda: "${userJid}"`, { 
-            originalFormat: userJid,
-            cleanedFormat: shortUserId,
-            chatId: chatId,
-            userName: userName,
-            environment: config.environment
-        });
-        
+        const startTime = Date.now();
+        let threadId: string | null = null; // Definir threadId aquí para que esté disponible en el bloque catch
+
         try {
-            // Verificar thread existente
-            let threadId = getThreadId(userJid);
-            
-            const stats = threadPersistence.getStats();
-            logInfo('THREAD_CHECK', 
-                threadId ? `Thread encontrado: ${threadId}` : 'No se encontró thread existente',
-                { userJid, shortUserId, threadId, totalThreads: stats.totalThreads }
-            );
-            
+            // 1. OBTENER O CREAR THREAD ID
+            threadId = getThreadId(userJid);
             if (!threadId) {
                 logOpenAIRequest('Creating new thread', { userId: shortUserId, state: 'creating_thread' });
                 const thread = await openaiClient.beta.threads.create();
                 threadId = thread.id;
-                
                 saveThreadId(userJid, threadId, chatId, userName);
-                
-                logOpenAIResponse('Thread created', { userId: shortUserId, threadId, state: 'thread_created' });
-                logThreadCreated(`Nuevo thread creado para ${shortUserId} (${userName})`, { 
-                    userId: shortUserId,
-                    threadId,
-                    userJid: userJid,
-                    chatId: chatId,
-                    userName: userName,
-                    environment: config.environment
-                });
+                logThreadCreated(`Nuevo thread creado para ${shortUserId} (${userName})`, { userId: shortUserId, threadId });
             } else {
-                logSuccess('THREAD_REUSE', `Reutilizando thread existente para ${shortUserId} (${userName || 'Usuario'})`, {
+                logSuccess('THREAD_REUSE', `Reutilizando thread existente para ${shortUserId}`, { threadId });
+            }
+
+            // 2. 🛡️ MANEJAR RUNS ACTIVOS EN CONFLICTO
+            if (activeRuns.has(threadId)) {
+                const activeRun = activeRuns.get(threadId)!;
+                logWarning('OPENAI_RUN_ACTIVE', 'Run activo detectado, intentando cancelar...', {
                     threadId,
-                    userJid: userJid,
-                    cleanedId: shortUserId
+                    runId: activeRun.id,
+                    status: activeRun.status,
+                    userId: activeRun.userId
                 });
-            }
-            
-            // 🔧 VERIFICAR RUNS ACTIVOS (solo si hay conflicto real)
-            try {
-                const runs = await openaiClient.beta.threads.runs.list(threadId, { limit: 5 });
-                const activeRuns = runs.data.filter(r => 
-                    ['in_progress', 'requires_action'].includes(r.status)
-                );
-                
-                if (activeRuns.length > 0) {
-                    logWarning('ACTIVE_RUNS_CONFLICT', `${activeRuns.length} run(s) activo(s) en conflicto, cancelando`, {
-                        shortUserId, threadId, 
-                        activeRuns: activeRuns.map(r => ({ id: r.id, status: r.status })),
-                        environment: config.environment
+                try {
+                    await openaiClient.beta.threads.runs.cancel(threadId, activeRun.id);
+                    logSuccess('OPENAI_RUN_CANCEL', `Run anterior cancelado exitosamente: ${activeRun.id}`, { threadId });
+                } catch (cancelError: any) {
+                    logError('OPENAI_RUN_CANCEL_ERROR', 'Error al intentar cancelar run anterior', {
+                        threadId,
+                        runId: activeRun.id,
+                        error: cancelError.message
                     });
-                    
-                    // Cancelar runs que están en conflicto
-                    for (const run of activeRuns) {
-                        try {
-                            await openaiClient.beta.threads.runs.cancel(threadId, run.id);
-                            logInfo('CONFLICT_RUN_CANCELLED', `Run en conflicto cancelado: ${run.id}`, {
-                                shortUserId, threadId, runId: run.id,
-                                environment: config.environment
-                            });
-                        } catch (cancelError) {
-                            logError('CONFLICT_CANCEL_ERROR', `Error cancelando run ${run.id}`, {
-                                shortUserId, threadId, runId: run.id,
-                                error: cancelError.message,
-                                environment: config.environment
-                            });
-                        }
-                    }
-                    
-                    // Breve espera para que las cancelaciones tomen efecto
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                } finally {
+                    activeRuns.delete(threadId);
                 }
-            } catch (error) {
-                logError('ACTIVE_RUNS_CHECK_ERROR', `Error verificando runs activos`, { 
-                    shortUserId, threadId, error: error.message 
-                });
             }
-            
-            // Agregar mensaje del usuario con contextos
-            logOpenAIRequest('Adding message to thread', { userId: shortUserId, state: 'adding_message' });
-            
+
+            // 3. AGREGAR MENSAJE AL THREAD
             const currentThreadInfo = threadPersistence.getThread(shortUserId);
             const timeContext = getCurrentTimeContext();
             const conversationalContext = getConversationalContext(currentThreadInfo);
-            
-            let messageWithContexts = timeContext + '\n\n' + conversationalContext;
-            messageWithContexts += '\n\n' + userMsg;
+            const messageWithContexts = `${timeContext}\n\n${conversationalContext}\n\n${userMsg}`;
             
             await openaiClient.beta.threads.messages.create(threadId, {
                 role: 'user',
                 content: messageWithContexts
             });
-            
-            // Actualizar actividad del thread
-            const threadInfo = threadPersistence.getThread(shortUserId);
-            if (threadInfo) {
-                threadPersistence.setThread(shortUserId, threadId, threadInfo.chatId, threadInfo.userName);
-            }
-            
-            logOpenAIResponse('Message added to thread', { userId: shortUserId, state: 'message_added' });
-            
-            // Crear y ejecutar run
-            logOpenAIRequest('Creating run', { userId: shortUserId, state: 'creating_run' });
-            let run = await openaiClient.beta.threads.runs.create(threadId, {
+            logInfo('OPENAI_REQUEST', 'Message added to thread', { userId: shortUserId });
+
+            // 4. CREAR Y EJECUTAR RUN
+            logInfo('OPENAI_REQUEST', 'Creating run', { userId: shortUserId });
+            const run = await openaiClient.beta.threads.runs.create(threadId, {
                 assistant_id: ASSISTANT_ID
             });
             
-            logOpenAIResponse('Run started', { userId: shortUserId, runId: run.id, state: 'run_started' });
+            // REGISTRAR RUN ACTIVO
+            activeRuns.set(threadId, {
+                id: run.id,
+                status: run.status,
+                startTime: Date.now(),
+                userId: shortUserId
+            });
+            logInfo('OPENAI_RUN_STARTED', 'Run iniciado', { userId: shortUserId, runId: run.id });
+
+            // 5. ESPERAR Y OBTENER RESULTADO (reutilizando la lógica existente)
+            const result = await waitForRunCompletion(threadId, run.id, shortUserId);
             
-            // Esperar respuesta
-            let attempts = 0;
-            const maxAttempts = 60;
-            
-            while (['queued', 'in_progress'].includes(run.status) && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
-                attempts++;
-                
-                if (attempts % 10 === 0) {
-                    logInfo('OPENAI_POLLING', `Esperando respuesta para ${shortUserId}, intento ${attempts}/${maxAttempts}, estado: ${run.status}`);
-                }
-            }
-            
-            // 🎯 MANEJO DE FUNCTION CALLS (loop completo para múltiples ciclos)
-            while (run.status === 'requires_action') {
-                const toolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
-                
-                if (!toolCalls || toolCalls.length === 0) {
-                    logError('FUNCTION_CALLING_NO_TOOLS', `Run requires_action pero sin tool_calls`, {
-                        shortUserId,
-                        threadId,
-                        runId: run.id,
-                        required_action: run.required_action,
-                        environment: config.environment
-                    });
-                    return sanitizeResponseForClient('Lo siento, hubo un problema procesando la consulta. Por favor intenta de nuevo.');
-                }
-                
-                logFunctionCallingStart(`OpenAI requiere ejecutar ${toolCalls.length} función(es)`, {
-                    userId: shortUserId,
-                    threadId,
-                    runId: run.id,
-                    toolCallsCount: toolCalls.length,
-                    functions: toolCalls.map(tc => ({
-                        id: tc.id,
-                        name: tc.function.name,
-                        argsLength: tc.function.arguments.length
-                    })),
-                    environment: config.environment
-                });
-                
-                // Ejecutar cada function call
-                const toolOutputs = [];
-                
-                for (const toolCall of toolCalls) {
-                    try {
-                        const functionName = toolCall.function.name;
-                        const functionArgs = JSON.parse(toolCall.function.arguments);
-                        
-                        logFunctionExecuting(`Ejecutando función: ${functionName}`, {
-                            userId: shortUserId,
-                            functionName,
-                            arguments: functionArgs,
-                            callId: toolCall.id,
-                            environment: config.environment
-                        });
-                        
-                        // Importar FunctionHandler dinámicamente
-                        const { FunctionHandler } = await import('./handlers/function-handler.js');
-                        const functionHandler = new FunctionHandler();
-                        
-                        // Ejecutar la función
-                        const result = await functionHandler.handleFunction(functionName, functionArgs);
-                        
-                        logSuccess('FUNCTION_EXECUTED', `Función ${functionName} ejecutada exitosamente`, {
-                            shortUserId,
-                            functionName,
-                            resultType: typeof result,
-                            resultPreview: typeof result === 'string' ? 
-                                (result.length > 200 ? result.substring(0, 200) + '...' : result) : 
-                                JSON.stringify(result).substring(0, 200),
-                            resultLength: typeof result === 'string' ? result.length : JSON.stringify(result).length,
-                            hasError: result?.error ? true : false,
-                            environment: config.environment
-                        });
-                        
-                        toolOutputs.push({
-                            tool_call_id: toolCall.id,
-                            output: JSON.stringify(result)
-                        });
-                        
-                    } catch (error) {
-                        logError('FUNCTION_ERROR', `Error ejecutando función ${toolCall.function.name}`, {
-                            shortUserId,
-                            functionName: toolCall.function.name,
-                            error: error.message,
-                            environment: config.environment
-                        });
-                        
-                        toolOutputs.push({
-                            tool_call_id: toolCall.id,
-                            output: JSON.stringify({ 
-                                success: false,
-                                error: `Error ejecutando función: ${error.message}` 
-                            })
-                        });
-                    }
-                }
-                
-                // Log detallado de los outputs antes de enviar
-                logInfo('FUNCTION_OUTPUTS_DETAIL', `Outputs de funciones listos para enviar a OpenAI`, {
-                    shortUserId,
-                    threadId,
-                    runId: run.id,
-                    outputs: toolOutputs.map(output => ({
-                        tool_call_id: output.tool_call_id,
-                        outputLength: output.output.length,
-                        outputPreview: output.output.substring(0, 500),
-                        outputComplete: output.output
-                    })),
-                    environment: config.environment
-                });
-                
-                // Enviar resultados a OpenAI
-                try {
-                    logInfo('FUNCTION_SUBMITTING', `Enviando resultados de ${toolOutputs.length} funciones a OpenAI`, {
-                        shortUserId,
-                        threadId,
-                        runId: run.id,
-                        toolOutputsCount: toolOutputs.length,
-                        environment: config.environment
-                    });
-                    
-                    // Enviar tool outputs y obtener el run actualizado
-                    run = await openaiClient.beta.threads.runs.submitToolOutputs(threadId, run.id, {
-                        tool_outputs: toolOutputs
-                    });
-                    
-                    logSuccess('FUNCTION_SUBMITTED', `Resultados enviados exitosamente`, {
-                        shortUserId,
-                        threadId,
-                        runId: run.id,
-                        newRunStatus: run.status,
-                        toolOutputsCount: toolOutputs.length,
-                        environment: config.environment
-                    });
-                    
-                    // 🔧 DEBUG: Log para verificar que no hay duplicación
-                    logInfo('FUNCTION_SUBMIT_DEBUG', `Tool outputs enviados para ${toolOutputs.length} calls`, {
-                        shortUserId,
-                        threadId,
-                        runId: run.id,
-                        submittedCallIds: toolOutputs.map(to => to.tool_call_id),
-                        runStatusAfterSubmit: run.status,
-                        environment: config.environment
-                    });
-                    
-                    // IMPORTANTE: Después de submitToolOutputs, el run pasa a "queued" o "in_progress"
-                    // Necesitamos esperar a que complete o requiera más acciones
-                    attempts = 0;
-                    while (['queued', 'in_progress'].includes(run.status) && attempts < maxAttempts) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
-                        attempts++;
-                        
-                        if (attempts % 10 === 0) {
-                            logInfo('FUNCTION_WAITING', `Esperando después de function calling para ${shortUserId}, estado: ${run.status}`, {
-                                shortUserId,
-                                threadId,
-                                runId: run.id,
-                                attempts: `${attempts}/${maxAttempts}`,
-                                environment: config.environment
-                            });
-                        }
-                    }
-                    
-                    // AHORA sí verificar el estado final
-                    if (run.status === 'requires_action') {
-                        // Solo procesar si REALMENTE hay nuevas acciones requeridas
-                        const newToolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
-                        if (newToolCalls && newToolCalls.length > 0) {
-                            // Verificar si son tool calls diferentes a los que acabamos de procesar
-                            const currentToolCallIds = toolCalls.map(tc => tc.id);
-                            const newToolCallIds = newToolCalls.map(tc => tc.id);
-                            const hasNewCalls = newToolCallIds.some(id => !currentToolCallIds.includes(id));
-                            
-                            // 🔧 DEBUG: Log detallado para verificar detección de duplicación
-                            logInfo('FUNCTION_DUPLICATE_CHECK', `Verificando duplicación de tool calls`, {
-                                shortUserId,
-                                threadId,
-                                runId: run.id,
-                                currentCallIds: currentToolCallIds,
-                                newCallIds: newToolCallIds,
-                                hasNewCalls,
-                                environment: config.environment
-                            });
-                            
-                            if (hasNewCalls) {
-                                logInfo('FUNCTION_ADDITIONAL_CALLS', `OpenAI requiere funciones adicionales`, {
-                                    shortUserId,
-                                    threadId,
-                                    runId: run.id,
-                                    previousCallsCount: toolCalls.length,
-                                    newCallsCount: newToolCalls.length,
-                                    environment: config.environment
-                                });
-                                continue; // Procesar NUEVAS function calls
-                            } else {
-                                logWarning('FUNCTION_DUPLICATE_CALLS', `Detectadas tool calls duplicadas, ignorando`, {
-                                    shortUserId,
-                                    threadId,
-                                    runId: run.id,
-                                    duplicateCallIds: currentToolCallIds,
-                                    environment: config.environment
-                                });
-                                // Forzar salida del while para evitar loop infinito
-                                break;
-                            }
-                        } else {
-                            logWarning('FUNCTION_NO_NEW_CALLS', `Run en requires_action pero sin nuevas tool calls`, {
-                                shortUserId,
-                                threadId,
-                                runId: run.id,
-                                environment: config.environment
-                            });
-                            break;
-                        }
-                    }
-                    
-                } catch (submitError) {
-                    logError('FUNCTION_SUBMIT_ERROR', `Error enviando resultados de funciones`, {
-                        shortUserId,
-                        threadId,
-                        runId: run.id,
-                        error: submitError.message,
-                        environment: config.environment
-                    });
-                    
-                    return sanitizeResponseForClient('Lo siento, hubo un problema enviando los resultados de la consulta. Por favor intenta de nuevo.');
-                }
-                
-                // Si el run está completed después del function call, salir del while
-                if (run.status === 'completed') {
-                    break;
-                }
-            }
+            // LIMPIAR RUN ACTIVO AL COMPLETAR
+            activeRuns.delete(threadId);
             
             const duration = Date.now() - startTime;
-            
-            if (run.status === 'completed') {
-                logSuccess('OPENAI_RUN_COMPLETED', `Run completado para ${shortUserId}`, { threadId, duration });
-                
-                const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
-                const assistantMessage = messages.data[0];
-                
-                if (assistantMessage && assistantMessage.content && assistantMessage.content.length > 0) {
-                    const content = assistantMessage.content[0];
-                    if (content.type === 'text') {
-                        const responseText = content.text.value;
-                        
-                        logSuccess('OPENAI_RESPONSE', `Respuesta recibida para ${shortUserId}`, {
-                            threadId,
-                            responseLength: responseText.length,
-                            duration,
-                            environment: config.environment
-                        });
-                        
-                        return sanitizeResponseForClient(responseText);
-                    }
-                }
-                
-                logWarning('OPENAI_NO_CONTENT', `Run completado pero sin contenido de texto`, {
-                    shortUserId,
-                    threadId,
-                    runId: run.id,
-                    messageContent: assistantMessage?.content
-                });
-                
-                return sanitizeResponseForClient('Lo siento, no pude generar una respuesta adecuada.');
-                
-            } else {
-                // Capturar información completa del error
-                const errorDetails = {
-                    runId: run.id,
-                    threadId,
-                    status: run.status,
-                    duration,
-                    attempts,
-                    // Campos críticos para diagnóstico
-                    last_error: run.last_error,
-                    failed_at: run.failed_at,
-                    incomplete_details: run.incomplete_details,
-                    usage: run.usage
-                };
-
-                logError('OPENAI_RUN_ERROR', `Run falló: ${run.last_error?.message || 'Sin mensaje de error'}`, errorDetails);
-
-                // Log adicional si hay detalles del error
-                if (run.last_error) {
-                    logError('OPENAI_RUN_ERROR_DETAIL', `Detalles específicos del error`, {
-                        error_code: run.last_error.code,
-                        error_message: run.last_error.message
-                    });
-                }
-                
-                return sanitizeResponseForClient('Lo siento, hubo un problema procesando tu consulta. Por favor intenta de nuevo.');
-            }
-            
-        } catch (error: any) {
-            const duration = Date.now() - startTime;
-            
-            // 🔧 MANEJO ESPECÍFICO DE ERRORES DE OPENAI
-            if (error.code === 'context_length_exceeded') {
-                logError('OPENAI_CONTEXT_LENGTH', 'Contexto excede límite de OpenAI', {
-                    shortUserId,
-                    error: error.message,
-                    duration,
-                    environment: config.environment
-                });
-                return sanitizeResponseForClient('Tu consulta es demasiado larga. Por favor, intenta con un mensaje más corto.');
-            }
-            
-            if (error.code === 'rate_limit_exceeded') {
-                const retryAfter = extractRetryAfter(error.message) || 60;
-                logError('OPENAI_RATE_LIMIT', 'Rate limit de OpenAI excedido', {
-                    shortUserId,
-                    retryAfter,
-                    error: error.message,
-                    duration,
-                    environment: config.environment
-                });
-                return sanitizeResponseForClient(`Estamos experimentando alta demanda. Por favor intenta en ${retryAfter} segundos.`);
-            }
-            
-            if (error.code === 'insufficient_quota') {
-                logError('OPENAI_QUOTA_EXCEEDED', 'Cuota de OpenAI agotada', {
-                    shortUserId,
-                    error: error.message,
-                    duration,
-                    environment: config.environment
-                });
-                return sanitizeResponseForClient('Temporalmente no disponible por límite de uso. Por favor intenta más tarde.');
-            }
-            
-            // Error genérico
-            logError('OPENAI_PROCESSING_ERROR', `Error en procesamiento OpenAI`, {
-                shortUserId,
-                error: error.message,
-                errorCode: error.code || 'unknown',
+            logSuccess('OPENAI_RUN_COMPLETED', `Run completado para ${shortUserId}`, {
+                threadId,
                 duration,
-                environment: config.environment
+                responseLength: result.length
             });
             
-            return sanitizeResponseForClient('Lo siento, hubo un error técnico. Por favor intenta de nuevo en unos momentos.');
+            return result;
+
+        } catch (error: any) {
+            // Asegurar limpieza del run activo en caso de error
+            if (threadId) {
+                activeRuns.delete(threadId);
+            }
+            logError('OPENAI_ERROR', `Error procesando con OpenAI para ${shortUserId}`, {
+                error: error.message,
+                threadId,
+                userId: shortUserId,
+                stack: error.stack
+            });
+            throw error;
         }
-        }); // Cerrar executeInQueue
     };
+    
+    // Función de espera de completado del run (adaptada de tu propuesta)
+    async function waitForRunCompletion(threadId: string, runId: string, userId: string): Promise<string> {
+        const maxAttempts = 60; // 60 segundos
+        let attempts = 0;
+
+        while (attempts < maxAttempts) {
+            const run = await openaiClient.beta.threads.runs.retrieve(threadId, runId);
+            
+            if (activeRuns.has(threadId)) {
+                activeRuns.get(threadId)!.status = run.status;
+            }
+
+            switch (run.status) {
+                case 'completed':
+                    const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
+                    const content = messages.data[0]?.content[0];
+                    if (content?.type === 'text') {
+                        return sanitizeResponseForClient(content.text.value);
+                    }
+                    throw new Error('No se encontró contenido de texto en la respuesta.');
+
+                case 'requires_action':
+                    if (run.required_action?.type === 'submit_tool_outputs') {
+                        await handleToolCalls(threadId, run, userId);
+                    }
+                    break;
+
+                case 'failed':
+                    throw new Error(`Run falló: ${run.last_error?.message || 'Error desconocido'}`);
+                case 'cancelled':
+                    throw new Error('Run fue cancelado.');
+                case 'expired':
+                    throw new Error('Run expiró.');
+                
+                default: // 'queued', 'in_progress', 'cancelling'
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            attempts++;
+        }
+        throw new Error('Timeout esperando la respuesta de OpenAI.');
+    }
+    
+    // Wrapper para manejar las tool calls
+    async function handleToolCalls(threadId: string, run: OpenAI.Beta.Threads.Runs.Run, userId: string) {
+        const toolCalls = run.required_action!.submit_tool_outputs.tool_calls;
+
+        logFunctionCallingStart(`OpenAI requiere ejecutar ${toolCalls.length} función(es)`, {
+            userId,
+            threadId,
+            runId: run.id,
+            toolCallsCount: toolCalls.length
+        });
+        
+        const { FunctionHandler } = await import('./handlers/function-handler.js');
+        const functionHandler = new FunctionHandler();
+        const toolOutputs = [];
+
+        for (const toolCall of toolCalls) {
+            try {
+                const functionName = toolCall.function.name;
+                const functionArgs = JSON.parse(toolCall.function.arguments);
+                const result = await functionHandler.handleFunction(functionName, functionArgs);
+                toolOutputs.push({
+                    tool_call_id: toolCall.id,
+                    output: JSON.stringify(result)
+                });
+            } catch (error: any) {
+                toolOutputs.push({
+                    tool_call_id: toolCall.id,
+                    output: JSON.stringify({ error: true, message: error.message })
+                });
+            }
+        }
+
+        logInfo('FUNCTION_SUBMITTED', `Enviando resultados de ${toolOutputs.length} funciones a OpenAI`, {
+            userId,
+            threadId,
+            runId: run.id
+        });
+
+        await openaiClient.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+            tool_outputs: toolOutputs
+        });
+    }
+
+    // --- El resto de la lógica del webhook y de la app permanece igual ---
+    // La función `processWithOpenAI` anterior será reemplazada por la nueva versión.
+    // La lógica de `openAIQueue` y `executeInQueue` ya no es necesaria con este nuevo enfoque.
+    
+    // Se elimina la clase OpenAIRunQueue y su instancia.
+    
+    // ...
+    // ... la función anterior processWithOpenAI y la clase OpenAIRunQueue se eliminan
+    // ...
+    
+    // --- La función principal de procesamiento ahora usa la nueva lógica ---
 
     // Funciones de thread management
     const saveThreadId = (jid: string, threadId: string, chatId: string | null = null, userName: string | null = null): boolean => {
@@ -2035,6 +1721,9 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
     // Los reintentos de webhook de WhatsApp son suficientes para la mayoría de los casos.
     
     // 🔧 RECUPERACIÓN DE RUNS HUÉRFANOS AL INICIAR (solo después de reinicio)
+    // ESTA LÓGICA DEBE SER REVISADA Y SIMPLIFICADA O ELIMINADA.
+    // POR AHORA, LA DEJAMOS COMENTADA PARA EVITAR CONFLICTOS CON EL NUEVO SISTEMA.
+    /*
     setTimeout(async () => {
         try {
             console.log('🔍 Buscando runs huérfanos después del reinicio...');
@@ -2251,6 +1940,7 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
             });
         }
     }, 3000); // Esperar 3 segundos después de la inicialización completa
+    */
 }
 
 // --- Manejo de Errores del Servidor ---

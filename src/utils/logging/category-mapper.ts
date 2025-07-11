@@ -1,259 +1,142 @@
+// src/utils/logging/category-mapper.ts
+
 /**
- * Category Mapper - Sistema de mapeo automático de categorías de logging
- * Soluciona el problema de categorías inválidas que aparecen en los logs
+ * @description Define las categorías de log válidas y sus propiedades.
+ * Organizado por componente para claridad.
  */
+export const VALID_CATEGORIES = {
+    // Sistema y Core
+    'SERVER_START': { level: 'SUCCESS', component: 'system' },
+    'BOT_READY': { level: 'SUCCESS', component: 'system' },
+    'HEALTH_CHECK': { level: 'INFO', component: 'system' },
+    'SHUTDOWN': { level: 'INFO', component: 'system' },
+    'CLEANUP': { level: 'INFO', component: 'system' },
 
-// Categorías válidas actuales del sistema
-export const VALID_CATEGORIES_SET = new Set([
-    // --- System & Core ---
-    'SERVER_START',
-    'BOT_READY',
-    'SYSTEM_RESTART',
-    'SYSTEM_HEALTHY',
-    'RECOVERY_START',
-    'RECOVERY_COMPLETE',
-    'WEBHOOK',
-    'SYSTEM_CRASH', // <-- Nueva categoría para errores fatales
-    'ERROR',
-    'WARNING',
-    'SUCCESS',
-    'INFO',
+    // Flujo de Mensajes y WhatsApp
+    'WEBHOOK': { level: 'INFO', component: 'whatsapp-api' },
+    'MESSAGE_RECEIVED': { level: 'INFO', component: 'messaging' },
+    'MESSAGE_BUFFER': { level: 'INFO', component: 'messaging' },
+    'MESSAGE_PROCESS': { level: 'INFO', component: 'messaging' },
+    'WHATSAPP_SEND': { level: 'INFO', component: 'whatsapp-api' },
+    'WHATSAPP_CHUNKS': { level: 'INFO', component: 'whatsapp-api' },
+    'WHATSAPP_CHUNKS_COMPLETE': { level: 'SUCCESS', component: 'whatsapp-api' },
+    'MESSAGE_COMPLETE': { level: 'SUCCESS', component: 'messaging' },
 
-    // --- Message Flow & WhatsApp ---
-    'MESSAGE_RECEIVED',
-    'MESSAGE_PROCESS',
-    'WHATSAPP_SEND',
-    'WHATSAPP_CHUNKS',
-    'WHATSAPP_CHUNKS_COMPLETE',
-    'MESSAGE_BUFFER',
-    'BUFFER_TIMER_RESET',
-    'PENDING_MESSAGE_REMOVED',
+    // OpenAI y Procesamiento de IA
+    'OPENAI_REQUEST': { level: 'INFO', component: 'ai-processing' },
+    'OPENAI_RESPONSE': { level: 'SUCCESS', component: 'ai-processing' },
+    'OPENAI_ERROR': { level: 'ERROR', component: 'ai-processing' },
+    'OPENAI_RUN_STARTED': { level: 'INFO', component: 'ai-processing' },
+    'OPENAI_RUN_COMPLETED': { level: 'SUCCESS', component: 'ai-processing' },
+    'OPENAI_RUN_ACTIVE': { level: 'WARNING', component: 'ai-processing' },
+    'OPENAI_RUN_CANCEL': { level: 'WARNING', component: 'ai-processing' },
+    'OPENAI_RUN_CANCEL_ERROR': { level: 'WARNING', component: 'ai-processing' },
+    'OPENAI_RUN_CLEANUP': { level: 'INFO', component: 'ai-processing' },
+    'OPENAI_FUNCTION_OUTPUT': { level: 'INFO', component: 'ai-processing' },
 
-    // --- OpenAI & AI Processing ---
-    'OPENAI_REQUEST',
-    'OPENAI_RESPONSE',
-    'OPENAI_RUN_COMPLETED',
-    'OPENAI_FUNCTION_OUTPUT',
-    
-    // --- Function Calling ---
-    'FUNCTION_CALLING_START',
-    'FUNCTION_EXECUTING',
-    'FUNCTION_HANDLER',
-    'FUNCTION_SUBMITTED',
-    'FUNCTION_PERFORMANCE',
+    // Function Calling
+    'FUNCTION_CALLING_START': { level: 'INFO', component: 'function-calling' },
+    'FUNCTION_EXECUTING': { level: 'INFO', component: 'function-calling' },
+    'FUNCTION_HANDLER': { level: 'SUCCESS', component: 'function-calling' },
+    'FUNCTION_SUBMITTED': { level: 'INFO', component: 'function-calling' },
+    'FUNCTION_ERROR': { level: 'ERROR', component: 'function-calling' },
 
-    // --- Beds24 Integration ---
-    'BEDS24_REQUEST',
-    'BEDS24_API_CALL',
-    'BEDS24_RESPONSE_DETAIL',
-    'BEDS24_PROCESSING',
-    'BEDS24_DEBUG_OUTPUT',
+    // Gestión de Threads
+    'THREAD_STATE': { level: 'INFO', component: 'thread-management' },
+    'THREAD_CREATED': { level: 'SUCCESS', component: 'thread-management' },
+    'THREAD_REUSE': { level: 'SUCCESS', component: 'thread-management' },
+    'THREAD_PERSIST': { level: 'INFO', component: 'thread-management' },
+    'THREAD_CLEANUP': { level: 'INFO', component: 'thread-management' },
 
-    // --- Thread & Context Management ---
-    'THREAD_CREATED',
-    'THREAD_PERSIST',
-    'THREAD_CLEANUP',
-    'THREAD_REUSE',
-    'THREAD_STATE',
-    'CONTEXT_LABELS',
-    'CONTEXT_UPDATED',
-    'CONVERSATION_START',
-    'CONVERSATION_CONTINUE',
-    'CONVERSATION_END',
+    // Integración con Beds24
+    'BEDS24_REQUEST': { level: 'INFO', component: 'beds24-integration' },
+    'BEDS24_API_CALL': { level: 'INFO', component: 'beds24-integration' },
+    'BEDS24_PROCESSING': { level: 'INFO', component: 'beds24-integration' },
+    'BEDS24_RESPONSE_DETAIL': { level: 'INFO', component: 'beds24-integration' },
 
-    // --- User-specific & Debugging ---
-    'USER_GREETING',
-    'USER_QUESTION',
-    'USER_INTENT_DETECTED',
-    'USER_DEBUG',
-    'CONTACT_API',
-    'CONTACT_API_DETAILED',
+    // Lógica de Disponibilidad
+    'AVAILABILITY_HANDLER': { level: 'INFO', component: 'availability' },
 
-    // --- Application Logic ---
-    'AVAILABILITY_HANDLER',
-    'AVAILABILITY_CHECK_START',
-    'AVAILABILITY_CHECK_COMPLETE',
-    'AVAILABILITY_FOUND',
-    'AVAILABILITY_NONE',
-    'BOOKING_INQUIRY',
-    'BOOKING_REQUEST',
-    'BOOKING_CONFIRMED',
-    'BOOKING_CANCELLED',
-    'BOOKING_MODIFIED',
-    'BOT_SUGGESTION',
-    'BOT_CLARIFICATION',
-    'BOT_MESSAGE_TRACKED',
-    
-    // --- Performance & Rate Limiting ---
-    'RUN_QUEUE',
-    'RESPONSE_TIME',
-    'API_LATENCY',
-    'PROCESSING_COMPLETE',
-    'RATE_LIMIT_HIT',
-    'RATE_LIMIT_RESET',
-    'DUPLICATE_MESSAGE',
-    'SPAM_DETECTED'
-]);
+    // Servicio de Contactos y Contexto
+    'CONTACT_API': { level: 'SUCCESS', component: 'contact-service' },
+    'CONTACT_API_DETAILED': { level: 'INFO', component: 'contact-service' },
+    'CONTEXT_LABELS': { level: 'INFO', component: 'contact-service' },
 
-// Mapeo automático de categorías inválidas a válidas.
-// Organizado por funcionalidad para facilitar el mantenimiento.
-const CATEGORY_MAPPINGS: Record<string, string> = {
-    // --- System & Recovery ---
+    // Generales y de Debugging
+    'USER_DEBUG': { level: 'INFO', component: 'debug' },
+    'USER_GREETING': { level: 'INFO', component: 'user-experience' },
+    'ERROR': { level: 'ERROR', component: 'system' },
+    'WARNING': { level: 'WARNING', component: 'system' },
+    'INFO': { level: 'INFO', component: 'system' },
+    'SUCCESS': { level: 'SUCCESS', component: 'system' }
+};
+
+export type ValidCategory = keyof typeof VALID_CATEGORIES;
+
+/**
+ * @description Mapea categorías antiguas o inconsistentes a las nuevas categorías estandarizadas.
+ * Esto permite una refactorización progresiva sin romper el logging.
+ */
+const CATEGORY_MAPPINGS: { [key: string]: ValidCategory } = {
+    // Mapeos de categorías antiguas a nuevas
+    'NEW_USER': 'USER_GREETING',
+    'BUFFER_CREATE': 'MESSAGE_BUFFER',
+    'MESSAGE_BUFFERED': 'MESSAGE_BUFFER',
+    'PENDING_MESSAGE_SAVED': 'MESSAGE_BUFFER',
+    'ACTIVE_RUNS_CONFLICT': 'OPENAI_RUN_ACTIVE',
+    'CONFLICT_RUN_CANCELLED': 'OPENAI_RUN_CANCEL',
     'THREADS_LOADED': 'THREAD_PERSIST',
-    'THREAD_OPERATION': 'THREAD_PERSIST',
-    'THREAD_CREATE': 'THREAD_CREATED',
     'THREAD_LOOKUP': 'THREAD_STATE',
     'THREAD_GET': 'THREAD_STATE',
     'THREAD_CHECK': 'THREAD_STATE',
-    'MEMORY_CLEANUP_SCHEDULED': 'THREAD_CLEANUP',
-    'SERVER_LISTENING': 'SERVER_START',
-    'SYSTEM_INITIALIZED': 'SYSTEM_HEALTHY',
-    'BOT_INITIALIZED': 'BOT_READY',
-    'RECOVERY_POST_RESTART': 'RECOVERY_START',
-    'PENDING_MESSAGES_FOUND': 'RECOVERY_START',
-    'PENDING_MESSAGE_REPROCESS': 'RECOVERY_START',
-    'RECOVERY_MESSAGES_FOUND': 'RECOVERY_COMPLETE',
-    'PENDING_MESSAGES_RECOVERED': 'RECOVERY_COMPLETE',
-
-    // --- Message Flow & WhatsApp ---
-    'USER_DETECTED': 'MESSAGE_RECEIVED',
-    'USER_INTERACTION': 'MESSAGE_RECEIVED',
-    'NEW_USER': 'USER_GREETING',
-    'MESSAGE_GROUPING': 'MESSAGE_PROCESS',
-    'MESSAGE_PROCESSING': 'MESSAGE_PROCESS',
-    'PENDING_MESSAGE_SAVED': 'MESSAGE_BUFFER',
-    'MESSAGE_BUFFERED': 'MESSAGE_BUFFER',
-    'MESSAGE_BUFFERING': 'MESSAGE_BUFFER',
-    'BUFFER_CREATE': 'MESSAGE_BUFFER',
-    'BUFFER_MANAGEMENT': 'MESSAGE_BUFFER',
-    'TIMER_RESET': 'BUFFER_TIMER_RESET',
-    'WHATSAPP_CHUNK': 'WHATSAPP_CHUNKS',
-    'WHATSAPP_CHUNKING': 'WHATSAPP_CHUNKS',
-    'WHATSAPP_SENDING': 'WHATSAPP_SEND',
-    'WEBHOOK_PROCESSING': 'WEBHOOK',
-    
-    // --- User and Context ---
-    'NEW_USER_LABELS': 'CONTEXT_LABELS',
-    'USER_CONTEXT': 'CONTEXT_LABELS',
-    'USER_IDENTIFICATION': 'USER_DEBUG',
-    'USER_INTENT': 'USER_INTENT_DETECTED',
-
-    // --- OpenAI & Functions ---
-    'OPENAI_STATE': 'OPENAI_RESPONSE',
-    'OPENAI_PROCESSING': 'OPENAI_REQUEST',
-    'OPENAI_THREAD_CREATED': 'THREAD_CREATED',
-    'OPENAI_THREAD_REUSED': 'THREAD_REUSE',
-    'DURATION_DETECTED': 'OPENAI_RUN_COMPLETED',
-    'FUNCTION_DETECTED': 'FUNCTION_HANDLER',
-    'FUNCTION_CALLING': 'FUNCTION_CALLING_START',
-    'FUNCTION_EXECUTED': 'FUNCTION_EXECUTING',
-    'FUNCTION_EXECUTION': 'FUNCTION_EXECUTING',
-    'FUNCTION_SUBMITTING': 'FUNCTION_SUBMITTED',
-    'FUNCTION_RESULT': 'FUNCTION_HANDLER',
-    'FUNCTION_COMPLETED': 'FUNCTION_HANDLER',
-    'FUNCTION_OUTPUTS_DETAIL': 'OPENAI_FUNCTION_OUTPUT',
-    'FUNCTION_SUBMIT_DEBUG': 'USER_DEBUG',
-    
-    // --- Beds24 Integration ---
-    'BEDS24_DETECTED': 'BEDS24_PROCESSING',
-    'BEDS24_RESPONSE_SUMMARY': 'BEDS24_RESPONSE_DETAIL',
-    'BEDS24_AVAILABILITY': 'AVAILABILITY_HANDLER',
     'BEDS24_DATA_MAPPING': 'BEDS24_PROCESSING',
     'BEDS24_CLASSIFICATION': 'BEDS24_PROCESSING',
-    'BEDS24_SPLITS': 'BEDS24_PROCESSING',
-    'BEDS24_API_REQUEST': 'BEDS24_API_CALL',
-    'BEDS24_API_RESPONSE': 'BEDS24_RESPONSE_DETAIL',
-    'BEDS24_DATA_PROCESSING': 'BEDS24_PROCESSING',
-    'BEDS24_OPTIMIZATION': 'BEDS24_API_CALL',
-    'AVAILABILITY_CHECK': 'AVAILABILITY_CHECK_START',
-    'AVAILABILITY_QUERY': 'AVAILABILITY_CHECK_START',
-    'AVAILABILITY_RESULT': 'AVAILABILITY_CHECK_COMPLETE',
-    'CALENDAR_CHECK': 'AVAILABILITY_CHECK_START',
+    'BEDS24_RESPONSE_SUMMARY': 'BEDS24_RESPONSE_DETAIL',
+    'FUNCTION_EXECUTED': 'FUNCTION_EXECUTING',
+    'FUNCTION_OUTPUTS_DETAIL': 'OPENAI_FUNCTION_OUTPUT',
+    'FUNCTION_SUBMITTING': 'FUNCTION_SUBMITTED',
+    'FUNCTION_SUBMIT_DEBUG': 'USER_DEBUG',
+    'WHATSAPP_CHUNK': 'WHATSAPP_CHUNKS',
+    'NEW_USER_LABELS': 'CONTEXT_LABELS',
 
-    // --- Control Flow ---
-    'RATE_LIMITED': 'RATE_LIMIT_HIT',
-    'DUPLICATE_HANDLING': 'DUPLICATE_MESSAGE',
-    'RATE_LIMITING': 'RATE_LIMIT_HIT',
-
-    // --- General & Fallback from Parser ---
-    'JSON_DATA': 'INFO',
-    'ERROR_DETECTED': 'ERROR',
-    'SYSTEM_CRASH': 'SYSTEM_CRASH'
+    // Mapeos de limpieza
+    'MEMORY_CLEANUP_SCHEDULED': 'THREAD_CLEANUP',
+    'SERVER_LISTENING': 'SERVER_START',
+    'PENDING_MESSAGE_REPROCESS': 'MESSAGE_PROCESS',
+    'PENDING_MESSAGES_FOUND': 'WARNING',
+    'PENDING_MESSAGES_RECOVERED': 'INFO',
+    'PENDING_MESSAGE_REMOVED': 'MESSAGE_COMPLETE',
+    'RECOVERY_START': 'INFO',
+    'RECOVERY_COMPLETE': 'SUCCESS'
 };
 
-// Cache para evitar warnings repetidos
-const invalidCategoryWarnings = new Set<string>();
+const warningCache = new Set<string>();
 
 /**
- * Normaliza una categoría inválida a una válida
- * @param category - Categoría original
- * @returns Categoría normalizada válida
+ * Normaliza una categoría de log. Si no es válida, intenta mapearla o la asigna a 'INFO'.
+ * @param category La categoría original a normalizar.
+ * @returns La categoría normalizada y válida.
  */
-export function normalizeCategory(category: string): string {
-    // Limpiar categoría de espacios y caracteres especiales
-    const cleanCategory = category.trim().toUpperCase();
-    
-    // 1. Verificar si ya es válida
-    if (VALID_CATEGORIES_SET.has(cleanCategory)) {
-        return cleanCategory;
+export function normalizeCategory(category: string): ValidCategory {
+    const upperCategory = category.toUpperCase();
+
+    if (VALID_CATEGORIES[upperCategory as ValidCategory]) {
+        return upperCategory as ValidCategory;
+    }
+
+    const mapped = CATEGORY_MAPPINGS[upperCategory];
+    if (mapped) {
+        if (!warningCache.has(upperCategory)) {
+            console.warn(`⚠️ Log Category Normalized: '${upperCategory}' -> '${mapped}'`);
+            warningCache.add(upperCategory);
+        }
+        return mapped;
+    }
+
+    if (!warningCache.has(upperCategory)) {
+       console.warn(`⚠️ Unmapped Log Category: '${upperCategory}'. Defaulting to 'INFO'.`);
+       warningCache.add(upperCategory);
     }
     
-    // 2. Buscar mapeo directo
-    if (CATEGORY_MAPPINGS[cleanCategory]) {
-        return CATEGORY_MAPPINGS[cleanCategory];
-    }
-    
-    // 3. Mapeo inteligente por contexto
-    if (cleanCategory.includes('THREAD')) return 'THREAD_PERSIST';
-    if (cleanCategory.includes('OPENAI')) return 'OPENAI_RESPONSE';
-    if (cleanCategory.includes('BEDS24')) return 'BEDS24_PROCESSING';
-    if (cleanCategory.includes('FUNCTION')) return 'FUNCTION_HANDLER';
-    if (cleanCategory.includes('MESSAGE')) return 'MESSAGE_PROCESS';
-    if (cleanCategory.includes('WHATSAPP')) return 'WHATSAPP_SEND';
-    if (cleanCategory.includes('ERROR')) return 'ERROR';
-    if (cleanCategory.includes('WARNING')) return 'WARNING';
-    if (cleanCategory.includes('SUCCESS')) return 'SUCCESS';
-    if (cleanCategory.includes('USER')) return 'USER_DEBUG';
-    if (cleanCategory.includes('BUFFER')) return 'MESSAGE_BUFFER';
-    if (cleanCategory.includes('WEBHOOK')) return 'WEBHOOK';
-    if (cleanCategory.includes('SERVER')) return 'SERVER_START';
-    if (cleanCategory.includes('BOT')) return 'BOT_READY';
-    
-    // 4. Último recurso - categoría genérica
     return 'INFO';
-}
-
-/**
- * Valida una categoría y muestra warning si es inválida (solo una vez)
- * @param originalCategory - Categoría original
- * @param normalizedCategory - Categoría normalizada
- */
-export function validateAndWarnCategory(originalCategory: string, normalizedCategory: string): void {
-    if (originalCategory !== normalizedCategory && !invalidCategoryWarnings.has(originalCategory)) {
-        console.warn(`⚠️ Category normalized: ${originalCategory} → ${normalizedCategory}`);
-        invalidCategoryWarnings.add(originalCategory);
-    }
-}
-
-/**
- * Obtiene estadísticas de mapeo de categorías
- * @returns Estadísticas de uso del mapeo
- */
-export function getCategoryMappingStats(): {
-    totalMappings: number;
-    warningsIssued: number;
-    validCategories: number;
-} {
-    return {
-        totalMappings: Object.keys(CATEGORY_MAPPINGS).length,
-        warningsIssued: invalidCategoryWarnings.size,
-        validCategories: VALID_CATEGORIES_SET.size
-    };
-}
-
-/**
- * Limpia el cache de warnings (útil para testing)
- */
-export function clearWarningsCache(): void {
-    invalidCategoryWarnings.clear();
 } 

@@ -6,8 +6,7 @@ import {
     logError as originalLogError, 
     logWarning as originalLogWarning, 
     logSuccess as originalLogSuccess, 
-    logDebug as originalLogDebug,
-    detailedLog
+    logDebug as originalLogDebug
 } from '../logging/index.js';
 
 // Crear wrapper para enhancedLog que acepta minúsculas
