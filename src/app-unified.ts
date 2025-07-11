@@ -99,7 +99,7 @@ import {
     logServerStart,
     logBotReady
 } from './utils/logging/index.js';
-import { threadPersistence, pendingMessagesPersistence } from './utils/persistence/index.js';
+import { threadPersistence } from './utils/persistence/index.js';
 
 // Importar sistema de monitoreo
 import { botDashboard } from './utils/monitoring/dashboard.js';
@@ -216,17 +216,15 @@ app.get('/health', (req, res) => {
 
 app.get('/', (req, res) => {
     const stats = threadPersistence.getStats();
-    const pendingStats = pendingMessagesPersistence.getStats();
     
     res.json({
         service: 'TeAlquilamos Bot',
-        version: '1.0.0-unified-pending-messages',
+        version: '1.0.0-unified-stateless',
         environment: config.environment,
         status: isServerInitialized ? 'ready' : 'initializing',
         port: config.port,
         webhookUrl: config.webhookUrl,
         baseUrl: config.baseUrl,
-        pendingMessages: pendingStats, // ✨ NUEVO: Estadísticas de mensajes pendientes
         threads: stats
     });
 });
@@ -1944,9 +1942,6 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     buffer.messages.push(messageText);
                     buffer.lastActivity = Date.now();
 
-                    // ✨ NUEVO: Guardar en persistencia por si el bot se reinicia
-                    pendingMessagesPersistence.savePendingMessage(userJid, buffer);
-
                     // Cancelar timer anterior si existe
                     if (userActivityTimers.has(userJid)) {
                         clearTimeout(userActivityTimers.get(userJid)!);
@@ -2013,7 +2008,6 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         // Endpoint para estadísticas en vivo
         app.get('/stats', (req, res) => {
             const stats = threadPersistence.getStats();
-            const pendingStats = pendingMessagesPersistence.getStats();
             const liveStats = {
                 timestamp: new Date().toISOString(),
                 environment: config.environment,
@@ -2028,7 +2022,6 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
                     total: userActivityTimers.size + manualTimers.size
                 },
                 threads: stats,
-                pendingMessages: pendingStats, // ✨ NUEVO: Estadísticas de mensajes pendientes
                 tracking: {
                     botMessages: botSentMessages.size,
                     typing: userTypingState.size
@@ -2042,46 +2035,9 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         });
     }
     
-    // 🔧 NUEVO: Recuperar mensajes pendientes del reinicio anterior
-    setTimeout(async () => {
-        console.log('🔍 Verificando mensajes pendientes del reinicio anterior...');
-        
-        await pendingMessagesPersistence.processPendingMessages(async (userId, pendingData) => {
-            try {
-                // Recrear el buffer con los datos guardados
-                const buffer = {
-                    messages: pendingData.messages,
-                    chatId: pendingData.chatId,
-                    name: pendingData.userName,
-                    lastActivity: pendingData.timestamp
-                };
-                
-                // Guardar temporalmente en el buffer
-                userMessageBuffers.set(userId, buffer);
-                
-                logInfo('PENDING_MESSAGE_REPROCESS', `Reprocesando mensaje pendiente`, {
-                    userId,
-                    userName: pendingData.userName,
-                    messageCount: pendingData.messages.length,
-                    ageMinutes: Math.floor((Date.now() - pendingData.timestamp) / 1000 / 60)
-                });
-                
-                // Procesar el mensaje
-                await processUserMessages(userId);
-                
-            } catch (error) {
-                logError('PENDING_REPROCESS_ERROR', `Error reprocesando mensaje pendiente`, {
-                    userId,
-                    error: error.message
-                });
-            }
-        });
-        
-        // Limpiar mensajes muy antiguos
-        pendingMessagesPersistence.cleanOldPendingMessages();
-        
-    }, 4000); // 4 segundos después del inicio, después de la recuperación de runs
-
+    // 🔧 LOGICA DE RECUPERACIÓN ELIMINADA - El bot ahora inicia limpio.
+    // Los reintentos de webhook de WhatsApp son suficientes para la mayoría de los casos.
+    
     // 🔧 RECUPERACIÓN DE RUNS HUÉRFANOS AL INICIAR (solo después de reinicio)
     setTimeout(async () => {
         try {
