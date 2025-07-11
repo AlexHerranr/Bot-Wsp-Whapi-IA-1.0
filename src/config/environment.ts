@@ -1,3 +1,7 @@
+
+import "dotenv/config";
+import { AppSecrets, getSecrets, areSecretsLoaded } from './secrets.js';
+
 /**
  * Sistema de Configuración Unificada
  * Detecta automáticamente el entorno y configura variables dinámicamente
@@ -32,6 +36,12 @@ export interface EnvironmentConfig {
     openaiRetries: number;
 }
 
+export interface AppConfig extends EnvironmentConfig {
+    secrets: AppSecrets;
+}
+
+let appConfig: AppConfig | null = null;
+
 /**
  * Detecta automáticamente el entorno de ejecución
  */
@@ -51,7 +61,7 @@ const detectEnvironment = (): EnvironmentConfig['environment'] => {
 };
 
 /**
- * Configuración unificada del entorno
+ * Configuración unificada del entorno (solo valores no secretos)
  */
 export const createEnvironmentConfig = (): EnvironmentConfig => {
     const environment = detectEnvironment();
@@ -115,14 +125,49 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
 };
 
 /**
- * Configuración global del entorno
+ * Carga y valida la configuración completa, incluyendo secretos.
+ * Esta función debe ser llamada al inicio de la aplicación.
  */
-export const config = createEnvironmentConfig();
+export const loadAndValidateConfig = async (): Promise<AppConfig> => {
+    if (appConfig) {
+        return appConfig;
+    }
+
+    const envConfig = createEnvironmentConfig();
+    const secrets = await getSecrets();
+
+    appConfig = {
+        ...envConfig,
+        secrets,
+    };
+
+    // Validar configuración completa
+    const { isValid, errors } = validateConfig(appConfig);
+    if (!isValid) {
+        errors.forEach(error => console.error(`   - ${error}`));
+        throw new Error('Configuración inválida. Saliendo...');
+    }
+    
+    return appConfig;
+};
+
+
+/**
+ * Devuelve la configuración cargada. Lanza un error si no se ha cargado.
+ */
+export const getConfig = (): AppConfig => {
+    if (!appConfig) {
+        throw new Error('La configuración no ha sido inicializada. Llama a loadAndValidateConfig() primero.');
+    }
+    return appConfig;
+};
+
 
 /**
  * Función para logging de configuración
  */
 export const logEnvironmentConfig = () => {
+    const config = getConfig();
     console.log('🔧 Configuración del Entorno:');
     console.log(`   📍 Entorno: ${config.environment}`);
     console.log(`   🌐 Puerto: ${config.port}`);
@@ -146,26 +191,18 @@ export const logEnvironmentConfig = () => {
         console.log('   ☁️  Modo: Cloud Run');
         console.log('   🚀 Producción: Activo');
     }
+    console.log(`   🔑 Secretos: ${areSecretsLoaded() ? 'Cargados' : 'No cargados'}`);
 };
 
 /**
  * Validar configuración requerida
  */
-export const validateEnvironmentConfig = (): { isValid: boolean; errors: string[] } => {
+const validateConfig = (config: AppConfig): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
     
-    // Variables requeridas
-    const requiredEnvVars = [
-        'ASSISTANT_ID',
-        'OPENAI_API_KEY',
-        'WHAPI_TOKEN',
-        'WHAPI_API_URL'
-    ];
-    
-    for (const envVar of requiredEnvVars) {
-        if (!process.env[envVar]) {
-            errors.push(`Variable de entorno requerida: ${envVar}`);
-        }
+    // Las variables de entorno requeridas ahora se validan dentro de getSecrets()
+    if (!areSecretsLoaded()) {
+        errors.push("Los secretos de la aplicación no se pudieron cargar.");
     }
     
     // Validar puerto
@@ -177,7 +214,7 @@ export const validateEnvironmentConfig = (): { isValid: boolean; errors: string[
     try {
         new URL(config.webhookUrl);
         new URL(config.baseUrl);
-    } catch (error) {
+    } catch (error: any) {
         errors.push(`URL inválida en configuración: ${error.message}`);
     }
     
@@ -223,6 +260,4 @@ export const cloudRunConfig = {
     // Configuración de logs
     enableStructuredLogs: true,
     logFormat: 'json'
-};
-
-export default config; 
+}; 

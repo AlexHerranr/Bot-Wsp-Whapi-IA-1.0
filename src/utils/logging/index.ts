@@ -1,71 +1,31 @@
 // src/utils/logging/index.ts
 
-import { config } from '../../config/environment.js';
-import { VALID_CATEGORIES, ValidCategory, normalizeCategory } from './category-mapper.js';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.K_SERVICE;
+const DETAILED_LOGS = process.env.ENABLE_DETAILED_LOGS === 'true' || !IS_PRODUCTION;
 
-const IS_PRODUCTION = config.environment === 'cloud-run';
-const DETAILED_LOGS = config.enableDetailedLogs;
-
-// Rate limiting por categoría (logs por minuto)
-const RATE_LIMITS: { [key in ValidCategory]?: number } = {
-    'HEALTH_CHECK': 10,
-    'MESSAGE_BUFFER': 50,
-    'USER_DEBUG': 50,
-    'THREAD_STATE': 20,
-};
-
-const rateLimitCounters = new Map<string, number>();
-setInterval(() => rateLimitCounters.clear(), 60000); // Limpiar cada minuto
-
-function checkRateLimit(category: ValidCategory): boolean {
-    const limit = RATE_LIMITS[category];
-    if (!limit) return true;
-
-    const count = rateLimitCounters.get(category) || 0;
-    if (count >= limit) {
-        if (count === limit) { // Loguear solo la primera vez que se excede
-             console.warn(`🚦 RATE LIMITED: Categoría '${category}' excedió límite de ${limit} logs/min.`);
-             rateLimitCounters.set(category, count + 1);
-        }
-        return false;
-    }
-    rateLimitCounters.set(category, count + 1);
-    return true;
-}
+type LogLevel = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
 
 function enrichedLog(
     category: string, 
     message: string, 
     details: Record<string, any> = {}, 
-    levelOverride?: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'
+    level: LogLevel = 'INFO'
 ) {
-    const normalizedCategory = normalizeCategory(category);
-    
-    if (!checkRateLimit(normalizedCategory)) {
-        return;
-    }
-
-    const categoryConfig = VALID_CATEGORIES[normalizedCategory];
-    const level = levelOverride || categoryConfig.level;
-    const component = categoryConfig.component;
-
     const logEntry = {
         timestamp: new Date().toISOString(),
-        message: `[${normalizedCategory}] ${message}`,
+        message: `[${category.toUpperCase()}] ${message}`,
         labels: {
             app: 'whatsapp-bot',
-            category: normalizedCategory,
-            component,
+            category: category.toUpperCase(),
             level,
             ...(details.userId && { userId: String(details.userId) }),
         },
         jsonPayload: {
-            category: normalizedCategory,
+            category: category.toUpperCase(),
             level,
             ...(details.userId && { userId: String(details.userId) }),
             details: Object.keys(details).length > 0 ? details : undefined,
-            environment: config.environment,
-            ...(category.toUpperCase() !== normalizedCategory && { originalCategory: category.toUpperCase() })
+            environment: IS_PRODUCTION ? 'cloud-run' : 'local',
         }
     };
     
@@ -74,13 +34,13 @@ function enrichedLog(
         'WARNING': console.warn,
         'SUCCESS': console.log,
         'INFO': console.log
-    }[level] || console.log;
+    }[level];
 
     if (IS_PRODUCTION) {
         logMethod(JSON.stringify(logEntry));
     } else {
-        const emoji = { 'SUCCESS': '✅', 'ERROR': '❌', 'WARNING': '⚠️', 'INFO': 'ℹ️' }[level] || '📝';
-        console.log(`${emoji} [${normalizedCategory}] ${message}`);
+        const emoji = { 'SUCCESS': '✅', 'ERROR': '❌', 'WARNING': '⚠️', 'INFO': 'ℹ️' }[level];
+        console.log(`${emoji} [${category.toUpperCase()}] ${message}`);
         if (DETAILED_LOGS && Object.keys(details).length > 0) {
             console.log(`   📊 Detalles:`, JSON.stringify(details, null, 2));
         }

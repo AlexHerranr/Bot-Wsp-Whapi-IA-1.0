@@ -15,6 +15,10 @@ import {
 } from '../../utils/logging/index.js';
 import axios from 'axios';
 
+// --- Caché de Disponibilidad ---
+const availabilityCache = new Map<string, { data: OptimizedResult; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
 // Interfaces para la lógica optimizada
 interface PropertyData {
     propertyId: number;
@@ -72,6 +76,49 @@ export interface AvailabilityFunction {
         required: ['startDate', 'endDate'];
     };
 }
+
+/**
+ * 🚀 NUEVO: Wrapper de caché para la consulta de disponibilidad
+ */
+async function getCachedAvailabilityAndPrices(
+    startDate: string,
+    endDate: string,
+    propertyId?: number,
+    roomId?: number
+): Promise<OptimizedResult> {
+    const cacheKey = `availability_${startDate}_${endDate}_${propertyId || 'any'}_${roomId || 'any'}`;
+    const cached = availabilityCache.get(cacheKey);
+
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+        logInfo('BEDS24_CACHE_HIT', 'Cache de disponibilidad utilizado', {
+            cacheKey,
+            age_seconds: Math.round((Date.now() - cached.timestamp) / 1000)
+        });
+        return cached.data;
+    }
+
+    logInfo('BEDS24_CACHE_MISS', 'Cache de disponibilidad no encontrado o expirado', { cacheKey });
+
+    const result = await getAvailabilityAndPricesOptimized(startDate, endDate, propertyId, roomId);
+    
+    availabilityCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now()
+    });
+
+    // Limpieza periódica de caché para evitar memory leaks
+    if (availabilityCache.size > 100) {
+        const now = Date.now();
+        for (const [key, value] of availabilityCache.entries()) {
+            if (now - value.timestamp > CACHE_TTL * 2) { // Eliminar entradas muy viejas
+                availabilityCache.delete(key);
+            }
+        }
+    }
+
+    return result;
+}
+
 
 /**
  * Obtiene datos combinados: disponibilidad + precios con lógica de splits
@@ -814,8 +861,8 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
             roomId
         });
 
-        // Obtener datos combinados: disponibilidad + precios
-        const result = await getAvailabilityAndPricesOptimized(startDate, endDate, propertyId, roomId);
+        // Obtener datos combinados: disponibilidad + precios (USANDO CACHÉ)
+        const result = await getCachedAvailabilityAndPrices(startDate, endDate, propertyId, roomId);
 
         // Formatear respuesta optimizada para OpenAI
         const response = formatOptimizedResponse(result, startDate, endDate);
