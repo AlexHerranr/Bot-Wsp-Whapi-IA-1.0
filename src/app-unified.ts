@@ -356,8 +356,7 @@ async function initializeBot() {
                     }
                 });
                 
-                // ✨ NUEVO: Limpiar mensajes pendientes antiguos
-                pendingMessagesPersistence.cleanOldPendingMessages();
+                // ✨ LÓGICA DE PERSISTENCIA ELIMINADA - El bot ahora inicia limpio.
 
                 if (cleanedBuffers > 0 || cleanedTimers > 0) {
                     logInfo('MEMORY_CLEANUP', 'Limpieza periódica de memoria completada', {
@@ -1625,9 +1624,6 @@ HORA: ${hours}:${minutes} - Zona horaria Colombia (UTC-5)
         
         // Enviar respuesta a WhatsApp usando la función mejorada
         await sendWhatsAppMessage(buffer.chatId, response);
-
-        // ✨ NUEVO: Eliminar de mensajes pendientes si existe
-        pendingMessagesPersistence.removePendingMessage(userId);
 
         // Limpiar buffer
         userMessageBuffers.delete(userId);
