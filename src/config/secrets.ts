@@ -53,6 +53,24 @@ export const getSecrets = async (): Promise<AppSecrets> => {
         return cachedSecrets;
     }
 
+    // NUEVO ➡️  Si TODAS las variables ya existen en process.env (por ejemplo, inyectadas
+    // mediante `--set-secrets` en Cloud Run) usamos esos valores directamente y evitamos
+    // llamadas a Secret Manager. Así nunca aparecen las claves en los logs de despliegue.
+    const envSecretsCandidate = {
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        ASSISTANT_ID: process.env.ASSISTANT_ID,
+        WHAPI_TOKEN: process.env.WHAPI_TOKEN,
+        WHAPI_API_URL: process.env.WHAPI_API_URL,
+        BEDS24_TOKEN: process.env.BEDS24_TOKEN,
+        BEDS24_API_URL: process.env.BEDS24_API_URL,
+    };
+    const allEnvPresent = Object.values(envSecretsCandidate).every((v) => typeof v === 'string' && v.length > 0);
+
+    if (allEnvPresent) {
+        cachedSecrets = envSecretsCandidate as AppSecrets;
+        return cachedSecrets;
+    }
+
     // En entorno local, usar variables de entorno para facilitar el desarrollo.
     // En producción, SIEMPRE usar un gestor de secretos.
     if (process.env.NODE_ENV !== 'production' && process.env.K_SERVICE === undefined) {
