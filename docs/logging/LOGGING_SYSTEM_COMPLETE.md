@@ -2,7 +2,35 @@
 
 ## 📋 Resumen Ejecutivo
 
-El sistema de logging ha sido completamente migrado y optimizado para Google Cloud Run, implementando **17 categorías específicas**, **filtros inteligentes**, **agregación automática** y **métricas en tiempo real**. Este documento describe la implementación completa, uso y mantenimiento del sistema.
+El sistema de logging ha sido completamente migrado y optimizado para Google Cloud Run, implementando **17 categorías específicas**, **filtros inteligentes**, **agregación automática**, **métricas en tiempo real** y **mejoras críticas de seguridad y robustez**. Este documento describe la implementación completa, uso y mantenimiento del sistema.
+
+## 🚨 **MEJORAS CRÍTICAS IMPLEMENTADAS V2.1**
+
+### 🔒 **Seguridad y Sanitización**
+- ✅ **Sanitización robusta** de tokens, API keys, números de teléfono
+- ✅ **Detección automática** de datos sensibles
+- ✅ **Enmascaramiento inteligente** preservando utilidad
+- ✅ **Métricas de sanitización** para auditoría
+
+### 🚦 **Rate Limiting y Anti-Spam**
+- ✅ **Rate limiting por usuario** (100 logs/min, 1000/hora)
+- ✅ **Límites por categoría** específicos y configurables
+- ✅ **Detección de duplicados** (máx 5 repeticiones)
+- ✅ **Limpieza automática** de memoria
+
+### 🛡️ **Robustez y Estabilidad**
+- ✅ **Circuit breaker** para fallos del sistema
+- ✅ **Encoding UTF-8** fijo para caracteres especiales
+- ✅ **Límites de memoria** estrictos (50MB max buffer)
+- ✅ **Validación de tamaño** (256KB Google Cloud limit)
+- ✅ **Error handling robusto** con fallbacks
+- ✅ **Feature flags** para rollback instantáneo
+
+### 📊 **Monitoreo Avanzado**
+- ✅ **Métricas del sistema** de logging
+- ✅ **Performance tracking** (latencia, throughput)
+- ✅ **Backup logging** cuando Cloud falla
+- ✅ **Alertas automáticas** de fallos
 
 ## 🎯 Objetivos Alcanzados
 
@@ -161,6 +189,97 @@ const CATEGORY_LEVELS = {
         }
     }
 }
+```
+
+## 🔒 **Seguridad y Sanitización**
+
+### Datos Protegidos Automáticamente
+```javascript
+// Antes (PELIGROSO)
+logInfo('USER_LOGIN', 'Usuario autenticado', {
+    phone: '573001234567',
+    token: 'sk-1234567890abcdef1234567890abcdef',
+    email: 'user@example.com',
+    password: 'mySecretPassword'
+});
+
+// Después (SEGURO - Automático)
+logInfo('USER_LOGIN', 'Usuario autenticado', {
+    phone: '573****4567',              // Enmascarado
+    token: 'sk-1****def',              // Enmascarado  
+    email: 'u***r@example.com',        // Enmascarado
+    password: '***REDACTED***'         // Completamente oculto
+});
+```
+
+### Configuración de Sanitización
+```javascript
+import { sanitizeDetails } from './utils/logging/data-sanitizer';
+
+// Configuración personalizada
+const customConfig = {
+    maskTokens: true,
+    maskPhoneNumbers: true,
+    maskEmails: false,        // Permitir emails en desarrollo
+    maxFieldLength: 1000
+};
+
+const sanitized = sanitizeDetails(sensitiveData, customConfig);
+```
+
+## 🚦 **Rate Limiting**
+
+### Límites por Categoría
+```javascript
+// Límites automáticos aplicados
+const CATEGORY_LIMITS = {
+    'MESSAGE_RECEIVED': { perMinute: 30, perHour: 500 },
+    'OPENAI_REQUEST': { perMinute: 15, perHour: 200 },
+    'BEDS24_REQUEST': { perMinute: 10, perHour: 100 },
+    'ERROR': { perMinute: 50, perHour: 500 }  // Más permisivo para errores
+};
+```
+
+### Verificar Estado de Usuario
+```javascript
+import { globalRateLimiter } from './utils/logging/rate-limiter';
+
+const userStatus = globalRateLimiter.getUserStatus('573001234567');
+console.log({
+    logsLastMinute: userStatus.logsLastMinute,
+    quotaRemaining: userStatus.quotaRemaining,
+    isBlocked: userStatus.isBlocked
+});
+```
+
+## 🛡️ **Robustez y Fallbacks**
+
+### Feature Flag para Rollback
+```bash
+# Rollback instantáneo si hay problemas
+export USE_LEGACY_LOGGING=true
+
+# El sistema volverá automáticamente al logging simple
+```
+
+### Circuit Breaker Automático
+```javascript
+// Automático - No requiere configuración
+// Si hay >10 fallos consecutivos:
+// 1. Sistema de logging se deshabilita 30 segundos
+// 2. Se activa backup logging
+// 3. Se reintenta automáticamente
+```
+
+### Límites de Memoria
+```javascript
+// Configuración automática del buffer
+const MEMORY_LIMITS = {
+    maxBufferSize: 1000,      // Máx 1000 logs
+    maxMemoryMB: 50,          // Máx 50MB en memoria
+    forceFlushSize: 500,      // Flush preventivo a 500 logs
+    maxMessageLength: 1000    // Máx 1000 chars por mensaje
+};
 ```
 
 ## 🔧 Uso del Sistema

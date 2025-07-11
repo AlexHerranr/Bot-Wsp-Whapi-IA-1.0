@@ -40,6 +40,11 @@ export class LogAggregator {
     private readonly MAX_BUFFER_SIZE = 1000; // Máximo 1000 logs en buffer
     private readonly MAX_AGGREGATED_DETAILS = 10; // Máximo 10 detalles por log agregado
     
+    // ✨ LÍMITES ESTRICTOS DE MEMORIA (MEJORA CRÍTICA)
+    private readonly MAX_MEMORY_MB = 50; // Máximo 50MB para el buffer
+    private readonly FORCE_FLUSH_SIZE = 500; // Forzar flush a los 500 logs
+    private readonly MAX_MESSAGE_LENGTH = 1000; // Máximo 1000 chars por mensaje
+    
     private emitFunction: (logString: string) => void;
     
     constructor(emitFunction: (logString: string) => void) {
@@ -169,12 +174,41 @@ export class LogAggregator {
     }
     
     /**
-     * 📏 VERIFICAR LÍMITES DEL BUFFER
+     * 📏 VERIFICAR LÍMITES DEL BUFFER - MEJORADO CON LÍMITES DE MEMORIA
      */
     private checkBufferLimits(): void {
+        // 1. Verificar límite por cantidad
         if (this.buffer.entries.size >= this.MAX_BUFFER_SIZE) {
-            // Forzar flush inmediato si el buffer está lleno
             this.flushBuffer();
+            return;
+        }
+        
+        // 2. ✨ VERIFICAR LÍMITE DE MEMORIA
+        const memoryUsage = this.getMemoryUsage();
+        if (memoryUsage > this.MAX_MEMORY_MB) {
+            console.warn(`🚨 Buffer memory limit exceeded: ${memoryUsage}MB > ${this.MAX_MEMORY_MB}MB. Force flushing.`);
+            this.flushBuffer();
+            return;
+        }
+        
+        // 3. ✨ FLUSH PREVENTIVO
+        if (this.buffer.entries.size >= this.FORCE_FLUSH_SIZE) {
+            console.log(`⚡ Preventive flush at ${this.buffer.entries.size} logs`);
+            this.flushBuffer();
+            return;
+        }
+    }
+    
+    /**
+     * 💾 CALCULAR USO DE MEMORIA DEL BUFFER
+     */
+    private getMemoryUsage(): number {
+        try {
+            const bufferString = JSON.stringify(Array.from(this.buffer.entries.values()));
+            return Math.round(Buffer.byteLength(bufferString, 'utf8') / 1024 / 1024); // MB
+        } catch (error) {
+            console.error('Error calculating buffer memory usage:', error);
+            return 0;
         }
     }
     

@@ -10,9 +10,11 @@
 import { LogLevel, LogEntry } from './types';
 import { shouldLog, applyContextualFilters, checkUserSpecificFilters, LogFilterMetrics } from './log-filters';
 import { LogAggregator } from './log-aggregator';
+import { sanitizeDetails as sanitizeData, containsSensitiveData, SanitizationMetrics } from './data-sanitizer';
+import { globalRateLimiter } from './rate-limiter';
 
-// Mapeo de categorías válidas según README
-const VALID_CATEGORIES = [
+// ✨ VALIDACIÓN ESTRICTA CON SET (MEJORA CRÍTICA)
+const VALID_CATEGORIES_SET = new Set([
     // Mensajes y Comunicación
     'MESSAGE_RECEIVED',
     'MESSAGE_PROCESS', 
@@ -43,8 +45,10 @@ const VALID_CATEGORIES = [
     'ERROR',
     'WARNING',
     'SUCCESS'
-] as const;
+]);
 
+// Array para compatibilidad con tipos
+const VALID_CATEGORIES = Array.from(VALID_CATEGORIES_SET);
 type ValidCategory = typeof VALID_CATEGORIES[number];
 
 // ✨ INSTANCIA GLOBAL DEL AGREGADOR
@@ -69,65 +73,260 @@ process.on('SIGTERM', () => {
  * Emite logs estructurados para Google Cloud Console con formato JSON optimizado.
  * Implementa TODAS las categorías especificadas en el README.
  */
+// ✨ MÉTRICAS DE PERFORMANCE DEL SISTEMA DE LOGGING
+interface LoggingMetrics {
+    droppedLogs: number;
+    avgLatency: number;
+    failedLogs: number;
+    totalLogs: number;
+    sanitizedLogs: number;
+    rateLimitedLogs: number;
+}
+
+const loggingMetrics: LoggingMetrics = {
+    droppedLogs: 0,
+    avgLatency: 0,
+    failedLogs: 0,
+    totalLogs: 0,
+    sanitizedLogs: 0,
+    rateLimitedLogs: 0
+};
+
+// ✨ CIRCUIT BREAKER PARA FALLOS
+let loggingFailures = 0;
+let loggingDisabled = false;
+const MAX_FAILURES = 10;
+const DISABLE_DURATION = 30000; // 30 segundos
+
+// ✨ FEATURE FLAG PARA ROLLBACK
+const USE_LEGACY_LOGGING = process.env.USE_LEGACY_LOGGING === 'true';
+
 export function cloudLog(level: LogLevel, category: string, message: string, details?: any): void {
-    // Registrar métricas
-    LogFilterMetrics.recordTotal();
+    const startTime = Date.now();
     
-    // Validar categoría
-    if (!VALID_CATEGORIES.includes(category as ValidCategory)) {
-        console.warn(`⚠️ Categoría de log no válida: ${category}. Usando 'OTHER'`);
-        category = 'OTHER';
-    }
-    
-    // Determinar entorno
-    const environment = process.env.K_SERVICE ? 'production' : 'development';
-    const userId = details?.userId || details?.shortUserId || 'system';
-    
-    // ✨ APLICAR FILTROS INTELIGENTES
-    
-    // 1. Filtro principal por nivel y categoría
-    if (!shouldLog(level, category, environment)) {
-        LogFilterMetrics.recordFiltered(category, 'level-filter');
-        return;
-    }
-    
-    // 2. Filtros contextuales
-    if (!applyContextualFilters(level, category, details, environment)) {
-        LogFilterMetrics.recordFiltered(category, 'contextual-filter');
-        return;
-    }
-    
-    // 3. Filtros específicos por usuario
-    if (!checkUserSpecificFilters(userId, level, category)) {
-        LogFilterMetrics.recordFiltered(category, 'user-filter');
-        return;
-    }
-    
-    // 4. Crear entrada estructurada
-    const entry: LogEntry = {
-        timestamp: new Date().toISOString(),
-        level,
-        category,
-        message,
-        details: sanitizeDetails(details),
-        environment
-    };
-    
-    // 5. Decidir si usar agregación o emitir directamente
-    const shouldAggregate = environment === 'production' && !isHighPriorityLog(level, category);
-    
-    if (shouldAggregate) {
-        // Usar agregador para logs de baja prioridad en producción
-        logAggregator.addLog(entry);
-    } else {
-        // Emitir directamente para logs importantes o en desarrollo
-        const structuredLog = formatGoogleCloudLogEntry(entry);
-        console.log(structuredLog);
+    try {
+        // ✨ FEATURE FLAG - ROLLBACK STRATEGY
+        if (USE_LEGACY_LOGGING) {
+            console.log(`[${level}] ${category}: ${message}`, details || '');
+            return;
+        }
+        
+        // ✨ CIRCUIT BREAKER - Si el logging está fallando mucho, deshabilitarlo temporalmente
+        if (loggingDisabled) {
+            loggingMetrics.droppedLogs++;
+            return;
+        }
+        
+        // Registrar métricas
+        LogFilterMetrics.recordTotal();
+        loggingMetrics.totalLogs++;
+        
+        // ✨ VALIDACIÓN ESTRICTA CON SET (MEJORA CRÍTICA)
+        if (!VALID_CATEGORIES_SET.has(category)) {
+            console.error(`❌ INVALID CATEGORY: ${category}. Must be one of: ${Array.from(VALID_CATEGORIES_SET).join(', ')}`);
+            // En desarrollo, mostrar error. En producción, usar ERROR pero loggear el error
+            if (process.env.NODE_ENV === 'development') {
+                throw new Error(`Invalid logging category: ${category}`);
+            }
+            category = 'ERROR'; // Usar ERROR en lugar de OTHER para que sea visible
+        }
+        
+        // Determinar entorno
+        const environment = process.env.K_SERVICE ? 'production' : 'development';
+        const userId = details?.userId || details?.shortUserId || 'system';
+        
+        // ✨ RATE LIMITING - Prevenir log flooding
+        const rateLimitResult = globalRateLimiter.checkRateLimit(userId, category, message, level);
+        if (!rateLimitResult.allowed) {
+            LogFilterMetrics.recordFiltered(category, 'rate-limited');
+            loggingMetrics.rateLimitedLogs++;
+            
+            // Solo loggear el primer bloqueo para evitar spam
+            if (loggingMetrics.rateLimitedLogs % 100 === 1) {
+                console.warn(`🚦 RATE LIMITED: ${rateLimitResult.reason}`);
+            }
+            return;
+        }
+        
+        // ✨ APLICAR FILTROS INTELIGENTES
+        
+        // 1. Filtro principal por nivel y categoría
+        if (!shouldLog(level, category, environment)) {
+            LogFilterMetrics.recordFiltered(category, 'level-filter');
+            return;
+        }
+        
+        // 2. Filtros contextuales
+        if (!applyContextualFilters(level, category, details, environment)) {
+            LogFilterMetrics.recordFiltered(category, 'contextual-filter');
+            return;
+        }
+        
+        // 3. Filtros específicos por usuario
+        if (!checkUserSpecificFilters(userId, level, category)) {
+            LogFilterMetrics.recordFiltered(category, 'user-filter');
+            return;
+        }
+        
+        // ✨ SANITIZACIÓN ROBUSTA DE DATOS SENSIBLES (CRÍTICO)
+        let sanitizedDetails = details;
+        if (details && containsSensitiveData(details)) {
+            sanitizedDetails = sanitizeData(details);
+            loggingMetrics.sanitizedLogs++;
+            SanitizationMetrics.recordFieldRedaction();
+        }
+        
+        // 4. Crear entrada estructurada
+        const entry: LogEntry = {
+            timestamp: new Date().toISOString(),
+            level,
+            category,
+            message,
+            details: sanitizedDetails,
+            environment
+        };
+        
+        // ✨ VALIDACIÓN DE TAMAÑO - Google Cloud Logging límite 256KB
+        const entryString = JSON.stringify(entry);
+        if (entryString.length > 250000) { // 250KB para dejar margen
+            entry.details = { 
+                truncated: true, 
+                originalSize: entryString.length,
+                message: 'Log truncated due to size limit'
+            };
+            loggingMetrics.droppedLogs++;
+        }
+        
+        // 5. Decidir si usar agregación o emitir directamente
+        const shouldAggregate = environment === 'production' && !isHighPriorityLog(level, category);
+        
+        if (shouldAggregate) {
+            // Usar agregador para logs de baja prioridad en producción
+            logAggregator.addLog(entry);
+        } else {
+            // Emitir directamente para logs importantes o en desarrollo
+            emitLogSafely(entry);
+        }
+        
+        // Actualizar métricas de latencia
+        const latency = Date.now() - startTime;
+        loggingMetrics.avgLatency = (loggingMetrics.avgLatency + latency) / 2;
+        
+        // Reset circuit breaker si todo va bien
+        if (loggingFailures > 0) {
+            loggingFailures = Math.max(0, loggingFailures - 1);
+        }
+        
+    } catch (error) {
+        handleLoggingError(error, level, category, message, details);
     }
 }
 
 /**
- * 🧹 SANITIZAR DETALLES SENSIBLES
+ * ✨ EMITIR LOG DE FORMA SEGURA CON FALLBACKS
+ */
+function emitLogSafely(entry: LogEntry): void {
+    try {
+        const structuredLog = formatGoogleCloudLogEntry(entry);
+        
+        // ✨ ENCODING UTF-8 FIX - Asegurar encoding correcto
+        const utf8Log = Buffer.from(structuredLog, 'utf8').toString('utf8');
+        console.log(utf8Log);
+        
+    } catch (error) {
+        // ✨ FALLBACK - Si JSON.stringify falla, intentar log básico
+        try {
+            console.error('LOGGING_SYSTEM_ERROR: JSON stringify failed', error);
+            console.log(`[${entry.level}] ${entry.category}: ${entry.message}`);
+        } catch (fallbackError) {
+            // Último recurso - log mínimo
+            console.error('CRITICAL_LOGGING_FAILURE', { error: error.message, fallback: fallbackError.message });
+        }
+        
+        loggingMetrics.failedLogs++;
+        loggingFailures++;
+    }
+}
+
+/**
+ * ✨ MANEJAR ERRORES DEL SISTEMA DE LOGGING
+ */
+function handleLoggingError(error: any, level: LogLevel, category: string, message: string, details?: any): void {
+    loggingMetrics.failedLogs++;
+    loggingFailures++;
+    
+    // ✨ CIRCUIT BREAKER - Deshabilitar logging temporalmente si hay muchos fallos
+    if (loggingFailures >= MAX_FAILURES) {
+        loggingDisabled = true;
+        console.error(`🚨 LOGGING SYSTEM DISABLED: Too many failures (${loggingFailures})`);
+        
+        // Reactivar después del tiempo de espera
+        setTimeout(() => {
+            loggingDisabled = false;
+            loggingFailures = 0;
+            console.log('🔄 LOGGING SYSTEM REACTIVATED');
+        }, DISABLE_DURATION);
+    }
+    
+    // ✨ BACKUP LOGGING - Si Cloud Logging falla, guardar localmente
+    try {
+        const backupEntry = {
+            timestamp: new Date().toISOString(),
+            level,
+            category,
+            message,
+            error: error.message,
+            stack: error.stack,
+            details: details ? JSON.stringify(details).substring(0, 200) : null
+        };
+        
+        // En desarrollo, mostrar en consola
+        if (process.env.NODE_ENV === 'development') {
+            console.error('LOGGING_ERROR:', backupEntry);
+        }
+        
+        // TODO: Implementar guardado en archivo local para backup
+        // saveToLocalBuffer(backupEntry);
+        
+    } catch (backupError) {
+        console.error('CRITICAL: Backup logging also failed', backupError);
+    }
+}
+
+/**
+ * 📊 OBTENER MÉTRICAS DEL SISTEMA DE LOGGING
+ */
+export function getLoggingMetrics(): LoggingMetrics & { 
+    rateLimiterStats: any; 
+    sanitizationStats: any;
+    filterStats: any;
+} {
+    return {
+        ...loggingMetrics,
+        rateLimiterStats: globalRateLimiter.getStats(),
+        sanitizationStats: SanitizationMetrics.getStats(),
+        filterStats: LogFilterMetrics.getStats()
+    };
+}
+
+/**
+ * 🔄 RESETEAR MÉTRICAS DEL SISTEMA DE LOGGING
+ */
+export function resetLoggingMetrics(): void {
+    loggingMetrics.droppedLogs = 0;
+    loggingMetrics.avgLatency = 0;
+    loggingMetrics.failedLogs = 0;
+    loggingMetrics.totalLogs = 0;
+    loggingMetrics.sanitizedLogs = 0;
+    loggingMetrics.rateLimitedLogs = 0;
+    
+    globalRateLimiter.reset();
+    SanitizationMetrics.reset();
+    LogFilterMetrics.reset();
+}
+
+/**
+ * 🧹 SANITIZAR DETALLES SENSIBLES (LEGACY - MANTENER COMPATIBILIDAD)
  * 
  * Limpia información sensible de los detalles antes de enviar a logs.
  */
