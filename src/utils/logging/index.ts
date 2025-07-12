@@ -86,12 +86,16 @@ function enrichedLog(
 }
 
 // Exportar funciones de logging específicas y genéricas
-export const logInfo = (cat: string, msg: string, details?: Record<string, any>) => enrichedLog(cat, msg, details, 'INFO');
+export const logInfo = (cat: string, msg: string, details?: Record<string, any>) => {
+    if (cat === 'MESSAGE_BUFFERED' && details?.bufferCount <= 1 && IS_PRODUCTION) return;  // Omitir si bufferCount <=1 en prod
+    if (cat === 'BUFFER_TIMER_RESET' && IS_PRODUCTION) return;  // Omitir resets en prod
+    enrichedLog(cat, msg, details, 'INFO');
+};
 export const logSuccess = (cat: string, msg: string, details?: Record<string, any>) => enrichedLog(cat, msg, details, 'SUCCESS');
 export const logWarning = (cat: string, msg: string, details?: Record<string, any>) => enrichedLog(cat, msg, details, 'WARNING');
 export const logError = (cat: string, msg: string, details?: Record<string, any>) => enrichedLog(cat, msg, details, 'ERROR');
 export const logDebug = (cat: string, msg: string, details?: Record<string, any>) => {
-    if (DETAILED_LOGS) {
+    if (DETAILED_LOGS && !IS_PRODUCTION) {  // Solo en no-production o si detailed enabled
         enrichedLog(cat, `[DEBUG] ${msg}`, details, 'INFO');
     }
 };

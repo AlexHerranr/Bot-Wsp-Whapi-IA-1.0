@@ -421,8 +421,8 @@ function setupWebhooks() {
                 run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
                 attempts++;
                 
-                if (attempts % 10 === 0) {
-                    logInfo('OPENAI_POLLING', `Esperando respuesta para ${shortUserId}, intento ${attempts}/${maxAttempts}, estado: ${run.status}`);
+                if (attempts % 20 === 0) {  // Cambiado de %10 a %20
+                    logInfo('OPENAI_POLLING', `Esperando...`, { shortUserId, runId: run.id, status: run.status });
                 }
             }
             
@@ -699,7 +699,11 @@ function setupWebhooks() {
                     // Log en consola con indicador de espera
                     const timeoutSeconds = MESSAGE_BUFFER_TIMEOUT / 1000;
                     const messagePreview = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
-                    console.log(`👤 ${userName}: "${messagePreview}" → ⏳ ${timeoutSeconds}s...`);
+                    if (process.env.DETAILED_LOGS === 'true') {
+                        console.log(`Detalles extras: ${JSON.stringify({ userJid, chatId, userName, messageText, timeoutSeconds })}`);
+                    } else {
+                        console.log(`👤 ${userName}: "${messagePreview}" → ⏳ ${timeoutSeconds}s...`);
+                    }
 
                     // Establecer nuevo timer para procesar mensajes agrupados
                     const timerId = setTimeout(async () => {
