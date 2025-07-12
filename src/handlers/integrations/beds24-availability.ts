@@ -11,7 +11,8 @@ import {
     logBeds24Request,
     logBeds24ApiCall,
     logBeds24ResponseDetail,
-    logBeds24Processing
+    logBeds24Processing,
+    logWarning
 } from '../../utils/logging/index.js';
 import axios from 'axios';
 
@@ -791,7 +792,7 @@ function generateDateRange(startDate: string, endDate: string): string[] {
  */
 export async function handleAvailabilityCheck(args: any): Promise<string> {
     // 🔧 MEJORADO: Validación robusta de parámetros según OpenAI best practices
-    const { startDate, endDate, propertyId = null, roomId = null, maxTransfers = null } = args;
+    let { startDate, endDate, propertyId = null, roomId = null, maxTransfers = null } = args;
     
     // Validación de fechas requeridas
     if (!startDate || !endDate) {
@@ -806,12 +807,53 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
         return 'Error: Las fechas deben estar en formato YYYY-MM-DD.';
     }
     
-    // Validación de lógica de fechas
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // 🔧 ETAPA 8: Fix Function Date Hallucination
+    // Ajustar fechas si la IA alucina el año (e.g., 2024 en lugar de 2025)
+    let adjustedStartDate = startDate;
+    let adjustedEndDate = endDate;
+    let dateAdjusted = false;
     
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // 1-12
+    
+    let start = new Date(startDate);
+    let end = new Date(endDate);
+    const startMonth = start.getMonth() + 1; // 1-12
+    const endMonth = end.getMonth() + 1; // 1-12
+    
+    // Si la fecha es del pasado pero el mes es futuro, ajustar al año actual o siguiente
+    if (start < today && startMonth > currentMonth) {
+        const newYear = currentYear;
+        adjustedStartDate = `${newYear}-${startDate.substring(5, 7)}-${startDate.substring(8, 10)}`;
+        dateAdjusted = true;
+        logWarning('BEDS24_DATE_ADJUSTMENT', 'Año ajustado para fecha de inicio', {
+            original: startDate,
+            adjusted: adjustedStartDate,
+            reason: 'past_date_future_month'
+        });
+    }
+    
+    if (end < today && endMonth > currentMonth) {
+        const newYear = currentYear;
+        adjustedEndDate = `${newYear}-${endDate.substring(5, 7)}-${endDate.substring(8, 10)}`;
+        dateAdjusted = true;
+        logWarning('BEDS24_DATE_ADJUSTMENT', 'Año ajustado para fecha de fin', {
+            original: endDate,
+            adjusted: adjustedEndDate,
+            reason: 'past_date_future_month'
+        });
+    }
+    
+    // Si se ajustaron las fechas, actualizar las variables
+    if (dateAdjusted) {
+        startDate = adjustedStartDate;
+        endDate = adjustedEndDate;
+        start = new Date(startDate);
+        end = new Date(endDate);
+    }
+    
+    // Validación de lógica de fechas
     if (start >= end) {
         logError('BEDS24_VALIDATION', 'Fecha de fin debe ser posterior a fecha de inicio', { startDate, endDate });
         return 'Error: La fecha de fin debe ser posterior a la fecha de inicio.';
@@ -822,8 +864,13 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
     yesterday.setDate(yesterday.getDate() - 1);
     
     if (start <= yesterday) {
-        logError('BEDS24_VALIDATION', 'Fecha de inicio no puede ser del pasado', { startDate, currentDate: today.toISOString().split('T')[0] });
-        return 'Error: La fecha de inicio no puede ser del pasado. Hoy y fechas futuras son válidas.';
+        logError('BEDS24_VALIDATION', 'Fecha de inicio no puede ser del pasado', { 
+            startDate, 
+            currentDate: today.toISOString().split('T')[0],
+            dateAdjusted,
+            originalStartDate: args.startDate
+        });
+        return 'Error: La fecha de inicio no puede ser del pasado. Por favor especifica fechas futuras.';
     }
     
     // Validación de parámetros opcionales
@@ -850,7 +897,10 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
         maxTransfers: maxTransfersLimit,
         hasSpecificProperty: propertyId !== null,
         hasSpecificRoom: roomId !== null,
-        requestType: 'availability_check'
+        requestType: 'availability_check',
+        dateAdjusted,
+        originalStartDate: args.startDate,
+        originalEndDate: args.endDate
     });
     
     try {
@@ -858,7 +908,8 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
             startDate,
             endDate,
             propertyId,
-            roomId
+            roomId,
+            dateAdjusted
         });
 
         // Obtener datos combinados: disponibilidad + precios (USANDO CACHÉ)
@@ -870,7 +921,8 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
         logSuccess('AVAILABILITY_HANDLER', 'Consulta completada exitosamente', {
             completeOptions: result.completeOptions.length,
             splitOptions: result.splitOptions.length,
-            dateRange: `${startDate} a ${endDate}`
+            dateRange: `${startDate} a ${endDate}`,
+            dateAdjusted
         });
 
         return response;
@@ -878,7 +930,8 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
     } catch (error) {
         logError('AVAILABILITY_HANDLER', 'Error en consulta de disponibilidad', {
             error: error instanceof Error ? error.message : error,
-            args
+            args,
+            dateAdjusted
         });
 
         if (error instanceof Beds24Error) {

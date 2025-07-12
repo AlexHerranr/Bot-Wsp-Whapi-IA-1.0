@@ -398,7 +398,19 @@ function setupWebhooks() {
              const config = getConfig();
              let historyInjection = '';
              let labelsStr = '';
-             if (config.enableHistoryInject && threadPersistence.isThreadOld(shortUserId)) {
+             
+             // 🔧 ETAPA 9: Enhanced logging para debug de condicionales
+             const isThreadOld = threadPersistence.isThreadOld(shortUserId);
+             
+             logInfo('THREAD_CONDITIONAL_CHECK', `Verificando condiciones para inyección de contexto`, {
+                 userId: shortUserId,
+                 isThreadOld,
+                 enableHistoryInject: config.enableHistoryInject,
+                 willInjectHistory: config.enableHistoryInject && isThreadOld,
+                 willInjectLabels: config.enableHistoryInject && isThreadOld
+             });
+             
+             if (config.enableHistoryInject && isThreadOld) {
                  try {
                      await guestMemory.syncWhapiLabels(userJid);  // Usa userJid completo
                      const profile = guestMemory.getProfile(shortUserId);
@@ -410,11 +422,17 @@ function setupWebhooks() {
                  }
                  
                  // GET historial SOLO si thread es viejo (condición más estricta)
-                 if (threadPersistence.isThreadOld(shortUserId)) {
+                 if (isThreadOld) {
                      try {
-                         historyInjection = await getChatHistory(chatId, config.historyMsgCount);
+                         // 🔧 ETAPA 9: Usar límite completo para threads viejos
+                         const historyLimit = config.historyMsgCount;
+                         historyInjection = await getChatHistory(chatId, historyLimit);
                          if (historyInjection) {
-                             logSuccess('HISTORY_INJECT', `Historial obtenido: ${historyInjection.split('\n').length} líneas`, { userId: shortUserId });
+                             logSuccess('HISTORY_INJECT', `Historial obtenido: ${historyInjection.split('\n').length} líneas`, { 
+                                 userId: shortUserId,
+                                 historyLimit,
+                                 isThreadOld: true
+                             });
                          } else {
                              logWarning('HISTORY_INJECT', 'No historial disponible', { userId: shortUserId });
                          }
@@ -422,7 +440,30 @@ function setupWebhooks() {
                          historyInjection = '';
                          logWarning('HISTORY_FAIL', 'Fallback sin historial', { error: error.message, userId: shortUserId });
                      }
+                 } else {
+                     // 🔧 ETAPA 9: Usar límite reducido para threads nuevos/activos
+                     try {
+                         const reducedLimit = config.historyLimitNewThreads; // Usar configuración específica
+                         historyInjection = await getChatHistory(chatId, reducedLimit);
+                         if (historyInjection) {
+                             logSuccess('HISTORY_INJECT', `Historial reducido obtenido: ${historyInjection.split('\n').length} líneas`, { 
+                                 userId: shortUserId,
+                                 historyLimit: reducedLimit,
+                                 isThreadOld: false
+                             });
+                         }
+                     } catch (error) {
+                         historyInjection = '';
+                         logWarning('HISTORY_FAIL', 'Fallback sin historial reducido', { error: error.message, userId: shortUserId });
+                     }
                  }
+             } else {
+                 logInfo('CONTEXT_INJECT_SKIPPED', `Inyección de contexto SKIPPED para ${shortUserId}`, {
+                     userId: shortUserId,
+                     reason: !config.enableHistoryInject ? 'history_inject_disabled' : 'thread_not_old',
+                     isThreadOld,
+                     enableHistoryInject: config.enableHistoryInject
+                 });
              }
              
              // Obtener o crear thread
@@ -442,11 +483,17 @@ function setupWebhooks() {
                  });
              }
              
-             // Inyección SOLO si hay contenido y thread es viejo (evitar duplicados)
-             if ((historyInjection || labelsStr) && threadPersistence.isThreadOld(shortUserId)) {
+             // 🔧 ETAPA 9: Inyección para threads viejos Y nuevos (con límites diferentes)
+             if (historyInjection || labelsStr) {
                  const injectContent = `${historyInjection ? historyInjection + '\n\n' : ''}Hora actual: ${new Date().toLocaleString('es-ES', { timeZone: 'America/Bogota' })}\nEtiquetas actuales: ${labelsStr}`;
                  await openaiClient.beta.threads.messages.create(threadId, { role: 'user', content: injectContent });
-                 logSuccess('CONTEXT_INJECT', `Contexto inyectado (historial + hora + labels)`, { length: injectContent.length, userId: shortUserId });
+                 logSuccess('CONTEXT_INJECT', `Contexto inyectado (historial + hora + labels)`, { 
+                     length: injectContent.length, 
+                     userId: shortUserId,
+                     isThreadOld,
+                     hasHistory: !!historyInjection,
+                     hasLabels: !!labelsStr
+                 });
              }
              
              // Agregar mensaje al thread
@@ -648,10 +695,24 @@ function setupWebhooks() {
                 environment: appConfig.environment
             });
             
-            // Remove thread SOLO si error real (thread not found)
+            // 🔧 ETAPA 9: Remove thread SOLO si error real (thread not found) Y thread es viejo
             if (error.message && error.message.includes('thread not found')) {
-                threadPersistence.removeThread(shortUserId);
-                logWarning('THREAD_REMOVED', `Thread removido por error real: ${error.message}`, { userId: shortUserId });
+                const isThreadOld = threadPersistence.isThreadOld(shortUserId);
+                if (isThreadOld) {
+                    threadPersistence.removeThread(shortUserId, 'thread_not_found_error');
+                    logWarning('THREAD_REMOVED', `Thread removido por error real: ${error.message}`, { 
+                        userId: shortUserId,
+                        isThreadOld,
+                        reason: 'thread_not_found_error'
+                    });
+                } else {
+                    logInfo('THREAD_REMOVE_SKIPPED', `Thread NO removido - no es viejo`, { 
+                        userId: shortUserId,
+                        isThreadOld,
+                        error: error.message,
+                        reason: 'thread_not_old'
+                    });
+                }
             }
             
             return 'Lo siento, hubo un error técnico. Por favor intenta de nuevo en unos momentos.';

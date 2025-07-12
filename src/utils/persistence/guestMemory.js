@@ -164,6 +164,19 @@ class GuestMemory {
     
     // Sincronizar etiquetas de Whapi con el perfil local
     async syncWhapiLabels(userId) {
+        // 🔧 ETAPA 9: Verificar si thread es viejo antes de sincronizar
+        const isThreadOld = threadPersistence.isThreadOld(userId);
+        
+        if (!isThreadOld) {
+            enhancedLog('debug', 'GUEST_MEMORY', 
+                `Sincronización de labels SKIPPED para ${userId} - thread no es viejo`, {
+                    userId,
+                    isThreadOld,
+                    reason: 'thread_not_old'
+                });
+            return null;
+        }
+        
         try {
             const profile = this.profiles.get(userId);
             if (!profile) return null;
@@ -181,14 +194,22 @@ class GuestMemory {
                 this.markAsChanged(); // Usar debounce para sincronización
                 
                 enhancedLog('success', 'GUEST_MEMORY', 
-                    `Etiquetas sincronizadas para ${userId}: ${chatInfo.labels.length} etiquetas`);
+                    `Etiquetas sincronizadas para ${userId}: ${chatInfo.labels.length} etiquetas`, {
+                        userId,
+                        isThreadOld,
+                        labelsCount: chatInfo.labels.length,
+                        labels: chatInfo.labels.map(l => l.name)
+                    });
                 
                 return profile;
             }
             
         } catch (error) {
             enhancedLog('error', 'GUEST_MEMORY', 
-                `Error sincronizando etiquetas para ${userId}: ${error.message}`);
+                `Error sincronizando etiquetas para ${userId}: ${error.message}`, {
+                    userId,
+                    isThreadOld
+                });
         }
         
         return null;

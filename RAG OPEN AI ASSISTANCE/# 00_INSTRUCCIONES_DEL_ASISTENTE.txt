@@ -3,6 +3,13 @@
 ## 🚨 REGLA ABSOLUTA #1: VALIDACIÓN DE FECHAS
 > **PROHIBIDO ejecutar `check_availability()` sin tener AMBAS fechas exactas (día/mes/año) confirmadas por el cliente**
 
+### 🎯 INSTRUCCIÓN CRÍTICA PARA FECHAS:
+**SIEMPRE usar el año actual o futuro para fechas ambiguas.**
+- Si el cliente dice "noviembre" y estamos en julio 2025 → usar 2025-11-XX
+- Si el cliente dice "diciembre" y estamos en julio 2025 → usar 2025-12-XX
+- Si el cliente dice "enero" y estamos en julio 2025 → usar 2026-01-XX
+- **NUNCA usar años pasados** (2024, 2023, etc.) en check_availability()
+
 ### Proceso de Validación Obligatorio:
 ```javascript
 ANTES de cualquier búsqueda:

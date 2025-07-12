@@ -383,13 +383,16 @@ export class ThreadPersistenceManager {
     }
 
     // 🆕 Eliminar thread específico
-    removeThread(userId: string): boolean {
+    removeThread(userId: string, reason?: string): boolean {
         const existed = this.threads.has(userId);
         if (existed) {
             this.threads.delete(userId);
             this.markAsChanged();
             enhancedLog('info', 'THREAD_PERSIST', 
-                `Thread removido para usuario ${userId} - Debug: ${new Error().stack?.split('\n')[2] || 'unknown caller'}`);
+                `Thread removido para usuario ${userId}`, {
+                    reason: reason || 'manual_removal',
+                    caller: new Error().stack?.split('\n')[2] || 'unknown'
+                });
         }
         
         return existed;
@@ -416,7 +419,19 @@ export class ThreadPersistenceManager {
         const lastActivity = new Date(record.lastActivity);
         const threshold = new Date();
         threshold.setMonth(threshold.getMonth() - effectiveMonths);
-        return lastActivity < threshold;
+        const isOld = lastActivity < threshold;
+        
+        // 🔧 ETAPA 9: Enhanced logging para debug de condicionales
+        enhancedLog('debug', 'THREAD_AGE_CHECK', `Verificando edad del thread para ${userId}`, {
+            userId,
+            lastActivity: record.lastActivity,
+            threshold: threshold.toISOString(),
+            effectiveMonths,
+            isOld,
+            daysSinceActivity: Math.floor((new Date().getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24))
+        });
+        
+        return isOld;
     }
 
     cleanupOldThreads(months: number): void {

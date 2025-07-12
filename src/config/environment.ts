@@ -39,6 +39,7 @@ export interface EnvironmentConfig {
     historyInjectMonths: number;
     historyMsgCount: number;
     enableHistoryInject: boolean;
+    historyLimitNewThreads: number;
 
     // Cache TTL
     cacheTtlSeconds: number;
@@ -118,6 +119,9 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     const historyInjectMonths = parseInt(process.env.HISTORY_INJECT_MONTHS || '3', 10);
     const historyMsgCount = parseInt(process.env.HISTORY_MSG_COUNT || '200', 10);
     const enableHistoryInject = process.env.ENABLE_HISTORY_INJECT !== 'false';
+    
+    // 🔧 ETAPA 10: Límite de historial para threads nuevos
+    const historyLimitNewThreads = parseInt(process.env.HISTORY_LIMIT_NEW_THREADS || '50', 10);
 
     // Cache TTL
     const cacheTtlSeconds = parseInt(process.env.CACHE_TTL_SECONDS || '3600', 10);
@@ -140,6 +144,7 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
         historyInjectMonths,
         historyMsgCount,
         enableHistoryInject,
+        historyLimitNewThreads,
         cacheTtlSeconds,
     };
 };

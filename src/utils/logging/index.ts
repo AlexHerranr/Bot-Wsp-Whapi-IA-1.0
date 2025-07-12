@@ -25,6 +25,9 @@ const STAGE_MAP: Record<string, string> = {
 // Lleva la cuenta de la posición que ocupa cada log dentro de un mismo flujo (messageId)
 const messageSequenceMap = new Map<string, number>();
 
+// 🔧 ETAPA 10: Detección de loops mejorada
+const loopDetectionMap = new Map<string, { count: number; firstSeen: number; lastSeen: number }>();
+
 function getFlowStage(category: string): string {
     return STAGE_MAP[category.toUpperCase()] || '0_unknown';
 }
@@ -35,6 +38,42 @@ function getSequenceNumber(category: string, messageId?: string): number | undef
     const seq = (messageSequenceMap.get(key) || 0) + 1;
     messageSequenceMap.set(key, seq);
     return seq;
+}
+
+// 🔧 ETAPA 10: Detectar loops en respuestas de fallback
+function detectLoopPattern(message: string, userId?: string): boolean {
+    const loopPatterns = [
+        'Las funciones se ejecutaron correctamente',
+        'no pude generar una respuesta final',
+        'Por favor intenta de nuevo',
+        'hubo un problema procesando'
+    ];
+    
+    const hasLoopPattern = loopPatterns.some(pattern => message.includes(pattern));
+    
+    if (hasLoopPattern && userId) {
+        const now = Date.now();
+        const userLoopData = loopDetectionMap.get(userId) || { count: 0, firstSeen: now, lastSeen: now };
+        
+        // Si es la primera vez o han pasado más de 5 minutos, resetear contador
+        if (now - userLoopData.lastSeen > 5 * 60 * 1000) {
+            userLoopData.count = 1;
+            userLoopData.firstSeen = now;
+        } else {
+            userLoopData.count++;
+        }
+        
+        userLoopData.lastSeen = now;
+        loopDetectionMap.set(userId, userLoopData);
+        
+        // Alertar si hay más de 2 respuestas de fallback en 5 minutos
+        if (userLoopData.count >= 3) {
+            console.warn(`🚨 [LOOP_DETECTED] Usuario ${userId} ha recibido ${userLoopData.count} respuestas de fallback en ${Math.round((now - userLoopData.firstSeen) / 1000)}s`);
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 function enrichedLog(
@@ -48,9 +87,14 @@ function enrichedLog(
         return;
     }
     
-    // Detectar automáticamente posibles loops
-    if (message.includes('Las funciones se ejecutaron correctamente') && category === 'OPENAI_RESPONSE') {
-        console.warn(`⚠️ [LOOP_DETECTED] Possible loop detected in response: ${message.substring(0, 100)}...`);
+    // 🔧 ETAPA 10: Detección de loops mejorada
+    const userId = details?.userId || details?.shortUserId;
+    const isLoopDetected = detectLoopPattern(message, userId);
+    
+    if (isLoopDetected) {
+        level = 'WARNING'; // Elevar nivel si se detecta loop
+        details.loopDetected = true;
+        details.loopPattern = 'fallback_response';
     }
     
     const stage = getFlowStage(category);
