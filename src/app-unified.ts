@@ -816,6 +816,9 @@ function setupWebhooks() {
         }
     });
 
+} // Cierre de setupWebhooks()
+
+// Función de inicialización del bot
 async function initializeBot() {
     // ... lógica de inicialización
     isServerInitialized = true;
