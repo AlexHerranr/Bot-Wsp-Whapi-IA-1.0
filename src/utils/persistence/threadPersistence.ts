@@ -385,12 +385,11 @@ export class ThreadPersistenceManager {
     // 🆕 Eliminar thread específico
     removeThread(userId: string): boolean {
         const existed = this.threads.has(userId);
-        this.threads.delete(userId);
-        
         if (existed) {
+            this.threads.delete(userId);
             this.markAsChanged();
             enhancedLog('info', 'THREAD_PERSIST', 
-                `Thread removido para usuario ${userId}`);
+                `Thread removido para usuario ${userId} - Debug: ${new Error().stack?.split('\n')[2] || 'unknown caller'}`);
         }
         
         return existed;

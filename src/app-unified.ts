@@ -82,9 +82,9 @@ const manualTimers = new Map<string, NodeJS.Timeout>();
 
 // Configuración de timeouts por entorno
 // 🔧 PAUSAR BUFFER: Usar DISABLE_MESSAGE_BUFFER=true para pruebas de velocidad
-const MESSAGE_BUFFER_TIMEOUT = process.env.DISABLE_MESSAGE_BUFFER === 'true' ? 0 : 2000; // Reducido a 2 segundos
+const MESSAGE_BUFFER_TIMEOUT = process.env.DISABLE_MESSAGE_BUFFER === 'true' ? 0 : 8000; // 8 segundos
 const MANUAL_MESSAGE_TIMEOUT = process.env.DISABLE_MESSAGE_BUFFER === 'true' ? 0 : 8000;
-const MAX_BUFFER_SIZE = 10; // 🚨 Límite máximo de mensajes por buffer (anti-spam)
+const MAX_BUFFER_SIZE = 10; // Límite máximo de mensajes por buffer (anti-spam)
 const BUFFER_DISABLED = process.env.DISABLE_MESSAGE_BUFFER === 'true';
 const MAX_BOT_MESSAGES = 1000;
 const MAX_MESSAGE_LENGTH = 5000;
@@ -280,7 +280,15 @@ function setupWebhooks() {
         }
 
         const shortUserId = getShortUserId(userId);
-        const combinedMessage = buffer.messages.join('\n\n');
+        
+        // Asegurar agrupación efectiva
+        let combinedMessage;
+        if (buffer.messages.length > 1) {
+            combinedMessage = buffer.messages.join('\n\n');
+            logInfo('BUFFER_GROUPED', `Agrupados ${buffer.messages.length} msgs`, { userId: shortUserId });
+        } else {
+            combinedMessage = buffer.messages[0];
+        }
 
         // Sincronizar labels/perfil antes de procesar
         await guestMemory.getOrCreateProfile(userId);
@@ -386,9 +394,7 @@ function setupWebhooks() {
         try {
                          logOpenAIRequest('starting_process', { shortUserId });
              
-             // Obtener o crear thread
-             let threadId = threadPersistence.getThread(shortUserId)?.threadId;
-             
+             // En processWithOpenAI, modificar la lógica de inyección:
              const config = getConfig();
              let historyInjection = '';
              let labelsStr = '';
@@ -403,18 +409,24 @@ function setupWebhooks() {
                      logWarning('SYNC_FAIL', 'Fallback sin labels', { error: error.message, userId: shortUserId });
                  }
                  
-                 try {
-                     historyInjection = await getChatHistory(chatId, config.historyMsgCount);
-                     if (historyInjection) {
-                         logSuccess('HISTORY_INJECT', `Historial obtenido: ${historyInjection.split('\n').length} líneas`, { userId: shortUserId });
-                     } else {
-                         logWarning('HISTORY_INJECT', 'No historial disponible', { userId: shortUserId });
+                 // GET historial SOLO si thread es viejo (condición más estricta)
+                 if (threadPersistence.isThreadOld(shortUserId)) {
+                     try {
+                         historyInjection = await getChatHistory(chatId, config.historyMsgCount);
+                         if (historyInjection) {
+                             logSuccess('HISTORY_INJECT', `Historial obtenido: ${historyInjection.split('\n').length} líneas`, { userId: shortUserId });
+                         } else {
+                             logWarning('HISTORY_INJECT', 'No historial disponible', { userId: shortUserId });
+                         }
+                     } catch (error) {
+                         historyInjection = '';
+                         logWarning('HISTORY_FAIL', 'Fallback sin historial', { error: error.message, userId: shortUserId });
                      }
-                 } catch (error) {
-                     historyInjection = '';
-                     logWarning('HISTORY_FAIL', 'Fallback sin historial', { error: error.message, userId: shortUserId });
                  }
              }
+             
+             // Obtener o crear thread
+             let threadId = threadPersistence.getThread(shortUserId)?.threadId;
              
              if (!threadId) {
                  const thread = await openaiClient.beta.threads.create();
@@ -430,7 +442,8 @@ function setupWebhooks() {
                  });
              }
              
-             if (historyInjection || labelsStr) {
+             // Inyección SOLO si hay contenido y thread es viejo (evitar duplicados)
+             if ((historyInjection || labelsStr) && threadPersistence.isThreadOld(shortUserId)) {
                  const injectContent = `${historyInjection ? historyInjection + '\n\n' : ''}Hora actual: ${new Date().toLocaleString('es-ES', { timeZone: 'America/Bogota' })}\nEtiquetas actuales: ${labelsStr}`;
                  await openaiClient.beta.threads.messages.create(threadId, { role: 'user', content: injectContent });
                  logSuccess('CONTEXT_INJECT', `Contexto inyectado (historial + hora + labels)`, { length: injectContent.length, userId: shortUserId });
@@ -469,33 +482,47 @@ function setupWebhooks() {
             if (run.status === 'completed') {
                 logSuccess('OPENAI_RUN_COMPLETED', `Run completado para ${shortUserId}`, { threadId });
                 
+                // Forzar limit: 1 para obtener solo el último mensaje
                 const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
                 const assistantMessage = messages.data[0];
                 
-                if (assistantMessage && assistantMessage.content && assistantMessage.content.length > 0) {
-                    const content = assistantMessage.content[0];
-                    if (content.type === 'text') {
-                        const responseText = content.text.value;
-                        
-                                                 logOpenAIResponse('response_received', {
-                             shortUserId,
-                             threadId,
-                             responseLength: responseText.length,
-                             environment: appConfig.environment
-                         });
-                        
-                        return responseText;
-                    }
+                // Validar que el mensaje tenga contenido válido
+                if (!assistantMessage || !assistantMessage.content || assistantMessage.content.length === 0) {
+                    logWarning('OPENAI_NO_CONTENT', 'No valid response, fallback', { runId: run.id, threadId });
+                    return 'Lo siento, hubo un problema procesando tu solicitud. Por favor intenta de nuevo.';
                 }
                 
-                logWarning('OPENAI_NO_CONTENT', `Run completado pero sin contenido de texto`, {
+                // Corregir el type guard para content:
+                const content = assistantMessage.content[0];
+                if (content.type !== 'text' || !('text' in content) || !content.text.value || content.text.value.trim() === '') {
+                    logWarning('OPENAI_INVALID_CONTENT', 'Invalid content type or empty value', { 
+                        runId: run.id, 
+                        threadId,
+                        contentType: content.type,
+                        hasValue: 'text' in content ? !!content.text?.value : false
+                    });
+                    return 'Lo siento, hubo un problema procesando tu solicitud. Por favor intenta de nuevo.';
+                }
+                
+                const responseText = content.text.value;
+                
+                // Detectar posible loop en respuesta
+                if (responseText.includes('Las funciones se ejecutaron correctamente')) {
+                    logWarning('LOOP_DETECTED', 'Possible loop detected in response', { 
+                        runId: run.id, 
+                        threadId,
+                        responsePreview: responseText.substring(0, 100)
+                    });
+                }
+                
+                logOpenAIResponse('response_received', {
                     shortUserId,
                     threadId,
-                    runId: run.id
+                    responseLength: responseText.length,
+                    environment: appConfig.environment
                 });
                 
-                return 'Lo siento, no pude generar una respuesta adecuada.';
-                
+                return responseText;
             } else if (run.status === 'requires_action' && run.required_action?.type === 'submit_tool_outputs') {
                 // Manejar function calling
                 const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
@@ -621,6 +648,12 @@ function setupWebhooks() {
                 environment: appConfig.environment
             });
             
+            // Remove thread SOLO si error real (thread not found)
+            if (error.message && error.message.includes('thread not found')) {
+                threadPersistence.removeThread(shortUserId);
+                logWarning('THREAD_REMOVED', `Thread removido por error real: ${error.message}`, { userId: shortUserId });
+            }
+            
             return 'Lo siento, hubo un error técnico. Por favor intenta de nuevo en unos momentos.';
         } finally {
             threadPersistence.removeThread(shortUserId);
@@ -662,6 +695,12 @@ function setupWebhooks() {
             
             // Procesar cada mensaje
             for (const message of messages) {
+                // Skip mensajes del bot para evitar self-loops
+                if (message.from_me) {
+                    logDebug('MESSAGE_SKIP', `Skipped bot message`, { id: message.id, from: message.from });
+                    continue;
+                }
+                
                 logMessageReceived('Mensaje recibido', {
                     userId: message.from,
                     chatId: message.chat_id,
@@ -754,7 +793,7 @@ function setupWebhooks() {
 
                     userActivityTimers.set(userJid, timerId);
 
-                    // Log técnico del buffering
+                    // Completar el log que se cortó:
                     logInfo('MESSAGE_BUFFERED', `Mensaje agregado al buffer`, {
                         userJid,
                         chatId,
@@ -764,6 +803,7 @@ function setupWebhooks() {
                         timeoutMs: MESSAGE_BUFFER_TIMEOUT,
                         environment: appConfig.environment
                     });
+
                 }
             }
             
@@ -775,7 +815,6 @@ function setupWebhooks() {
             });
         }
     });
-}
 
 async function initializeBot() {
     // ... lógica de inicialización
@@ -786,4 +825,4 @@ async function initializeBot() {
 // --- Ejecución ---
 main();
 
-// Exportar para testing 
+// Exportar para testing

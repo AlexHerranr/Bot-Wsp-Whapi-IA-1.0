@@ -18,7 +18,8 @@ const STAGE_MAP: Record<string, string> = {
     'MESSAGE_SENT': '9_complete',
     'HISTORY_INJECT': '6_ai_request',
     'LABELS_INJECT': '6_ai_request',
-    'CONTEXT_INJECT': '6_ai_request'
+    'CONTEXT_INJECT': '6_ai_request',
+    'LOOP_DETECTED': '0_unknown'
 };
 
 // Lleva la cuenta de la posición que ocupa cada log dentro de un mismo flujo (messageId)
@@ -45,6 +46,11 @@ function enrichedLog(
     // Omitir debug en prod para ciertas categorías
     if (IS_PRODUCTION && ['THREAD_DEBUG', 'BUFFER_TIMER_RESET'].includes(category)) {
         return;
+    }
+    
+    // Detectar automáticamente posibles loops
+    if (message.includes('Las funciones se ejecutaron correctamente') && category === 'OPENAI_RESPONSE') {
+        console.warn(`⚠️ [LOOP_DETECTED] Possible loop detected in response: ${message.substring(0, 100)}...`);
     }
     
     const stage = getFlowStage(category);

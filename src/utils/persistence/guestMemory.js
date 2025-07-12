@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { enhancedLog } from '../core/index.js';
 import { whapiLabels } from '../whapi/index.js';
+import { threadPersistence } from './threadPersistence.js';
 
 class GuestMemory {
     constructor() {
@@ -112,7 +113,10 @@ class GuestMemory {
             }
             
             this.profiles.set(userId, newProfile);
-            await this.syncWhapiLabels(userId);  // Agregar sync después de crear
+            // Sync SOLO si thread es viejo
+            if (threadPersistence.isThreadOld(userId)) {
+                await this.syncWhapiLabels(userId);
+            }
             
             enhancedLog('info', 'GUEST_MEMORY', 
                 `Nuevo perfil creado para ${userId} con ${newProfile.whapiLabels.length} etiquetas`);
@@ -124,10 +128,14 @@ class GuestMemory {
             const profile = this.profiles.get(userId);
             profile.lastInteraction = new Date().toISOString();
             this.markAsChanged(); // Solo marcar cambio
+            
+            // Sync SOLO si thread es viejo
+            if (threadPersistence.isThreadOld(userId)) {
+                await this.syncWhapiLabels(userId);
+            }
         }
         
         if (existing) {
-            await this.syncWhapiLabels(userId);  // Agregar sync antes de return
             return existing;
         }
         

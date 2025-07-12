@@ -39,6 +39,9 @@ export interface EnvironmentConfig {
     historyInjectMonths: number;
     historyMsgCount: number;
     enableHistoryInject: boolean;
+
+    // Cache TTL
+    cacheTtlSeconds: number;
 }
 
 export interface AppConfig extends EnvironmentConfig {
@@ -115,6 +118,9 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     const historyInjectMonths = parseInt(process.env.HISTORY_INJECT_MONTHS || '3', 10);
     const historyMsgCount = parseInt(process.env.HISTORY_MSG_COUNT || '200', 10);
     const enableHistoryInject = process.env.ENABLE_HISTORY_INJECT !== 'false';
+
+    // Cache TTL
+    const cacheTtlSeconds = parseInt(process.env.CACHE_TTL_SECONDS || '3600', 10);
     
     return {
         isCloudRun,
@@ -134,6 +140,7 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
         historyInjectMonths,
         historyMsgCount,
         enableHistoryInject,
+        cacheTtlSeconds,
     };
 };
 
@@ -206,6 +213,7 @@ export const logEnvironmentConfig = () => {
     }
     console.log(`   🔑 Secretos: ${areSecretsLoaded() ? 'Cargados' : 'No cargados'}`);
     console.log(`   📜 Inyección Historial: ${config.enableHistoryInject ? 'Activa' : 'Inactiva'} (${config.historyInjectMonths} meses, ${config.historyMsgCount} msgs)`);
+    console.log(`   ⏱️ Cache TTL: ${config.cacheTtlSeconds} segundos (${Math.round(config.cacheTtlSeconds/3600)}h)`);
 };
 
 /**
