@@ -80,6 +80,10 @@ const manualMessageBuffers = new Map<string, {
 }>();
 const manualTimers = new Map<string, NodeJS.Timeout>();
 
+// 🔧 ETAPA 2: Cache de historial para optimizar fetches
+const historyCache = new Map<string, { history: string; timestamp: number }>();
+const HISTORY_CACHE_TTL = 60 * 60 * 1000; // 1 hora en ms
+
 // Configuración de timeouts por entorno
 // 🔧 PAUSAR BUFFER: Usar DISABLE_MESSAGE_BUFFER=true para pruebas de velocidad
 const MESSAGE_BUFFER_TIMEOUT = process.env.DISABLE_MESSAGE_BUFFER === 'true' ? 0 : 8000; // 8 segundos
@@ -184,6 +188,23 @@ function setupEndpoints() {
             initialized: isServerInitialized,
             activeBuffers: userMessageBuffers.size,
             threadStats: stats,
+            // 🔧 ETAPA 1: Información adicional de threads para debug
+            threadInfo: {
+                totalThreads: stats.totalThreads,
+                activeThreads: stats.activeThreads,
+                inactiveThreads: stats.totalThreads - stats.activeThreads,
+                lastCleanup: new Date().toISOString()
+            },
+            // 🔧 ETAPA 2: Información del cache de historial
+            historyCache: {
+                size: historyCache.size,
+                ttlMinutes: Math.round(HISTORY_CACHE_TTL / 1000 / 60),
+                sampleEntries: Array.from(historyCache.entries()).slice(0, 3).map(([userId, entry]) => ({
+                    userId: userId.substring(0, 8) + '...',
+                    ageMinutes: Math.round((Date.now() - entry.timestamp) / 1000 / 60),
+                    historyLines: entry.history.split('\n').length
+                }))
+            }
         });
     });
 
@@ -392,109 +413,115 @@ function setupWebhooks() {
         const shortUserId = getShortUserId(userJid);
         
         try {
-                         logOpenAIRequest('starting_process', { shortUserId });
+            logOpenAIRequest('starting_process', { shortUserId });
              
-             // En processWithOpenAI, modificar la lógica de inyección:
-             const config = getConfig();
-             let historyInjection = '';
-             let labelsStr = '';
+            const config = getConfig();
+            let historyInjection = '';
+            let labelsStr = '';
              
-             // 🔧 ETAPA 9: Enhanced logging para debug de condicionales
-             const isThreadOld = threadPersistence.isThreadOld(shortUserId);
+            // Obtener o crear thread PRIMERO
+            let threadId = threadPersistence.getThread(shortUserId)?.threadId;
+            const isNewThread = !threadId;
              
-             logInfo('THREAD_CONDITIONAL_CHECK', `Verificando condiciones para inyección de contexto`, {
-                 userId: shortUserId,
-                 isThreadOld,
-                 enableHistoryInject: config.enableHistoryInject,
-                 willInjectHistory: config.enableHistoryInject && isThreadOld,
-                 willInjectLabels: config.enableHistoryInject && isThreadOld
-             });
-             
-             if (config.enableHistoryInject && isThreadOld) {
-                 try {
-                     await guestMemory.syncWhapiLabels(userJid);  // Usa userJid completo
-                     const profile = guestMemory.getProfile(shortUserId);
-                     labelsStr = profile?.whapiLabels ? JSON.stringify(profile.whapiLabels.map(l => l.name)) : '[]';
-                     logInfo('LABELS_INJECT', `Etiquetas para inyección: ${labelsStr}`, { userId: shortUserId });
-                 } catch (error) {
-                     labelsStr = '';
-                     logWarning('SYNC_FAIL', 'Fallback sin labels', { error: error.message, userId: shortUserId });
-                 }
+            if (isNewThread) {
+                // 🔧 ETAPA 2: Crear thread nuevo
+                const thread = await openaiClient.beta.threads.create();
+                threadId = thread.id;
+                threadPersistence.setThread(shortUserId, threadId, chatId, userName);
                  
-                 // GET historial SOLO si thread es viejo (condición más estricta)
-                 if (isThreadOld) {
-                     try {
-                         // 🔧 ETAPA 9: Usar límite completo para threads viejos
-                         const historyLimit = config.historyMsgCount;
-                         historyInjection = await getChatHistory(chatId, historyLimit);
-                         if (historyInjection) {
-                             logSuccess('HISTORY_INJECT', `Historial obtenido: ${historyInjection.split('\n').length} líneas`, { 
-                                 userId: shortUserId,
-                                 historyLimit,
-                                 isThreadOld: true
-                             });
-                         } else {
-                             logWarning('HISTORY_INJECT', 'No historial disponible', { userId: shortUserId });
-                         }
-                     } catch (error) {
-                         historyInjection = '';
-                         logWarning('HISTORY_FAIL', 'Fallback sin historial', { error: error.message, userId: shortUserId });
-                     }
-                 } else {
-                     // 🔧 ETAPA 9: Usar límite reducido para threads nuevos/activos
-                     try {
-                         const reducedLimit = config.historyLimitNewThreads; // Usar configuración específica
-                         historyInjection = await getChatHistory(chatId, reducedLimit);
-                         if (historyInjection) {
-                             logSuccess('HISTORY_INJECT', `Historial reducido obtenido: ${historyInjection.split('\n').length} líneas`, { 
-                                 userId: shortUserId,
-                                 historyLimit: reducedLimit,
-                                 isThreadOld: false
-                             });
-                         }
-                     } catch (error) {
-                         historyInjection = '';
-                         logWarning('HISTORY_FAIL', 'Fallback sin historial reducido', { error: error.message, userId: shortUserId });
-                     }
-                 }
-             } else {
-                 logInfo('CONTEXT_INJECT_SKIPPED', `Inyección de contexto SKIPPED para ${shortUserId}`, {
-                     userId: shortUserId,
-                     reason: !config.enableHistoryInject ? 'history_inject_disabled' : 'thread_not_old',
-                     isThreadOld,
-                     enableHistoryInject: config.enableHistoryInject
-                 });
-             }
+                logThreadCreated('Thread creado', { 
+                    shortUserId,
+                    threadId,
+                    chatId, 
+                    userName,
+                    environment: appConfig.environment
+                });
+                
+                // 🔧 ETAPA 2: Fetch historial SOLO para threads nuevos con cache
+                if (config.enableHistoryInject) {
+                    try {
+                        // Verificar cache primero
+                        const cachedHistory = historyCache.get(shortUserId);
+                        const now = Date.now();
+                        
+                        if (cachedHistory && (now - cachedHistory.timestamp) < HISTORY_CACHE_TTL) {
+                            // Cache hit - usar historial cacheado
+                            historyInjection = cachedHistory.history;
+                            logInfo('HISTORY_CACHE_HIT', 'Usando historial cacheado', { 
+                                userId: shortUserId,
+                                cacheAge: Math.round((now - cachedHistory.timestamp) / 1000 / 60) + 'min',
+                                historyLines: historyInjection.split('\n').length
+                            });
+                        } else {
+                            // Cache miss - obtener historial fresco
+                            const historyLimit = config.historyMsgCount; // Usar límite configurado (reducido a 100)
+                            historyInjection = await getChatHistory(chatId, historyLimit);
+                            
+                            if (historyInjection) {
+                                // Cachear el resultado
+                                historyCache.set(shortUserId, { 
+                                    history: historyInjection, 
+                                    timestamp: now 
+                                });
+                                
+                                logSuccess('HISTORY_FETCH', 'Historial fresco obtenido y cacheado', { 
+                                    userId: shortUserId,
+                                    historyLimit,
+                                    historyLines: historyInjection.split('\n').length,
+                                    cacheSize: historyCache.size
+                                });
+                            } else {
+                                logWarning('HISTORY_INJECT', 'No historial disponible', { userId: shortUserId });
+                            }
+                        }
+                    } catch (error) {
+                        historyInjection = '';
+                        logWarning('HISTORY_FAIL', 'Fallback sin historial', { 
+                            error: error.message, 
+                            userId: shortUserId 
+                        });
+                    }
+                    
+                    // 🔧 ETAPA 2: Sincronizar labels solo para threads nuevos
+                    try {
+                        await guestMemory.syncWhapiLabels(userJid);
+                        const profile = guestMemory.getProfile(shortUserId);
+                        labelsStr = profile?.whapiLabels ? JSON.stringify(profile.whapiLabels.map(l => l.name)) : '[]';
+                        logInfo('LABELS_INJECT', `Etiquetas para inyección: ${labelsStr}`, { userId: shortUserId });
+                    } catch (error) {
+                        labelsStr = '';
+                        logWarning('SYNC_FAIL', 'Fallback sin labels', { error: error.message, userId: shortUserId });
+                    }
+                }
+            } else {
+                // 🔧 ETAPA 2: Thread existente - skip fetch de historial
+                logInfo('THREAD_REUSE', `Thread reutilizado para ${shortUserId}`, {
+                    shortUserId,
+                    threadId,
+                    chatId,
+                    userName,
+                    environment: appConfig.environment
+                });
+                
+                logInfo('HISTORY_SKIP', 'Skip fetch historial: Thread existe', { 
+                    userId: shortUserId,
+                    threadId,
+                    reason: 'thread_already_exists'
+                });
+            }
              
-             // Obtener o crear thread
-             let threadId = threadPersistence.getThread(shortUserId)?.threadId;
-             
-             if (!threadId) {
-                 const thread = await openaiClient.beta.threads.create();
-                 threadId = thread.id;
-                 threadPersistence.setThread(shortUserId, threadId, chatId, userName);
-                 
-                 logThreadCreated('Thread creado', { 
-                     shortUserId,
-                     threadId,
-                     chatId, 
-                     userName,
-                     environment: appConfig.environment
-                 });
-             }
-             
-             // 🔧 ETAPA 9: Inyección para threads viejos Y nuevos (con límites diferentes)
-             if (historyInjection || labelsStr) {
-                 const injectContent = `${historyInjection ? historyInjection + '\n\n' : ''}Hora actual: ${new Date().toLocaleString('es-ES', { timeZone: 'America/Bogota' })}\nEtiquetas actuales: ${labelsStr}`;
-                 await openaiClient.beta.threads.messages.create(threadId, { role: 'user', content: injectContent });
-                 logSuccess('CONTEXT_INJECT', `Contexto inyectado (historial + hora + labels)`, { 
-                     length: injectContent.length, 
-                     userId: shortUserId,
-                     isThreadOld,
-                     hasHistory: !!historyInjection,
-                     hasLabels: !!labelsStr
-                 });
-             }
+            // 🔧 ETAPA 2: Inyección de contexto solo si hay contenido
+            if (historyInjection || labelsStr) {
+                const injectContent = `${historyInjection ? historyInjection + '\n\n' : ''}Hora actual: ${new Date().toLocaleString('es-ES', { timeZone: 'America/Bogota' })}\nEtiquetas actuales: ${labelsStr}`;
+                await openaiClient.beta.threads.messages.create(threadId, { role: 'user', content: injectContent });
+                logSuccess('CONTEXT_INJECT', `Contexto inyectado (historial + hora + labels)`, { 
+                    length: injectContent.length, 
+                    userId: shortUserId,
+                    isNewThread,
+                    hasHistory: !!historyInjection,
+                    hasLabels: !!labelsStr
+                });
+            }
              
              // Agregar mensaje al thread
              await openaiClient.beta.threads.messages.create(threadId, {
@@ -716,9 +743,10 @@ function setupWebhooks() {
             }
             
             return 'Lo siento, hubo un error técnico. Por favor intenta de nuevo en unos momentos.';
-        } finally {
-            threadPersistence.removeThread(shortUserId);
         }
+        // 🔧 ETAPA 1: ELIMINAR REMOCIÓN AUTOMÁTICA DE THREADS
+        // Los threads se mantienen activos para reutilizar contexto
+        // Solo se remueven en cleanup automático o errores fatales
     };
 
     // Webhook Principal
@@ -884,6 +912,45 @@ async function initializeBot() {
     // ... lógica de inicialización
     isServerInitialized = true;
     console.log('✅ Bot completamente inicializado');
+    
+    // 🔧 ETAPA 1: Cleanup automático de threads viejos
+    // Ejecutar cada hora para mantener threads activos limpios
+    setInterval(() => {
+        try {
+            const removedCount = threadPersistence.cleanupOldThreads(1); // 1 mes = threads muy viejos
+            if (removedCount > 0) {
+                logInfo('THREAD_CLEANUP', `Cleanup automático: ${removedCount} threads viejos removidos`);
+            }
+        } catch (error) {
+            logError('THREAD_CLEANUP', 'Error en cleanup automático', { error: error.message });
+        }
+    }, 60 * 60 * 1000); // Cada hora
+    
+    // 🔧 ETAPA 2: Cleanup automático del cache de historial
+    // Ejecutar cada 2 horas para evitar crecimiento indefinido
+    setInterval(() => {
+        try {
+            const now = Date.now();
+            let expiredCount = 0;
+            
+            for (const [userId, cacheEntry] of historyCache.entries()) {
+                if ((now - cacheEntry.timestamp) > HISTORY_CACHE_TTL) {
+                    historyCache.delete(userId);
+                    expiredCount++;
+                }
+            }
+            
+            if (expiredCount > 0) {
+                logInfo('HISTORY_CACHE_CLEANUP', `Cache cleanup: ${expiredCount} entradas expiradas removidas`, {
+                    remainingEntries: historyCache.size
+                });
+            }
+        } catch (error) {
+            logError('HISTORY_CACHE_CLEANUP', 'Error en cleanup del cache', { error: error.message });
+        }
+    }, 2 * 60 * 60 * 1000); // Cada 2 horas
+    
+    logInfo('BOT_INIT', 'Cleanup automático de threads y cache configurado');
 }
 
 // --- Ejecución ---

@@ -434,7 +434,7 @@ export class ThreadPersistenceManager {
         return isOld;
     }
 
-    cleanupOldThreads(months: number): void {
+    cleanupOldThreads(months: number): number {
         let removed = 0;
         for (const userId of this.getAllUserIds()) {
             if (this.isThreadOld(userId, months)) {
@@ -446,6 +446,7 @@ export class ThreadPersistenceManager {
             enhancedLog('info', 'THREAD_CLEANUP', `${removed} threads viejos eliminados (> ${months} meses)`);
             this.saveThreads();
         }
+        return removed;
     }
 }
 
