@@ -95,7 +95,7 @@ class WhapiLabelsManager {
             return {
                 id: chatData.id,
                 name: chatData.name,
-                labels: chatData.labels || [],
+                labels: chatData.labels || [],  // Asegurar formato array de {id, name, color}
                 lastMessage: chatData.last_message
             };
 

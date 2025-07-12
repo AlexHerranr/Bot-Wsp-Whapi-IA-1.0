@@ -34,6 +34,11 @@ export interface EnvironmentConfig {
     // Configuración de OpenAI
     openaiTimeout: number;
     openaiRetries: number;
+
+    // Inyección de historial
+    historyInjectMonths: number;
+    historyMsgCount: number;
+    enableHistoryInject: boolean;
 }
 
 export interface AppConfig extends EnvironmentConfig {
@@ -105,6 +110,11 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     // Configuración de OpenAI optimizada por entorno
     const openaiTimeout = parseInt(process.env.OPENAI_TIMEOUT || (isCloudRun ? '30000' : '45000'), 10);
     const openaiRetries = parseInt(process.env.OPENAI_RETRIES || (isCloudRun ? '2' : '3'), 10);
+
+    // Inyección de historial
+    const historyInjectMonths = parseInt(process.env.HISTORY_INJECT_MONTHS || '3', 10);
+    const historyMsgCount = parseInt(process.env.HISTORY_MSG_COUNT || '200', 10);
+    const enableHistoryInject = process.env.ENABLE_HISTORY_INJECT !== 'false';
     
     return {
         isCloudRun,
@@ -120,7 +130,10 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
         enableBufferLogs,
         enableTimingLogs,
         openaiTimeout,
-        openaiRetries
+        openaiRetries,
+        historyInjectMonths,
+        historyMsgCount,
+        enableHistoryInject,
     };
 };
 
@@ -192,6 +205,7 @@ export const logEnvironmentConfig = () => {
         console.log('   🚀 Producción: Activo');
     }
     console.log(`   🔑 Secretos: ${areSecretsLoaded() ? 'Cargados' : 'No cargados'}`);
+    console.log(`   📜 Inyección Historial: ${config.enableHistoryInject ? 'Activa' : 'Inactiva'} (${config.historyInjectMonths} meses, ${config.historyMsgCount} msgs)`);
 };
 
 /**
@@ -217,6 +231,9 @@ const validateConfig = (config: AppConfig): { isValid: boolean; errors: string[]
     } catch (error: any) {
         errors.push(`URL inválida en configuración: ${error.message}`);
     }
+
+    if (config.historyInjectMonths < 1) errors.push('HISTORY_INJECT_MONTHS debe ser al menos 1');
+    if (config.historyMsgCount < 50) errors.push('HISTORY_MSG_COUNT debe ser al menos 50');  // Validación extra simple
     
     return {
         isValid: errors.length === 0,

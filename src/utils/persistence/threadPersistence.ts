@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { enhancedLog } from '../core/index.js';
 import { logThreadPersist, logThreadCleanup } from '../logging/index.js';
+import { getConfig } from '../../config/environment';
 
 interface ThreadRecord {
     threadId: string;
@@ -26,6 +27,7 @@ export class ThreadPersistenceManager {
         this.loadThreads();
         this.setupAutoSave();
         this.setupGracefulShutdown();
+        this.cleanupOldThreads(12);
     }
     
     // Asegurar que los directorios existen
@@ -346,7 +348,8 @@ export class ThreadPersistenceManager {
             name: record.name,
             labels: record.labels,
             daysSinceActivity: Math.floor(daysSinceActivity),
-            isActive: daysSinceActivity <= 7
+            isActive: daysSinceActivity <= 7,
+            isOld: this.isThreadOld(userId)
         };
     }
     
@@ -404,6 +407,31 @@ export class ThreadPersistenceManager {
         
         // Guardar inmediatamente después de limpiar
         this.saveThreads();
+    }
+
+    isThreadOld(userId: string, months?: number): boolean {
+        const config = getConfig();
+        const effectiveMonths = months || config.historyInjectMonths;
+        const record = this.getThread(userId);
+        if (!record) return true;
+        const lastActivity = new Date(record.lastActivity);
+        const threshold = new Date();
+        threshold.setMonth(threshold.getMonth() - effectiveMonths);
+        return lastActivity < threshold;
+    }
+
+    cleanupOldThreads(months: number): void {
+        let removed = 0;
+        for (const userId of this.getAllUserIds()) {
+            if (this.isThreadOld(userId, months)) {
+                this.removeThread(userId);
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            enhancedLog('info', 'THREAD_CLEANUP', `${removed} threads viejos eliminados (> ${months} meses)`);
+            this.saveThreads();
+        }
     }
 }
 

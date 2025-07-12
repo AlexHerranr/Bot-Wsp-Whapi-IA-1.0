@@ -75,7 +75,8 @@ class GuestMemory {
     
     // Obtener o crear perfil SIMPLIFICADO con sincronización de Whapi
     async getOrCreateProfile(userId) {
-        if (!this.profiles.has(userId)) {
+        const existing = this.profiles.get(userId);
+        if (!existing) {
             // Crear perfil básico
             const newProfile = {
                 id: userId,
@@ -111,6 +112,7 @@ class GuestMemory {
             }
             
             this.profiles.set(userId, newProfile);
+            await this.syncWhapiLabels(userId);  // Agregar sync después de crear
             
             enhancedLog('info', 'GUEST_MEMORY', 
                 `Nuevo perfil creado para ${userId} con ${newProfile.whapiLabels.length} etiquetas`);
@@ -122,6 +124,11 @@ class GuestMemory {
             const profile = this.profiles.get(userId);
             profile.lastInteraction = new Date().toISOString();
             this.markAsChanged(); // Solo marcar cambio
+        }
+        
+        if (existing) {
+            await this.syncWhapiLabels(userId);  // Agregar sync antes de return
+            return existing;
         }
         
         return this.profiles.get(userId);

@@ -47,6 +47,10 @@ import {
     logBotReady
 } from './utils/logging/index.js';
 import { threadPersistence } from './utils/persistence/index.js';
+import { getChatHistory } from './utils/whapi/index';
+import { guestMemory } from './utils/persistence/index';
+import { whapiLabels } from './utils/whapi/index';
+import { getConfig } from './config/environment';
 
 // Importar sistema de monitoreo
 import { botDashboard } from './utils/monitoring/dashboard.js';
@@ -278,6 +282,9 @@ function setupWebhooks() {
         const shortUserId = getShortUserId(userId);
         const combinedMessage = buffer.messages.join('\n\n');
 
+        // Sincronizar labels/perfil antes de procesar
+        await guestMemory.getOrCreateProfile(userId);
+
         logInfo('MESSAGE_PROCESS', `Procesando mensajes agrupados`, {
             userId,
             shortUserId,
@@ -382,6 +389,33 @@ function setupWebhooks() {
              // Obtener o crear thread
              let threadId = threadPersistence.getThread(shortUserId)?.threadId;
              
+             const config = getConfig();
+             let historyInjection = '';
+             let labelsStr = '';
+             if (config.enableHistoryInject && threadPersistence.isThreadOld(shortUserId)) {
+                 try {
+                     await guestMemory.syncWhapiLabels(userJid);  // Usa userJid completo
+                     const profile = guestMemory.getProfile(shortUserId);
+                     labelsStr = profile?.whapiLabels ? JSON.stringify(profile.whapiLabels.map(l => l.name)) : '[]';
+                     logInfo('LABELS_INJECT', `Etiquetas para inyección: ${labelsStr}`, { userId: shortUserId });
+                 } catch (error) {
+                     labelsStr = '';
+                     logWarning('SYNC_FAIL', 'Fallback sin labels', { error: error.message, userId: shortUserId });
+                 }
+                 
+                 try {
+                     historyInjection = await getChatHistory(chatId, config.historyMsgCount);
+                     if (historyInjection) {
+                         logSuccess('HISTORY_INJECT', `Historial obtenido: ${historyInjection.split('\n').length} líneas`, { userId: shortUserId });
+                     } else {
+                         logWarning('HISTORY_INJECT', 'No historial disponible', { userId: shortUserId });
+                     }
+                 } catch (error) {
+                     historyInjection = '';
+                     logWarning('HISTORY_FAIL', 'Fallback sin historial', { error: error.message, userId: shortUserId });
+                 }
+             }
+             
              if (!threadId) {
                  const thread = await openaiClient.beta.threads.create();
                  threadId = thread.id;
@@ -394,6 +428,12 @@ function setupWebhooks() {
                      userName,
                      environment: appConfig.environment
                  });
+             }
+             
+             if (historyInjection || labelsStr) {
+                 const injectContent = `${historyInjection ? historyInjection + '\n\n' : ''}Hora actual: ${new Date().toLocaleString('es-ES', { timeZone: 'America/Bogota' })}\nEtiquetas actuales: ${labelsStr}`;
+                 await openaiClient.beta.threads.messages.create(threadId, { role: 'user', content: injectContent });
+                 logSuccess('CONTEXT_INJECT', `Contexto inyectado (historial + hora + labels)`, { length: injectContent.length, userId: shortUserId });
              }
              
              // Agregar mensaje al thread
@@ -582,6 +622,8 @@ function setupWebhooks() {
             });
             
             return 'Lo siento, hubo un error técnico. Por favor intenta de nuevo en unos momentos.';
+        } finally {
+            threadPersistence.removeThread(shortUserId);
         }
     };
 

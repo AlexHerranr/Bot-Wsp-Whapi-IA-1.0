@@ -15,7 +15,10 @@ const STAGE_MAP: Record<string, string> = {
     'OPENAI_PAYLOAD': '6_ai_request',
     'OPENAI_RESPONSE': '7_ai_response',
     'WHATSAPP_SEND': '8_send',
-    'MESSAGE_SENT': '9_complete'
+    'MESSAGE_SENT': '9_complete',
+    'HISTORY_INJECT': '6_ai_request',
+    'LABELS_INJECT': '6_ai_request',
+    'CONTEXT_INJECT': '6_ai_request'
 };
 
 // Lleva la cuenta de la posición que ocupa cada log dentro de un mismo flujo (messageId)
@@ -39,6 +42,11 @@ function enrichedLog(
     details: Record<string, any> = {}, 
     level: LogLevel = 'INFO'
 ) {
+    // Omitir debug en prod para ciertas categorías
+    if (IS_PRODUCTION && ['THREAD_DEBUG', 'BUFFER_TIMER_RESET'].includes(category)) {
+        return;
+    }
+    
     const stage = getFlowStage(category);
     const sequence = getSequenceNumber(category, details?.messageId);
 
