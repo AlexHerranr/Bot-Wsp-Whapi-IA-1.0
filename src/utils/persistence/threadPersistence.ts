@@ -27,7 +27,8 @@ export class ThreadPersistenceManager {
         this.loadThreads();
         this.setupAutoSave();
         this.setupGracefulShutdown();
-        this.cleanupOldThreads(12);
+        // 🔧 ARREGLO: No hacer cleanup inmediatamente para evitar errores de configuración
+        // this.cleanupOldThreads(12);
     }
     
     // Asegurar que los directorios existen
@@ -412,26 +413,37 @@ export class ThreadPersistenceManager {
     }
 
     isThreadOld(userId: string, months?: number): boolean {
-        const config = getConfig();
-        const effectiveMonths = months || config.historyInjectMonths;
-        const record = this.getThread(userId);
-        if (!record) return true;
-        const lastActivity = new Date(record.lastActivity);
-        const threshold = new Date();
-        threshold.setMonth(threshold.getMonth() - effectiveMonths);
-        const isOld = lastActivity < threshold;
-        
-        // 🔧 ETAPA 9: Enhanced logging para debug de condicionales
-        enhancedLog('debug', 'THREAD_AGE_CHECK', `Verificando edad del thread para ${userId}`, {
-            userId,
-            lastActivity: record.lastActivity,
-            threshold: threshold.toISOString(),
-            effectiveMonths,
-            isOld,
-            daysSinceActivity: Math.floor((new Date().getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24))
-        });
-        
-        return isOld;
+        try {
+            const config = getConfig();
+            const effectiveMonths = months || config.historyInjectMonths;
+            const record = this.getThread(userId);
+            if (!record) return true;
+            const lastActivity = new Date(record.lastActivity);
+            const threshold = new Date();
+            threshold.setMonth(threshold.getMonth() - effectiveMonths);
+            const isOld = lastActivity < threshold;
+            
+            // 🔧 ETAPA 9: Enhanced logging para debug de condicionales
+            enhancedLog('debug', 'THREAD_AGE_CHECK', `Verificando edad del thread para ${userId}`, {
+                userId,
+                lastActivity: record.lastActivity,
+                threshold: threshold.toISOString(),
+                effectiveMonths,
+                isOld,
+                daysSinceActivity: Math.floor((new Date().getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24))
+            });
+            
+            return isOld;
+        } catch (error) {
+            // Si la configuración no está disponible, usar valor por defecto
+            const effectiveMonths = months || 3; // Valor por defecto de 3 meses
+            const record = this.getThread(userId);
+            if (!record) return true;
+            const lastActivity = new Date(record.lastActivity);
+            const threshold = new Date();
+            threshold.setMonth(threshold.getMonth() - effectiveMonths);
+            return lastActivity < threshold;
+        }
     }
 
     cleanupOldThreads(months: number): number {
@@ -447,6 +459,20 @@ export class ThreadPersistenceManager {
             this.saveThreads();
         }
         return removed;
+    }
+
+    // 🔧 NUEVO: Método para inicializar cleanup después de que la configuración esté disponible
+    initializeCleanup(): void {
+        try {
+            const config = getConfig();
+            const months = config.historyInjectMonths || 12;
+            this.cleanupOldThreads(months);
+            enhancedLog('info', 'THREAD_PERSIST', `Cleanup inicializado con ${months} meses`);
+        } catch (error) {
+            // Si la configuración no está disponible, usar valor por defecto
+            this.cleanupOldThreads(12);
+            enhancedLog('info', 'THREAD_PERSIST', 'Cleanup inicializado con valor por defecto (12 meses)');
+        }
     }
 }
 

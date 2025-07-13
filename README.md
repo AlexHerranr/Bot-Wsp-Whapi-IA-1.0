@@ -18,6 +18,46 @@
 
 ---
 
+## 🗺️ **MAPA DE NAVEGACIÓN DEL PROYECTO**
+
+### **📁 Estructura Principal**
+```
+Bot-Wsp-Whapi-IA/
+├── 🚀 src/app-unified.ts                  # APLICACIÓN PRINCIPAL
+├── ⚙️ src/config/                         # Configuración del sistema
+├── 🤖 src/handlers/                       # Manejadores de IA y webhooks
+├── 🏨 src/services/                       # Servicios de negocio (Beds24, etc.)
+├── 🔧 src/functions/                      # Funciones de OpenAI Function Calling
+├── 🛠️ src/utils/                          # Utilidades y helpers
+├── 📚 docs/                               # Documentación completa
+├── 🧪 tests/                              # Tests y validaciones
+├── 🛠️ scripts/                            # Scripts de automatización
+├── 🧹 tmp/                                # Archivos temporales
+└── 📦 archive/                            # Archivos históricos
+```
+
+### **🎯 Archivos Clave para Desarrollo**
+- **`src/app-unified.ts`** - Punto de entrada principal
+- **`src/config/environment.ts`** - Configuración de entornos
+- **`src/config/secrets.ts`** - Gestión de secretos
+- **`package.json`** - Configuración del proyecto
+- **`README.md`** - Documentación principal
+
+### **📚 Documentación Esencial**
+- **`QUICK_START.md`** - Inicio rápido
+- **`docs/development/local-setup.md`** - Setup local
+- **`docs/deployment/README.md`** - Guía de deployment
+- **`PROJECT_STRUCTURE.md`** - Mapa de navegación completo
+
+### **🛠️ Scripts Importantes**
+- **`npm run verify`** - Verificar configuración
+- **`npm run dev:local`** - Desarrollo local
+- **`npm run deploy`** - Deploy a producción
+
+> **📖 Para ver el mapa completo detallado**: Consulta [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)
+
+---
+
 ## 🏗️ **Arquitectura del Sistema**
 
 ```
@@ -101,6 +141,32 @@ Usuario WhatsApp → WHAPI → Bot (app-unified.ts) → OpenAI Assistant → Fun
 
 ---
 
+## 🔄 **Arquitectura de Entornos**
+
+### **🏠 Desarrollo Local**
+- **Puerto**: 3008
+- **Host**: localhost
+- **Webhook**: Ngrok (actual-bobcat-handy.ngrok-free.app)
+- **Configuración**: Variables de entorno locales (.env)
+- **Logs**: Consola + archivos locales
+- **Secretos**: Variables de entorno directas
+
+### **☁️ Producción (Cloud Run)**
+- **Puerto**: 8080
+- **Host**: 0.0.0.0
+- **Webhook**: URL de Cloud Run
+- **Configuración**: Google Secret Manager
+- **Logs**: Google Cloud Logging
+- **Secretos**: Google Secret Manager
+
+### **🔄 Separación Automática**
+El sistema detecta automáticamente el entorno mediante:
+- **Variable `K_SERVICE`**: Presente en Cloud Run
+- **Variable `NODE_ENV`**: Configurada como 'production'
+- **Configuración dinámica**: URLs, puertos y secretos se ajustan automáticamente
+
+---
+
 ## 🚀 **Inicio Rápido**
 
 ### **Prerrequisitos**
@@ -119,14 +185,22 @@ cd Bot-Wsp-Whapi-IA
 ### **2. Instalar Dependencias**
 ```bash
 npm install
+# o
+pnpm install
 ```
 
-### **3. Configurar Variables de Entorno**
+### **3. Configurar Variables de Entorno (Desarrollo Local)**
 ```bash
 # Copiar archivo de ejemplo
 cp .env.example .env
 
-# Configurar variables (ver sección de configuración)
+# Configurar variables para desarrollo local
+OPENAI_API_KEY=sk-proj-...
+ASSISTANT_ID=asst_...
+WHAPI_TOKEN=tu_token_whapi
+WHAPI_API_URL=https://gate.whapi.cloud
+BEDS24_TOKEN=tu_token_beds24
+BEDS24_API_URL=https://api.beds24.com
 ```
 
 ### **4. Configurar OpenAI Assistant**
@@ -136,12 +210,23 @@ cp .env.example .env
 
 ### **5. Ejecutar en Desarrollo**
 ```bash
+# Desarrollo con ngrok automático
+npm run dev:local
+
+# Solo desarrollo local
 npm run dev
+
+# Desarrollo con configuración de producción
+npm run dev:cloud
 ```
 
 ### **6. Desplegar a Producción**
 ```bash
+# Deploy automático con Cloud Build
 npm run deploy
+
+# Deploy directo a Cloud Run
+npm run deploy:auto
 ```
 
 ---
@@ -150,6 +235,7 @@ npm run deploy
 
 ### **Variables de Entorno Requeridas**
 
+#### **Desarrollo Local (.env)**
 ```bash
 # OpenAI Configuration
 OPENAI_API_KEY=sk-proj-...
@@ -163,13 +249,15 @@ WHAPI_API_URL=https://gate.whapi.cloud
 BEDS24_TOKEN=tu_token_beds24
 BEDS24_API_URL=https://api.beds24.com
 
-# Google Cloud Configuration
-GOOGLE_CLOUD_PROJECT=tu-proyecto-id
-GOOGLE_CLOUD_REGION=northamerica-northeast1
-
 # Bot Configuration
-WEBHOOK_URL=https://tu-dominio.com/hook
-ENVIRONMENT=production
+WEBHOOK_URL=https://actual-bobcat-handy.ngrok-free.app/hook
+ENVIRONMENT=local
+```
+
+#### **Producción (Google Secret Manager)**
+```bash
+# Las mismas variables se configuran en Google Secret Manager
+# y se inyectan automáticamente en Cloud Run
 ```
 
 ### **Configuración del OpenAI Assistant**

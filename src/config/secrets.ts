@@ -2,8 +2,8 @@
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 import { logError } from '../utils/logger';
 
-// TODO: Reemplazar con el ID de tu proyecto de Google Cloud
-const GCLOUD_PROJECT_ID = process.env.GCLOUD_PROJECT_ID || 'gen-lang-client-0318357688';
+// Project ID dinámico - NO hardcodeado
+const GCLOUD_PROJECT_ID = process.env.GCLOUD_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || 'gen-lang-client-0318357688';
 
 export interface AppSecrets {
     OPENAI_API_KEY: string;

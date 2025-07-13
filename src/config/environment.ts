@@ -86,14 +86,14 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     // Webhook URL dinámica
     const webhookUrl = process.env.WEBHOOK_URL || (
         isCloudRun 
-            ? 'https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app/hook'
+            ? `${process.env.CLOUD_RUN_URL || 'https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app'}/hook`
             : 'https://actual-bobcat-handy.ngrok-free.app/hook'
     );
     
     // Base URL dinámica
     const baseUrl = process.env.BASE_URL || (
         isCloudRun 
-            ? 'https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app'
+            ? process.env.CLOUD_RUN_URL || 'https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app'
             : `http://localhost:${port}`
     );
     
@@ -196,7 +196,7 @@ export const logEnvironmentConfig = () => {
     console.log('🔧 Configuración del Entorno:');
     console.log(`   📍 Entorno: ${config.environment}`);
     console.log(`   🌐 Puerto: ${config.port}`);
-    console.log(`   🔗 Webhook: ${config.webhookUrl}`);
+    console.log(`   �� Webhook: ${config.webhookUrl}`);
     console.log(`   📊 Log Level: ${config.logLevel}`);
     console.log(`   🔍 Logs Detallados: ${config.enableDetailedLogs ? 'Sí' : 'No'}`);
     

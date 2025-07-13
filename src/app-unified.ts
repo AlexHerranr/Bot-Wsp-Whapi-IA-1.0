@@ -115,6 +115,9 @@ const main = async () => {
         
         logEnvironmentConfig();
         
+        // 🔧 ARREGLO: Inicializar cleanup de threads después de cargar configuración
+        threadPersistence.initializeCleanup();
+        
         const { secrets } = appConfig;
 
         openaiClient = new OpenAI({ 

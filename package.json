@@ -12,16 +12,19 @@
     "build": "tsc --outDir dist",
     "start": "node dist/app-unified.js",
     "test": "node scripts/development/test-env.js",
+    "verify": "node scripts/verify-environment.js",
     "assistant": "node scripts/assistant-management/assistant-cli.js",
     "create-assistant": "node scripts/create-new-assistant-v2.js",
     "check-docs": "node scripts/check-docs.js",
     "pre-deploy": "powershell -ExecutionPolicy Bypass -File scripts/pre-deploy.ps1",
     "deploy": "npm run build && npm run pre-deploy && git push origin master",
-    "deploy:auto": "npm run build && gcloud run deploy bot-wsp-whapi-ia --source . --region northamerica-northeast1 --allow-unauthenticated",
+    "deploy:cloud": "npm run build && gcloud run deploy bot-wsp-whapi-ia --source . --region northamerica-northeast1 --allow-unauthenticated",
+    "deploy:auto": "npm run deploy:cloud",
     "health-check": "node -e \"require('http').get('http://localhost:8080/health', (res) => { console.log('Status:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1) })\"",
     "health-check:local": "node -e \"require('http').get('http://localhost:3008/health', (res) => { console.log('Status:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1) })\"",
     "config": "node -e \"console.log('Environment Config:'); console.log(require('./src/config/environment.js').config);\"",
-    "cloud:logs": "python tools/log-tools/cloud-parser/parse_bot_logs.py --sessions 10 --hours 1"
+    "cloud:logs": "python tools/log-tools/cloud-parser/parse_bot_logs.py --sessions 10 --hours 1",
+    "predeploy-checklist": "node scripts/predeploy-checklist.js"
   },
   "keywords": [
     "whatsapp",
