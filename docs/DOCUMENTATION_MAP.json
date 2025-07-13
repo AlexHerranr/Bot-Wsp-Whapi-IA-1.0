@@ -72,12 +72,28 @@
       "archive/README.md",
       "REORGANIZATION_SUMMARY.md",
       "docs/progress/ACTUALIZACION_ENERO_2025.md"
+    ],
+    "docs/architecture/LOCKING_AND_RECOVERY.md": [
+      "src/app-unified.ts",
+      "src/utils/persistence/threadPersistence.ts"
+    ],
+    "docs/guides/TROUBLESHOOTING_AND_FAQ.md": [
+      "src/app-unified.ts",
+      "src/utils/logging/index.ts",
+      "src/routes/metrics.ts"
+    ],
+    "docs/API_ENDPOINTS.md": [
+      "src/app-unified.ts",
+      "src/routes/metrics.ts",
+      "src/functions/index.ts"
     ]
   },
   "documentation_categories": {
     "features": "Documentación específica de funcionalidades",
     "progress": "Estado y progreso del proyecto", 
     "development": "Documentación técnica y arquitectura",
-    "guides": "Guías de uso e instalación"
+    "guides": "Guías de uso e instalación",
+    "architecture": "Documentación de arquitectura del sistema",
+    "api": "Documentación de endpoints y funciones"
   }
 } 
