@@ -116,12 +116,12 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     const openaiRetries = parseInt(process.env.OPENAI_RETRIES || (isCloudRun ? '2' : '3'), 10);
 
     // Inyección de historial
-    const historyInjectMonths = parseInt(process.env.HISTORY_INJECT_MONTHS || '3', 10);
-    const historyMsgCount = parseInt(process.env.HISTORY_MSG_COUNT || '200', 10);
+    const historyInjectMonths = parseInt(process.env.HISTORY_INJECT_MONTHS || '1', 10); // Reducido de 3 a 1 mes
+    const historyMsgCount = parseInt(process.env.HISTORY_MSG_COUNT || '50', 10); // Reducido de 200 a 50
     const enableHistoryInject = process.env.ENABLE_HISTORY_INJECT !== 'false';
     
     // 🔧 ETAPA 10: Límite de historial para threads nuevos
-    const historyLimitNewThreads = parseInt(process.env.HISTORY_LIMIT_NEW_THREADS || '50', 10);
+    const historyLimitNewThreads = parseInt(process.env.HISTORY_LIMIT_NEW_THREADS || '20', 10); // Reducido de 50 a 20
 
     // Cache TTL
     const cacheTtlSeconds = parseInt(process.env.CACHE_TTL_SECONDS || '3600', 10);

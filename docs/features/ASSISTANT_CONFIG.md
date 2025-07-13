@@ -151,6 +151,14 @@ WHAPI_TOKEN=...
 WHAPI_API_URL=https://gate.whapi.cloud
 ```
 
+## Variables de entorno relevantes para optimización y monitoreo
+
+- `THREAD_TOKEN_THRESHOLD`: Límite de tokens por thread antes de activar cleanup (default: 8000).
+- `HISTORIAL_SUMMARY_THRESHOLD`: Límite de tokens para activar resumen automático (default: 5000).
+- `OPENAI_MODEL`: Modelo global para generación de resúmenes.
+
+Estas variables permiten ajustar el comportamiento de cleanup y performance del bot según el entorno.
+
 ## 4. Workflow n8n de Ejemplo
 
 ### Webhook Node (Trigger)

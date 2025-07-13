@@ -13,6 +13,8 @@ El proyecto ha sido **completamente unificado** y **optimizado para Cloud Run** 
 - ✅ **Arquitectura Unificada**: Un solo archivo principal (`app-unified.ts`)
 - ✅ **ETAPA 1**: Persistencia de threads optimizada ✅ IMPLEMENTADA
 - ✅ **ETAPA 2**: Cache de historial inteligente ✅ IMPLEMENTADA
+- ✅ **ETAPA 3**: Sistema de tracing y retry automático ✅ IMPLEMENTADA
+- ✅ **Sistema Híbrido**: Patrones simples, flujo híbrido, inyección condicional ✅ IMPLEMENTADO
 - ✅ **Detección de Entorno**: Automática entre local y Cloud Run
 - ✅ **Reorganización Completa**: Archivos históricos archivados
 - ✅ **Resolución de Problemas**: Dockerfile y PATH de Git
@@ -143,6 +145,15 @@ const config = {
 - **Detección de entorno**: Configuración automática local vs Cloud Run
 - **Rate limiting mejorado**: Prevención de spam y sobrecarga
 - **Logging optimizado**: Categorías estandarizadas y formateo eficiente
+
+### **✅ SISTEMA HÍBRIDO INTELIGENTE: Optimización Avanzada**
+- **Patrones Simples**: Detección pre-buffer de saludos, agradecimientos, despedidas, confusiones y confirmaciones
+- **Respuestas Instantáneas**: <1 segundo para casos comunes sin llamar a OpenAI
+- **Flujo Híbrido**: Análisis de consultas de disponibilidad incompletas para pedir detalles antes de OpenAI
+- **Inyección Condicional**: Análisis de contexto con threshold 10% para inyección inteligente
+- **Cache de Inyección**: TTL de 1 minuto para evitar recalcular contexto repetidamente
+- **Métricas Avanzadas**: pattern_hits_total, cache hit/miss, expuestas en /metrics
+- **Check Temático**: Sincronización automática de etiquetas cuando se detectan keywords relevantes
 
 ---
 

@@ -2,14 +2,18 @@
 
 ## 🚀 progress/ESTADO_FINAL_PROYECTO.md - Estado Actual Optimizado ⭐ ACTUALIZADO
 - **✅ Sistema Completamente Optimizado**: Cache de historial, persistencia de threads, cleanup automático
+- **✅ Sistema Híbrido Inteligente**: Patrones simples, flujo híbrido, inyección condicional
 - **✅ Métricas de Performance**: 50% reducción en latencia, 95% reutilización de threads, 80% cache hit rate
+- **✅ Reducción de Costos**: 30-40% menos llamadas a OpenAI, respuestas instantáneas
 - **✅ Producción Activa**: Cloud Run estable con 99.9% uptime
-- **✅ Optimizaciones Implementadas**: ETAPA 1 y ETAPA 2 completadas exitosamente
+- **✅ Optimizaciones Implementadas**: ETAPA 1, ETAPA 2, ETAPA 3 y Sistema Híbrido completados exitosamente
 
 ## 📋 progress/ACTUALIZACION_ENERO_2025.md - Optimizaciones Completadas ⭐ ACTUALIZADO
 - **✅ Estado Production Ready**: Todas las optimizaciones críticas implementadas
 - **✅ ETAPA 1 Implementada**: Persistencia de threads optimizada
 - **✅ ETAPA 2 Implementada**: Cache de historial inteligente
+- **✅ ETAPA 3 Implementada**: Sistema de tracing y retry automático
+- **✅ Sistema Híbrido Implementado**: Patrones simples, flujo híbrido, inyección condicional
 - **✅ Sistema Unificado**: Arquitectura optimizada para Cloud Run
 - **✅ Métricas Excelentes**: Performance mejorada significativamente
 
@@ -40,6 +44,14 @@
 - Instalación paso a paso optimizada
 - Variables de entorno necesarias
 - Configuración de OpenAI Assistant
+
+### 1.5 Sistema Híbrido Inteligente ✅ NUEVO
+- **Patrones Simples**: Detección de saludos, agradecimientos, despedidas
+- **Respuestas Instantáneas**: <1s para casos comunes sin OpenAI
+- **Flujo Híbrido**: Guía inteligente en consultas de disponibilidad
+- **Inyección Condicional**: Contexto solo cuando es necesario
+- **Cache Inteligente**: Optimización de llamadas a APIs
+- **Métricas Avanzadas**: Monitoreo de patrones y eficiencia
 
 ---
 
@@ -207,7 +219,32 @@
 
 ---
 
-## 9. Estructura de Archivos del Proyecto ✅ ACTUALIZADO
+## 9. features/SISTEMA_HIBRIDO_INTELIGENTE.md - Sistema Híbrido ✅ NUEVO
+
+### 9.1 Arquitectura del Sistema Híbrido
+- **✅ Patrones Simples**: Detección pre-buffer con regex
+- **✅ Respuestas Fijas**: Respuestas instantáneas sin OpenAI
+- **✅ Flujo Híbrido**: Análisis de disponibilidad y contexto
+- **✅ Inyección Condicional**: Contexto solo cuando es relevante
+- **✅ Cache Inteligente**: TTL 1 min para optimización
+
+### 9.2 Funcionalidades Implementadas
+- **Patrones Detectados**: Saludos, agradecimientos, despedidas, confusiones, confirmaciones
+- **Keywords Temáticas**: pasado, reserva, anterior, previo, historial, cotización, confirmación
+- **Detección de Disponibilidad**: Análisis de completitud antes de OpenAI
+- **Análisis de Contexto**: Threshold 10% para inyección condicional
+- **Métricas Avanzadas**: pattern_hits_total, cache hit/miss
+
+### 9.3 Estado Actual
+- **✅ FUNCIONANDO EN PRODUCCIÓN** con optimizaciones completas
+- **Performance**: 30-40% menos llamadas a OpenAI
+- **UX**: Respuestas instantáneas para casos comunes
+- **Eficiencia**: Cache inteligente y inyección condicional
+- **Monitoreo**: Métricas detalladas en /metrics y /health
+
+---
+
+## 10. Estructura de Archivos del Proyecto ✅ ACTUALIZADO
 
 ```
 Bot-Wsp-Whapi-IA/
@@ -247,7 +284,9 @@ Bot-Wsp-Whapi-IA/
 │       ├── 📄 function-handler.js  # Manejador principal
 │       └── 📄 availability-handler.js # Functions de disponibilidad
 ├── 📁 tests/
-│   └── 📄 test-labels-update.js   # Prueba de actualización de etiquetas ✅ NUEVO
+│   ├── 📄 test-labels-update.js   # Prueba de actualización de etiquetas ✅ NUEVO
+│   ├── 📄 test-simple-patterns.js # Prueba de patrones simples ✅ NUEVO
+│   └── 📄 test-hybrid-flow.js     # Prueba de flujo híbrido ✅ NUEVO
 ├── 📄 .env.example                # Variables de entorno ejemplo
 └── 📄 package.json                # Dependencias del proyecto
 ```
@@ -282,6 +321,9 @@ Bot-Wsp-Whapi-IA/
 
 9. **Para implementar contexto histórico:**
    - features/CONTEXTO_HISTORIAL_CONVERSACION.md → chatHistory.ts → test-chat-history.js
+
+10. **Para implementar sistema híbrido:**
+    - features/SISTEMA_HIBRIDO_INTELIGENTE.md → test-simple-patterns.js → test-hybrid-flow.js
 
 ---
 

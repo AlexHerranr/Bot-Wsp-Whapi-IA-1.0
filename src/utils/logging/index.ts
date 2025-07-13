@@ -5,6 +5,86 @@ const DETAILED_LOGS = process.env.ENABLE_DETAILED_LOGS === 'true' || !IS_PRODUCT
 
 type LogLevel = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
 
+// 🔧 ETAPA 3: Sistema de tracing con requestId
+const activeRequests = new Map<string, {
+    requestId: string;
+    userId: string;
+    startTime: number;
+    flowStage: string;
+    toolCalls: Array<{ id: string; functionName: string; status: string }>;
+    contextTokens: number;
+    totalTokens: number;
+}>();
+
+// 🔧 ETAPA 3: Generar requestId único
+function generateRequestId(): string {
+    return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// 🔧 ETAPA 3: Iniciar tracing de request
+function startRequestTracing(userId: string): string {
+    const requestId = generateRequestId();
+    activeRequests.set(requestId, {
+        requestId,
+        userId,
+        startTime: Date.now(),
+        flowStage: 'init',
+        toolCalls: [],
+        contextTokens: 0,
+        totalTokens: 0
+    });
+    return requestId;
+}
+
+// 🔧 ETAPA 3: Actualizar etapa del flujo
+function updateRequestStage(requestId: string, stage: string): void {
+    const request = activeRequests.get(requestId);
+    if (request) {
+        request.flowStage = stage;
+    }
+}
+
+// 🔧 ETAPA 3: Registrar tool call
+function registerToolCall(requestId: string, toolCallId: string, functionName: string, status: string = 'pending'): void {
+    const request = activeRequests.get(requestId);
+    if (request) {
+        request.toolCalls.push({ id: toolCallId, functionName, status });
+    }
+}
+
+// 🔧 ETAPA 3: Actualizar status de tool call
+function updateToolCallStatus(requestId: string, toolCallId: string, status: string): void {
+    const request = activeRequests.get(requestId);
+    if (request) {
+        const toolCall = request.toolCalls.find(tc => tc.id === toolCallId);
+        if (toolCall) {
+            toolCall.status = status;
+        }
+    }
+}
+
+// 🔧 ETAPA 3: Finalizar tracing de request
+function endRequestTracing(requestId: string): any {
+    const request = activeRequests.get(requestId);
+    if (request) {
+        const duration = Date.now() - request.startTime;
+        const summary = {
+            requestId: request.requestId,
+            userId: request.userId,
+            duration,
+            flowStage: request.flowStage,
+            toolCallsCount: request.toolCalls.length,
+            toolCalls: request.toolCalls,
+            contextTokens: request.contextTokens,
+            totalTokens: request.totalTokens,
+            success: request.flowStage === 'completed'
+        };
+        activeRequests.delete(requestId);
+        return summary;
+    }
+    return null;
+}
+
 // --- Mapeo de etapas del flujo y helpers añadidos ---
 const STAGE_MAP: Record<string, string> = {
     'MESSAGE_RECEIVED': '1_receive',
@@ -19,7 +99,21 @@ const STAGE_MAP: Record<string, string> = {
     'HISTORY_INJECT': '6_ai_request',
     'LABELS_INJECT': '6_ai_request',
     'CONTEXT_INJECT': '6_ai_request',
-    'LOOP_DETECTED': '0_unknown'
+    'LOOP_DETECTED': '0_unknown',
+    // 🔧 ETAPA 1: Nuevas categorías de métricas
+    'OPENAI_TOKENS': '6_ai_request',
+    'OPENAI_LATENCY': '6_ai_request',
+    'OPENAI_USAGE': '6_ai_request',
+    'CONTEXT_TOKENS': '6_ai_request',
+    'FUNCTION_METRICS': '6_ai_request',
+    'BEDS24_METRICS': '4_beds_request',
+    'FALLBACK_TRIGGERED': '7_ai_response',
+    'PERFORMANCE_METRICS': '9_complete',
+    // 🔧 ETAPA 3: Nuevas categorías de tracing
+    'REQUEST_TRACING': '0_tracing',
+    'TOOL_OUTPUTS_SUBMITTED': '6_ai_request',
+    'ASSISTANT_NO_RESPONSE': '7_ai_response',
+    'FLOW_STAGE_UPDATE': '0_tracing'
 };
 
 // Lleva la cuenta de la posición que ocupa cada log dentro de un mismo flujo (messageId)
@@ -258,6 +352,22 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
         return `⚠️ Webhook recibido sin mensajes válidos`;
     }
     
+    // 🔧 ETAPA 1: Nuevas categorías de métricas (solo en archivo, no en terminal)
+    if (category === 'OPENAI_TOKENS' || 
+        category === 'OPENAI_LATENCY' || 
+        category === 'OPENAI_USAGE' || 
+        category === 'CONTEXT_TOKENS' || 
+        category === 'FUNCTION_METRICS' || 
+        category === 'BEDS24_METRICS' || 
+        category === 'PERFORMANCE_METRICS') {
+        return ''; // Solo en archivo detallado
+    }
+    
+    // === FALLBACKS === (solo críticos en terminal)
+    if (category === 'FALLBACK_TRIGGERED') {
+        return `⚠️ Fallback activado: ${details?.reason || 'sin razón especificada'}`;
+    }
+    
     // === Por defecto: no mostrar en terminal (solo en archivo) ===
     return '';
 }
@@ -295,4 +405,30 @@ export const logThreadCreated = (msg: string, details?: Record<string, any>) => 
 export const logThreadPersist = (msg: string, details?: Record<string, any>) => enrichedLog('THREAD_PERSIST', msg, details);
 export const logThreadCleanup = (msg: string, details?: Record<string, any>) => enrichedLog('THREAD_CLEANUP', msg, details);
 export const logServerStart = (msg: string, details?: Record<string, any>) => enrichedLog('SERVER_START', msg, details);
-export const logBotReady = (msg: string, details?: Record<string, any>) => enrichedLog('BOT_READY', msg, details); 
+export const logBotReady = (msg: string, details?: Record<string, any>) => enrichedLog('BOT_READY', msg, details);
+
+// 🔧 ETAPA 1: Nuevas funciones de logging para métricas avanzadas
+export const logOpenAITokens = (msg: string, details?: Record<string, any>) => enrichedLog('OPENAI_TOKENS', msg, details);
+export const logOpenAILatency = (msg: string, details?: Record<string, any>) => enrichedLog('OPENAI_LATENCY', msg, details);
+export const logOpenAIUsage = (msg: string, details?: Record<string, any>) => enrichedLog('OPENAI_USAGE', msg, details);
+export const logContextTokens = (msg: string, details?: Record<string, any>) => enrichedLog('CONTEXT_TOKENS', msg, details);
+export const logFunctionCallingMetrics = (msg: string, details?: Record<string, any>) => enrichedLog('FUNCTION_METRICS', msg, details);
+export const logBeds24Metrics = (msg: string, details?: Record<string, any>) => enrichedLog('BEDS24_METRICS', msg, details);
+export const logFallbackTriggered = (msg: string, details?: Record<string, any>) => enrichedLog('FALLBACK_TRIGGERED', msg, details);
+export const logPerformanceMetrics = (msg: string, details?: Record<string, any>) => enrichedLog('PERFORMANCE_METRICS', msg, details);
+
+// 🔧 ETAPA 3: Nuevas funciones de tracing avanzado
+export const logRequestTracing = (msg: string, details?: Record<string, any>) => enrichedLog('REQUEST_TRACING', msg, details);
+export const logToolOutputsSubmitted = (msg: string, details?: Record<string, any>) => enrichedLog('TOOL_OUTPUTS_SUBMITTED', msg, details);
+export const logAssistantNoResponse = (msg: string, details?: Record<string, any>) => enrichedLog('ASSISTANT_NO_RESPONSE', msg, details);
+export const logFlowStageUpdate = (msg: string, details?: Record<string, any>) => enrichedLog('FLOW_STAGE_UPDATE', msg, details);
+
+// 🔧 ETAPA 3: Exportar funciones de tracing
+export {
+    startRequestTracing,
+    updateRequestStage,
+    registerToolCall,
+    updateToolCallStatus,
+    endRequestTracing,
+    generateRequestId
+}; 

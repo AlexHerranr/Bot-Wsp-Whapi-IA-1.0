@@ -20,6 +20,139 @@ import axios from 'axios';
 const availabilityCache = new Map<string, { data: OptimizedResult; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
+// 🔧 ETAPA 1.2: Función de validación de fechas con fuzzy parsing
+/**
+ * Valida y corrige fechas con fuzzy parsing para manejar typos comunes
+ * Ejemplo: "agosot" → "agosto", "15 de agosot" → "2025-08-15"
+ */
+function validateAndFixDates(startDate: string, endDate: string): {
+    startDate: string;
+    endDate: string;
+    corrections: string[];
+    isValid: boolean;
+} {
+    const corrections: string[] = [];
+    let isValid = true;
+    
+    // 🔧 ETAPA 3: Mapeo expandido de typos comunes en meses con fuzzy matching
+    const monthTypos: Record<string, string> = {
+        // Typos comunes de agosto
+        'agosot': 'agosto', 'agosto': 'agosto', 'agost': 'agosto', 'agust': 'agosto',
+        // Typos comunes de septiembre
+        'septiembre': 'septiembre', 'septiempre': 'septiembre', 'septiempre': 'septiembre',
+        // Typos comunes de octubre
+        'octubre': 'octubre', 'octubr': 'octubre', 'octub': 'octubre',
+        // Typos comunes de noviembre
+        'noviembre': 'noviembre', 'noviempre': 'noviembre', 'noviem': 'noviembre',
+        // Typos comunes de diciembre
+        'diciembre': 'diciembre', 'diciem': 'diciembre', 'diciembr': 'diciembre',
+        // Typos comunes de enero
+        'enero': 'enero', 'ener': 'enero', 'enro': 'enero',
+        // Typos comunes de febrero
+        'febrero': 'febrero', 'febrer': 'febrero', 'febre': 'febrero',
+        // Typos comunes de marzo
+        'marzo': 'marzo', 'marz': 'marzo', 'mar': 'marzo',
+        // Typos comunes de abril
+        'abril': 'abril', 'abri': 'abril', 'abr': 'abril',
+        // Typos comunes de mayo
+        'mayo': 'mayo', 'may': 'mayo',
+        // Typos comunes de junio
+        'junio': 'junio', 'juni': 'junio', 'jun': 'junio',
+        // Typos comunes de julio
+        'julio': 'julio', 'juli': 'julio', 'jul': 'julio'
+    };
+    
+    // 🔧 ETAPA 3: Función mejorada para procesar una fecha con fuzzy matching
+    function processDate(dateStr: string, isStartDate: boolean): string {
+        let processedDate = dateStr;
+        
+        // Si ya es formato YYYY-MM-DD, validar
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (dateRegex.test(dateStr)) {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) {
+                isValid = false;
+                corrections.push(`Fecha inválida: ${dateStr}`);
+                return dateStr;
+            }
+            return dateStr;
+        }
+        
+        // Intentar parsear fechas en formato texto
+        const lowerDate = dateStr.toLowerCase();
+        
+        // 🔧 ETAPA 3: Patrones expandidos para fechas
+        const patterns = [
+            /(\d{1,2})\s+(?:de\s+)?([a-z]+)/, // "15 de agosot" o "15 agosot"
+            /(\d{1,2})\/(\d{1,2})/, // "15/8" o "15/08"
+            /(\d{1,2})-(\d{1,2})/, // "15-8" o "15-08"
+            /(\d{1,2})\.(\d{1,2})/ // "15.8" o "15.08"
+        ];
+        
+        for (const pattern of patterns) {
+            const match = lowerDate.match(pattern);
+            if (match) {
+                let day: number;
+                let monthText: string;
+                let monthNum: number;
+                
+                if (pattern.source.includes('[a-z]')) {
+                    // Patrón de texto: "15 de agosot"
+                    day = parseInt(match[1]);
+                    monthText = match[2];
+                    
+                    // 🔧 ETAPA 3: Fuzzy matching para meses con typos
+                    let correctedMonth = monthText;
+                    if (monthTypos[monthText]) {
+                        correctedMonth = monthTypos[monthText];
+                        if (correctedMonth !== monthText) {
+                            corrections.push(`Corregido typo en mes: "${monthText}" → "${correctedMonth}"`);
+                        }
+                    }
+                    
+                    // Mapear mes a número
+                    const monthMap: Record<string, number> = {
+                        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+                        'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+                        'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+                    };
+                    
+                    monthNum = monthMap[correctedMonth];
+                } else {
+                    // Patrón numérico: "15/8"
+                    day = parseInt(match[1]);
+                    monthNum = parseInt(match[2]);
+                }
+                
+                if (monthNum && day >= 1 && day <= 31 && monthNum >= 1 && monthNum <= 12) {
+                    const currentYear = new Date().getFullYear();
+                    const formattedMonth = monthNum.toString().padStart(2, '0');
+                    const formattedDay = day.toString().padStart(2, '0');
+                    processedDate = `${currentYear}-${formattedMonth}-${formattedDay}`;
+                    
+                    corrections.push(`Fecha parseada: "${dateStr}" → "${processedDate}"`);
+                    return processedDate;
+                }
+            }
+        }
+        
+        // Si no se pudo procesar, marcar como inválida
+        isValid = false;
+        corrections.push(`No se pudo procesar fecha: ${dateStr}`);
+        return dateStr;
+    }
+    
+    const processedStartDate = processDate(startDate, true);
+    const processedEndDate = processDate(endDate, false);
+    
+    return {
+        startDate: processedStartDate,
+        endDate: processedEndDate,
+        corrections,
+        isValid
+    };
+}
+
 // Interfaces para la lógica optimizada
 interface PropertyData {
     propertyId: number;
@@ -123,6 +256,7 @@ async function getCachedAvailabilityAndPrices(
 
 /**
  * Obtiene datos combinados: disponibilidad + precios con lógica de splits
+ * 🔧 ETAPA 1.1: Try-catch exhaustivo y timeout configurado
  */
 async function getAvailabilityAndPricesOptimized(
     startDate: string,
@@ -132,28 +266,236 @@ async function getAvailabilityAndPricesOptimized(
 ): Promise<OptimizedResult> {
     const BEDS24_TOKEN = process.env.BEDS24_TOKEN || '';
     const BEDS24_API_URL = 'https://api.beds24.com/v2';
+    const API_TIMEOUT = parseInt(process.env.BEDS24_TIMEOUT || '15000'); // 15 segundos por defecto
     
-    // Usar las fechas originales directamente - sin ajustes de timezone
-    const dateRange = generateDateRange(startDate, endDate);
-    const totalNights = dateRange.length;
-    
-    logBeds24Processing('Calculando noches de estadía', {
-        startDate,
-        endDate,
-        nightsRange: dateRange,
-        totalNights,
-        dateCalculation: 'stay_nights_only'
-    });
-    
-    // ✨ OPTIMIZACIÓN: Usar SOLO el endpoint calendar (ya incluye nombres reales)
-    const calendarResponse = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar?startDate=${startDate}&endDate=${endDate}&includeNumAvail=true&includePrices=true&includeMinStay=true&includeMaxStay=true&includeMultiplier=true&includeOverride=true`, {
-        headers: { 'Accept': 'application/json', 'token': BEDS24_TOKEN }
-    });
-    const calendarData = await calendarResponse.json() as any;
-    
-    if (!calendarData.success) {
-        throw new Error(`Error obteniendo calendario: ${calendarData.error}`);
-    }
+    try {
+        // Usar las fechas originales directamente - sin ajustes de timezone
+        const dateRange = generateDateRange(startDate, endDate);
+        const totalNights = dateRange.length;
+        
+        logBeds24Processing('Calculando noches de estadía', {
+            startDate,
+            endDate,
+            nightsRange: dateRange,
+            totalNights,
+            dateCalculation: 'stay_nights_only'
+        });
+        
+        // 🔧 ETAPA 1.3: Timeout configurado para APIs externas
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+        
+        try {
+            // ✨ OPTIMIZACIÓN: Usar SOLO el endpoint calendar (ya incluye nombres reales)
+            const calendarResponse = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar?startDate=${startDate}&endDate=${endDate}&includeNumAvail=true&includePrices=true&includeMinStay=true&includeMaxStay=true&includeMultiplier=true&includeOverride=true`, {
+                headers: { 'Accept': 'application/json', 'token': BEDS24_TOKEN },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!calendarResponse.ok) {
+                throw new Error(`HTTP ${calendarResponse.status}: ${calendarResponse.statusText}`);
+            }
+            
+            const calendarData = await calendarResponse.json() as any;
+            
+            if (!calendarData.success) {
+                throw new Error(`Error obteniendo calendario: ${calendarData.error}`);
+            }
+
+            // Logging optimizado de conexión
+            logBeds24ApiCall('Consulta optimizada a Beds24 (solo calendar)', {
+                success: calendarData.success,
+                totalProperties: calendarData.data?.length || 0,
+                dateRange: `${startDate} - ${endDate}`,
+                nightsCalculated: totalNights,
+                optimization: 'single-endpoint',
+                endpoint: 'inventory/rooms/calendar',
+                method: 'GET',
+                parameters: {
+                    startDate,
+                    endDate,
+                    includeNumAvail: true,
+                    includePrices: true,
+                    includeMinStay: true,
+                    includeMaxStay: true,
+                    includeMultiplier: true,
+                    includeOverride: true
+                }
+            });
+
+            // Log detallado de la respuesta cruda para análisis
+            logBeds24ResponseDetail('Respuesta cruda de Beds24 API', {
+                firstRoom: calendarData.data?.[0] ? {
+                    propertyId: calendarData.data[0].propertyId,
+                    roomId: calendarData.data[0].roomId,
+                    name: calendarData.data[0].name,
+                    calendarEntries: calendarData.data[0].calendar?.length || 0,
+                    sampleEntry: calendarData.data[0].calendar?.[0]
+                } : null,
+                totalRooms: calendarData.data?.length || 0,
+                responseStructure: calendarData.data?.length ? Object.keys(calendarData.data[0]) : [],
+                success: calendarData.success,
+                responseSize: JSON.stringify(calendarData).length
+            });
+
+            // Mapear los datos de Beds24 a las noches reales de estadía
+            const mappedCalendarData = mapBeds24DataToStayNights(calendarData.data || [], startDate, endDate);
+
+            // Procesar datos de disponibilidad y precios
+            const propertyData: Record<number, PropertyData> = {};
+            
+            if (calendarData.success && mappedCalendarData) {
+                mappedCalendarData.forEach((roomData: any) => {
+                    const propertyId = roomData.propertyId;
+                    const roomId = roomData.roomId;
+                    
+                    // Inicializar datos de la propiedad
+                    if (!propertyData[propertyId]) {
+                        propertyData[propertyId] = {
+                            propertyId: propertyId,
+                            propertyName: roomData.name || `Propiedad ${propertyId}`, // ✨ OPTIMIZACIÓN: Usar nombre directo del calendar
+                            roomName: roomData.name || `Habitación ${roomId}`, // ✨ Usar nombre real de la habitación
+                            roomId: roomId,
+                            availability: {},
+                            prices: {}
+                        };
+                    }
+                    
+                    // Procesar calendario para disponibilidad y precios
+                    if (roomData.calendar) {
+                        roomData.calendar.forEach((calItem: any) => {
+                            // 🔧 CORRECCIÓN: Procesar rango de fechas from-to de Beds24
+                            const fromDate = new Date(calItem.from);
+                            const toDate = new Date(calItem.to || calItem.from);
+                            
+                            // Generar todas las fechas cubiertas por esta entrada
+                            for (let date = new Date(fromDate); date <= toDate; date.setDate(date.getDate() + 1)) {
+                                const dateStr = date.toISOString().split('T')[0];
+                                
+                                // Solo procesar fechas que están en nuestro rango de noches
+                                if (dateRange.includes(dateStr)) {
+                                    // Disponibilidad basada en numAvail (0 = ocupado, 1+ = disponible)
+                                    propertyData[propertyId].availability[dateStr] = (calItem.numAvail || 0) > 0;
+                                    
+                                    // Precios
+                                    if (calItem.price1) {
+                                        propertyData[propertyId].prices[dateStr] = calItem.price1;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+            
+            // Clasificar propiedades según disponibilidad
+            const completeOptions: PropertyData[] = [];
+            const partialOptions: PropertyData[] = [];
+            
+            Object.values(propertyData).forEach(property => {
+                // CORRECCIÓN: Verificar disponibilidad solo para noches de estadía
+                const isFullyAvailableAndPriced = dateRange.every(date => property.availability[date] && property.prices[date] > 0);
+                
+                if (isFullyAvailableAndPriced) {
+                    completeOptions.push(property);
+                } else {
+                    // CORRECCIÓN: Verificar disponibilidad parcial solo para noches reales
+                    const isPartiallyAvailable = dateRange.some(date => property.availability[date] && property.prices[date] > 0);
+                    if (isPartiallyAvailable) {
+                        partialOptions.push(property);
+                    }
+                }
+            });
+            
+            // Logging básico de clasificación
+            logInfo('BEDS24_CLASSIFICATION', 'Propiedades clasificadas', {
+                completeOptions: completeOptions.length,
+                partialOptions: partialOptions.length,
+                willGenerateSplits: completeOptions.length === 0 ? true : completeOptions.length <= 2,
+                nightsAnalyzed: totalNights
+            });
+
+            // Generar opciones de split según nueva lógica:
+            // - 0 completas: hasta 3 splits (cualquier cantidad de traslados)
+            // - 1 completa: 2 splits (máximo 1 traslado)
+            // - 2+ completas: 1 split (máximo 1 traslado)
+            let splitOptions: SplitOption[] = [];
+            if (completeOptions.length === 0) {
+                // Sin opciones completas: buscar cualquier combinación viable
+                splitOptions = findConsecutiveSplits(partialOptions, dateRange, 3, 3);
+            } else if (completeOptions.length === 1) {
+                // 1 opción completa: mostrar 2 alternativas con máximo 1 traslado
+                splitOptions = findConsecutiveSplits(partialOptions, dateRange, 2, 1);
+            } else if (completeOptions.length >= 2) {
+                // 2+ opciones completas: mostrar 1 alternativa con máximo 1 traslado
+                splitOptions = findConsecutiveSplits(partialOptions, dateRange, 1, 1);
+            }
+            
+            // Logging básico de splits
+            if (splitOptions.length > 0) {
+                logInfo('BEDS24_SPLITS', 'Splits generados exitosamente', {
+                    splitCount: splitOptions.length,
+                    averageTransfers: splitOptions.reduce((sum, split) => sum + split.transfers, 0) / splitOptions.length
+                });
+            }
+            
+            // Log resumen final de la respuesta
+            logInfo('BEDS24_RESPONSE_SUMMARY', `Encontradas ${completeOptions.length} opciones completas y ${splitOptions.length} opciones con traslado`, {
+                dateRange: `${startDate} al ${endDate}`,
+                totalNights,
+                completeOptionsDetail: completeOptions.slice(0, 3).map(opt => ({
+                    propertyName: opt.propertyName,
+                    totalPrice: Object.values(opt.prices).reduce((sum, price) => sum + price, 0),
+                    pricePerNight: Math.round(Object.values(opt.prices).reduce((sum, price) => sum + price, 0) / totalNights)
+                })),
+                splitOptionsDetail: splitOptions.slice(0, 2).map(split => ({
+                    type: split.type,
+                    transfers: split.transfers,
+                    totalPrice: split.totalPrice,
+                    properties: split.properties.map(p => p.propertyName).join(' → ')
+                }))
+            });
+            
+            return {
+                completeOptions,
+                splitOptions,
+                totalNights
+            };
+            
+        } catch (error) {
+            clearTimeout(timeoutId);
+            
+            // 🔧 ETAPA 1.1: Try-catch exhaustivo para manejar errores específicos
+            if (error instanceof Error) {
+                if (error.name === 'AbortError') {
+                    logError('BEDS24_TIMEOUT', 'Timeout en consulta a Beds24 API', {
+                        timeout: API_TIMEOUT,
+                        startDate,
+                        endDate,
+                        error: error.message
+                    });
+                    throw new Error(`Timeout: La consulta a Beds24 tardó más de ${API_TIMEOUT/1000} segundos`);
+                }
+                
+                if (error.message.includes('HTTP')) {
+                    logError('BEDS24_HTTP_ERROR', 'Error HTTP en consulta a Beds24', {
+                        error: error.message,
+                        startDate,
+                        endDate
+                    });
+                    throw new Error(`Error de conexión con Beds24: ${error.message}`);
+                }
+            }
+            
+            logError('BEDS24_UNKNOWN_ERROR', 'Error desconocido en consulta a Beds24', {
+                error: error instanceof Error ? error.message : String(error),
+                startDate,
+                endDate
+            });
+            throw new Error('Error interno al consultar disponibilidad en Beds24');
+        }
 
     // Logging optimizado de conexión
     logBeds24ApiCall('Consulta optimizada a Beds24 (solo calendar)', {
@@ -338,6 +680,52 @@ async function getAvailabilityAndPricesOptimized(
         splitOptions,
         totalNights
     };
+    
+    } catch (error) {
+        // 🔧 ETAPA 1.1: Try-catch exhaustivo para manejar errores específicos
+        if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+                logError('BEDS24_TIMEOUT', 'Timeout en consulta a Beds24 API', {
+                    timeout: API_TIMEOUT,
+                    startDate,
+                    endDate,
+                    error: error.message
+                });
+                throw new Error(`Timeout: La consulta a Beds24 tardó más de ${API_TIMEOUT/1000} segundos`);
+            }
+            
+            if (error.message.includes('HTTP')) {
+                logError('BEDS24_HTTP_ERROR', 'Error HTTP en consulta a Beds24', {
+                    error: error.message,
+                    startDate,
+                    endDate
+                });
+                throw new Error(`Error de conexión con Beds24: ${error.message}`);
+            }
+        }
+        
+        logError('BEDS24_UNKNOWN_ERROR', 'Error desconocido en consulta a Beds24', {
+            error: error instanceof Error ? error.message : String(error),
+            startDate,
+            endDate
+        });
+        throw new Error('Error interno al consultar disponibilidad en Beds24');
+        
+    } catch (outerError) {
+        // 🔧 ETAPA 1.4: Fallback inteligente si Beds24 falla
+        logError('BEDS24_FALLBACK', 'Activando fallback por error en Beds24', {
+            error: outerError instanceof Error ? outerError.message : String(outerError),
+            startDate,
+            endDate
+        });
+        
+        // Devolver respuesta de fallback
+        return {
+            completeOptions: [],
+            splitOptions: [],
+            totalNights: generateDateRange(startDate, endDate).length
+        };
+    }
 }
 
 /**
@@ -790,21 +1178,38 @@ function generateDateRange(startDate: string, endDate: string): string[] {
 /**
  * Handler principal para consultas de disponibilidad desde OpenAI
  */
-export async function handleAvailabilityCheck(args: any): Promise<string> {
+export async function handleAvailabilityCheck(args: any, requestId?: string): Promise<string> {
+    // 🔧 ETAPA 3: Tracking de performance para Beds24
+    const startTime = Date.now();
+    
     // 🔧 MEJORADO: Validación robusta de parámetros según OpenAI best practices
     let { startDate, endDate, propertyId = null, roomId = null, maxTransfers = null } = args;
     
-    // Validación de fechas requeridas
-    if (!startDate || !endDate) {
-        logError('BEDS24_VALIDATION', 'Fechas requeridas faltantes', { args });
-        return 'Error: Se requieren fechas de inicio y fin para la consulta.';
+    // 🔧 ETAPA 1.2: Validación de fechas con fuzzy parsing
+    const dateValidation = validateAndFixDates(startDate, endDate);
+    
+    if (!dateValidation.isValid) {
+        logError('BEDS24_VALIDATION', 'Fechas inválidas después de fuzzy parsing', { 
+            originalStartDate: startDate,
+            originalEndDate: endDate,
+            corrections: dateValidation.corrections
+        });
+        return `Error: No se pudieron procesar las fechas. ${dateValidation.corrections.join(', ')}`;
     }
     
-    // Validación de formato de fechas
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
-        logError('BEDS24_VALIDATION', 'Formato de fecha inválido', { startDate, endDate });
-        return 'Error: Las fechas deben estar en formato YYYY-MM-DD.';
+    // Usar las fechas corregidas
+    startDate = dateValidation.startDate;
+    endDate = dateValidation.endDate;
+    
+    // Log de correcciones si las hubo
+    if (dateValidation.corrections.length > 0) {
+        logInfo('BEDS24_DATE_CORRECTIONS', 'Fechas corregidas con fuzzy parsing', {
+            originalStartDate: args.startDate,
+            originalEndDate: args.endDate,
+            correctedStartDate: startDate,
+            correctedEndDate: endDate,
+            corrections: dateValidation.corrections
+        });
     }
     
     // 🔧 ETAPA 8: Fix Function Date Hallucination
@@ -900,7 +1305,8 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
         requestType: 'availability_check',
         dateAdjusted,
         originalStartDate: args.startDate,
-        originalEndDate: args.endDate
+        originalEndDate: args.endDate,
+        requestId
     });
     
     try {
@@ -909,7 +1315,8 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
             endDate,
             propertyId,
             roomId,
-            dateAdjusted
+            dateAdjusted,
+            requestId
         });
 
         // Obtener datos combinados: disponibilidad + precios (USANDO CACHÉ)
@@ -918,11 +1325,20 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
         // Formatear respuesta optimizada para OpenAI
         const response = formatOptimizedResponse(result, startDate, endDate);
         
+        // 🔧 ETAPA 3: Loggear métricas de performance de Beds24
+        const processingMs = Date.now() - startTime;
+        const responseSize = JSON.stringify(result).length;
+        
         logSuccess('AVAILABILITY_HANDLER', 'Consulta completada exitosamente', {
             completeOptions: result.completeOptions.length,
             splitOptions: result.splitOptions.length,
             dateRange: `${startDate} a ${endDate}`,
-            dateAdjusted
+            dateAdjusted,
+            processingMs,
+            responseSize,
+            apiResponseSize: responseSize,
+            isEfficient: processingMs < 5000, // <5s es eficiente
+            requestId
         });
 
         return response;
@@ -931,7 +1347,8 @@ export async function handleAvailabilityCheck(args: any): Promise<string> {
         logError('AVAILABILITY_HANDLER', 'Error en consulta de disponibilidad', {
             error: error instanceof Error ? error.message : error,
             args,
-            dateAdjusted
+            dateAdjusted,
+            requestId
         });
 
         if (error instanceof Beds24Error) {

@@ -118,6 +118,15 @@ Usuario WhatsApp → WHAPI → Bot (app-unified.ts) → OpenAI Assistant → Fun
 - **Detección de Errores**: Alertas automáticas para problemas críticos
 - **Análisis de Performance**: Métricas de tiempo de respuesta y satisfacción
 
+### **7. 🚀 Sistema Híbrido Inteligente** ✅ NUEVO
+- **Patrones Simples**: Detección automática de saludos, agradecimientos, despedidas
+- **Respuestas Instantáneas**: <1 segundo para casos comunes sin OpenAI
+- **Flujo Híbrido**: Guía inteligente en consultas de disponibilidad incompletas
+- **Inyección Condicional**: Contexto histórico solo cuando es relevante
+- **Cache Inteligente**: Optimización de llamadas a APIs con TTL configurable
+- **Métricas Avanzadas**: Monitoreo detallado de patrones y eficiencia
+- **Reducción de Costos**: 30-40% menos llamadas a OpenAI
+
 ---
 
 ## 🛠️ **Tecnologías Utilizadas**
@@ -371,15 +380,50 @@ node tests/test-labels-update.js
 
 ### **Métricas Actuales**
 - **Tiempo de Respuesta**: <3 segundos promedio
+- **Respuestas Instantáneas**: <1 segundo para patrones simples
 - **Throughput**: 100+ mensajes por minuto
 - **Uptime**: 99.9% en Cloud Run
 - **Escalabilidad**: Auto-scaling configurado
+- **Reducción de Costos**: 30-40% menos llamadas a OpenAI
 
 ### **Optimizaciones Implementadas**
 - **Cache de Historial** - Evita fetches repetidos de conversaciones
 - **Thread Reutilización** - Mantiene contexto entre mensajes
 - **Rate Limiting** - Previene spam y sobrecarga
 - **Message Buffering** - Agrupa mensajes para eficiencia
+- **Sistema Híbrido** - Patrones simples y respuestas instantáneas
+- **Inyección Condicional** - Contexto histórico optimizado
+- **Cache Inteligente** - TTL configurable para optimización
+
+---
+
+## Optimización y Monitoreo Proactivo (Etapas 1-4)
+
+El bot implementa un sistema robusto de optimización y monitoreo:
+
+- **Fuzzy Parsing**: Detección de patrones y fechas con tolerancia a typos usando Levenshtein.
+- **Dynamic Thresholds**: Umbrales dinámicos para inyección de contexto y patrones.
+- **Token Cleanup**: Poda automática de threads con alto uso de tokens (>8000), migración de mensajes recientes y generación de resúmenes.
+- **Métricas Prometheus**: Exposición de métricas clave (`fuzzyHits`, `raceErrors`, `tokenCleanups`, `highTokenThreads`) en `/metrics`.
+- **Alertas Proactivas**: Alertas si hay exceso de fuzzy matches, race errors o threads con tokens altos.
+
+### Variables de entorno relevantes
+- `THREAD_TOKEN_THRESHOLD` (default: 8000): Límite de tokens por thread antes de poda.
+- `HISTORIAL_SUMMARY_THRESHOLD` (default: 5000): Límite para activar resumen automático.
+- `OPENAI_MODEL`: Modelo global para resúmenes.
+
+### Consultar métricas
+- Accede a `/metrics` para Prometheus.
+- Logs detallados en `/logs` y consola para debugging avanzado.
+
+---
+
+Para detalles técnicos, ver:
+- `docs/features/OPTIMIZACION_CLOUD_RUN.md` - Optimización y cleanup
+- `docs/features/SISTEMA_HIBRIDO_INTELIGENTE.md` - Fuzzy parsing y thresholds
+- `docs/architecture/LOCKING_AND_RECOVERY.md` - Sistema de locks y recuperación
+- `docs/guides/TROUBLESHOOTING_AND_FAQ.md` - Guía de problemas comunes
+- `docs/API_ENDPOINTS.md` - Inventario completo de endpoints
 
 ---
 

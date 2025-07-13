@@ -1,13 +1,20 @@
 {
   "description": "Mapeo entre archivos de código y documentación que debe actualizarse",
-  "version": "1.1.0",
-  "last_updated": "2025-01-07",
+  "version": "1.2.0",
+  "last_updated": "2025-07-12",
   "mappings": {
     "src/app-unified.ts": [
       "docs/progress/ACTUALIZACION_ENERO_2025.md",
       "docs/progress/ESTADO_FINAL_PROYECTO.md",
+      "docs/features/SISTEMA_HIBRIDO_INTELIGENTE.md",
       "docs/README.md",
       "REORGANIZATION_SUMMARY.md"
+    ],
+    "tests/test-simple-patterns.js": [
+      "docs/features/SISTEMA_HIBRIDO_INTELIGENTE.md"
+    ],
+    "tests/test-hybrid-flow.js": [
+      "docs/features/SISTEMA_HIBRIDO_INTELIGENTE.md"
     ],
     "src/app.ts": [
       "archive/README.md",

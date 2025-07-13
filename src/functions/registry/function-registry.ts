@@ -60,7 +60,7 @@ export function generateOpenAISchemas(): any[] {
 /**
  * Ejecutar función por nombre
  */
-export async function executeFunction(name: string, args: any): Promise<any> {
+export async function executeFunction(name: string, args: any, requestId?: string): Promise<any> {
   const functionDef = getFunction(name);
   
   if (!functionDef) {
@@ -69,6 +69,17 @@ export async function executeFunction(name: string, args: any): Promise<any> {
   
   if (!functionDef.enabled) {
     throw new Error(`Función '${name}' está deshabilitada`);
+  }
+  
+  // 🔧 ETAPA 3: Pasar requestId a funciones que lo soporten
+  if (requestId && typeof functionDef.handler === 'function') {
+    // Intentar llamar con requestId si la función lo acepta
+    try {
+      return await functionDef.handler(args, requestId);
+    } catch (error) {
+      // Si falla, intentar sin requestId (compatibilidad hacia atrás)
+      return await functionDef.handler(args);
+    }
   }
   
   return await functionDef.handler(args);

@@ -3,6 +3,14 @@ import * as path from 'path';
 import { enhancedLog } from '../core/index.js';
 import { whapiLabels } from '../whapi/index.js';
 import { threadPersistence } from './threadPersistence.js';
+import { 
+    incrementLabelCacheHits, 
+    incrementLabelCacheMisses, 
+    setLabelCacheSize, 
+    incrementLabelCacheInvalidations,
+    incrementSyncCalls,
+    incrementDuplicatesAvoided
+} from '../../routes/metrics.js';
 
 class GuestMemory {
     constructor() {
@@ -10,6 +18,18 @@ class GuestMemory {
         this.PROFILES_FILE = path.join(process.cwd(), 'tmp', 'guest_profiles.json');
         this.hasChanges = false; // Flag para controlar guardado
         this.saveTimeout = null; // Timeout para debounce
+        
+        // 🔧 ETAPA 2: Sistema de cache para labels
+        this.labelCache = new Map(); // userId → { labels: [], timestamp: Date }
+        this.LABEL_CACHE_TTL = 300000; // 5 minutos en milisegundos
+        
+        // 🔧 ETAPA 2: Limpieza automática del cache cada 10 minutos
+        setInterval(() => {
+            this.cleanExpiredCache();
+        }, 600000); // 10 minutos
+        
+        enhancedLog('info', 'GUEST_MEMORY', 
+            `Sistema de cache de labels inicializado (TTL: ${this.LABEL_CACHE_TTL/1000}s, limpieza: 10min)`);
     }
     
     // Asegurar que el directorio existe
@@ -75,7 +95,7 @@ class GuestMemory {
     }
     
     // Obtener o crear perfil SIMPLIFICADO con sincronización de Whapi
-    async getOrCreateProfile(userId) {
+    async getOrCreateProfile(userId, forceSync = false) {
         const existing = this.profiles.get(userId);
         if (!existing) {
             // Crear perfil básico
@@ -113,10 +133,8 @@ class GuestMemory {
             }
             
             this.profiles.set(userId, newProfile);
-            // Sync SOLO si thread es viejo
-            if (threadPersistence.isThreadOld(userId)) {
-                await this.syncWhapiLabels(userId);
-            }
+            // 🔧 FIX: Usar wrapper centralizado para nuevo perfil
+            await this.syncIfNeeded(userId, forceSync, true); // isNewThread = true para perfiles nuevos
             
             enhancedLog('info', 'GUEST_MEMORY', 
                 `Nuevo perfil creado para ${userId} con ${newProfile.whapiLabels.length} etiquetas`);
@@ -129,10 +147,8 @@ class GuestMemory {
             profile.lastInteraction = new Date().toISOString();
             this.markAsChanged(); // Solo marcar cambio
             
-            // Sync SOLO si thread es viejo
-            if (threadPersistence.isThreadOld(userId)) {
-                await this.syncWhapiLabels(userId);
-            }
+            // 🔧 FIX: Usar wrapper centralizado para perfil existente
+            await this.syncIfNeeded(userId, forceSync); // Solo si thread es viejo (manejado por wrapper)
         }
         
         if (existing) {
@@ -154,6 +170,19 @@ class GuestMemory {
             Object.assign(profile, updates);
             this.profiles.set(userId, profile);
             
+            // 🔧 ETAPA 2: Invalidar cache si se actualizaron labels
+            if (updates.whapiLabels || updates.label) {
+                this.labelCache.delete(userId);
+                // 🔧 ETAPA 2: Incrementar métrica de invalidación
+                incrementLabelCacheInvalidations();
+                
+                enhancedLog('info', 'LABEL_CACHE_INVALIDATED', `Cache invalidated for ${userId}`, {
+                    userId,
+                    reason: 'profile_updated',
+                    updatedFields: Object.keys(updates)
+                });
+            }
+            
             // Mantener guardado inmediato para actualizaciones manuales
             this.saveProfiles();
             
@@ -164,6 +193,9 @@ class GuestMemory {
     
     // Sincronizar etiquetas de Whapi con el perfil local
     async syncWhapiLabels(userId) {
+        // 🔧 ETAPA 3: Incrementar métrica de llamadas de sync
+        incrementSyncCalls();
+        
         // 🔧 ETAPA 9: Verificar si thread es viejo antes de sincronizar
         const isThreadOld = threadPersistence.isThreadOld(userId);
         
@@ -295,14 +327,151 @@ class GuestMemory {
     }
     
     // Obtener información completa de un perfil con sus etiquetas
-    async getFullProfile(userId) {
+    async getFullProfile(userId, forceSync = false) {
         const profile = this.getProfile(userId);
         if (!profile) return null;
         
-        // Sincronizar etiquetas de Whapi
-        await this.syncWhapiLabels(userId);
+        // 🔧 FIX: Usar wrapper centralizado en lugar de sync directo
+        await this.syncIfNeeded(userId, forceSync);
         
         return this.profiles.get(userId);
+    }
+    
+    // 🔧 ETAPA 2: Limpiar cache expirado
+    cleanExpiredCache() {
+        const now = Date.now();
+        let expiredCount = 0;
+        
+        for (const [userId, cached] of this.labelCache.entries()) {
+            if (now - cached.timestamp > this.LABEL_CACHE_TTL) {
+                this.labelCache.delete(userId);
+                expiredCount++;
+            }
+        }
+        
+        // 🔧 ETAPA 2: Actualizar métrica del tamaño del cache después de limpieza
+        setLabelCacheSize(this.labelCache.size);
+        
+        if (expiredCount > 0) {
+            enhancedLog('info', 'LABEL_CACHE_CLEANED', `Cleaned ${expiredCount} expired cache entries`, {
+                expiredCount,
+                remainingCacheSize: this.labelCache.size
+            });
+        }
+        
+        return expiredCount;
+    }
+    
+    // 🔧 ETAPA 2: Obtener estadísticas del cache
+    getCacheStats() {
+        const now = Date.now();
+        const stats = {
+            totalEntries: this.labelCache.size,
+            validEntries: 0,
+            expiredEntries: 0,
+            averageAge: 0,
+            oldestEntry: null,
+            newestEntry: null
+        };
+        
+        let totalAge = 0;
+        
+        for (const [userId, cached] of this.labelCache.entries()) {
+            const age = now - cached.timestamp;
+            totalAge += age;
+            
+            if (age < this.LABEL_CACHE_TTL) {
+                stats.validEntries++;
+            } else {
+                stats.expiredEntries++;
+            }
+            
+            if (!stats.oldestEntry || age > stats.oldestEntry.age) {
+                stats.oldestEntry = { userId, age, ageSeconds: Math.round(age / 1000) };
+            }
+            
+            if (!stats.newestEntry || age < stats.newestEntry.age) {
+                stats.newestEntry = { userId, age, ageSeconds: Math.round(age / 1000) };
+            }
+        }
+        
+        if (stats.totalEntries > 0) {
+            stats.averageAge = Math.round(totalAge / stats.totalEntries / 1000); // en segundos
+        }
+        
+        return stats;
+    }
+    
+    // 🔧 ETAPA 1 + 2: Wrapper centralizado con cache para sincronización de labels
+    async syncIfNeeded(userId, force = false, isNewThread = false, requestId = null) {
+        const isThreadOld = threadPersistence.isThreadOld(userId);
+        
+        // 🔧 ETAPA 2: Verificar cache primero (si no es force)
+        if (!force) {
+            const cached = this.labelCache.get(userId);
+            if (cached && (Date.now() - cached.timestamp < this.LABEL_CACHE_TTL)) {
+                // 🔧 ETAPA 2: Incrementar métrica de cache hit
+                incrementLabelCacheHits();
+                // 🔧 ETAPA 3: Incrementar métrica de duplicados evitados
+                incrementDuplicatesAvoided();
+                
+                enhancedLog('info', 'LABEL_CACHE_HIT', `Using cached labels for ${userId}`, {
+                    userId,
+                    cacheAge: Date.now() - cached.timestamp,
+                    labelsCount: cached.labels.length,
+                    cacheAgeSeconds: Math.round((Date.now() - cached.timestamp) / 1000),
+                    requestId
+                });
+                return cached.labels; // ¡No llamar a Whapi!
+            } else {
+                // 🔧 ETAPA 2: Incrementar métrica de cache miss
+                incrementLabelCacheMisses();
+            }
+        }
+        
+        if (!force && !isThreadOld && !isNewThread) {
+            enhancedLog('debug', 'SYNC_SKIPPED', `No sync needed for ${userId}`, { 
+                userId,
+                reason: 'not_old_or_new',
+                isThreadOld,
+                isNewThread,
+                force,
+                requestId
+            });
+            return null;
+        }
+        
+        enhancedLog('info', 'SYNC_NEEDED', `Sync needed for ${userId}`, {
+            userId,
+            reason: force ? 'forced' : (isNewThread ? 'new_thread' : 'old_thread'),
+            isThreadOld,
+            isNewThread,
+            force,
+            requestId
+        });
+        
+        // Hacer sync normal
+        const result = await this.syncWhapiLabels(userId);
+        
+        // 🔧 ETAPA 2: Guardar en cache después del sync exitoso
+        if (result && result.whapiLabels) {
+            this.labelCache.set(userId, {
+                labels: result.whapiLabels,
+                timestamp: Date.now()
+            });
+            
+            // 🔧 ETAPA 2: Actualizar métrica del tamaño del cache
+            setLabelCacheSize(this.labelCache.size);
+            
+            enhancedLog('info', 'LABEL_CACHE_STORED', `Stored labels in cache for ${userId}`, {
+                userId,
+                labelsCount: result.whapiLabels.length,
+                cacheSize: this.labelCache.size,
+                requestId
+            });
+        }
+        
+        return result;
     }
 }
 

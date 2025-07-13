@@ -636,3 +636,25 @@ Para soporte técnico:
 **Última actualización**: Enero 2025  
 **Versión**: 2.0.0  
 **Estado**: Producción ✅ 
+
+## Integración Prometheus y Alertas
+
+- El endpoint `/metrics` expone métricas clave para Prometheus.
+- Ejemplo de métricas:
+  - `fuzzy_hits_total`: fuzzy matches detectados.
+  - `race_errors_total`: errores de concurrencia.
+  - `token_cleanups_total`: cleanups ejecutados.
+  - `high_token_threads`: threads con tokens altos.
+
+### Ejemplo de alerta Prometheus
+```yaml
+- alert: HighRaceErrors
+  expr: race_errors_total > 0
+  for: 5m
+  labels:
+    severity: error
+  annotations:
+    summary: "Race errors detectados en el bot"
+```
+
+- Se recomienda monitorear y alertar sobre estos valores para prevenir degradación del sistema. 
