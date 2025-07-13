@@ -76,6 +76,7 @@ function detectLoopPattern(message: string, userId?: string): boolean {
     return false;
 }
 
+// 🔧 NUEVO: Sistema dual de logging separado
 function enrichedLog(
     category: string, 
     message: string, 
@@ -100,7 +101,8 @@ function enrichedLog(
     const stage = getFlowStage(category);
     const sequence = getSequenceNumber(category, details?.messageId);
 
-    const logEntry = {
+    // 🔧 NUEVO: Log detallado para archivo (Tipo 2)
+    const detailedLogEntry = {
         timestamp: new Date().toISOString(),
         severity: level,
         message: `[${category.toUpperCase()}] ${message}`,
@@ -124,23 +126,140 @@ function enrichedLog(
             environment: IS_PRODUCTION ? 'cloud-run' : 'local',
         }
     };
-    
-    const logMethod = {
-        'ERROR': console.error,
-        'WARNING': console.warn,
-        'SUCCESS': console.log,
-        'INFO': console.log
-    }[level];
 
+    // 🔧 NUEVO: Log simple para terminal (Tipo 1)
+    const simpleLogEntry = formatSimpleConsoleLog(category, message, details, level);
+
+    // 🔧 NUEVO: Sistema dual separado
     if (IS_PRODUCTION) {
-        logMethod(JSON.stringify(logEntry));
+        // Cloud Run: Solo logs estructurados
+        console.log(JSON.stringify(detailedLogEntry));
     } else {
-        const emoji = { 'SUCCESS': '✅', 'ERROR': '❌', 'WARNING': '⚠️', 'INFO': 'ℹ️' }[level];
-        console.log(`${emoji} [${category.toUpperCase()}] ${message}`);
-        if (DETAILED_LOGS && Object.keys(details).length > 0) {
-            console.log(`   📊 Detalles:`, JSON.stringify(details, null, 2));
+        // Desarrollo local: Terminal limpio + archivo detallado
+        if (simpleLogEntry) {
+            console.log(simpleLogEntry);
+        }
+        
+        // Escribir log detallado al archivo usando el sistema existente
+        if (DETAILED_LOGS) {
+            // Importar dinámicamente para evitar dependencias circulares
+            const { detailedLog } = require('../logger');
+            detailedLog(level, category, message, details);
         }
     }
+}
+
+// 🔧 NUEVO: Función para formatear logs simples de terminal
+function formatSimpleConsoleLog(category: string, message: string, details: any, level: LogLevel): string {
+    const emoji = { 'SUCCESS': '✅', 'ERROR': '❌', 'WARNING': '⚠️', 'INFO': 'ℹ️' }[level];
+    
+    // Extraer información útil de los detalles
+    const userName = details?.userName || details?.cleanName || details?.shortUserId || 'Usuario';
+    const messagePreview = details?.preview || details?.messagePreview || '';
+    const duration = details?.duration || (message.includes('en ') ? message.match(/en (\d+)ms/)?.[1] : null);
+    
+    // === INICIO DEL BOT ===
+    if (category === 'SERVER_START') {
+        return `🚀 Servidor HTTP iniciado en ${details?.host || 'localhost'}:${details?.port || '3008'}`;
+    }
+    
+    if (category === 'BOT_READY') {
+        return `✅ Bot completamente inicializado`;
+    }
+    
+    // === MENSAJES DE USUARIO ===
+    if (category === 'MESSAGE_RECEIVED') {
+        const preview = details?.body ? `"${details.body.substring(0, 50)}${details.body.length > 50 ? '...' : ''}"` : '';
+        return `👤 ${userName}: ${preview} → ⏳ ${details?.timeoutMs ? details.timeoutMs/1000 : 8}s...`;
+    }
+    
+    if (category === 'MESSAGE_PROCESS') {
+        const count = details?.messageCount || 1;
+        return `🤖 [BOT] ${count} msgs → OpenAI`;
+    }
+    
+    // === PROCESAMIENTO IA ===
+    if (category === 'OPENAI_REQUEST') {
+        return `🤖 [BOT] Procesando con IA...`;
+    }
+    
+    if (category === 'OPENAI_RESPONSE') {
+        const duration = details?.duration ? `${(details.duration/1000).toFixed(1)}s` : '';
+        return `✅ [BOT] Completado (${duration}) → 💬 "${messagePreview.substring(0, 50)}${messagePreview.length > 50 ? '...' : ''}"`;
+    }
+    
+    if (category === 'OPENAI_ERROR') {
+        return `❌ [BOT] Error en procesamiento OpenAI para ${userName}`;
+    }
+    
+    // === FUNCIONES ===
+    if (category === 'FUNCTION_CALLING_START') {
+        const functionName = details?.functionName || 'función';
+        return `⚙️ Ejecutando función: ${functionName}`;
+    }
+    
+    if (category === 'FUNCTION_HANDLER') {
+        const functionName = details?.functionName || 'función';
+        return `✅ ${functionName} → ${details?.result || 'completado'}`;
+    }
+    
+    // === BEDS24 ===
+    if (category === 'BEDS24_REQUEST') {
+        return `🏨 Beds24 → Consultando disponibilidad...`;
+    }
+    
+    if (category === 'BEDS24_RESPONSE_DETAIL') {
+        const options = details?.options || details?.availabilityCount || 0;
+        return `✅ Beds24 → ${options} opciones encontradas`;
+    }
+    
+    // === WHATSAPP ===
+    if (category === 'WHATSAPP_SEND') {
+        return `📤 Enviando respuesta a ${userName}...`;
+    }
+    
+    if (category === 'WHATSAPP_SEND' && level === 'SUCCESS') {
+        return `✅ Mensaje enviado exitosamente`;
+    }
+    
+    // === THREADS ===
+    if (category === 'THREAD_CREATED') {
+        return `🧵 Nuevo thread creado`;
+    }
+    
+    if (category === 'THREAD_REUSE') {
+        return `🧵 Thread existente reutilizado`;
+    }
+    
+    // === BUFFER ===
+    if (category === 'BUFFER_GROUPED') {
+        const count = details?.messageCount || 1;
+        return `📦 Agrupados ${count} msgs`;
+    }
+    
+    // === ETIQUETAS ===
+    if (category === 'WHAPI_LABELS') {
+        const count = details?.labelsCount || 0;
+        return `🏷️ ${count} etiquetas sincronizadas`;
+    }
+    
+    // === ERRORES ===
+    if (category === 'ERROR') {
+        return `❌ Error: ${message}`;
+    }
+    
+    // === WARNINGS ===
+    if (category === 'WARNING') {
+        return `⚠️ ${message}`;
+    }
+    
+    // === WEBHOOKS === (solo críticos)
+    if (category === 'WEBHOOK' && level === 'WARNING') {
+        return `⚠️ Webhook recibido sin mensajes válidos`;
+    }
+    
+    // === Por defecto: no mostrar en terminal (solo en archivo) ===
+    return '';
 }
 
 // Exportar funciones de logging específicas y genéricas
