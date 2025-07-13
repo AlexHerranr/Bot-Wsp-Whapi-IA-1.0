@@ -53,6 +53,13 @@ Bot-Wsp-Whapi-IA/
 - **`npm run verify`** - Verificar configuración
 - **`npm run dev:local`** - Desarrollo local
 - **`npm run deploy`** - Deploy a producción
+- **`node scripts/setup-typing-webhook.js`** - Configurar webhook de typing
+- **`node scripts/test-typing-events.js`** - Probar eventos de presencia
+
+### **🔍 Debugging Crítico**
+- **`http://localhost:4040/inspect/http`** - Ver eventos de webhook en tiempo real
+- **`http://localhost:3008/health`** - Health check del bot
+- **`http://localhost:3008/config`** - Configuración actual (solo desarrollo)
 
 > **📖 Para ver el mapa completo detallado**: Consulta [`PROJECT_STRUCTURE.md`](./PROJECT_STRUCTURE.md)
 
@@ -127,6 +134,14 @@ Usuario WhatsApp → WHAPI → Bot (app-unified.ts) → OpenAI Assistant → Fun
 - **Métricas Avanzadas**: Monitoreo detallado de patrones y eficiencia
 - **Reducción de Costos**: 30-40% menos llamadas a OpenAI
 
+### **8. ✍️ Sistema de Buffer Basado en Typing** ✅ NUEVO
+- **Detección de Escritura**: Detecta cuando el usuario está escribiendo via webhook
+- **Pausa Inteligente**: Detiene respuestas mientras el usuario escribe
+- **Agrupación Natural**: Espera 3 segundos después de que deje de escribir
+- **Fallback Automático**: 2 segundos si no hay eventos de typing
+- **Comportamiento Humano**: Simula interacción natural sin interrupciones
+- **Suscripción Automática**: Se suscribe a presencia de usuarios automáticamente
+
 ---
 
 ## 🛠️ **Tecnologías Utilizadas**
@@ -156,6 +171,7 @@ Usuario WhatsApp → WHAPI → Bot (app-unified.ts) → OpenAI Assistant → Fun
 - **Puerto**: 3008
 - **Host**: localhost
 - **Webhook**: Ngrok (actual-bobcat-handy.ngrok-free.app)
+- **Debug**: Ngrok Inspect (http://localhost:4040/inspect/http)
 - **Configuración**: Variables de entorno locales (.env)
 - **Logs**: Consola + archivos locales
 - **Secretos**: Variables de entorno directas
@@ -184,6 +200,19 @@ El sistema detecta automáticamente el entorno mediante:
 - Cuenta de WHAPI (WhatsApp Business API)
 - Cuenta de Beds24
 - Proyecto en Google Cloud Platform
+- **Ngrok** (para desarrollo local)
+
+### **🔍 Debugging Crítico (IMPORTANTE)**
+```bash
+# URL para ver eventos de webhook en tiempo real
+http://localhost:4040/inspect/http
+```
+
+**¿Por qué es esencial?**
+- ✅ Ver eventos de mensajes en tiempo real
+- ✅ Ver eventos de presencia (typing)
+- ✅ Debuggear problemas de webhook
+- ✅ Verificar que Whapi envíe datos correctamente
 
 ### **1. Clonar el Repositorio**
 ```bash

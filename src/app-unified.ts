@@ -106,6 +106,14 @@ const manualMessageBuffers = new Map<string, {
 }>();
 const manualTimers = new Map<string, NodeJS.Timeout>();
 
+// 🔧 NUEVO: Sistema de cooldown para patrones simples (evitar spam)
+const patternCooldowns = new Map<string, number>(); // userId -> lastPatternTime
+const PATTERN_COOLDOWN_MS = 30000; // 30 segundos entre respuestas de patrones
+
+// 🔧 NUEVO: Sistema de detección de mensajes no reconocidos
+const unrecognizedMessages = new Map<string, number>(); // userId -> count
+const UNRECOGNIZED_THRESHOLD = 2; // Después de 2 mensajes no reconocidos, usar AI
+
 // 🔧 ETAPA 2: Cache de historial para optimizar fetches
 const historyCache = new Map<string, { history: string; timestamp: number }>();
 const HISTORY_CACHE_TTL = 60 * 60 * 1000; // 1 hora en ms
@@ -114,14 +122,11 @@ const HISTORY_CACHE_TTL = 60 * 60 * 1000; // 1 hora en ms
 const contextInjectionCache = new Map<string, { context: string; timestamp: number }>();
 const CONTEXT_INJECTION_TTL = 60 * 1000; // 1 minuto
 
-// Configuración de timeouts por entorno
-// 🔧 PAUSAR BUFFER: Usar DISABLE_MESSAGE_BUFFER=true para pruebas de velocidad
-// 🔧 REVERTIDO: Timeout simple por entorno (no dinámico)
-const MESSAGE_BUFFER_TIMEOUT = process.env.DISABLE_MESSAGE_BUFFER === 'true' ? 0 : 
-    (process.env.ENVIRONMENT === 'local' ? 4000 : 8000); // 4s local, 8s producción
-const MANUAL_MESSAGE_TIMEOUT = process.env.DISABLE_MESSAGE_BUFFER === 'true' ? 0 : 8000;
+// 🔧 NUEVO: Sistema de typing dinámico
+// Configuración de timeouts optimizada para mejor UX
+const FALLBACK_TIMEOUT = 2000; // 2 segundos si no hay typing detectable (más rápido)
+const POST_TYPING_DELAY = 3000; // 3 segundos después de que deje de escribir (más natural)
 const MAX_BUFFER_SIZE = 10; // Límite máximo de mensajes por buffer (anti-spam)
-const BUFFER_DISABLED = process.env.DISABLE_MESSAGE_BUFFER === 'true';
 const MAX_BOT_MESSAGES = 1000;
 const MAX_MESSAGE_LENGTH = 5000;
 
@@ -150,12 +155,32 @@ const EXPANDED_PATTERN_KEYWORDS = {
 };
 
 // --- Respuestas Fijas para Patrones Simples ---
-const FIXED_RESPONSES = {
-  greeting: "¡Hola! 😊 ¿Cómo puedo ayudarte hoy? ¿Buscas apartamento en Cartagena?",
-  thanks: "¡De nada! 😊 Estoy aquí para ayudarte. ¿Hay algo más en lo que pueda asistirte?",
-  bye: "¡Hasta luego! 👋 Que tengas un excelente día. Si necesitas algo más, aquí estaré.",
-  confusion: "Lo siento, ¿puedes repetir eso de otra manera? 😅 Estoy aquí para ayudarte.",
-  ok: "¡Perfecto! 👍 ¿En qué más puedo ayudarte?"
+const FIXED_RESPONSES: Record<string, string[]> = {
+  greeting: [
+    "¡Hola! 😊 ¿Cómo puedo ayudarte hoy? ¿Buscas apartamento en Cartagena?",
+    "¡Hola! 👋 ¿En qué puedo asistirte? ¿Te interesa alojamiento en Cartagena?",
+    "¡Hola! 😄 ¿Cómo estás? ¿Buscas un lugar para hospedarte en Cartagena?"
+  ],
+  thanks: [
+    "¡De nada! 😊 Estoy aquí para ayudarte. ¿Hay algo más en lo que pueda asistirte?",
+    "¡Por supuesto! 😄 Es un placer ayudarte. ¿Necesitas algo más?",
+    "¡De nada! 👍 Me alegra poder ayudarte. ¿Hay alguna otra consulta?"
+  ],
+  bye: [
+    "¡Hasta luego! 👋 Que tengas un excelente día. Si necesitas algo más, aquí estaré.",
+    "¡Nos vemos! 😊 Que tengas un día maravilloso. ¡Vuelve cuando quieras!",
+    "¡Hasta pronto! 👋 Que disfrutes tu día. Estaré aquí para cuando regreses."
+  ],
+  confusion: [
+    "Lo siento, ¿puedes repetir eso de otra manera? 😅 Estoy aquí para ayudarte.",
+    "No entendí bien, ¿podrías decirlo de otra forma? 🤔 Estoy listo para ayudarte.",
+    "Disculpa, ¿puedes explicarlo de otra manera? 😊 Quiero asegurarme de entenderte bien."
+  ],
+  ok: [
+    "¡Perfecto! 👍 ¿En qué más puedo ayudarte?",
+    "¡Excelente! 😄 ¿Hay algo más en lo que pueda asistirte?",
+    "¡Genial! 👌 ¿Qué más necesitas?"
+  ]
 };
 
 // --- Función para Detectar Patrones Simples con Fuzzy Matching ---
@@ -165,27 +190,62 @@ function detectSimplePattern(messageText: string): { pattern: string; response: 
   // 🔧 ETAPA 3: Primero intentar match exacto con regex
   for (const [patternName, pattern] of Object.entries(SIMPLE_PATTERNS)) {
     if (pattern.test(messageText.trim())) {
-      const response = FIXED_RESPONSES[patternName as keyof typeof FIXED_RESPONSES];
-      if (response) {
+      const responses = FIXED_RESPONSES[patternName];
+      if (responses && responses.length > 0) {
+        // Seleccionar respuesta aleatoria para evitar repetición
+        const randomIndex = Math.floor(Math.random() * responses.length);
+        const response = responses[randomIndex];
         return { pattern: patternName, response, isFuzzy: false };
       }
     }
   }
   
-  // 🔧 ETAPA 3: Si no hay match exacto, intentar fuzzy matching
+  // 🔧 ETAPA 3: Si no hay match exacto, intentar fuzzy matching mejorado
   for (const [patternName, keywords] of Object.entries(EXPANDED_PATTERN_KEYWORDS)) {
     for (const keyword of keywords) {
-      const distance = levenshtein.get(cleanMessage, keyword.toLowerCase());
-      const tolerance = 3; // Tolerance de 3 caracteres
-      
-      if (distance <= tolerance || cleanMessage.includes(keyword.toLowerCase())) {
-        const response = FIXED_RESPONSES[patternName as keyof typeof FIXED_RESPONSES];
-        if (response) {
-          logInfo('FUZZY_PATTERN_MATCH', `Patrón detectado con fuzzy matching`, {
+      // 🔧 MEJORADO: Buscar coincidencias parciales primero
+      if (cleanMessage.includes(keyword.toLowerCase())) {
+        const responses = FIXED_RESPONSES[patternName];
+        if (responses && responses.length > 0) {
+          const randomIndex = Math.floor(Math.random() * responses.length);
+          const response = responses[randomIndex];
+          
+          logInfo('FUZZY_PATTERN_MATCH', `Patrón detectado con substring matching`, {
             pattern: patternName,
             keyword,
-            distance,
-            tolerance,
+            matchType: 'substring',
+            originalMessage: messageText.substring(0, 50) + '...'
+          });
+          return { pattern: patternName, response, isFuzzy: true };
+        }
+      }
+      
+      // 🔧 MEJORADO: Tokenizar mensaje para fuzzy matching más preciso
+      const messageWords = cleanMessage.split(/\s+/);
+      let bestMatch = { distance: Infinity, word: '' };
+      
+      for (const word of messageWords) {
+        const distance = levenshtein.get(word, keyword.toLowerCase());
+        if (distance < bestMatch.distance) {
+          bestMatch = { distance, word };
+        }
+      }
+      
+      // 🔧 MEJORADO: Tolerance dinámico basado en longitud de keyword
+      const dynamicTolerance = Math.max(1, Math.floor(keyword.length * 0.3)); // 30% de la longitud
+      
+      if (bestMatch.distance <= dynamicTolerance) {
+        const responses = FIXED_RESPONSES[patternName];
+        if (responses && responses.length > 0) {
+          const randomIndex = Math.floor(Math.random() * responses.length);
+          const response = responses[randomIndex];
+          
+          logInfo('FUZZY_PATTERN_MATCH', `Patrón detectado con fuzzy matching mejorado`, {
+            pattern: patternName,
+            keyword,
+            matchedWord: bestMatch.word,
+            distance: bestMatch.distance,
+            dynamicTolerance,
             originalMessage: messageText.substring(0, 50) + '...'
           });
           return { pattern: patternName, response, isFuzzy: true };
@@ -653,6 +713,60 @@ function setupWebhooks() {
         
         return cleaned;
     };
+    
+    // 🔧 NUEVO: Función para suscribirse a presencia de usuario
+    const subscribedPresences = new Set<string>(); // Rastrea usuarios suscritos
+    
+    async function subscribeToPresence(userId: string): Promise<void> {
+        if (subscribedPresences.has(userId)) {
+            logDebug('PRESENCE_ALREADY_SUBSCRIBED', `Ya suscrito a presencia de ${userId}`, {
+                userId,
+                environment: appConfig.environment
+            });
+            return; // Ya suscrito
+        }
+        
+        try {
+            // Suscribirse a presencia del usuario (sin body)
+            const response = await fetch(`${appConfig.secrets.WHAPI_API_URL}/presences/${userId}`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`
+                }
+                // Sin body - solo suscripción
+            });
+            
+            if (response.ok) {
+                subscribedPresences.add(userId);
+                logSuccess('PRESENCE_SUBSCRIBE', `Suscrito a presences para ${userId}`, {
+                    userId,
+                    environment: appConfig.environment
+                });
+            } else if (response.status === 409) {
+                // Ya suscrito - agregar al set para evitar futuros intentos
+                subscribedPresences.add(userId);
+                logInfo('PRESENCE_ALREADY_SUBSCRIBED_API', `Usuario ${userId} ya suscrito (409)`, {
+                    userId,
+                    status: response.status,
+                    environment: appConfig.environment
+                });
+            } else {
+                const errorText = await response.text();
+                logError('PRESENCE_SUBSCRIBE_ERROR', `Error suscribiendo a ${userId}`, { 
+                    userId,
+                    status: response.status,
+                    error: errorText,
+                    environment: appConfig.environment
+                });
+            }
+        } catch (error: any) {
+            logError('PRESENCE_SUBSCRIBE_FAIL', `Fallo de red suscribiendo a ${userId}`, { 
+                userId,
+                error: error.message,
+                environment: appConfig.environment
+            });
+        }
+    }
 
     // 🔧 ETAPA 2: Funciones para Flujo Híbrido
     
@@ -945,9 +1059,13 @@ function setupWebhooks() {
             });
         }
 
-        // Limpiar buffer
+        // Limpiar buffer, timer y estado de typing
         userMessageBuffers.delete(userId);
-        userActivityTimers.delete(userId);
+        if (userActivityTimers.has(userId)) {
+            clearTimeout(userActivityTimers.get(userId)!);
+            userActivityTimers.delete(userId);
+        }
+        userTypingState.delete(userId); // Limpiar estado de typing
     }
 
     // Función para envío de mensajes a WhatsApp
@@ -2018,13 +2136,81 @@ function setupWebhooks() {
         }
         
         try {
-            const { messages } = req.body;
+            const { messages, presences, event } = req.body;
+            
+            // 🔧 NUEVO: Procesar eventos de presencia (typing)
+            if (presences && event?.type === 'presences' && event?.event === 'post') {
+                logInfo('PRESENCE_EVENT', `Procesando ${presences.length} eventos de presencia`, {
+                    environment: appConfig.environment,
+                    presenceCount: presences.length
+                });
+                
+                presences.forEach((presence: { contact_id: string, status: string }) => {
+                    const userId = presence.contact_id;
+                    const status = presence.status.toLowerCase();
+                    const shortUserId = getShortUserId(userId);
+                    
+                    logInfo('PRESENCE_RECEIVED', `Presencia para ${shortUserId}: ${status}`, {
+                        userId: shortUserId,
+                        status,
+                        environment: appConfig.environment
+                    });
+
+                    if (status === 'typing' || status === 'recording') {
+                        // Usuario está escribiendo - pausar procesamiento
+                        userTypingState.set(userId, true);
+                        
+                        // Cancelar timer si existe
+                        if (userActivityTimers.has(userId)) {
+                            clearTimeout(userActivityTimers.get(userId)!);
+                            logDebug('TIMER_PAUSED', `Procesamiento pausado por typing en ${shortUserId}`, {
+                                userId: shortUserId,
+                                environment: appConfig.environment
+                            });
+                        }
+                        
+                        console.log(`✍️ ${shortUserId} está escribiendo... (pausando respuesta)`);
+                        
+                    } else if (status === 'online' || status === 'offline' || status === 'pending') {
+                        // Usuario dejó de escribir - programar procesamiento
+                        if (userTypingState.get(userId) === true) {
+                            userTypingState.set(userId, false);
+                            const buffer = userMessageBuffers.get(userId);
+                            
+                            if (buffer && buffer.messages.length > 0) {
+                                const timer = setTimeout(() => processUserMessages(userId), POST_TYPING_DELAY); // 3 segundos después de stop typing
+                                userActivityTimers.set(userId, timer);
+                                
+                                logDebug('TIMER_STARTED_AFTER_TYPING', `Typing stopped; timer 3s iniciado para ${shortUserId}`, {
+                                    userId: shortUserId,
+                                    messagesInBuffer: buffer.messages.length,
+                                    environment: appConfig.environment
+                                });
+                                
+                                console.log(`⏸️ ${shortUserId} dejó de escribir → ⏳ 3s...`);
+                            }
+                        }
+                    }
+                });
+                
+                return; // Salir después de manejar presences
+            }
+            
+            // Procesar mensajes normales
             
             if (!messages || !Array.isArray(messages)) {
-                logWarning('WEBHOOK', 'Webhook recibido sin mensajes válidos', { 
-                    body: req.body,
-                    environment: appConfig.environment
-                });
+                // 🔧 MEJORADO: Solo log warning si no es un webhook de status
+                if (!req.body.statuses || !Array.isArray(req.body.statuses)) {
+                    logWarning('WEBHOOK', 'Webhook recibido sin mensajes válidos', { 
+                        body: req.body,
+                        environment: appConfig.environment
+                    });
+                } else {
+                    logDebug('WEBHOOK_STATUS', 'Webhook de status recibido (normal)', {
+                        statusCount: req.body.statuses.length,
+                        environment: appConfig.environment
+                    });
+                }
                 return;
             }
             
@@ -2073,25 +2259,46 @@ function setupWebhooks() {
                     // 🔧 ETAPA 3: Detección de Patrones Simples con Fuzzy Matching (Pre-Buffer)
                     const simplePattern = detectSimplePattern(messageText);
                     if (simplePattern) {
-                        logInfo('PATTERN_DETECTED', `Patrón simple detectado: ${simplePattern.pattern}${simplePattern.isFuzzy ? ' (fuzzy)' : ''}`, {
-                            userJid: getShortUserId(userJid),
-                            userName,
-                            messageText: messageText.substring(0, 50) + '...',
-                            pattern: simplePattern.pattern,
-                            isFuzzy: simplePattern.isFuzzy,
-                            environment: appConfig.environment
-                        });
+                        // 🔧 NUEVO: Verificar cooldown para evitar spam de patrones
+                        const lastPatternTime = patternCooldowns.get(userJid) || 0;
+                        const timeSinceLastPattern = Date.now() - lastPatternTime;
                         
-                        // Enviar respuesta fija inmediatamente (skip buffer/OpenAI)
-                        await sendWhatsAppMessage(chatId, simplePattern.response);
-                        
-                        // Log en consola
-                        console.log(`⚡ [PATTERN] ${userName}: "${messageText.substring(0, 30)}..." → ${simplePattern.pattern}${simplePattern.isFuzzy ? ' (fuzzy)' : ''} → Respuesta fija`);
-                        
-                        // Incrementar métrica de patrones detectados
-                        incrementPatternMetric(simplePattern.pattern, simplePattern.isFuzzy);
-                        
-                        continue; // Skip al siguiente mensaje
+                        if (timeSinceLastPattern < PATTERN_COOLDOWN_MS) {
+                            logInfo('PATTERN_COOLDOWN', `Patrón en cooldown para ${userName}`, {
+                                userJid: getShortUserId(userJid),
+                                pattern: simplePattern.pattern,
+                                timeSinceLastPattern: Math.round(timeSinceLastPattern / 1000) + 's',
+                                cooldownMs: PATTERN_COOLDOWN_MS,
+                                environment: appConfig.environment
+                            });
+                            
+                            console.log(`⏳ [COOLDOWN] ${userName}: Patrón ${simplePattern.pattern} en cooldown (${Math.round(timeSinceLastPattern / 1000)}s/${PATTERN_COOLDOWN_MS / 1000}s)`);
+                            
+                            // Continuar con el procesamiento normal (buffer/OpenAI)
+                        } else {
+                            // Cooldown completado - procesar patrón
+                            patternCooldowns.set(userJid, Date.now());
+                            
+                            logInfo('PATTERN_DETECTED', `Patrón simple detectado: ${simplePattern.pattern}${simplePattern.isFuzzy ? ' (fuzzy)' : ''}`, {
+                                userJid: getShortUserId(userJid),
+                                userName,
+                                messageText: messageText.substring(0, 50) + '...',
+                                pattern: simplePattern.pattern,
+                                isFuzzy: simplePattern.isFuzzy,
+                                environment: appConfig.environment
+                            });
+                            
+                            // Enviar respuesta fija inmediatamente (skip buffer/OpenAI)
+                            await sendWhatsAppMessage(chatId, simplePattern.response);
+                            
+                            // Log en consola
+                            console.log(`⚡ [PATTERN] ${userName}: "${messageText.substring(0, 30)}..." → ${simplePattern.pattern}${simplePattern.isFuzzy ? ' (fuzzy)' : ''} → Respuesta fija`);
+                            
+                            // Incrementar métrica de patrones detectados
+                            incrementPatternMetric(simplePattern.pattern, simplePattern.isFuzzy);
+                            
+                            continue; // Skip al siguiente mensaje
+                        }
                     }
                     
                     // Crear o actualizar buffer de mensajes
@@ -2106,7 +2313,7 @@ function setupWebhooks() {
                         logDebug('BUFFER_CREATE', `Buffer creado para ${userName}`, {
                             userJid,
                             chatId,
-                            timeout: MESSAGE_BUFFER_TIMEOUT,
+                            timeout: 'typing-based',
                             environment: appConfig.environment
                         });
                     }
@@ -2130,35 +2337,47 @@ function setupWebhooks() {
                     buffer.messages.push(messageText);
                     buffer.lastActivity = Date.now();
 
-                    // Cancelar timer anterior si existe
-                    if (userActivityTimers.has(userJid)) {
-                        clearTimeout(userActivityTimers.get(userJid)!);
+                    // 🔧 NUEVO: Suscribirse a presencia del usuario (solo una vez)
+                    const shortUserId = getShortUserId(userJid);
+                    await subscribeToPresence(shortUserId);
+
+                    // 🔧 NUEVO: Sistema de typing dinámico
+                    const isUserTyping = userTypingState.get(userJid) === true;
+                    
+                    if (!isUserTyping) {
+                        // Usuario no está escribiendo - usar timeout corto (fallback)
+                        if (userActivityTimers.has(userJid)) {
+                            clearTimeout(userActivityTimers.get(userJid)!);
+                        }
                         
-                        logDebug('BUFFER_TIMER_RESET', `Timer reiniciado para ${userName}`, {
+                        const fallbackTimeout = FALLBACK_TIMEOUT; // 2 segundos si no hay typing
+                        const timerId = setTimeout(async () => {
+                            await processUserMessages(userJid);
+                        }, fallbackTimeout);
+                        
+                        userActivityTimers.set(userJid, timerId);
+                        
+                        // Log en consola
+                        const messagePreview = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
+                        console.log(`👤 ${userName}: "${messagePreview}" → ⏳ 2s... (buffer: ${buffer.messages.length})`);
+                        
+                        logDebug('FALLBACK_TIMER_SET', `Timer fallback 2s para ${userName} (no typing detectado)`, {
                             userJid,
-                            previousMessages: buffer.messages.length - 1,
-                            newMessage: messageText.substring(0, 50)
+                            bufferSize: buffer.messages.length,
+                            environment: appConfig.environment
                         });
-                    }
-
-                    // 🔧 ETAPA 4.2: Buffer simplificado por entorno
-                    const bufferTimeout = appConfig?.environment === 'local' ? 4000 : 8000;
-                    
-                    // Log en consola con indicador de espera
-                    const timeoutSeconds = bufferTimeout / 1000;
-                    const messagePreview = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
-                    if (process.env.DETAILED_LOGS === 'true') {
-                        console.log(`Detalles extras: ${JSON.stringify({ userJid, chatId, userName, messageText, timeoutSeconds, bufferSize: buffer.messages.length })}`);
+                        
                     } else {
-                        console.log(`👤 ${userName}: "${messagePreview}" → ⏳ ${timeoutSeconds}s... (buffer: ${buffer.messages.length})`);
+                        // Usuario está escribiendo - no establecer timer, esperar evento de stop typing
+                        logDebug('TIMER_SKIPPED', `No timer: usuario ${userName} está escribiendo`, {
+                            userJid,
+                            bufferSize: buffer.messages.length,
+                            environment: appConfig.environment
+                        });
+                        
+                        const messagePreview = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
+                        console.log(`👤 ${userName}: "${messagePreview}" → ✍️ esperando... (buffer: ${buffer.messages.length})`);
                     }
-                    
-                    // Establecer nuevo timer para procesar mensajes agrupados
-                    const timerId = setTimeout(async () => {
-                        await processUserMessages(userJid);
-                    }, bufferTimeout);
-
-                    userActivityTimers.set(userJid, timerId);
 
                     // Completar el log que se cortó:
                     logInfo('MESSAGE_BUFFERED', `Mensaje agregado al buffer`, {
@@ -2167,7 +2386,7 @@ function setupWebhooks() {
                         userName,
                         bufferCount: buffer.messages.length,
                         messageLength: messageText.length,
-                        timeoutMs: bufferTimeout,
+                        isTyping: isUserTyping,
                         environment: appConfig.environment
                     });
 
@@ -2247,6 +2466,30 @@ async function initializeBot() {
     }, 2 * 60 * 60 * 1000); // Cada 2 horas
     
     logInfo('BOT_INIT', 'Cleanup automático de threads y cache configurado');
+    
+    // 🔧 NUEVO: Cleanup automático del sistema de cooldown de patrones
+    // Ejecutar cada 10 minutos para limpiar cooldowns viejos
+    setInterval(() => {
+        try {
+            const now = Date.now();
+            let expiredCount = 0;
+            
+            for (const [userId, lastPatternTime] of patternCooldowns.entries()) {
+                if ((now - lastPatternTime) > PATTERN_COOLDOWN_MS * 2) { // 2x el cooldown
+                    patternCooldowns.delete(userId);
+                    expiredCount++;
+                }
+            }
+            
+            if (expiredCount > 0) {
+                logInfo('PATTERN_COOLDOWN_CLEANUP', `Cooldown cleanup: ${expiredCount} entradas expiradas removidas`, {
+                    remainingEntries: patternCooldowns.size
+                });
+            }
+        } catch (error) {
+            logError('PATTERN_COOLDOWN_CLEANUP', 'Error en cleanup del sistema de cooldown', { error: error.message });
+        }
+    }, 10 * 60 * 1000); // Cada 10 minutos
     
     // 🔧 ETAPA 4: Cleanup automático de threads con alto uso de tokens
     // Ejecutar cada hora para mantener threads eficientes

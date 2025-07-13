@@ -62,6 +62,29 @@ npm run config
 npm run health-check:local
 ```
 
+### 🌐 Ngrok Inspect - Debug de Webhooks
+```bash
+# URL para ver todos los requests que llegan a tu webhook
+http://localhost:4040/inspect/http
+```
+
+**¿Por qué es CRÍTICO?**
+- ✅ Ver eventos de mensajes en tiempo real
+- ✅ Ver eventos de presencia (typing)
+- ✅ Debuggear problemas de webhook
+- ✅ Verificar que Whapi envíe datos correctamente
+
+**Flujo de puertos:**
+- **3008**: Tu bot (aplicación Node.js)
+- **4040**: Ngrok inspect (herramienta de debug)
+- **ngrok-free.app**: Túnel público que conecta ambos
+
+**Cómo usar:**
+1. Inicia tu bot: `npm run dev:local`
+2. Abre en navegador: `http://localhost:4040/inspect/http`
+3. Envía mensajes desde WhatsApp
+4. Observa los requests en tiempo real
+
 ### Logs
 Los logs se muestran en consola y se guardan en:
 - `./logs/debug.log` - Logs detallados
