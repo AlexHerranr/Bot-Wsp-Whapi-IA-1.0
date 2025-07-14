@@ -144,28 +144,25 @@ const MAX_BUFFER_SIZE = 10; // Límite máximo de mensajes por buffer (anti-spam
 const MAX_BOT_MESSAGES = 1000;
 const MAX_MESSAGE_LENGTH = 5000;
 
-// --- Patrones Mejorados: Saludos, Disponibilidad, Fechas y Preguntas ---
+// --- Patrones Simplificados: Solo los Esenciales ---
 const SIMPLE_PATTERNS = {
   greeting: /^(hola|buen(os)?\s(d[ií]as|tardes|noches)|que\s+tal|hey|hi|hello)(\s*[\.,¡!¿\?])*\s*$/i,
   availability: /^(disponibilidad|disponible|libre|apartamento|hospedaje|busco\s+lugar|tienes\s+disp|hay\s+disp|tienen\s+apartamentos?)(\s*[\.,¡!¿\?])*\s*$/i,
-  dates: /^(seria|sería|del|al|desde|hasta|entre|fecha|fechas|del\s+\d+|al\s+\d+|\d+\s+de\s+\w+|\d+\/\d+|\d+-\d+)/i,
-  question: /^(porque|por qué|por que|no\s+respondiste|no\s+respondes|no\s+entiendo|que\s+paso|qué\s+pasó|\?)/i
+  dates: /^(seria|sería|del|al|desde|hasta|entre|fecha|fechas|del\s+\d+|al\s+\d+|\d+\s+de\s+\w+|\d+\/\d+|\d+-\d+)/i
 };
 
-// --- Keywords Mejoradas para Detección ---
+// --- Keywords Simplificadas para Detección ---
 const PATTERN_KEYWORDS = {
   greeting: ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'que tal', 'hey', 'hi', 'hello', 'buen dia', 'buena tarde', 'buena noche'],
   availability: ['disponibilidad', 'disponible', 'libre', 'apartamento', 'apartamentos', 'apto', 'aptos', 'hospedaje', 'busco lugar', 'tienes disp', 'hay disp', 'tienen apartamento', 'tienen apartamentos', 'buscando'],
-  dates: ['seria', 'sería', 'del', 'al', 'desde', 'hasta', 'entre', 'fecha', 'fechas', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosot', 'ago', 'sep', 'oct', 'nov', 'dic'],
-  question: ['porque', 'por qué', 'por que', 'no respondiste', 'no respondes', 'no entiendo', 'que paso', 'qué pasó', 'respondiste', 'respondes', '?']
+  dates: ['seria', 'sería', 'del', 'al', 'desde', 'hasta', 'entre', 'fecha', 'fechas', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosot', 'ago', 'sep', 'oct', 'nov', 'dic']
 };
 
-// --- Respuestas Mejoradas con Contexto ---
+// --- Respuestas Simplificadas con Contexto ---
 const FIXED_RESPONSES: Record<string, string> = {
-  greeting: "Hola que tal como te podemos ayudar?",
-  availability: "Listo claro que sí, para que fechas estas buscando apartamento acá en cartagena, dime fecha de entrada, fecha de salida, y cuantas personas, con esta info busco en mi sistema para ver que tengo disponibilidad",
-  dates: "Perfecto, veo que me das fechas. ¿Cuántas personas serían? Con esa información puedo buscar disponibilidad en mi sistema.",
-  question: "Disculpa, estoy aquí para ayudarte. ¿Buscas apartamento en Cartagena? Dime las fechas y cuántas personas y te ayudo a buscar disponibilidad."
+  greeting: "¡Hola! Bienvenido a nuestro servicio de apartamentos en Cartagena. ¿En qué puedo ayudarte hoy?",
+  availability: "Sí, tenemos apartamentos disponibles en Cartagena. Dime las fechas, número de personas y presupuesto para recomendarte opciones.",
+  dates: "Perfecto, veo que me das fechas. ¿Cuántas personas serían? Con esa información puedo buscar disponibilidad en mi sistema."
 };
 
 
@@ -196,8 +193,9 @@ function analyzeCompleteContext(combinedText: string, userId?: string): { patter
   const hasDateKeywords = ['del', 'al', 'desde', 'hasta', 'fecha', 'días'].some(kw => cleanText.includes(kw));
   const hasPeopleKeywords = ['personas', 'gente', 'huespedes', '4', '5', '6'].some(kw => cleanText.includes(kw));
   
-  // Si tiene elementos de reserva pero no es una consulta completa, es availability
-  if (hasReservationKeywords && hasApartmentKeywords && !hasDateKeywords && !hasPeopleKeywords) {
+  // Si tiene elementos de reserva o consulta directa de apartamentos, es availability
+  if ((hasReservationKeywords && hasApartmentKeywords) || 
+      (hasApartmentKeywords && (cleanText.includes('tienen') || cleanText.includes('hay') || cleanText.includes('disponible')))) {
     const response = FIXED_RESPONSES.availability;
     if (userId) {
       try {
@@ -211,7 +209,8 @@ function analyzeCompleteContext(combinedText: string, userId?: string): { patter
       pattern: 'availability',
       originalMessage: combinedText.substring(0, 50) + '...',
       hasReservation: hasReservationKeywords,
-      hasApartment: hasApartmentKeywords
+      hasApartment: hasApartmentKeywords,
+      hasDirectQuery: cleanText.includes('tienen') || cleanText.includes('hay') || cleanText.includes('disponible')
     });
     
     return { pattern: 'availability', response, isFuzzy: true };
@@ -237,10 +236,18 @@ function analyzeCompleteContext(combinedText: string, userId?: string): { patter
     return { pattern: 'dates', response, isFuzzy: true };
   }
   
-  // 3. Si tiene números y palabras como "personas", es información de personas
+  // 3. Detectar información de personas
   const peopleMatch = cleanText.match(/(\d+)\s*(personas?|gente|huespedes?)/);
   if (peopleMatch) {
-    const response = "Perfecto, ya tengo toda la información. Buscando disponibilidad para " + peopleMatch[1] + " personas en las fechas que me dijiste. Un momento...";
+    let response: string;
+    
+    // Si viene después de availability o dates, es información completa
+    if (lastPattern === 'availability' || lastPattern === 'dates') {
+      response = "Perfecto, ya tengo toda la información. Buscando disponibilidad para " + peopleMatch[1] + " personas en las fechas que me dijiste. Un momento...";
+    } else {
+      // Si no hay contexto previo, preguntar por fechas
+      response = "Perfecto, " + peopleMatch[1] + " personas. ¿Para qué fechas necesitas el apartamento?";
+    }
     
     if (userId) {
       try {
@@ -253,6 +260,7 @@ function analyzeCompleteContext(combinedText: string, userId?: string): { patter
     logInfo('PATTERN_MATCH', `Información de personas detectada`, {
       pattern: 'people_info',
       people: peopleMatch[1],
+      lastPattern,
       originalMessage: combinedText.substring(0, 50) + '...'
     });
     
@@ -260,7 +268,8 @@ function analyzeCompleteContext(combinedText: string, userId?: string): { patter
   }
   
   // 4. Detectar saludos
-  if (['hola', 'buenos', 'buenas', 'que tal', 'hey', 'hi', 'hello'].some(kw => cleanText.includes(kw))) {
+  if (['hola', 'buenos', 'buenas', 'que tal', 'hey', 'hi', 'hello'].some(kw => cleanText.includes(kw)) || 
+      cleanText === 'qué tal' || cleanText === 'que tal') {
     const response = FIXED_RESPONSES.greeting;
     if (userId) {
       try {
@@ -276,26 +285,6 @@ function analyzeCompleteContext(combinedText: string, userId?: string): { patter
     });
     
     return { pattern: 'greeting', response, isFuzzy: true };
-  }
-  
-  // 5. Detectar preguntas o confusión
-  if (cleanText.includes('?') || ['porque', 'por qué', 'no entiendo', 'ya te dije', 'error'].some(kw => cleanText.includes(kw))) {
-    const response = "Entiendo tu frustración. Déjame ayudarte mejor. ¿Buscas apartamento en Cartagena? Dime las fechas exactas y cuántas personas, y te busco disponibilidad inmediatamente.";
-    
-    if (userId) {
-      try {
-        guestMemory.updateProfile(userId, { lastPattern: 'confusion' });
-      } catch (error) {
-        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
-      }
-    }
-    
-    logInfo('PATTERN_MATCH', `Confusión o pregunta detectada`, {
-      pattern: 'confusion',
-      originalMessage: combinedText.substring(0, 50) + '...'
-    });
-    
-    return { pattern: 'confusion', response, isFuzzy: true };
   }
   
   return null;
