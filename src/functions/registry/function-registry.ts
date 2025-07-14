@@ -75,7 +75,7 @@ export async function executeFunction(name: string, args: any, requestId?: strin
   if (requestId && typeof functionDef.handler === 'function') {
     // Intentar llamar con requestId si la función lo acepta
     try {
-      return await functionDef.handler(args, requestId);
+      return await (functionDef.handler as any)(args, requestId);
     } catch (error) {
       // Si falla, intentar sin requestId (compatibilidad hacia atrás)
       return await functionDef.handler(args);
