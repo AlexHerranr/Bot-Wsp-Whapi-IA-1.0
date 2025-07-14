@@ -287,6 +287,26 @@ function analyzeCompleteContext(combinedText: string, userId?: string): { patter
     return { pattern: 'greeting', response, isFuzzy: true };
   }
   
+  // 🔧 CORRECCIÓN 2: Detectar inputs ambiguos como "??..." o "..." y manejarlos localmente
+  if (/^[\?\.]{2,}$/.test(cleanText) || cleanText === '?' || cleanText === '...') {
+    const response = "¿Podrías ser más específico? ¿Buscas información sobre disponibilidad, precios, o tienes alguna pregunta en particular?";
+    if (userId) {
+      try {
+        guestMemory.updateProfile(userId, { lastPattern: 'ambiguous_input' });
+      } catch (error) {
+        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
+      }
+    }
+    
+    logInfo('PATTERN_MATCH', `Input ambiguo detectado y manejado localmente`, {
+      pattern: 'ambiguous_input',
+      originalMessage: combinedText,
+      environment: appConfig.environment
+    });
+    
+    return { pattern: 'ambiguous_input', response, isFuzzy: false };
+  }
+  
   return null;
 }
 
@@ -842,7 +862,56 @@ function setupWebhooks() {
         await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
     }
     
+    // 🔧 NUEVA FUNCIÓN: Verificar si hay runs activos para un usuario
+    async function isRunActive(userId: string): Promise<boolean> {
+        try {
+            const shortUserId = getShortUserId(userId);
+            const threadRecord = threadPersistence.getThread(shortUserId);
+            
+            if (!threadRecord) {
+                return false; // No hay thread, no hay runs activos
+            }
+            
+            const runs = await openaiClient.beta.threads.runs.list(threadRecord.threadId, { limit: 5 });
+            const activeRuns = runs.data.filter(r => 
+                ['queued', 'in_progress', 'requires_action'].includes(r.status)
+            );
+            
+            if (activeRuns.length > 0) {
+                logWarning('ACTIVE_RUN_DETECTED', `Run activo detectado para ${shortUserId}`, {
+                    shortUserId,
+                    threadId: threadRecord.threadId,
+                    activeRuns: activeRuns.map(r => ({ id: r.id, status: r.status })),
+                    environment: appConfig.environment
+                });
+                return true;
+            }
+            
+            return false;
+        } catch (error) {
+            logError('RUN_CHECK_ERROR', `Error verificando runs activos para ${userId}`, {
+                userId: getShortUserId(userId),
+                error: error.message,
+                environment: appConfig.environment
+            });
+            return false; // En caso de error, asumir que no hay runs activos
+        }
+    }
+
     async function processCombinedMessage(userId: string, combinedText: string, chatId: string, userName: string, messageCount: number): Promise<void> {
+        // 🔧 CORRECCIÓN 1: Verificar runs activos antes de procesar
+        const hasActiveRun = await isRunActive(userId);
+        if (hasActiveRun) {
+            logWarning('BUFFER_PROCESS_SKIPPED', `Procesamiento de buffer saltado - run activo para ${userName}`, {
+                userJid: getShortUserId(userId),
+                messageCount,
+                combinedText: combinedText.substring(0, 50) + '...',
+                environment: appConfig.environment
+            });
+            console.log(`⏸️ [BUFFER_SKIP] ${userName}: Run activo → Saltando procesamiento`);
+            return; // Evita duplicados al esperar runs en curso
+        }
+        
         // 🔧 MEJORADO: Análisis de contexto completo del buffer
         const simplePattern = analyzeCompleteContext(combinedText, userId);
         
@@ -1445,29 +1514,41 @@ function setupWebhooks() {
                 });
             }
             
-            // 🔧 ETAPA 2: Inyección de Contexto Condicional para Threads Existentes
-            if (!isNewThread && contextAnalysis?.needsInjection) {
-                try {
-                    const relevantContext = await getRelevantContext(userJid, requestId);
-                    if (relevantContext) {
-                        await openaiClient.beta.threads.messages.create(threadId, { 
-                            role: 'user', 
-                            content: relevantContext 
-                        });
-                        
-                        // Calcular tokens de contexto adicional
-                        const additionalContextTokens = Math.ceil(relevantContext.length / 4);
-                        contextTokens += additionalContextTokens;
-                        
-                        logSuccess('CONTEXT_INJECTION_CONDITIONAL', 'Contexto relevante inyectado para thread existente', {
-                            userId: shortUserId,
-                            threadId,
-                            contextLength: relevantContext.length,
-                            additionalTokens: additionalContextTokens,
-                            matchPercentage: contextAnalysis.matchPercentage,
-                            reason: contextAnalysis.reason,
-                            requestId
-                        });
+            // 🔧 CORRECCIÓN 3: Validación de contexto vacío antes de inyectar
+            const historyLines = historyInjection ? historyInjection.split('\n').length : 0;
+            if (historyLines < 1 && !isNewThread) {
+                logWarning('EMPTY_CONTEXT_SKIP', 'Contexto vacío detectado, saltando inyección', {
+                    userId: shortUserId,
+                    threadId,
+                    historyLines,
+                    isNewThread,
+                    requestId
+                });
+                // No inyectar contexto vacío, continuar con el mensaje del usuario
+            } else {
+                // 🔧 ETAPA 2: Inyección de Contexto Condicional para Threads Existentes
+                if (!isNewThread && contextAnalysis?.needsInjection) {
+                    try {
+                        const relevantContext = await getRelevantContext(userJid, requestId);
+                        if (relevantContext) {
+                            await openaiClient.beta.threads.messages.create(threadId, { 
+                                role: 'user', 
+                                content: relevantContext 
+                            });
+                            
+                            // Calcular tokens de contexto adicional
+                            const additionalContextTokens = Math.ceil(relevantContext.length / 4);
+                            contextTokens += additionalContextTokens;
+                            
+                            logSuccess('CONTEXT_INJECTION_CONDITIONAL', 'Contexto relevante inyectado para thread existente', {
+                                userId: shortUserId,
+                                threadId,
+                                contextLength: relevantContext.length,
+                                additionalTokens: additionalContextTokens,
+                                matchPercentage: contextAnalysis.matchPercentage,
+                                reason: contextAnalysis.reason,
+                                requestId
+                                                    });
                     }
                 } catch (error) {
                     logWarning('CONTEXT_INJECTION_FAILED', 'Error inyectando contexto condicional', {
@@ -1477,6 +1558,7 @@ function setupWebhooks() {
                     });
                 }
             }
+            } // Cerrar el bloque else de validación de contexto vacío
              
             // 🔧 ETAPA 2: Inyección de contexto solo si hay contenido
             if (historyInjection || labelsStr) {

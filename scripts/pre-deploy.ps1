@@ -45,7 +45,7 @@ foreach ($var in $requiredVars) {
 
 if ($missingVars.Count -gt 0) {
     Write-Host "⚠️  Variables de entorno faltantes: $($missingVars -join ', ')" -ForegroundColor Yellow
-    Write-Host "💡 Asegúrate de configurarlas en Cloud Run" -ForegroundColor Blue
+    Write-Host "💡 Asegurate de configurarlas en Cloud Run" -ForegroundColor Blue
 } else {
     Write-Host "✅ Variables de entorno configuradas" -ForegroundColor Green
 }
