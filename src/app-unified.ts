@@ -114,6 +114,20 @@ const PATTERN_COOLDOWN_MS = 30000; // 30 segundos entre respuestas de patrones
 const unrecognizedMessages = new Map<string, number>(); // userId -> count
 const UNRECOGNIZED_THRESHOLD = 2; // Después de 2 mensajes no reconocidos, usar AI
 
+// 🔧 NUEVO: Sistema de buffering proactivo global
+const globalMessageBuffers = new Map<string, {
+    messages: string[],
+    chatId: string,
+    userName: string,
+    lastActivity: number,
+    timer: NodeJS.Timeout | null,
+    isTyping: boolean,
+    typingCount: number
+}>();
+const BUFFER_WINDOW_MS = 8000; // 8 segundos para agrupar mensajes
+const TYPING_EXTENSION_MS = 5000; // 5 segundos extra por typing
+const MAX_TYPING_COUNT = 3; // Máximo 3 typings antes de forzar procesamiento
+
 // 🔧 ETAPA 2: Cache de historial para optimizar fetches
 const historyCache = new Map<string, { history: string; timestamp: number }>();
 const HISTORY_CACHE_TTL = 60 * 60 * 1000; // 1 hora en ms
@@ -130,147 +144,174 @@ const MAX_BUFFER_SIZE = 10; // Límite máximo de mensajes por buffer (anti-spam
 const MAX_BOT_MESSAGES = 1000;
 const MAX_MESSAGE_LENGTH = 5000;
 
-// --- Patrones para Consultas Simples ---
+// --- Patrones Mejorados: Saludos, Disponibilidad, Fechas y Preguntas ---
 const SIMPLE_PATTERNS = {
-  greeting: /^(hola|buen(os)?\s(d[ií]as|tardes|noches))(\s*[\.,¡!¿\?])*\s*$/i,
-  thanks: /^(gracias|muchas gracias|mil gracias|te agradezco)(\s*[\.,¡!])*$/i,
-  // 🔧 MEJORADO: Disponibilidad con typos comunes
-  availability: /^(disponibilidad|disponible|libre|dispnibilidad|disponib?lidad|tienes\s+disp|hay\s+disp)(\s*[\.,¡!¿\?])*\s*$/i,
-  // 🔧 MEJORADO: Precios con variaciones
-  price: /^(precio|costo|cu[áa]nto|valor|valo|tarifa)(\s*[\.,¡!¿\?])*\s*$/i,
-  bye: /^(chau|adiós|hasta luego|nos vemos|bye)(\s*[\.,¡!])*$/i,
-  confusion: /^(no entiendo|no comprendo|qué dijiste|no sé|no se)(\s*[\.,¡!¿\?])*$/i,
-  ok: /^(ok|okay|vale|perfecto|listo)(\s*[\.,¡!])*$/i
+  greeting: /^(hola|buen(os)?\s(d[ií]as|tardes|noches)|que\s+tal|hey|hi|hello)(\s*[\.,¡!¿\?])*\s*$/i,
+  availability: /^(disponibilidad|disponible|libre|apartamento|hospedaje|busco\s+lugar|tienes\s+disp|hay\s+disp|tienen\s+apartamentos?)(\s*[\.,¡!¿\?])*\s*$/i,
+  dates: /^(seria|sería|del|al|desde|hasta|entre|fecha|fechas|del\s+\d+|al\s+\d+|\d+\s+de\s+\w+|\d+\/\d+|\d+-\d+)/i,
+  question: /^(porque|por qué|por que|no\s+respondiste|no\s+respondes|no\s+entiendo|que\s+paso|qué\s+pasó|\?)/i
 };
 
-// 🔧 ETAPA 3: Keywords expandidas para fuzzy matching
-const EXPANDED_PATTERN_KEYWORDS = {
-  greeting: ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'hello', 'hi', 'buen dia', 'buena tarde', 'buena noche'],
-  thanks: ['gracias', 'muchas gracias', 'mil gracias', 'te agradezco', 'thank you', 'thanks', 'grasias', 'grasia'],
-  availability: ['disponibilidad', 'disponible', 'libre', 'dispnibilidad', 'disponib?lidad', 'tienes disp', 'hay disp', 'disponiblidad', 'disponibildad', 'disponib'],
-  price: ['precio', 'costo', 'cuanto', 'valor', 'valo', 'tarifa', 'precio', 'costo', 'cuanto', 'valo', 'tarifa'],
-  bye: ['chau', 'adios', 'hasta luego', 'nos vemos', 'bye', 'goodbye', 'hasta la vista', 'nos vemos'],
-  confusion: ['no entiendo', 'no comprendo', 'que dijiste', 'no se', 'no se', 'confuso', 'confused', 'no entiendo'],
-  ok: ['ok', 'okay', 'vale', 'perfecto', 'listo', 'perfect', 'okey', 'vale']
+// --- Keywords Mejoradas para Detección ---
+const PATTERN_KEYWORDS = {
+  greeting: ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'que tal', 'hey', 'hi', 'hello', 'buen dia', 'buena tarde', 'buena noche'],
+  availability: ['disponibilidad', 'disponible', 'libre', 'apartamento', 'apartamentos', 'apto', 'aptos', 'hospedaje', 'busco lugar', 'tienes disp', 'hay disp', 'tienen apartamento', 'tienen apartamentos', 'buscando'],
+  dates: ['seria', 'sería', 'del', 'al', 'desde', 'hasta', 'entre', 'fecha', 'fechas', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosot', 'ago', 'sep', 'oct', 'nov', 'dic'],
+  question: ['porque', 'por qué', 'por que', 'no respondiste', 'no respondes', 'no entiendo', 'que paso', 'qué pasó', 'respondiste', 'respondes', '?']
 };
 
-// --- Respuestas Fijas para Patrones Simples ---
-const FIXED_RESPONSES: Record<string, string[]> = {
-  greeting: [
-    "¡Hola! 😊 ¿Cómo puedo ayudarte hoy? ¿Buscas apartamento en Cartagena?",
-    "¡Hola! 👋 ¿En qué puedo asistirte? ¿Te interesa alojamiento en Cartagena?",
-    "¡Hola! 😄 ¿Cómo estás? ¿Buscas un lugar para hospedarte en Cartagena?"
-  ],
-  thanks: [
-    "¡De nada! 😊 Estoy aquí para ayudarte. ¿Hay algo más en lo que pueda asistirte?",
-    "¡Por supuesto! 😄 Es un placer ayudarte. ¿Necesitas algo más?",
-    "¡De nada! 👍 Me alegra poder ayudarte. ¿Hay alguna otra consulta?"
-  ],
-  bye: [
-    "¡Hasta luego! 👋 Que tengas un excelente día. Si necesitas algo más, aquí estaré.",
-    "¡Nos vemos! 😊 Que tengas un día maravilloso. ¡Vuelve cuando quieras!",
-    "¡Hasta pronto! 👋 Que disfrutes tu día. Estaré aquí para cuando regreses."
-  ],
-  confusion: [
-    "Lo siento, ¿puedes repetir eso de otra manera? 😅 Estoy aquí para ayudarte.",
-    "No entendí bien, ¿podrías decirlo de otra forma? 🤔 Estoy listo para ayudarte.",
-    "Disculpa, ¿puedes explicarlo de otra manera? 😊 Quiero asegurarme de entenderte bien."
-  ],
-  ok: [
-    "¡Perfecto! 👍 ¿En qué más puedo ayudarte?",
-    "¡Excelente! 😄 ¿Hay algo más en lo que pueda asistirte?",
-    "¡Genial! 👌 ¿Qué más necesitas?"
-  ]
+// --- Respuestas Mejoradas con Contexto ---
+const FIXED_RESPONSES: Record<string, string> = {
+  greeting: "Hola que tal como te podemos ayudar?",
+  availability: "Listo claro que sí, para que fechas estas buscando apartamento acá en cartagena, dime fecha de entrada, fecha de salida, y cuantas personas, con esta info busco en mi sistema para ver que tengo disponibilidad",
+  dates: "Perfecto, veo que me das fechas. ¿Cuántas personas serían? Con esa información puedo buscar disponibilidad en mi sistema.",
+  question: "Disculpa, estoy aquí para ayudarte. ¿Buscas apartamento en Cartagena? Dime las fechas y cuántas personas y te ayudo a buscar disponibilidad."
 };
 
-// --- Función para Detectar Patrones Simples con Fuzzy Matching ---
-function detectSimplePattern(messageText: string): { pattern: string; response: string; isFuzzy: boolean } | null {
-  const cleanMessage = messageText.trim().toLowerCase();
+
+
+
+
+// --- Función Inteligente para Analizar Contexto Completo ---
+function analyzeCompleteContext(combinedText: string, userId?: string): { pattern: string; response: string; isFuzzy: boolean } | null {
+  const cleanText = combinedText.trim().toLowerCase();
   
-  // 🔧 ETAPA 3: Primero intentar match exacto con regex
-  for (const [patternName, pattern] of Object.entries(SIMPLE_PATTERNS)) {
-    if (pattern.test(messageText.trim())) {
-      const responses = FIXED_RESPONSES[patternName];
-      if (responses && responses.length > 0) {
-        // Seleccionar respuesta aleatoria para evitar repetición
-        const randomIndex = Math.floor(Math.random() * responses.length);
-        const response = responses[randomIndex];
-        return { pattern: patternName, response, isFuzzy: false };
-      }
+  // 🔧 MEJORADO: Obtener contexto del usuario
+  let userContext = null;
+  if (userId) {
+    try {
+      userContext = guestMemory.getProfile(userId);
+    } catch (error) {
+      logDebug('CONTEXT_ERROR', 'No se pudo obtener contexto del usuario', { userId, error: error.message });
     }
   }
   
-  // 🔧 ETAPA 3: Si no hay match exacto, intentar fuzzy matching mejorado
-  for (const [patternName, keywords] of Object.entries(EXPANDED_PATTERN_KEYWORDS)) {
-    for (const keyword of keywords) {
-      // 🔧 MEJORADO: Buscar coincidencias parciales primero
-      if (cleanMessage.includes(keyword.toLowerCase())) {
-        const responses = FIXED_RESPONSES[patternName];
-        if (responses && responses.length > 0) {
-          const randomIndex = Math.floor(Math.random() * responses.length);
-          const response = responses[randomIndex];
-          
-          logInfo('FUZZY_PATTERN_MATCH', `Patrón detectado con substring matching`, {
-            pattern: patternName,
-            keyword,
-            matchType: 'substring',
-            originalMessage: messageText.substring(0, 50) + '...'
-          });
-          return { pattern: patternName, response, isFuzzy: true };
-        }
-      }
-      
-      // 🔧 MEJORADO: Tokenizar mensaje para fuzzy matching más preciso
-      const messageWords = cleanMessage.split(/\s+/);
-      let bestMatch = { distance: Infinity, word: '' };
-      
-      for (const word of messageWords) {
-        const distance = levenshtein.get(word, keyword.toLowerCase());
-        if (distance < bestMatch.distance) {
-          bestMatch = { distance, word };
-        }
-      }
-      
-      // 🔧 MEJORADO: Tolerance dinámico basado en longitud de keyword
-      const dynamicTolerance = Math.max(1, Math.floor(keyword.length * 0.3)); // 30% de la longitud
-      
-      if (bestMatch.distance <= dynamicTolerance) {
-        const responses = FIXED_RESPONSES[patternName];
-        if (responses && responses.length > 0) {
-          const randomIndex = Math.floor(Math.random() * responses.length);
-          const response = responses[randomIndex];
-          
-          logInfo('FUZZY_PATTERN_MATCH', `Patrón detectado con fuzzy matching mejorado`, {
-            pattern: patternName,
-            keyword,
-            matchedWord: bestMatch.word,
-            distance: bestMatch.distance,
-            dynamicTolerance,
-            originalMessage: messageText.substring(0, 50) + '...'
-          });
-          return { pattern: patternName, response, isFuzzy: true };
-        }
+  const lastPattern = userContext?.lastPattern;
+  
+  // 🔧 MEJORADO: Análisis inteligente del contexto completo
+  
+  // 1. Detectar si es una consulta completa de reserva
+  const hasReservationKeywords = ['reservar', 'reserva', 'gustaría', 'quiero', 'busco', 'necesito'].some(kw => cleanText.includes(kw));
+  const hasApartmentKeywords = ['apartamento', 'apto', 'habitación', 'lugar', 'alojamiento'].some(kw => cleanText.includes(kw));
+  const hasDateKeywords = ['del', 'al', 'desde', 'hasta', 'fecha', 'días'].some(kw => cleanText.includes(kw));
+  const hasPeopleKeywords = ['personas', 'gente', 'huespedes', '4', '5', '6'].some(kw => cleanText.includes(kw));
+  
+  // Si tiene elementos de reserva pero no es una consulta completa, es availability
+  if (hasReservationKeywords && hasApartmentKeywords && !hasDateKeywords && !hasPeopleKeywords) {
+    const response = FIXED_RESPONSES.availability;
+    if (userId) {
+      try {
+        guestMemory.updateProfile(userId, { lastPattern: 'availability' });
+      } catch (error) {
+        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
       }
     }
+    
+    logInfo('PATTERN_MATCH', `Consulta de disponibilidad detectada en contexto completo`, {
+      pattern: 'availability',
+      originalMessage: combinedText.substring(0, 50) + '...',
+      hasReservation: hasReservationKeywords,
+      hasApartment: hasApartmentKeywords
+    });
+    
+    return { pattern: 'availability', response, isFuzzy: true };
+  }
+  
+  // 2. Si viene después de availability y tiene fechas, es dates
+  if (lastPattern === 'availability' && hasDateKeywords) {
+    const response = FIXED_RESPONSES.dates;
+    if (userId) {
+      try {
+        guestMemory.updateProfile(userId, { lastPattern: 'dates' });
+      } catch (error) {
+        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
+      }
+    }
+    
+    logInfo('PATTERN_MATCH', `Fechas detectadas después de availability`, {
+      pattern: 'dates',
+      originalMessage: combinedText.substring(0, 50) + '...',
+      lastPattern
+    });
+    
+    return { pattern: 'dates', response, isFuzzy: true };
+  }
+  
+  // 3. Si tiene números y palabras como "personas", es información de personas
+  const peopleMatch = cleanText.match(/(\d+)\s*(personas?|gente|huespedes?)/);
+  if (peopleMatch) {
+    const response = "Perfecto, ya tengo toda la información. Buscando disponibilidad para " + peopleMatch[1] + " personas en las fechas que me dijiste. Un momento...";
+    
+    if (userId) {
+      try {
+        guestMemory.updateProfile(userId, { lastPattern: 'people_info' });
+      } catch (error) {
+        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
+      }
+    }
+    
+    logInfo('PATTERN_MATCH', `Información de personas detectada`, {
+      pattern: 'people_info',
+      people: peopleMatch[1],
+      originalMessage: combinedText.substring(0, 50) + '...'
+    });
+    
+    return { pattern: 'people_info', response, isFuzzy: true };
+  }
+  
+  // 4. Detectar saludos
+  if (['hola', 'buenos', 'buenas', 'que tal', 'hey', 'hi', 'hello'].some(kw => cleanText.includes(kw))) {
+    const response = FIXED_RESPONSES.greeting;
+    if (userId) {
+      try {
+        guestMemory.updateProfile(userId, { lastPattern: 'greeting' });
+      } catch (error) {
+        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
+      }
+    }
+    
+    logInfo('PATTERN_MATCH', `Saludo detectado en contexto completo`, {
+      pattern: 'greeting',
+      originalMessage: combinedText.substring(0, 50) + '...'
+    });
+    
+    return { pattern: 'greeting', response, isFuzzy: true };
+  }
+  
+  // 5. Detectar preguntas o confusión
+  if (cleanText.includes('?') || ['porque', 'por qué', 'no entiendo', 'ya te dije', 'error'].some(kw => cleanText.includes(kw))) {
+    const response = "Entiendo tu frustración. Déjame ayudarte mejor. ¿Buscas apartamento en Cartagena? Dime las fechas exactas y cuántas personas, y te busco disponibilidad inmediatamente.";
+    
+    if (userId) {
+      try {
+        guestMemory.updateProfile(userId, { lastPattern: 'confusion' });
+      } catch (error) {
+        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
+      }
+    }
+    
+    logInfo('PATTERN_MATCH', `Confusión o pregunta detectada`, {
+      pattern: 'confusion',
+      originalMessage: combinedText.substring(0, 50) + '...'
+    });
+    
+    return { pattern: 'confusion', response, isFuzzy: true };
   }
   
   return null;
 }
 
-// --- Función para Incrementar Métricas de Patrones ---
+// --- Función Simplificada para Métricas de Patrones ---
 function incrementPatternMetric(pattern: string, isFuzzy: boolean = false) {
   try {
     // Incrementar contador de patrones detectados
-    incrementMessages(); // Usar la función existente para mensajes procesados
-    console.log(`📊 [METRICS] Patrón detectado: ${pattern}${isFuzzy ? ' (fuzzy)' : ''}`);
+    incrementMessages();
+    console.log(`📊 [METRICS] Patrón detectado: ${pattern}${isFuzzy ? ' (keyword)' : ' (regex)'}`);
     
-    // 🔧 ETAPA 3: Log específico para fuzzy matches
-    if (isFuzzy) {
-      logInfo('FUZZY_PATTERN_METRIC', `Métrica de patrón fuzzy incrementada`, {
-        pattern,
-        isFuzzy
-      });
-    }
+    logInfo('PATTERN_METRIC', `Métrica de patrón incrementada`, {
+      pattern,
+      isFuzzy
+    });
   } catch (error) {
     console.error('Error incrementando métrica de patrón:', error);
   }
@@ -716,6 +757,137 @@ function setupWebhooks() {
     
     // 🔧 NUEVO: Función para suscribirse a presencia de usuario
     const subscribedPresences = new Set<string>(); // Rastrea usuarios suscritos
+    
+    // 🔧 NUEVO: Funciones para buffering proactivo global
+    function addToGlobalBuffer(userId: string, messageText: string, chatId: string, userName: string): void {
+        let buffer = globalMessageBuffers.get(userId);
+        
+        if (!buffer) {
+            buffer = {
+                messages: [],
+                chatId,
+                userName,
+                lastActivity: Date.now(),
+                timer: null,
+                isTyping: false,
+                typingCount: 0
+            };
+            globalMessageBuffers.set(userId, buffer);
+        }
+        
+        // Agregar mensaje al buffer
+        buffer.messages.push(messageText);
+        buffer.lastActivity = Date.now();
+        
+        // Limpiar timer existente
+        if (buffer.timer) {
+            clearTimeout(buffer.timer);
+        }
+        
+        // Configurar nuevo timer
+        const delay = buffer.isTyping ? TYPING_EXTENSION_MS : BUFFER_WINDOW_MS;
+        buffer.timer = setTimeout(() => processGlobalBuffer(userId), delay);
+        
+        logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
+            userJid: getShortUserId(userId),
+            userName,
+            messageText: messageText.substring(0, 50) + '...',
+            bufferSize: buffer.messages.length,
+            delay,
+            isTyping: buffer.isTyping,
+            environment: appConfig.environment
+        });
+    }
+    
+    function updateTypingStatus(userId: string, isTyping: boolean): void {
+        const buffer = globalMessageBuffers.get(userId);
+        if (!buffer) return;
+        
+        buffer.isTyping = isTyping;
+        
+        if (isTyping) {
+            buffer.typingCount++;
+            
+            // Extender timer si está escribiendo
+            if (buffer.timer) {
+                clearTimeout(buffer.timer);
+                const delay = Math.min(TYPING_EXTENSION_MS * buffer.typingCount, BUFFER_WINDOW_MS * 2);
+                buffer.timer = setTimeout(() => processGlobalBuffer(userId), delay);
+                
+                logInfo('GLOBAL_BUFFER_TYPING', `Timer extendido por typing`, {
+                    userJid: getShortUserId(userId),
+                    userName: buffer.userName,
+                    typingCount: buffer.typingCount,
+                    delay,
+                    environment: appConfig.environment
+                });
+            }
+        } else {
+            // Reset typing count cuando deja de escribir
+            buffer.typingCount = 0;
+        }
+    }
+    
+    async function processGlobalBuffer(userId: string): Promise<void> {
+        const buffer = globalMessageBuffers.get(userId);
+        if (!buffer || buffer.messages.length === 0) {
+            globalMessageBuffers.delete(userId);
+            return;
+        }
+        
+        const combinedText = buffer.messages.join(' ');
+        const messageCount = buffer.messages.length;
+        
+        logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global`, {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            messageCount,
+            combinedText: combinedText.substring(0, 100) + '...',
+            environment: appConfig.environment
+        });
+        
+        // Limpiar buffer
+        globalMessageBuffers.delete(userId);
+        
+        // Procesar mensaje combinado
+        await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
+    }
+    
+    async function processCombinedMessage(userId: string, combinedText: string, chatId: string, userName: string, messageCount: number): Promise<void> {
+        // 🔧 MEJORADO: Análisis de contexto completo del buffer
+        const simplePattern = analyzeCompleteContext(combinedText, userId);
+        
+        if (simplePattern) {
+            // Procesar patrón directamente - SIN COOLDOWN (SIMPLIFICADO)
+            patternCooldowns.set(userId, Date.now());
+            unrecognizedMessages.delete(userId);
+            
+            await sendWhatsAppMessage(chatId, simplePattern.response);
+            
+            console.log(`⚡ [BATCH_PATTERN] ${userName}: ${messageCount} mensajes → ${simplePattern.pattern} → Respuesta fija`);
+            incrementPatternMetric(simplePattern.pattern, simplePattern.isFuzzy);
+            
+        } else {
+            // Mensaje no reconocido - USAR OPENAI (MEJORADO)
+            const currentCount = unrecognizedMessages.get(userId) || 0;
+            const newCount = currentCount + 1;
+            unrecognizedMessages.set(userId, newCount);
+            
+            logInfo('BATCH_UNRECOGNIZED', `Batch de ${messageCount} mensajes no reconocidos - USANDO OPENAI`, {
+                userJid: getShortUserId(userId),
+                messageCount,
+                unrecognizedCount: newCount,
+                combinedText: combinedText.substring(0, 100) + '...',
+                environment: appConfig.environment
+            });
+            
+            console.log(`🤖 [BATCH_AI] ${userName}: ${messageCount} mensajes no reconocidos → Usando OpenAI`);
+            
+            // Procesar con OpenAI
+            const response = await processWithOpenAI(combinedText, userId, chatId, userName);
+            await sendWhatsAppMessage(chatId, response);
+        }
+    }
     
     async function subscribeToPresence(userId: string): Promise<void> {
         if (subscribedPresences.has(userId)) {
@@ -2157,38 +2329,19 @@ function setupWebhooks() {
                     });
 
                     if (status === 'typing' || status === 'recording') {
-                        // Usuario está escribiendo - pausar procesamiento
+                        // Usuario está escribiendo - actualizar estado global
                         userTypingState.set(userId, true);
+                        updateTypingStatus(userId, true);
                         
-                        // Cancelar timer si existe
-                        if (userActivityTimers.has(userId)) {
-                            clearTimeout(userActivityTimers.get(userId)!);
-                            logDebug('TIMER_PAUSED', `Procesamiento pausado por typing en ${shortUserId}`, {
-                                userId: shortUserId,
-                                environment: appConfig.environment
-                            });
-                        }
-                        
-                        console.log(`✍️ ${shortUserId} está escribiendo... (pausando respuesta)`);
+                        console.log(`✍️ ${shortUserId} está escribiendo... (extendiendo buffer)`);
                         
                     } else if (status === 'online' || status === 'offline' || status === 'pending') {
-                        // Usuario dejó de escribir - programar procesamiento
+                        // Usuario dejó de escribir - actualizar estado global
                         if (userTypingState.get(userId) === true) {
                             userTypingState.set(userId, false);
-                            const buffer = userMessageBuffers.get(userId);
+                            updateTypingStatus(userId, false);
                             
-                            if (buffer && buffer.messages.length > 0) {
-                                const timer = setTimeout(() => processUserMessages(userId), POST_TYPING_DELAY); // 3 segundos después de stop typing
-                                userActivityTimers.set(userId, timer);
-                                
-                                logDebug('TIMER_STARTED_AFTER_TYPING', `Typing stopped; timer 3s iniciado para ${shortUserId}`, {
-                                    userId: shortUserId,
-                                    messagesInBuffer: buffer.messages.length,
-                                    environment: appConfig.environment
-                                });
-                                
-                                console.log(`⏸️ ${shortUserId} dejó de escribir → ⏳ 3s...`);
-                            }
+                            console.log(`⏸️ ${shortUserId} dejó de escribir`);
                         }
                     }
                 });
@@ -2237,160 +2390,34 @@ function setupWebhooks() {
                     environment: appConfig.environment
                 });
                 
-                // Solo procesar mensajes de texto que no sean del bot
-                if (message.type === 'text' && !message.from_me && message.text?.body) {
-                    const userJid = message.from;
-                    const chatId = message.chat_id;
-                    const userName = cleanContactName(message.from_name);
-                    let messageText = message.text.body;
-                    
-                    // Validación de tamaño de mensaje
-                    if (messageText.length > MAX_MESSAGE_LENGTH) {
-                        logWarning('MESSAGE_TOO_LONG', 'Mensaje excede límite, truncando', {
-                            userJid: getShortUserId(userJid),
-                            originalLength: messageText.length,
-                            maxLength: MAX_MESSAGE_LENGTH,
-                            environment: appConfig.environment
-                        });
+                                    // Solo procesar mensajes de texto que no sean del bot
+                    if (message.type === 'text' && !message.from_me && message.text?.body) {
+                        const userJid = message.from;
+                        const chatId = message.chat_id;
+                        const userName = cleanContactName(message.from_name);
+                        let messageText = message.text.body;
                         
-                        messageText = messageText.substring(0, MAX_MESSAGE_LENGTH) + '... [mensaje truncado por límite de tamaño]';
-                    }
-                    
-                    // 🔧 ETAPA 3: Detección de Patrones Simples con Fuzzy Matching (Pre-Buffer)
-                    const simplePattern = detectSimplePattern(messageText);
-                    if (simplePattern) {
-                        // 🔧 NUEVO: Verificar cooldown para evitar spam de patrones
-                        const lastPatternTime = patternCooldowns.get(userJid) || 0;
-                        const timeSinceLastPattern = Date.now() - lastPatternTime;
-                        
-                        if (timeSinceLastPattern < PATTERN_COOLDOWN_MS) {
-                            logInfo('PATTERN_COOLDOWN', `Patrón en cooldown para ${userName}`, {
+                        // Validación de tamaño de mensaje
+                        if (messageText.length > MAX_MESSAGE_LENGTH) {
+                            logWarning('MESSAGE_TOO_LONG', 'Mensaje excede límite, truncando', {
                                 userJid: getShortUserId(userJid),
-                                pattern: simplePattern.pattern,
-                                timeSinceLastPattern: Math.round(timeSinceLastPattern / 1000) + 's',
-                                cooldownMs: PATTERN_COOLDOWN_MS,
+                                originalLength: messageText.length,
+                                maxLength: MAX_MESSAGE_LENGTH,
                                 environment: appConfig.environment
                             });
                             
-                            console.log(`⏳ [COOLDOWN] ${userName}: Patrón ${simplePattern.pattern} en cooldown (${Math.round(timeSinceLastPattern / 1000)}s/${PATTERN_COOLDOWN_MS / 1000}s)`);
-                            
-                            // Continuar con el procesamiento normal (buffer/OpenAI)
-                        } else {
-                            // Cooldown completado - procesar patrón
-                            patternCooldowns.set(userJid, Date.now());
-                            
-                            logInfo('PATTERN_DETECTED', `Patrón simple detectado: ${simplePattern.pattern}${simplePattern.isFuzzy ? ' (fuzzy)' : ''}`, {
-                                userJid: getShortUserId(userJid),
-                                userName,
-                                messageText: messageText.substring(0, 50) + '...',
-                                pattern: simplePattern.pattern,
-                                isFuzzy: simplePattern.isFuzzy,
-                                environment: appConfig.environment
-                            });
-                            
-                            // Enviar respuesta fija inmediatamente (skip buffer/OpenAI)
-                            await sendWhatsAppMessage(chatId, simplePattern.response);
-                            
-                            // Log en consola
-                            console.log(`⚡ [PATTERN] ${userName}: "${messageText.substring(0, 30)}..." → ${simplePattern.pattern}${simplePattern.isFuzzy ? ' (fuzzy)' : ''} → Respuesta fija`);
-                            
-                            // Incrementar métrica de patrones detectados
-                            incrementPatternMetric(simplePattern.pattern, simplePattern.isFuzzy);
-                            
-                            continue; // Skip al siguiente mensaje
-                        }
-                    }
-                    
-                    // Crear o actualizar buffer de mensajes
-                    if (!userMessageBuffers.has(userJid)) {
-                        userMessageBuffers.set(userJid, {
-                            messages: [],
-                            chatId: chatId,
-                            name: userName,
-                            lastActivity: Date.now()
-                        });
-                        
-                        logDebug('BUFFER_CREATE', `Buffer creado para ${userName}`, {
-                            userJid,
-                            chatId,
-                            timeout: 'typing-based',
-                            environment: appConfig.environment
-                        });
-                    }
-
-                    const buffer = userMessageBuffers.get(userJid)!;
-                    
-                    // Validación de límite de buffer (anti-spam)
-                    if (buffer.messages.length >= MAX_BUFFER_SIZE) {
-                        logWarning('BUFFER_OVERFLOW', `Buffer alcanzó límite máximo para ${userName}`, {
-                            userJid,
-                            bufferSize: buffer.messages.length,
-                            maxSize: MAX_BUFFER_SIZE,
-                            droppedMessage: messageText.substring(0, 50) + '...',
-                            environment: appConfig.environment
-                        });
-                        
-                        console.log(`🚫 [SPAM] Buffer lleno para ${userName} (${buffer.messages.length}/${MAX_BUFFER_SIZE})`);
-                        continue; // Ignorar mensajes adicionales
-                    }
-                    
-                    buffer.messages.push(messageText);
-                    buffer.lastActivity = Date.now();
-
-                    // 🔧 NUEVO: Suscribirse a presencia del usuario (solo una vez)
-                    const shortUserId = getShortUserId(userJid);
-                    await subscribeToPresence(shortUserId);
-
-                    // 🔧 NUEVO: Sistema de typing dinámico
-                    const isUserTyping = userTypingState.get(userJid) === true;
-                    
-                    if (!isUserTyping) {
-                        // Usuario no está escribiendo - usar timeout corto (fallback)
-                        if (userActivityTimers.has(userJid)) {
-                            clearTimeout(userActivityTimers.get(userJid)!);
+                            messageText = messageText.substring(0, MAX_MESSAGE_LENGTH) + '... [mensaje truncado por límite de tamaño]';
                         }
                         
-                        const fallbackTimeout = FALLBACK_TIMEOUT; // 2 segundos si no hay typing
-                        const timerId = setTimeout(async () => {
-                            await processUserMessages(userJid);
-                        }, fallbackTimeout);
+                        // 🔧 NUEVO: Usar buffering global proactivo para TODOS los mensajes
+                        addToGlobalBuffer(userJid, messageText, chatId, userName);
                         
-                        userActivityTimers.set(userJid, timerId);
+                        // 🔧 NUEVO: Suscribirse a presencia del usuario (solo una vez)
+                        const shortUserId = getShortUserId(userJid);
+                        await subscribeToPresence(shortUserId);
                         
-                        // Log en consola
-                        const messagePreview = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
-                        console.log(`👤 ${userName}: "${messagePreview}" → ⏳ 2s... (buffer: ${buffer.messages.length})`);
-                        
-                        logDebug('FALLBACK_TIMER_SET', `Timer fallback 2s para ${userName} (no typing detectado)`, {
-                            userJid,
-                            bufferSize: buffer.messages.length,
-                            environment: appConfig.environment
-                        });
-                        
-                    } else {
-                        // Usuario está escribiendo - no establecer timer, esperar evento de stop typing
-                        logDebug('TIMER_SKIPPED', `No timer: usuario ${userName} está escribiendo`, {
-                            userJid,
-                            bufferSize: buffer.messages.length,
-                            environment: appConfig.environment
-                        });
-                        
-                        const messagePreview = messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText;
-                        console.log(`👤 ${userName}: "${messagePreview}" → ✍️ esperando... (buffer: ${buffer.messages.length})`);
+                        console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → Buffer global`);
                     }
-
-                    // Completar el log que se cortó:
-                    logInfo('MESSAGE_BUFFERED', `Mensaje agregado al buffer`, {
-                        userJid,
-                        chatId,
-                        userName,
-                        bufferCount: buffer.messages.length,
-                        messageLength: messageText.length,
-                        isTyping: isUserTyping,
-                        environment: appConfig.environment
-                    });
-
-                }
             }
             
         } catch (error) {
@@ -2415,7 +2442,7 @@ async function initializeBot() {
     // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (del comentario externo)
     await recoverOrphanedRuns();
     
-    // 🔧 ETAPA 1: Log de patrones simples activos
+    // 🔧 ETAPA 1: Log de patrones simples activos (SIMPLIFICADO)
     console.log('⚡ Patrones simples activos:', Object.keys(SIMPLE_PATTERNS).join(', '));
     logInfo('PATTERNS_INIT', 'Patrones simples inicializados', {
         patterns: Object.keys(SIMPLE_PATTERNS),
@@ -2491,6 +2518,60 @@ async function initializeBot() {
         }
     }, 10 * 60 * 1000); // Cada 10 minutos
     
+    // 🔧 NUEVO: Cleanup automático del sistema de mensajes no reconocidos
+    // Ejecutar cada 15 minutos para limpiar contadores viejos
+    setInterval(() => {
+        try {
+            const now = Date.now();
+            let expiredCount = 0;
+            
+            // Limpiar contadores de mensajes no reconocidos después de 1 hora de inactividad
+            for (const [userId, count] of unrecognizedMessages.entries()) {
+                const buffer = userMessageBuffers.get(userId);
+                if (!buffer || (now - buffer.lastActivity) > 60 * 60 * 1000) { // 1 hora
+                    unrecognizedMessages.delete(userId);
+                    expiredCount++;
+                }
+            }
+            
+            if (expiredCount > 0) {
+                logInfo('UNRECOGNIZED_CLEANUP', `Unrecognized messages cleanup: ${expiredCount} contadores expirados removidos`, {
+                    remainingEntries: unrecognizedMessages.size
+                });
+            }
+        } catch (error) {
+            logError('UNRECOGNIZED_CLEANUP', 'Error en cleanup del sistema de mensajes no reconocidos', { error: error.message });
+        }
+    }, 15 * 60 * 1000); // Cada 15 minutos
+    
+    // 🔧 NUEVO: Cleanup automático del buffer global
+    // Ejecutar cada 5 minutos para limpiar buffers viejos
+    setInterval(() => {
+        try {
+            const now = Date.now();
+            let expiredCount = 0;
+            
+            // Limpiar buffers globales después de 10 minutos de inactividad
+            for (const [userId, buffer] of globalMessageBuffers.entries()) {
+                if ((now - buffer.lastActivity) > 10 * 60 * 1000) { // 10 minutos
+                    if (buffer.timer) {
+                        clearTimeout(buffer.timer);
+                    }
+                    globalMessageBuffers.delete(userId);
+                    expiredCount++;
+                }
+            }
+            
+            if (expiredCount > 0) {
+                logInfo('GLOBAL_BUFFER_CLEANUP', `Global buffer cleanup: ${expiredCount} buffers expirados removidos`, {
+                    remainingEntries: globalMessageBuffers.size
+                });
+            }
+        } catch (error) {
+            logError('GLOBAL_BUFFER_CLEANUP', 'Error en cleanup del buffer global', { error: error.message });
+        }
+    }, 5 * 60 * 1000); // Cada 5 minutos
+    
     // 🔧 ETAPA 4: Cleanup automático de threads con alto uso de tokens
     // Ejecutar cada hora para mantener threads eficientes
     setInterval(async () => {
@@ -2537,7 +2618,10 @@ async function initializeBot() {
                 },
                 caches: {
                     historyCache: historyCache.size,
-                    contextCache: contextInjectionCache.size
+                    contextCache: contextInjectionCache.size,
+                    patternCooldowns: patternCooldowns.size,
+                    unrecognizedMessages: unrecognizedMessages.size,
+                    globalBuffers: globalMessageBuffers.size
                 },
                 uptime: Math.round(process.uptime()) + 's'
             });

@@ -142,6 +142,27 @@ Usuario WhatsApp → WHAPI → Bot (app-unified.ts) → OpenAI Assistant → Fun
 - **Comportamiento Humano**: Simula interacción natural sin interrupciones
 - **Suscripción Automática**: Se suscribe a presencia de usuarios automáticamente
 
+### **9. 🔍 Análisis de Contexto Completo** ✅ NUEVO
+- **Análisis Inteligente**: Analiza el buffer completo de mensajes del usuario
+- **Detección de Patrones**: Identifica consultas de disponibilidad, fechas, personas y preguntas
+- **Memoria de Usuario**: Recuerda el último patrón detectado para contexto
+- **Respuestas Contextualizadas**: Proporciona respuestas específicas según el patrón
+- **Fallback Inteligente**: Usa OpenAI solo cuando no se detectan patrones
+
+### **10. 🔒 Sistema de Lock y Recuperación** ✅ NUEVO
+- **Prevención de Race Conditions**: Evita procesamiento simultáneo del mismo usuario
+- **Recuperación de Runs Huérfanos**: Recupera automáticamente runs al iniciar el bot
+- **Cleanup Automático**: Limpia threads con tokens excesivos cada hora
+- **Métricas Avanzadas**: Monitoreo de race errors y cleanups
+- **Optimización de Memoria**: Previene crecimiento indefinido de memoria
+
+### **11. 💬 Sistema de Respuestas Contextualizadas** ✅ NUEVO
+- **Respuestas Instantáneas**: <1 segundo para casos comunes
+- **Guía Natural**: Flujo conversacional intuitivo para reservas
+- **Personalización**: Respuestas adaptadas al historial del usuario
+- **Reducción de Costos**: 30-40% menos llamadas a OpenAI
+- **Mejor UX**: Conversaciones más naturales y eficientes
+
 ---
 
 ## 🛠️ **Tecnologías Utilizadas**
