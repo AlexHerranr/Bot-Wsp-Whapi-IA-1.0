@@ -52,6 +52,7 @@ desktop.ini
 config.local.yaml
 .env
 .env.local
+cloud-run-config.yaml
 
 # Archivos de prueba temporales
 test_output_*.txt
