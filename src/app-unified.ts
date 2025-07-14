@@ -733,8 +733,8 @@ function setupWebhooks() {
         }
 
         // Todo mensaje relevante va directo a OpenAI
-        const response = await processWithOpenAI(combinedText, userId, chatId, userName);
-        await sendWhatsAppMessage(chatId, response);
+            const response = await processWithOpenAI(combinedText, userId, chatId, userName);
+            await sendWhatsAppMessage(chatId, response);
     }
     
     async function subscribeToPresence(userId: string): Promise<void> {
@@ -1211,9 +1211,9 @@ function setupWebhooks() {
                     chatId, 
                     userName,
                     environment: appConfig.environment,
-                    requestId
-                });
-            } else {
+                                requestId
+                            });
+                        } else {
                 logInfo('THREAD_REUSE', `Thread reutilizado para ${shortUserId}`, {
                     shortUserId,
                     threadId,
@@ -1229,7 +1229,7 @@ function setupWebhooks() {
                     requestId
                 });
             }
-             
+            
             // 🔧 NUEVO: Usar función modularizada de inyección de historial
             if (config.enableHistoryInject) {
                 try {
@@ -2260,9 +2260,9 @@ async function initializeBot() {
             contextCache: cacheStats.contextCache,
             injectionCache: cacheStats.injectionCache
         });
-    } catch (error) {
+        } catch (error) {
         logWarning('CACHE_STATS_ERROR', 'Error obteniendo estadísticas de cache', { error: error.message });
-    }
+        }
     
 
     

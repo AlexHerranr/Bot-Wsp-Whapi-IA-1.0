@@ -63,7 +63,7 @@
 ## 📦 Instalación y Configuración
 
 ### **Prerrequisitos**
-- Node.js 18+
+- Node.js 18+ 
 - Cuenta de OpenAI con API key
 - Cuenta de WhatsApp Business API
 - Cuenta de Beds24 (opcional)
