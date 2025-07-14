@@ -2598,7 +2598,7 @@ async function initializeBot() {
             // 🔧 ETAPA 2: Detección de memory leaks
             const heapUsagePercentage = (heapUsedMB / heapTotalMB) * 100;
             const isHighMemory = heapUsedMB > 300; // Threshold más conservador
-            const isMemoryLeak = heapUsagePercentage > 80; // >80% del heap usado
+            const isMemoryLeak = heapUsagePercentage > 95; // >95% del heap usado (ajustado para evitar falsos positivos)
             
             logInfo('MEMORY_USAGE', 'Métricas de memoria del sistema', {
                 memory: {
@@ -2639,8 +2639,8 @@ async function initializeBot() {
                 logError('MEMORY_LEAK_DETECTED', 'Posible memory leak detectado', {
                     heapUsedMB: Math.round(heapUsedMB),
                     heapUsagePercent: Math.round(heapUsagePercentage) + '%',
-                    threshold: 80,
-                    recommendation: 'Considerar restart del servicio'
+                    threshold: 95,
+                    recommendation: 'Uso de memoria crítico - considerar optimización o restart'
                 });
             }
             
