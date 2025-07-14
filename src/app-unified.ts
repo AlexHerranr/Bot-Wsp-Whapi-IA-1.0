@@ -106,14 +106,6 @@ const manualMessageBuffers = new Map<string, {
 }>();
 const manualTimers = new Map<string, NodeJS.Timeout>();
 
-// 🔧 NUEVO: Sistema de cooldown para patrones simples (evitar spam)
-const patternCooldowns = new Map<string, number>(); // userId -> lastPatternTime
-const PATTERN_COOLDOWN_MS = 30000; // 30 segundos entre respuestas de patrones
-
-// 🔧 NUEVO: Sistema de detección de mensajes no reconocidos
-const unrecognizedMessages = new Map<string, number>(); // userId -> count
-const UNRECOGNIZED_THRESHOLD = 2; // Después de 2 mensajes no reconocidos, usar AI
-
 // 🔧 NUEVO: Sistema de buffering proactivo global
 const globalMessageBuffers = new Map<string, {
     messages: string[],
@@ -144,187 +136,7 @@ const MAX_BUFFER_SIZE = 10; // Límite máximo de mensajes por buffer (anti-spam
 const MAX_BOT_MESSAGES = 1000;
 const MAX_MESSAGE_LENGTH = 5000;
 
-// --- Patrones Simplificados: Solo los Esenciales ---
-const SIMPLE_PATTERNS = {
-  greeting: /^(hola|buen(os)?\s(d[ií]as|tardes|noches)|que\s+tal|hey|hi|hello)(\s*[\.,¡!¿\?])*\s*$/i,
-  availability: /^(disponibilidad|disponible|libre|apartamento|hospedaje|busco\s+lugar|tienes\s+disp|hay\s+disp|tienen\s+apartamentos?)(\s*[\.,¡!¿\?])*\s*$/i,
-  dates: /^(seria|sería|del|al|desde|hasta|entre|fecha|fechas|del\s+\d+|al\s+\d+|\d+\s+de\s+\w+|\d+\/\d+|\d+-\d+)/i
-};
 
-// --- Keywords Simplificadas para Detección ---
-const PATTERN_KEYWORDS = {
-  greeting: ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'que tal', 'hey', 'hi', 'hello', 'buen dia', 'buena tarde', 'buena noche'],
-  availability: ['disponibilidad', 'disponible', 'libre', 'apartamento', 'apartamentos', 'apto', 'aptos', 'hospedaje', 'busco lugar', 'tienes disp', 'hay disp', 'tienen apartamento', 'tienen apartamentos', 'buscando'],
-  dates: ['seria', 'sería', 'del', 'al', 'desde', 'hasta', 'entre', 'fecha', 'fechas', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosot', 'ago', 'sep', 'oct', 'nov', 'dic']
-};
-
-// --- Respuestas Simplificadas con Contexto ---
-const FIXED_RESPONSES: Record<string, string> = {
-  greeting: "¡Hola! Bienvenido a nuestro servicio de apartamentos en Cartagena. ¿En qué puedo ayudarte hoy?",
-  availability: "Sí, tenemos apartamentos disponibles en Cartagena. Dime las fechas, número de personas y presupuesto para recomendarte opciones.",
-  dates: "Perfecto, veo que me das fechas. ¿Cuántas personas serían? Con esa información puedo buscar disponibilidad en mi sistema."
-};
-
-
-
-
-
-// --- Función Inteligente para Analizar Contexto Completo ---
-function analyzeCompleteContext(combinedText: string, userId?: string): { pattern: string; response: string; isFuzzy: boolean } | null {
-  const cleanText = combinedText.trim().toLowerCase();
-  
-  // 🔧 MEJORADO: Obtener contexto del usuario
-  let userContext = null;
-  if (userId) {
-    try {
-      userContext = guestMemory.getProfile(userId);
-    } catch (error) {
-      logDebug('CONTEXT_ERROR', 'No se pudo obtener contexto del usuario', { userId, error: error.message });
-    }
-  }
-  
-  const lastPattern = userContext?.lastPattern;
-  
-  // 🔧 MEJORADO: Análisis inteligente del contexto completo
-  
-  // 1. Detectar si es una consulta completa de reserva
-  const hasReservationKeywords = ['reservar', 'reserva', 'gustaría', 'quiero', 'busco', 'necesito'].some(kw => cleanText.includes(kw));
-  const hasApartmentKeywords = ['apartamento', 'apto', 'habitación', 'lugar', 'alojamiento'].some(kw => cleanText.includes(kw));
-  const hasDateKeywords = ['del', 'al', 'desde', 'hasta', 'fecha', 'días'].some(kw => cleanText.includes(kw));
-  const hasPeopleKeywords = ['personas', 'gente', 'huespedes', '4', '5', '6'].some(kw => cleanText.includes(kw));
-  
-  // Si tiene elementos de reserva o consulta directa de apartamentos, es availability
-  if ((hasReservationKeywords && hasApartmentKeywords) || 
-      (hasApartmentKeywords && (cleanText.includes('tienen') || cleanText.includes('hay') || cleanText.includes('disponible')))) {
-    const response = FIXED_RESPONSES.availability;
-    if (userId) {
-      try {
-        guestMemory.updateProfile(userId, { lastPattern: 'availability' });
-      } catch (error) {
-        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
-      }
-    }
-    
-    logInfo('PATTERN_MATCH', `Consulta de disponibilidad detectada en contexto completo`, {
-      pattern: 'availability',
-      originalMessage: combinedText.substring(0, 50) + '...',
-      hasReservation: hasReservationKeywords,
-      hasApartment: hasApartmentKeywords,
-      hasDirectQuery: cleanText.includes('tienen') || cleanText.includes('hay') || cleanText.includes('disponible')
-    });
-    
-    return { pattern: 'availability', response, isFuzzy: true };
-  }
-  
-  // 2. Si viene después de availability y tiene fechas, es dates
-  if (lastPattern === 'availability' && hasDateKeywords) {
-    const response = FIXED_RESPONSES.dates;
-    if (userId) {
-      try {
-        guestMemory.updateProfile(userId, { lastPattern: 'dates' });
-      } catch (error) {
-        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
-      }
-    }
-    
-    logInfo('PATTERN_MATCH', `Fechas detectadas después de availability`, {
-      pattern: 'dates',
-      originalMessage: combinedText.substring(0, 50) + '...',
-      lastPattern
-    });
-    
-    return { pattern: 'dates', response, isFuzzy: true };
-  }
-  
-  // 3. Detectar información de personas
-  const peopleMatch = cleanText.match(/(\d+)\s*(personas?|gente|huespedes?)/);
-  if (peopleMatch) {
-    let response: string;
-    
-    // Si viene después de availability o dates, es información completa
-    if (lastPattern === 'availability' || lastPattern === 'dates') {
-      response = "Perfecto, ya tengo toda la información. Buscando disponibilidad para " + peopleMatch[1] + " personas en las fechas que me dijiste. Un momento...";
-    } else {
-      // Si no hay contexto previo, preguntar por fechas
-      response = "Perfecto, " + peopleMatch[1] + " personas. ¿Para qué fechas necesitas el apartamento?";
-    }
-    
-    if (userId) {
-      try {
-        guestMemory.updateProfile(userId, { lastPattern: 'people_info' });
-      } catch (error) {
-        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
-      }
-    }
-    
-    logInfo('PATTERN_MATCH', `Información de personas detectada`, {
-      pattern: 'people_info',
-      people: peopleMatch[1],
-      lastPattern,
-      originalMessage: combinedText.substring(0, 50) + '...'
-    });
-    
-    return { pattern: 'people_info', response, isFuzzy: true };
-  }
-  
-  // 4. Detectar saludos
-  if (['hola', 'buenos', 'buenas', 'que tal', 'hey', 'hi', 'hello'].some(kw => cleanText.includes(kw)) || 
-      cleanText === 'qué tal' || cleanText === 'que tal') {
-    const response = FIXED_RESPONSES.greeting;
-    if (userId) {
-      try {
-        guestMemory.updateProfile(userId, { lastPattern: 'greeting' });
-      } catch (error) {
-        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
-      }
-    }
-    
-    logInfo('PATTERN_MATCH', `Saludo detectado en contexto completo`, {
-      pattern: 'greeting',
-      originalMessage: combinedText.substring(0, 50) + '...'
-    });
-    
-    return { pattern: 'greeting', response, isFuzzy: true };
-  }
-  
-  // 🔧 CORRECCIÓN 2: Detectar inputs ambiguos como "??..." o "..." y manejarlos localmente
-  if (/^[\?\.]{2,}$/.test(cleanText) || cleanText === '?' || cleanText === '...') {
-    const response = "¿Podrías ser más específico? ¿Buscas información sobre disponibilidad, precios, o tienes alguna pregunta en particular?";
-    if (userId) {
-      try {
-        guestMemory.updateProfile(userId, { lastPattern: 'ambiguous_input' });
-      } catch (error) {
-        logDebug('CONTEXT_SAVE_ERROR', 'No se pudo guardar contexto', { userId, error: error.message });
-      }
-    }
-    
-    logInfo('PATTERN_MATCH', `Input ambiguo detectado y manejado localmente`, {
-      pattern: 'ambiguous_input',
-      originalMessage: combinedText,
-      environment: appConfig.environment
-    });
-    
-    return { pattern: 'ambiguous_input', response, isFuzzy: false };
-  }
-  
-  return null;
-}
-
-// --- Función Simplificada para Métricas de Patrones ---
-function incrementPatternMetric(pattern: string, isFuzzy: boolean = false) {
-  try {
-    // Incrementar contador de patrones detectados
-    incrementMessages();
-    console.log(`📊 [METRICS] Patrón detectado: ${pattern}${isFuzzy ? ' (keyword)' : ' (regex)'}`);
-    
-    logInfo('PATTERN_METRIC', `Métrica de patrón incrementada`, {
-      pattern,
-      isFuzzy
-    });
-  } catch (error) {
-    console.error('Error incrementando métrica de patrón:', error);
-  }
-}
 
 // 🔧 ETAPA 1: Funciones de lock para prevenir race conditions
 async function acquireThreadLock(userId: string): Promise<boolean> {
@@ -649,13 +461,7 @@ function setupEndpoints() {
                     historyLines: entry.history.split('\n').length
                 }))
             },
-            // 🔧 ETAPA 1: Información de patrones simples
-            simplePatterns: {
-                enabled: true,
-                patterns: Object.keys(SIMPLE_PATTERNS),
-                responses: Object.keys(FIXED_RESPONSES),
-                description: "Detección pre-buffer de patrones simples para respuestas instantáneas"
-            },
+
             // 🔧 ETAPA 2: Información de flujo híbrido
             hybridFlow: {
                 enabled: true,
@@ -899,52 +705,34 @@ function setupWebhooks() {
     }
 
     async function processCombinedMessage(userId: string, combinedText: string, chatId: string, userName: string, messageCount: number): Promise<void> {
-        // 🔧 CORRECCIÓN 1: Verificar runs activos antes de procesar
+        // Filtro inicial: ignorar mensajes triviales/ruido
+        const cleanText = combinedText.trim();
+        if (cleanText.length < 3 || /^[\?\.]+$/.test(cleanText)) {
+            logInfo('IGNORED_NOISE', 'Mensaje ignorado por ser ruido/trivial', {
+                userJid: getShortUserId(userId),
+                messageCount,
+                combinedText: cleanText,
+                environment: appConfig.environment
+            });
+            return;
+        }
+
+        // Verificar runs activos antes de procesar
         const hasActiveRun = await isRunActive(userId);
         if (hasActiveRun) {
             logWarning('BUFFER_PROCESS_SKIPPED', `Procesamiento de buffer saltado - run activo para ${userName}`, {
                 userJid: getShortUserId(userId),
                 messageCount,
-                combinedText: combinedText.substring(0, 50) + '...',
+                combinedText: cleanText.substring(0, 50) + '...',
                 environment: appConfig.environment
             });
             console.log(`⏸️ [BUFFER_SKIP] ${userName}: Run activo → Saltando procesamiento`);
-            return; // Evita duplicados al esperar runs en curso
+            return;
         }
-        
-        // 🔧 MEJORADO: Análisis de contexto completo del buffer
-        const simplePattern = analyzeCompleteContext(combinedText, userId);
-        
-        if (simplePattern) {
-            // Procesar patrón directamente - SIN COOLDOWN (SIMPLIFICADO)
-            patternCooldowns.set(userId, Date.now());
-            unrecognizedMessages.delete(userId);
-            
-            await sendWhatsAppMessage(chatId, simplePattern.response);
-            
-            console.log(`⚡ [BATCH_PATTERN] ${userName}: ${messageCount} mensajes → ${simplePattern.pattern} → Respuesta fija`);
-            incrementPatternMetric(simplePattern.pattern, simplePattern.isFuzzy);
-            
-        } else {
-            // Mensaje no reconocido - USAR OPENAI (MEJORADO)
-            const currentCount = unrecognizedMessages.get(userId) || 0;
-            const newCount = currentCount + 1;
-            unrecognizedMessages.set(userId, newCount);
-            
-            logInfo('BATCH_UNRECOGNIZED', `Batch de ${messageCount} mensajes no reconocidos - USANDO OPENAI`, {
-                userJid: getShortUserId(userId),
-                messageCount,
-                unrecognizedCount: newCount,
-                combinedText: combinedText.substring(0, 100) + '...',
-                environment: appConfig.environment
-            });
-            
-            console.log(`🤖 [BATCH_AI] ${userName}: ${messageCount} mensajes no reconocidos → Usando OpenAI`);
-            
-            // Procesar con OpenAI
-            const response = await processWithOpenAI(combinedText, userId, chatId, userName);
-            await sendWhatsAppMessage(chatId, response);
-        }
+
+        // Todo mensaje relevante va directo a OpenAI
+        const response = await processWithOpenAI(combinedText, userId, chatId, userName);
+        await sendWhatsAppMessage(chatId, response);
     }
     
     async function subscribeToPresence(userId: string): Promise<void> {
@@ -2513,13 +2301,7 @@ async function initializeBot() {
     // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (del comentario externo)
     await recoverOrphanedRuns();
     
-    // 🔧 ETAPA 1: Log de patrones simples activos (SIMPLIFICADO)
-    console.log('⚡ Patrones simples activos:', Object.keys(SIMPLE_PATTERNS).join(', '));
-    logInfo('PATTERNS_INIT', 'Patrones simples inicializados', {
-        patterns: Object.keys(SIMPLE_PATTERNS),
-        responses: Object.keys(FIXED_RESPONSES),
-        environment: appConfig.environment
-    });
+
     
     // 🔧 ETAPA 1: Cleanup automático de threads viejos
     // Ejecutar cada hora para mantener threads activos limpios
@@ -2565,55 +2347,7 @@ async function initializeBot() {
     
     logInfo('BOT_INIT', 'Cleanup automático de threads y cache configurado');
     
-    // 🔧 NUEVO: Cleanup automático del sistema de cooldown de patrones
-    // Ejecutar cada 10 minutos para limpiar cooldowns viejos
-    setInterval(() => {
-        try {
-            const now = Date.now();
-            let expiredCount = 0;
-            
-            for (const [userId, lastPatternTime] of patternCooldowns.entries()) {
-                if ((now - lastPatternTime) > PATTERN_COOLDOWN_MS * 2) { // 2x el cooldown
-                    patternCooldowns.delete(userId);
-                    expiredCount++;
-                }
-            }
-            
-            if (expiredCount > 0) {
-                logInfo('PATTERN_COOLDOWN_CLEANUP', `Cooldown cleanup: ${expiredCount} entradas expiradas removidas`, {
-                    remainingEntries: patternCooldowns.size
-                });
-            }
-        } catch (error) {
-            logError('PATTERN_COOLDOWN_CLEANUP', 'Error en cleanup del sistema de cooldown', { error: error.message });
-        }
-    }, 10 * 60 * 1000); // Cada 10 minutos
-    
-    // 🔧 NUEVO: Cleanup automático del sistema de mensajes no reconocidos
-    // Ejecutar cada 15 minutos para limpiar contadores viejos
-    setInterval(() => {
-        try {
-            const now = Date.now();
-            let expiredCount = 0;
-            
-            // Limpiar contadores de mensajes no reconocidos después de 1 hora de inactividad
-            for (const [userId, count] of unrecognizedMessages.entries()) {
-                const buffer = userMessageBuffers.get(userId);
-                if (!buffer || (now - buffer.lastActivity) > 60 * 60 * 1000) { // 1 hora
-                    unrecognizedMessages.delete(userId);
-                    expiredCount++;
-                }
-            }
-            
-            if (expiredCount > 0) {
-                logInfo('UNRECOGNIZED_CLEANUP', `Unrecognized messages cleanup: ${expiredCount} contadores expirados removidos`, {
-                    remainingEntries: unrecognizedMessages.size
-                });
-            }
-        } catch (error) {
-            logError('UNRECOGNIZED_CLEANUP', 'Error en cleanup del sistema de mensajes no reconocidos', { error: error.message });
-        }
-    }, 15 * 60 * 1000); // Cada 15 minutos
+
     
     // 🔧 NUEVO: Cleanup automático del buffer global
     // Ejecutar cada 5 minutos para limpiar buffers viejos
@@ -2690,8 +2424,6 @@ async function initializeBot() {
                 caches: {
                     historyCache: historyCache.size,
                     contextCache: contextInjectionCache.size,
-                    patternCooldowns: patternCooldowns.size,
-                    unrecognizedMessages: unrecognizedMessages.size,
                     globalBuffers: globalMessageBuffers.size
                 },
                 uptime: Math.round(process.uptime()) + 's'
