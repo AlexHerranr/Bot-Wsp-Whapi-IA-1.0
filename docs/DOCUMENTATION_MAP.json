@@ -1,99 +1,253 @@
 {
-  "description": "Mapeo entre archivos de código y documentación que debe actualizarse",
-  "version": "1.2.0",
-  "last_updated": "2025-07-12",
-  "mappings": {
-    "src/app-unified.ts": [
-      "docs/progress/ACTUALIZACION_ENERO_2025.md",
-      "docs/progress/ESTADO_FINAL_PROYECTO.md",
-      "docs/features/SISTEMA_HIBRIDO_INTELIGENTE.md",
-      "docs/README.md",
-      "REORGANIZATION_SUMMARY.md"
-    ],
-    "tests/test-simple-patterns.js": [
-      "docs/features/SISTEMA_HIBRIDO_INTELIGENTE.md"
-    ],
-    "tests/test-hybrid-flow.js": [
-      "docs/features/SISTEMA_HIBRIDO_INTELIGENTE.md"
-    ],
-    "src/app.ts": [
-      "archive/README.md",
-      "docs/progress/PROGRESO-BOT.md"
-    ],
-    "src/utils/whapi/chatHistory.ts": [
-      "docs/features/CONTEXTO_HISTORIAL_CONVERSACION.md",
-      "docs/progress/PROGRESO-BOT.md"
-    ],
-    "src/handlers/integrations/beds24-availability.ts": [
-      "docs/features/BEDS24_INTEGRATION_COMPLETE.md",
-      "docs/features/OPTIMIZACION_FORMATO_BEDS24.md",
-      "docs/progress/PROGRESO-BOT.md"
-    ],
-    "src/handlers/function-handler.ts": [
-      "docs/features/BEDS24_INTEGRATION_COMPLETE.md",
-      "docs/features/ESCALATE_TO_HUMAN_SPEC.md",
-      "docs/progress/PROGRESO-BOT.md"
-    ],
-    "src/utils/persistence/threadPersistence.ts": [
-      "docs/features/SISTEMA_ACTUALIZACION_LABELS.md",
-      "docs/progress/PROGRESO-BOT.md"
-    ],
-    "src/utils/whapi/whapiLabels.js": [
-      "docs/features/SISTEMA_ACTUALIZACION_LABELS.md",
-      "docs/features/EXTRACCION_ETIQUETAS_WHATSAPP.md"
-    ],
-    "src/utils/core/enhancedLogger.ts": [
-      "docs/progress/PROGRESO-BOT.md"
-    ],
-    "scripts/assistant-management/update-assistant-smart.js": [
-      "docs/ASSISTANT_MANAGEMENT.md",
-      "docs/SISTEMA_ACTUALIZACION_RAG.md"
-    ],
-    "scripts/create-new-assistant-v2.js": [
-      "docs/ASSISTANT_MANAGEMENT.md",
-      "docs/features/ASSISTANT_CONFIG.md"
-    ],
-    "package.json": [
-      "docs/progress/ACTUALIZACION_ENERO_2025.md",
-      "docs/README.md"
-    ],
-    "tsconfig.json": [
-      "docs/progress/ACTUALIZACION_ENERO_2025.md"
-    ],
-    "Dockerfile": [
-      "docs/progress/ACTUALIZACION_ENERO_2025.md",
-      "DEPLOYMENT_GUIDE.md"
-    ],
-    "src/config/environment.ts": [
-      "docs/progress/ACTUALIZACION_ENERO_2025.md",
-      "docs/README.md"
-    ],
-    "archive/": [
-      "archive/README.md",
-      "REORGANIZATION_SUMMARY.md",
-      "docs/progress/ACTUALIZACION_ENERO_2025.md"
-    ],
-    "docs/architecture/LOCKING_AND_RECOVERY.md": [
-      "src/app-unified.ts",
-      "src/utils/persistence/threadPersistence.ts"
-    ],
-    "docs/guides/TROUBLESHOOTING_AND_FAQ.md": [
-      "src/app-unified.ts",
-      "src/utils/logging/index.ts",
-      "src/routes/metrics.ts"
-    ],
-    "docs/API_ENDPOINTS.md": [
-      "src/app-unified.ts",
-      "src/routes/metrics.ts",
-      "src/functions/index.ts"
-    ]
+  "last_updated": "Julio 2025",
+  "version": "2.0.0",
+  "sections": {
+    "getting_started": {
+      "title": "🚀 Inicio Rápido",
+      "description": "Guías para comenzar con el bot",
+      "files": [
+        {
+          "path": "README.md",
+          "title": "README Principal",
+          "description": "Visión general del proyecto y configuración básica",
+          "updated": "Julio 2025"
+        },
+        {
+          "path": "QUICK_START.md",
+          "title": "Inicio Rápido",
+          "description": "Configuración rápida en 5 minutos",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/development/local-setup.md",
+          "title": "Configuración Local",
+          "description": "Configuración completa para desarrollo local",
+          "updated": "Junio 2025"
+        }
+      ]
+    },
+    "features": {
+      "title": "🎯 Funcionalidades",
+      "description": "Documentación de características principales",
+      "files": [
+        {
+          "path": "docs/features/FUNCTION_INVENTORY.md",
+          "title": "Inventario de Funciones",
+          "description": "Catálogo completo de funciones de OpenAI disponibles",
+          "updated": "Julio 2025",
+          "new": true
+        },
+        {
+          "path": "docs/features/HISTORY_INJECTION_IMPROVEMENTS.md",
+          "title": "Sistema de Inyección de Historial",
+          "description": "Mejoras implementadas en Julio 2025 para optimización de tokens y latencia",
+          "updated": "Julio 2025",
+          "new": true
+        },
+        {
+          "path": "docs/features/OPTIMIZACION_CLOUD_RUN.md",
+          "title": "Optimización de Cloud Run",
+          "description": "Mejoras de performance y optimización para Google Cloud Run",
+          "updated": "Julio 2025"
+        },
+        {
+          "path": "docs/features/BEDS24_INTEGRATION_COMPLETE.md",
+          "title": "Integración Beds24",
+          "description": "Integración completa con sistema de gestión hotelera Beds24",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/features/ESCALATE_TO_HUMAN_SPEC.md",
+          "title": "Escalamiento a Humano",
+          "description": "Sistema de escalamiento automático a agentes humanos",
+          "updated": "Junio 2025"
+        }
+      ]
+    },
+    "architecture": {
+      "title": "🏗️ Arquitectura",
+      "description": "Documentación técnica de la arquitectura del sistema",
+      "files": [
+        {
+          "path": "docs/architecture/LOCKING_AND_RECOVERY.md",
+          "title": "Sistema de Locks y Recuperación",
+          "description": "Mecanismos de prevención de race conditions y recuperación de errores",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "PROJECT_STRUCTURE.md",
+          "title": "Estructura del Proyecto",
+          "description": "Organización de archivos y directorios del proyecto",
+          "updated": "Junio 2025"
+        }
+      ]
+    },
+    "deployment": {
+      "title": "🚀 Despliegue",
+      "description": "Guías de despliegue y configuración de producción",
+      "files": [
+        {
+          "path": "docs/deployment/DEPLOYMENT_GUIDE.md",
+          "title": "Guía de Despliegue",
+          "description": "Instrucciones completas para desplegar en Google Cloud Run",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/deployment/CLOUD_RUN_CHECKLIST.md",
+          "title": "Checklist de Cloud Run",
+          "description": "Lista de verificación para despliegue exitoso",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/deployment/VERIFICACION_FINAL_COMPLETA.md",
+          "title": "Verificación Final",
+          "description": "Pasos de verificación post-despliegue",
+          "updated": "Junio 2025"
+        }
+      ]
+    },
+    "development": {
+      "title": "👨‍💻 Desarrollo",
+      "description": "Guías para desarrolladores y contribuidores",
+      "files": [
+        {
+          "path": "docs/development/PLAN_ESTABILIZACION_BOT_V2.md",
+          "title": "Plan de Estabilización V2",
+          "description": "Plan de estabilización y mejoras del bot",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/development/OPTIMIZACION_CLOUD_RUN.md",
+          "title": "Optimización de Cloud Run",
+          "description": "Estrategias de optimización para Google Cloud Run",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/development/REORGANIZACION_MODULAR_ENERO_2025.md",
+          "title": "Reorganización Modular",
+          "description": "Reorganización del proyecto en módulos",
+          "updated": "Enero 2025"
+        }
+      ]
+    },
+    "integrations": {
+      "title": "🔗 Integraciones",
+      "description": "Documentación de integraciones externas",
+      "files": [
+        {
+          "path": "docs/integrations/WHAPI_COMPLETE_API_REFERENCE.md",
+          "title": "API de WhatsApp",
+          "description": "Referencia completa de la API de WhatsApp Business",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/integrations/beds24/architecture.md",
+          "title": "Arquitectura Beds24",
+          "description": "Arquitectura de integración con Beds24",
+          "updated": "Junio 2025"
+        }
+      ]
+    },
+    "progress": {
+      "title": "📈 Progreso",
+      "description": "Seguimiento del progreso y actualizaciones",
+      "files": [
+        {
+          "path": "docs/progress/ACTUALIZACION_JULIO_2025.md",
+          "title": "Actualización Julio 2025",
+          "description": "Mejoras del sistema de inyección de historial optimizado",
+          "updated": "Julio 2025",
+          "new": true
+        },
+        {
+          "path": "docs/progress/ESTADO_FINAL_PROYECTO.md",
+          "title": "Estado Final del Proyecto",
+          "description": "Estado actual y resumen del proyecto",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/progress/REORGANIZACION_COMPLETADA.md",
+          "title": "Reorganización Completada",
+          "description": "Resumen de la reorganización del proyecto",
+          "updated": "Enero 2025"
+        }
+      ]
+    },
+    "guides": {
+      "title": "📖 Guías",
+      "description": "Guías de uso y troubleshooting",
+      "files": [
+        {
+          "path": "docs/guides/TROUBLESHOOTING_AND_FAQ.md",
+          "title": "Troubleshooting y FAQ",
+          "description": "Solución de problemas comunes y preguntas frecuentes",
+          "updated": "Junio 2025"
+        }
+      ]
+    },
+    "api": {
+      "title": "🔌 API",
+      "description": "Documentación de endpoints y APIs",
+      "files": [
+        {
+          "path": "docs/API_ENDPOINTS.md",
+          "title": "Endpoints de API",
+          "description": "Documentación completa de endpoints disponibles",
+          "updated": "Junio 2025"
+        }
+      ]
+    }
   },
-  "documentation_categories": {
-    "features": "Documentación específica de funcionalidades",
-    "progress": "Estado y progreso del proyecto", 
-    "development": "Documentación técnica y arquitectura",
-    "guides": "Guías de uso e instalación",
-    "architecture": "Documentación de arquitectura del sistema",
-    "api": "Documentación de endpoints y funciones"
+  "recent_updates": [
+    {
+      "date": "Julio 2025",
+      "title": "Sistema de Inyección de Historial Optimizado",
+      "description": "Implementación de sistema inteligente de inyección de historial con cache, compresión automática y logging detallado",
+      "files_updated": [
+        "src/utils/context/historyInjection.ts",
+        "src/functions/history/inject-history.ts",
+        "src/functions/registry/function-registry.ts",
+        "docs/features/HISTORY_INJECTION_IMPROVEMENTS.md",
+        "docs/features/FUNCTION_INVENTORY.md",
+        "docs/progress/ACTUALIZACION_JULIO_2025.md"
+      ]
+    },
+    {
+      "date": "Junio 2025",
+      "title": "Estabilización y Optimización",
+      "description": "Mejoras en estabilidad, performance y documentación del sistema",
+      "files_updated": [
+        "docs/features/OPTIMIZACION_CLOUD_RUN.md",
+        "docs/progress/ESTADO_FINAL_PROYECTO.md"
+      ]
+    }
+  ],
+  "key_features": {
+    "ai_conversation": {
+      "title": "🤖 IA Conversacional",
+      "description": "OpenAI GPT-4 con sistema de inyección de historial optimizado",
+      "status": "active"
+    },
+    "whatsapp_integration": {
+      "title": "📱 WhatsApp Business",
+      "description": "Integración completa con WhatsApp Business API",
+      "status": "active"
+    },
+    "hotel_management": {
+      "title": "🏨 Gestión Hotelera",
+      "description": "Sistema especializado para gestión de reservas hoteleras",
+      "status": "active"
+    },
+    "performance_optimization": {
+      "title": "⚡ Performance",
+      "description": "Sistema optimizado con cache inteligente y compresión automática",
+      "status": "active"
+    }
+  },
+  "maintenance": {
+    "last_review": "Julio 2025",
+    "next_review": "Agosto 2025",
+    "maintainer": "Development Team",
+    "status": "active"
   }
 } 
