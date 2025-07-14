@@ -8,7 +8,7 @@
 
 El **TeAlquilamos Bot** ha sido completamente optimizado y está listo para el despliegue en producción con todas las mejoras implementadas y probadas localmente.
 
----
+---VV
 
 ## 🚀 **FUNCIONALIDADES IMPLEMENTADAS Y VERIFICADAS**
 
