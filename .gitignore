@@ -79,5 +79,6 @@ examples/*.txt
 *.lnk
 ehthumbs.db
 node_modules
-.env
+
+*.env
 .env

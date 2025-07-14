@@ -39,7 +39,7 @@ function validateAndFixDates(startDate: string, endDate: string): {
         // Typos comunes de agosto
         'agosot': 'agosto', 'agosto': 'agosto', 'agost': 'agosto', 'agust': 'agosto',
         // Typos comunes de septiembre
-        'septiembre': 'septiembre', 'septiempre': 'septiembre', 'septiempre': 'septiembre',
+        'septiembre': 'septiembre', 'septiempre': 'septiembre', 'septiem': 'septiembre',
         // Typos comunes de octubre
         'octubre': 'octubre', 'octubr': 'octubre', 'octub': 'octubre',
         // Typos comunes de noviembre
@@ -497,190 +497,6 @@ async function getAvailabilityAndPricesOptimized(
             throw new Error('Error interno al consultar disponibilidad en Beds24');
         }
 
-    // Logging optimizado de conexión
-    logBeds24ApiCall('Consulta optimizada a Beds24 (solo calendar)', {
-        success: calendarData.success,
-        totalProperties: calendarData.data?.length || 0,
-        dateRange: `${startDate} - ${endDate}`,
-        nightsCalculated: totalNights,
-        optimization: 'single-endpoint',
-        endpoint: 'inventory/rooms/calendar',
-        method: 'GET',
-        parameters: {
-            startDate,
-            endDate,
-            includeNumAvail: true,
-            includePrices: true,
-            includeMinStay: true,
-            includeMaxStay: true,
-            includeMultiplier: true,
-            includeOverride: true
-        }
-    });
-
-    // Log detallado de la respuesta cruda para análisis
-    logBeds24ResponseDetail('Respuesta cruda de Beds24 API', {
-        firstRoom: calendarData.data?.[0] ? {
-            propertyId: calendarData.data[0].propertyId,
-            roomId: calendarData.data[0].roomId,
-            name: calendarData.data[0].name,
-            calendarEntries: calendarData.data[0].calendar?.length || 0,
-            sampleEntry: calendarData.data[0].calendar?.[0]
-        } : null,
-        totalRooms: calendarData.data?.length || 0,
-        responseStructure: calendarData.data?.length ? Object.keys(calendarData.data[0]) : [],
-        success: calendarData.success,
-        responseSize: JSON.stringify(calendarData).length
-    });
-
-    // Mapear los datos de Beds24 a las noches reales de estadía
-    const mappedCalendarData = mapBeds24DataToStayNights(calendarData.data || [], startDate, endDate);
-
-    // Procesar datos de disponibilidad y precios
-    const propertyData: Record<number, PropertyData> = {};
-    
-    if (calendarData.success && mappedCalendarData) {
-        mappedCalendarData.forEach((roomData: any) => {
-            const propertyId = roomData.propertyId;
-            const roomId = roomData.roomId;
-            
-            // Inicializar datos de la propiedad
-            if (!propertyData[propertyId]) {
-                propertyData[propertyId] = {
-                    propertyId: propertyId,
-                    propertyName: roomData.name || `Propiedad ${propertyId}`, // ✨ OPTIMIZACIÓN: Usar nombre directo del calendar
-                    roomName: roomData.name || `Habitación ${roomId}`, // ✨ Usar nombre real de la habitación
-                    roomId: roomId,
-                    availability: {},
-                    prices: {}
-                };
-            }
-            
-            // Procesar calendario para disponibilidad y precios
-            if (roomData.calendar) {
-                roomData.calendar.forEach((calItem: any) => {
-                    // 🔧 CORRECCIÓN: Procesar rango de fechas from-to de Beds24
-                    const fromDate = new Date(calItem.from);
-                    const toDate = new Date(calItem.to || calItem.from);
-                    
-                    // Generar todas las fechas cubiertas por esta entrada
-                    for (let date = new Date(fromDate); date <= toDate; date.setDate(date.getDate() + 1)) {
-                        const dateStr = date.toISOString().split('T')[0];
-                        
-                        // Solo procesar fechas que están en nuestro rango de noches
-                        if (dateRange.includes(dateStr)) {
-                            // Disponibilidad basada en numAvail (0 = ocupado, 1+ = disponible)
-                            propertyData[propertyId].availability[dateStr] = (calItem.numAvail || 0) > 0;
-                            
-                            // Precios
-                            if (calItem.price1) {
-                                propertyData[propertyId].prices[dateStr] = calItem.price1;
-                            }
-                        }
-                    }
-                });
-            }
-        });
-    }
-    
-    // Logging detallado del procesamiento
-    logBeds24Processing('Datos procesados correctamente', {
-        totalProperties: Object.keys(propertyData).length,
-        nightsRange: dateRange,
-        totalNights,
-        processingStage: 'availability_and_prices_mapped',
-        propertiesDetail: Object.values(propertyData).map(prop => ({
-            propertyId: prop.propertyId,
-            propertyName: prop.propertyName,
-            roomName: prop.roomName,
-            availableDates: Object.entries(prop.availability)
-                .filter(([_, available]) => available)
-                .map(([date]) => date),
-            priceRange: {
-                min: Math.min(...Object.values(prop.prices).filter(p => p > 0)),
-                max: Math.max(...Object.values(prop.prices).filter(p => p > 0)),
-                dates: Object.entries(prop.prices)
-                    .filter(([_, price]) => price > 0)
-                    .map(([date, price]) => ({ date, price }))
-                    .slice(0, 3) // Muestra solo los primeros 3 días como ejemplo
-            }
-        }))
-    });
-
-    // Clasificar opciones - CORRECCIÓN: Solo considerar noches reales
-    const completeOptions: PropertyData[] = [];
-    const partialOptions: PropertyData[] = [];
-    
-    Object.values(propertyData).forEach(property => {
-        // CORRECCIÓN: Verificar disponibilidad solo para noches de estadía
-        const isFullyAvailableAndPriced = dateRange.every(date => property.availability[date] && property.prices[date] > 0);
-        
-        if (isFullyAvailableAndPriced) {
-            completeOptions.push(property);
-        } else {
-            // CORRECCIÓN: Verificar disponibilidad parcial solo para noches reales
-            const isPartiallyAvailable = dateRange.some(date => property.availability[date] && property.prices[date] > 0);
-            if (isPartiallyAvailable) {
-                partialOptions.push(property);
-            }
-        }
-    });
-    
-    // Logging básico de clasificación
-    logInfo('BEDS24_CLASSIFICATION', 'Propiedades clasificadas', {
-        completeOptions: completeOptions.length,
-        partialOptions: partialOptions.length,
-        willGenerateSplits: completeOptions.length === 0 ? true : completeOptions.length <= 2,
-        nightsAnalyzed: totalNights
-    });
-
-    // Generar opciones de split según nueva lógica:
-    // - 0 completas: hasta 3 splits (cualquier cantidad de traslados)
-    // - 1 completa: 2 splits (máximo 1 traslado)
-    // - 2+ completas: 1 split (máximo 1 traslado)
-    let splitOptions: SplitOption[] = [];
-    if (completeOptions.length === 0) {
-        // Sin opciones completas: buscar cualquier combinación viable
-        splitOptions = findConsecutiveSplits(partialOptions, dateRange, 3, 3);
-    } else if (completeOptions.length === 1) {
-        // 1 opción completa: mostrar 2 alternativas con máximo 1 traslado
-        splitOptions = findConsecutiveSplits(partialOptions, dateRange, 2, 1);
-    } else if (completeOptions.length >= 2) {
-        // 2+ opciones completas: mostrar 1 alternativa con máximo 1 traslado
-        splitOptions = findConsecutiveSplits(partialOptions, dateRange, 1, 1);
-    }
-    
-    // Logging básico de splits
-    if (splitOptions.length > 0) {
-        logInfo('BEDS24_SPLITS', 'Splits generados exitosamente', {
-            splitCount: splitOptions.length,
-            averageTransfers: splitOptions.reduce((sum, split) => sum + split.transfers, 0) / splitOptions.length
-        });
-    }
-    
-    // Log resumen final de la respuesta
-    logInfo('BEDS24_RESPONSE_SUMMARY', `Encontradas ${completeOptions.length} opciones completas y ${splitOptions.length} opciones con traslado`, {
-        dateRange: `${startDate} al ${endDate}`,
-        totalNights,
-        completeOptionsDetail: completeOptions.slice(0, 3).map(opt => ({
-            propertyName: opt.propertyName,
-            totalPrice: Object.values(opt.prices).reduce((sum, price) => sum + price, 0),
-            pricePerNight: Math.round(Object.values(opt.prices).reduce((sum, price) => sum + price, 0) / totalNights)
-        })),
-        splitOptionsDetail: splitOptions.slice(0, 2).map(split => ({
-            type: split.type,
-            transfers: split.transfers,
-            totalPrice: split.totalPrice,
-            properties: split.properties.map(p => p.propertyName).join(' → ')
-        }))
-    });
-    
-    return {
-        completeOptions,
-        splitOptions,
-        totalNights
-    };
-    
     } catch (error) {
         // 🔧 ETAPA 1.1: Try-catch exhaustivo para manejar errores específicos
         if (error instanceof Error) {
@@ -706,15 +522,6 @@ async function getAvailabilityAndPricesOptimized(
         
         logError('BEDS24_UNKNOWN_ERROR', 'Error desconocido en consulta a Beds24', {
             error: error instanceof Error ? error.message : String(error),
-            startDate,
-            endDate
-        });
-        throw new Error('Error interno al consultar disponibilidad en Beds24');
-        
-    } catch (outerError) {
-        // 🔧 ETAPA 1.4: Fallback inteligente si Beds24 falla
-        logError('BEDS24_FALLBACK', 'Activando fallback por error en Beds24', {
-            error: outerError instanceof Error ? outerError.message : String(outerError),
             startDate,
             endDate
         });
