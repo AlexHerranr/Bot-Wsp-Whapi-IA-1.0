@@ -78,6 +78,8 @@ import metricsRouter, {
     updateActiveThreads 
 } from './routes/metrics.js';
 
+// Importar nuevo módulo modularizado de inyección de historial/contexto
+import { injectHistory, cleanupExpiredCaches, getCacheStats } from './utils/context/historyInjection.js';
 
 // --- Variables Globales ---
 let appConfig: AppConfig;
@@ -1179,6 +1181,8 @@ function setupWebhooks() {
         const startTime = Date.now();
         let contextTokens = 0;
         let totalTokens = 0;
+        let historyInjection = '';
+        let labelsStr = '';
         
         try {
             // 🔧 ETAPA 3: Actualizar etapa del flujo si hay requestId (solo en debug)
@@ -1192,19 +1196,15 @@ function setupWebhooks() {
             });
              
             const config = getConfig();
-            let historyInjection = '';
-            let labelsStr = '';
              
             // Obtener o crear thread PRIMERO
             let threadId = threadPersistence.getThread(shortUserId)?.threadId;
             const isNewThread = !threadId;
-             
             if (isNewThread) {
-                // 🔧 ETAPA 2: Crear thread nuevo
+                // Crear thread nuevo
                 const thread = await openaiClient.beta.threads.create();
                 threadId = thread.id;
                 threadPersistence.setThread(shortUserId, threadId, chatId, userName);
-                 
                 logThreadCreated('Thread creado', { 
                     shortUserId,
                     threadId,
@@ -1213,78 +1213,7 @@ function setupWebhooks() {
                     environment: appConfig.environment,
                     requestId
                 });
-                
-                // 🔧 ETAPA 2: Fetch historial SOLO para threads nuevos con cache
-                if (config.enableHistoryInject) {
-                    try {
-                        // Verificar cache primero
-                        const cachedHistory = historyCache.get(shortUserId);
-                        const now = Date.now();
-                        
-                        if (cachedHistory && (now - cachedHistory.timestamp) < HISTORY_CACHE_TTL) {
-                            // Cache hit - usar historial cacheado
-                            historyInjection = cachedHistory.history;
-                            logInfo('HISTORY_CACHE_HIT', 'Usando historial cacheado', { 
-                                userId: shortUserId,
-                                cacheAge: Math.round((now - cachedHistory.timestamp) / 1000 / 60) + 'min',
-                                historyLines: historyInjection.split('\n').length,
-                                requestId
-                            });
-                        } else {
-                            // Cache miss - obtener historial fresco
-                            const historyLimit = config.historyMsgCount; // Usar límite configurado (reducido a 100)
-                            historyInjection = await getChatHistory(chatId, historyLimit);
-                            
-                            if (historyInjection) {
-                                // Cachear el resultado
-                                historyCache.set(shortUserId, { 
-                                    history: historyInjection, 
-                                    timestamp: now 
-                                });
-                                
-                                logSuccess('HISTORY_FETCH', 'Historial fresco obtenido y cacheado', { 
-                                    userId: shortUserId,
-                                    historyLimit,
-                                    historyLines: historyInjection.split('\n').length,
-                                    cacheSize: historyCache.size,
-                                    requestId
-                                });
-                            } else {
-                                logWarning('HISTORY_INJECT', 'No historial disponible', { 
-                                    userId: shortUserId,
-                                    requestId 
-                                });
-                            }
-                        }
-                    } catch (error) {
-                        historyInjection = '';
-                        logWarning('HISTORY_FAIL', 'Fallback sin historial', { 
-                            error: error.message, 
-                            userId: shortUserId,
-                            requestId
-                        });
-                    }
-                    
-                    // 🔧 ETAPA 2: Sincronizar labels usando wrapper centralizado
-                    try {
-                        await guestMemory.syncIfNeeded(userJid, false, true, requestId); // isNewThread = true
-                        const profile = guestMemory.getProfile(shortUserId);
-                        labelsStr = profile?.whapiLabels ? JSON.stringify(profile.whapiLabels.map(l => l.name)) : '[]';
-                        logInfo('LABELS_INJECT', `Etiquetas para inyección: ${labelsStr}`, { 
-                            userId: shortUserId,
-                            requestId 
-                        });
-                    } catch (error) {
-                        labelsStr = '';
-                        logWarning('SYNC_FAIL', 'Fallback sin labels', { 
-                            error: error.message, 
-                            userId: shortUserId,
-                            requestId
-                        });
-                    }
-                }
             } else {
-                // 🔧 ETAPA 2: Thread existente - skip fetch de historial
                 logInfo('THREAD_REUSE', `Thread reutilizado para ${shortUserId}`, {
                     shortUserId,
                     threadId,
@@ -1293,7 +1222,6 @@ function setupWebhooks() {
                     environment: appConfig.environment,
                     requestId
                 });
-                
                 logInfo('HISTORY_SKIP', 'Skip fetch historial: Thread existe', { 
                     userId: shortUserId,
                     threadId,
@@ -1301,81 +1229,48 @@ function setupWebhooks() {
                     requestId
                 });
             }
-            
-            // 🔧 CORRECCIÓN 3: Validación de contexto vacío antes de inyectar
-            const historyLines = historyInjection ? historyInjection.split('\n').length : 0;
-            if (historyLines < 1 && !isNewThread) {
-                logWarning('EMPTY_CONTEXT_SKIP', 'Contexto vacío detectado, saltando inyección', {
-                    userId: shortUserId,
-                    threadId,
-                    historyLines,
-                    isNewThread,
-                    requestId
-                });
-                // No inyectar contexto vacío, continuar con el mensaje del usuario
-            } else {
-                // 🔧 ETAPA 2: Inyección de Contexto Condicional para Threads Existentes
-                if (!isNewThread && contextAnalysis?.needsInjection) {
-                    try {
-                        const relevantContext = await getRelevantContext(userJid, requestId);
-                        if (relevantContext) {
-                            await openaiClient.beta.threads.messages.create(threadId, { 
-                                role: 'user', 
-                                content: relevantContext 
-                            });
-                            
-                            // Calcular tokens de contexto adicional
-                            const additionalContextTokens = Math.ceil(relevantContext.length / 4);
-                            contextTokens += additionalContextTokens;
-                            
-                            logSuccess('CONTEXT_INJECTION_CONDITIONAL', 'Contexto relevante inyectado para thread existente', {
-                                userId: shortUserId,
-                                threadId,
-                                contextLength: relevantContext.length,
-                                additionalTokens: additionalContextTokens,
-                                matchPercentage: contextAnalysis.matchPercentage,
-                                reason: contextAnalysis.reason,
-                                requestId
-                                                    });
+             
+            // 🔧 NUEVO: Usar función modularizada de inyección de historial
+            if (config.enableHistoryInject) {
+                try {
+                    const injectionResult = await injectHistory(
+                        threadId, 
+                        userJid, 
+                        chatId, 
+                        isNewThread, 
+                        contextAnalysis, 
+                        requestId
+                    );
+                    
+                    if (injectionResult.success) {
+                        contextTokens += injectionResult.tokensUsed;
+                        
+                        logSuccess('HISTORY_INJECTION_COMPLETED', 'Inyección de historial completada', {
+                            userId: shortUserId,
+                            threadId,
+                            tokensUsed: injectionResult.tokensUsed,
+                            contextLength: injectionResult.contextLength,
+                            historyLines: injectionResult.historyLines,
+                            labelsCount: injectionResult.labelsCount,
+                            reason: injectionResult.reason,
+                            requestId
+                        });
+                    } else {
+                        logWarning('HISTORY_INJECTION_FAILED', 'Inyección de historial falló', {
+                            userId: shortUserId,
+                            threadId,
+                            reason: injectionResult.reason,
+                            requestId
+                        });
                     }
                 } catch (error) {
-                    logWarning('CONTEXT_INJECTION_FAILED', 'Error inyectando contexto condicional', {
+                    logError('HISTORY_INJECTION_ERROR', 'Error en inyección de historial', {
                         userId: shortUserId,
+                        threadId,
                         error: error.message,
                         requestId
                     });
                 }
-            }
-            } // Cerrar el bloque else de validación de contexto vacío
-             
-            // 🔧 ETAPA 2: Inyección de contexto solo si hay contenido
-            if (historyInjection || labelsStr) {
-                const injectContent = `${historyInjection ? historyInjection + '\n\n' : ''}Hora actual: ${new Date().toLocaleString('es-ES', { timeZone: 'America/Bogota' })}\nEtiquetas actuales: ${labelsStr}`;
-                await openaiClient.beta.threads.messages.create(threadId, { role: 'user', content: injectContent });
-                
-                // 🔧 ETAPA 1: Calcular y loggear tokens de contexto
-                contextTokens = Math.ceil(injectContent.length / 4); // Estimación aproximada
-                logContextTokens('Contexto inyectado', {
-                    shortUserId,
-                    threadId,
-                    contextLength: injectContent.length,
-                    estimatedTokens: contextTokens,
-                    hasHistory: !!historyInjection,
-                    hasLabels: !!labelsStr,
-                    historyLines: historyInjection ? historyInjection.split('\n').length : 0,
-                    labelsCount: labelsStr ? JSON.parse(labelsStr).length : 0,
-                    requestId
-                });
-                
-                logSuccess('CONTEXT_INJECT', `Contexto inyectado (historial + hora + labels)`, { 
-                    length: injectContent.length, 
-                    userId: shortUserId,
-                    isNewThread,
-                    hasHistory: !!historyInjection,
-                    hasLabels: !!labelsStr,
-                    estimatedTokens: contextTokens,
-                    requestId
-                });
             }
              
              // 🔧 ETAPA 2: Summary automático de historial para threads con alto uso de tokens
@@ -2345,7 +2240,29 @@ async function initializeBot() {
         }
     }, 2 * 60 * 60 * 1000); // Cada 2 horas
     
+    // 🔧 NUEVO: Cleanup automático de caches de inyección
+    // Ejecutar cada 10 minutos para mantener caches limpios
+    setInterval(() => {
+        try {
+            cleanupExpiredCaches();
+        } catch (error) {
+            logError('INJECTION_CACHE_CLEANUP', 'Error en cleanup de caches de inyección', { error: error.message });
+        }
+    }, 10 * 60 * 1000); // Cada 10 minutos
+    
     logInfo('BOT_INIT', 'Cleanup automático de threads y cache configurado');
+    
+    // 🔧 NUEVO: Log de estadísticas de cache al inicio
+    try {
+        const cacheStats = getCacheStats();
+        logInfo('CACHE_INIT', 'Estadísticas de cache al inicio', {
+            historyCache: cacheStats.historyCache,
+            contextCache: cacheStats.contextCache,
+            injectionCache: cacheStats.injectionCache
+        });
+    } catch (error) {
+        logWarning('CACHE_STATS_ERROR', 'Error obteniendo estadísticas de cache', { error: error.message });
+    }
     
 
     
