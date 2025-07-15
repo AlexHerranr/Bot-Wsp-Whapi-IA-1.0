@@ -58,21 +58,31 @@ export class Beds24Service {
         // Interceptor para logs de responses
         this.apiClient.interceptors.response.use(
             (response) => {
-                logBeds24ResponseDetail(`Response: ${response.status}`, {
-                    status: response.status,
-                    url: response.config.url,
-                    dataCount: response.data?.data?.length || 0,
-                    success: response.data?.success,
-                    responseLength: JSON.stringify(response.data).length
-                });
+                try {
+                    logBeds24ResponseDetail(`Response: ${response.status}`, {
+                        status: response.status,
+                        url: response.config.url,
+                        dataCount: response.data?.data?.length || 0,
+                        success: response.data?.success,
+                        responseLength: JSON.stringify(response.data).length
+                    });
+                } catch (logError) {
+                    // 🔧 ETAPA 1: Capturar errores en logging para evitar crash
+                    console.error('[ERROR] BEDS24_LOG_ERROR:', logError.message);
+                }
                 return response;
             },
             (error) => {
-                logError('BEDS24_API', 'Error en response', {
-                    status: error.response?.status,
-                    message: error.response?.data?.error || error.message,
-                    url: error.config?.url
-                });
+                try {
+                    logError('BEDS24_API', 'Error en response', {
+                        status: error.response?.status,
+                        message: error.response?.data?.error || error.message,
+                        url: error.config?.url
+                    });
+                } catch (logError) {
+                    // 🔧 ETAPA 1: Capturar errores en logging para evitar crash
+                    console.error('[ERROR] BEDS24_LOG_ERROR:', logError.message);
+                }
                 return Promise.reject(error);
             }
         );
@@ -139,21 +149,35 @@ export class Beds24Service {
 
         } catch (error) {
             const duration = Date.now() - startTime;
-            logError('BEDS24_AVAILABILITY', 'Error obteniendo disponibilidad', {
-                error: error instanceof Error ? error.message : error,
-                duration: `${duration}ms`,
-                query
-            });
-
-            if (error instanceof Beds24Error) {
-                throw error;
+            
+            try {
+                logError('BEDS24_AVAILABILITY', 'Error obteniendo disponibilidad', {
+                    error: error instanceof Error ? error.message : error,
+                    duration: `${duration}ms`,
+                    query
+                });
+            } catch (logError) {
+                // 🔧 ETAPA 1: Capturar errores en logging para evitar crash
+                console.error('[ERROR] BEDS24_LOG_ERROR:', logError.message);
             }
 
-            throw new Beds24Error(
-                'Error al consultar disponibilidad en Beds24',
-                undefined,
-                error
-            );
+            // 🔧 ETAPA 1: Fallback simple en lugar de crash
+            console.error('[ERROR] BEDS24_API_ERROR:', error instanceof Error ? error.message : error);
+            
+            // Retornar fallback simple para que OpenAI decida cómo responder
+            return [{
+                propertyName: 'Error en consulta',
+                roomName: 'No disponible',
+                available: false,
+                dateRange: {
+                    from: query.startDate,
+                    to: query.endDate
+                },
+                availableDates: [],
+                unavailableDates: [],
+                totalDays: 0,
+                availableDays: 0
+            }];
         }
     }
 

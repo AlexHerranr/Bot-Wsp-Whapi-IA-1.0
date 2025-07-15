@@ -269,9 +269,53 @@ async function getAvailabilityAndPricesOptimized(
     const API_TIMEOUT = parseInt(process.env.BEDS24_TIMEOUT || '15000'); // 15 segundos por defecto
     
     try {
-        // Usar las fechas originales directamente - sin ajustes de timezone
-        const dateRange = generateDateRange(startDate, endDate);
-        const totalNights = dateRange.length;
+        // 🔧 ETAPA 1: Try-catch específico para el punto exacto del crash
+        let dateRange: string[];
+        let totalNights: number;
+        
+        try {
+            // Usar las fechas originales directamente - sin ajustes de timezone
+            dateRange = generateDateRange(startDate, endDate);
+            totalNights = dateRange.length;
+            
+        } catch (dateCalcError) {
+            logError('BEDS24_CALC_ERROR', 'Error calculando noches de estadía', { 
+                error: dateCalcError instanceof Error ? dateCalcError.message : String(dateCalcError),
+                stack: dateCalcError instanceof Error ? dateCalcError.stack : undefined,
+                startDate,
+                endDate,
+                startDateType: typeof startDate,
+                endDateType: typeof endDate
+            });
+            
+            // 🔧 ETAPA 2: Fallback simple para evitar crash
+            return { 
+                error: true, 
+                message: 'Error procesando fechas de estadía',
+                completeOptions: [],
+                splitOptions: [],
+                totalNights: 0
+            } as any;
+        }
+        
+        // 🔧 ETAPA 3: Límite de procesamiento para arrays grandes
+        const MAX_NIGHTS = 30;
+        if (totalNights > MAX_NIGHTS) {
+            logWarning('BEDS24_NIGHTS_LIMIT', 'Búsqueda limitada por número de noches', {
+                requestedNights: totalNights,
+                maxAllowed: MAX_NIGHTS,
+                startDate,
+                endDate
+            });
+            
+            return { 
+                error: true, 
+                message: `Búsquedas limitadas a ${MAX_NIGHTS} noches máximo`,
+                completeOptions: [],
+                splitOptions: [],
+                totalNights: 0
+            } as any;
+        }
         
         logBeds24Processing('Calculando noches de estadía', {
             startDate,
@@ -844,92 +888,51 @@ function buildConsecutiveSplitStartWith(partialOptions: PropertyData[], dateRang
 function formatOptimizedResponse(result: OptimizedResult, startDate: string, endDate: string): string {
     const { completeOptions, splitOptions, totalNights } = result;
     
-    // Usar las fechas originales de entrada y salida (no las noches)
-    let response = `📅 **${formatDateRange(startDate, endDate)} (${totalNights} ${totalNights === 1 ? 'noche' : 'noches'})**\n\n`;
-    
-    // 1. Mostrar siempre las opciones de estancia completa si existen
-    if (completeOptions.length > 0) {
-        response += `🥇 **Apartamentos Disponibles (${completeOptions.length} opciones)**\n`;
-        
-        const sortedComplete = completeOptions
-            .map(option => {
-                const totalPrice = Object.values(option.prices).reduce((sum, price) => sum + price, 0);
-                return { ...option, totalPrice };
-            })
-            .sort((a, b) => a.totalPrice - b.totalPrice)
-            .slice(0, 3); // Máximo 3 opciones principales
-        
-        sortedComplete.forEach((option, index) => {
-            response += `✅ **${option.propertyName}** - $${option.totalPrice.toLocaleString()}\n`;
-            response += `   📊 $${Math.round(option.totalPrice / totalNights).toLocaleString()}/noche\n\n`;
-        });
-    }
-    
-    // 2. Mostrar opciones alternas con cambio de apartamento (siempre que estén disponibles)
-    if (splitOptions.length > 0) {
-        // Contextualizar según disponibilidad completa
-        if (completeOptions.length === 0) {
-            response += `\n❌ **No hay Disponibilidad Completa - Solo Parcial con Opción de Traslado**\n`;
-            response += `💡 *Alternativas con cambio de apartamento (ofrecer solo como opción adicional al huésped)*\n\n`;
-        } else {
-            response += `\n🔄 **Opciones Adicionales con Traslado**\n`;
-            response += `💡 *Alternativas económicas con cambio de apartamento (opcional para el huésped)*\n\n`;
-        }
-        
-        splitOptions.slice(0, 3).forEach((split, index) => { // Máximo 3 opciones alternas
-            const transferText = split.transfers === 1 ? '1 traslado' : `${split.transfers} traslados`;
-            response += `🔄 **Alternativa ${index + 1}**: ${transferText} - $${split.totalPrice.toLocaleString()}\n`;
-            
-            split.properties.forEach((prop, propIndex) => {
-                const dates = prop.dates.length > 1 ? 
-                    `${prop.dates[0]} a ${prop.dates[prop.dates.length - 1]}` : 
-                    prop.dates[0];
-                response += `   ${propIndex === 0 ? '🏠' : '🔄'} ${prop.propertyName}: ${dates} - $${prop.price.toLocaleString()}\n`;
-            });
-            response += '\n';
-        });
-    }
-    
-    // 3. Mensaje final si no se encontró absolutamente nada
-    if (completeOptions.length === 0 && splitOptions.length === 0) {
-        response += `❌ **Sin disponibilidad para ${totalNights} ${totalNights === 1 ? 'noche' : 'noches'}**\n`;
-        response += `💡 Considera fechas alternativas\n`;
-    }
-    
-    // Agregar fecha y hora de la consulta (más conciso)
-    const now = new Date();
-    const consultaDateTime = now.toLocaleString('es-ES', {
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'America/Bogota'
-    });
-    
-    response += `\n🔄 *Beds24 - ${consultaDateTime}*`;
-    
+    // 🔧 MEJORADO: Formato JSON plano para facilitar interpretación por OpenAI
+    const response = {
+        dateRange: `${startDate} al ${endDate}`,
+        totalNights,
+        completeOptions: completeOptions.slice(0, 3).map(option => ({
+            propertyName: option.propertyName,
+            totalPrice: Object.values(option.prices).reduce((sum, price) => sum + price, 0),
+            pricePerNight: Math.round(Object.values(option.prices).reduce((sum, price) => sum + price, 0) / totalNights)
+        })),
+        splitOptions: splitOptions.slice(0, 3).map(split => ({
+            transfers: split.transfers,
+            totalPrice: split.totalPrice,
+            properties: split.properties.map(prop => ({
+                propertyName: prop.propertyName,
+                dates: prop.dates,
+                price: prop.price
+            }))
+        })),
+        hasCompleteOptions: completeOptions.length > 0,
+        hasSplitOptions: splitOptions.length > 0,
+        timestamp: new Date().toISOString()
+    };
+
     // Log para análisis (solo en logs, no en consola)
     logInfo('BEDS24_DEBUG_OUTPUT', 'Respuesta formateada para OpenAI', {
-        responsePreview: response.substring(0, 200),
-        responseLength: response.length,
+        responsePreview: JSON.stringify(response).substring(0, 200),
+        responseLength: JSON.stringify(response).length,
         hasCompleteOptions: result.completeOptions.length > 0,
         hasSplitOptions: result.splitOptions.length > 0
     });
 
     // Log detallado para análisis
     logInfo('BEDS24_RESPONSE_DETAIL', 'Respuesta completa de Beds24 enviada a OpenAI', {
-        responseLength: response.length,
-        estimatedTokens: Math.ceil(response.length / 4),
+        responseLength: JSON.stringify(response).length,
+        estimatedTokens: Math.ceil(JSON.stringify(response).length / 4),
         hasCompleteOptions: result.completeOptions.length > 0,
         hasSplitOptions: result.splitOptions.length > 0,
         completeOptionsCount: result.completeOptions.length,
         splitOptionsCount: result.splitOptions.length,
         totalNights: result.totalNights,
-        responsePreview: response.substring(0, 200) + (response.length > 200 ? '...' : ''),
-        fullResponse: response // Contenido completo para análisis
+        responsePreview: JSON.stringify(response).substring(0, 200) + (JSON.stringify(response).length > 200 ? '...' : ''),
+        fullResponse: JSON.stringify(response) // Contenido completo para análisis
     });
 
-    return response;
+    return JSON.stringify(response);
 }
 
 /**
@@ -1126,8 +1129,43 @@ export async function handleAvailabilityCheck(args: any, requestId?: string): Pr
             requestId
         });
 
-        // Obtener datos combinados: disponibilidad + precios (USANDO CACHÉ)
-        const result = await getCachedAvailabilityAndPrices(startDate, endDate, propertyId, roomId);
+        // 🔧 ETAPA 1: Try-catch específico para getCachedAvailabilityAndPrices
+        let result: OptimizedResult;
+        try {
+            // Obtener datos combinados: disponibilidad + precios (USANDO CACHÉ)
+            result = await getCachedAvailabilityAndPrices(startDate, endDate, propertyId, roomId);
+        } catch (cacheError) {
+            logError('BEDS24_CACHE_ERROR', 'Error en consulta cacheada', {
+                error: cacheError instanceof Error ? cacheError.message : String(cacheError),
+                stack: cacheError instanceof Error ? cacheError.stack : undefined,
+                startDate,
+                endDate,
+                propertyId,
+                roomId
+            });
+            
+            // 🔧 Fallback: intentar consulta directa sin cache
+            try {
+                logInfo('BEDS24_FALLBACK', 'Intentando consulta directa sin cache', {
+                    startDate,
+                    endDate
+                });
+                result = await getAvailabilityAndPricesOptimized(startDate, endDate, propertyId, roomId);
+            } catch (directError) {
+                logError('BEDS24_DIRECT_ERROR', 'Error en consulta directa', {
+                    error: directError instanceof Error ? directError.message : String(directError),
+                    startDate,
+                    endDate
+                });
+                
+                return 'Error: No se pudo obtener información de disponibilidad. Por favor intenta más tarde.';
+            }
+        }
+
+        // 🔧 ETAPA 2: Verificar si el resultado tiene error
+        if (result && 'error' in result && (result as any).error) {
+            return `Error: ${(result as any).message || 'Error procesando disponibilidad'}`;
+        }
 
         // Formatear respuesta optimizada para OpenAI
         const response = formatOptimizedResponse(result, startDate, endDate);

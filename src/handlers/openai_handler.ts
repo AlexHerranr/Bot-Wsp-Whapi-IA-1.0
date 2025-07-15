@@ -57,7 +57,13 @@ export class OpenAiHandler implements AiHandler {
     }
 
     if (runStatus.status === 'failed') {
-      return { text: "Lo siento, tuve un problema al procesar tu solicitud." };
+      // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
+      logInfo('OPENAI_RUN_FAILED', 'Run falló, permitiendo flujo natural', {
+        userId,
+        threadId,
+        runId: run.id
+      });
+      return { text: "" };
     }
 
     // Obtener los mensajes más recientes
@@ -65,7 +71,12 @@ export class OpenAiHandler implements AiHandler {
     const assistantMessages = messages.data.filter(m => m.role === 'assistant');
     
     if (assistantMessages.length === 0) {
-      return { text: "No obtuve una respuesta clara. Por favor, intenta de nuevo." };
+      // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
+      logInfo('OPENAI_NO_ASSISTANT_MESSAGES', 'No hay mensajes del assistant, permitiendo flujo natural', {
+        userId,
+        threadId
+      });
+      return { text: "" };
     }
 
     // Extraer el texto de la respuesta
@@ -79,7 +90,12 @@ export class OpenAiHandler implements AiHandler {
       });
       return { text: responseContent.text.value };
     } else {
-      return { text: "Recibí una respuesta en un formato no soportado." };
+      // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
+      logInfo('OPENAI_UNSUPPORTED_FORMAT', 'Formato de respuesta no soportado, permitiendo flujo natural', {
+        userId,
+        threadId
+      });
+      return { text: "" };
     }
   }
 

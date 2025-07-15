@@ -58,11 +58,20 @@ export class GeminiHandler implements AiHandler {
         
         return { text };
       } else {
-        return { text: "No obtuve una respuesta clara. Por favor, intenta de nuevo." };
+        // 🔧 ELIMINADO: Fallback automático - permitir que el sistema maneje la respuesta
+        console.log('GEMINI_NO_CANDIDATES', 'No hay candidatos de respuesta, permitiendo flujo natural', {
+          userId
+        });
+        return { text: "" };
       }
     } catch (error) {
       console.error('Error al procesar mensaje con Gemini:', error);
-      return { text: "Lo siento, tuve un problema al procesar tu solicitud." };
+      // 🔧 ELIMINADO: Fallback automático - permitir que el sistema maneje la respuesta
+      console.log('GEMINI_ERROR', 'Error en Gemini, permitiendo flujo natural', {
+        userId,
+        error: error.message
+      });
+      return { text: "" };
     }
   }
 }

@@ -9,6 +9,7 @@ import type { FunctionDefinition } from '../types/function-types.js';
 import { checkAvailabilityFunction } from '../availability/beds24-availability.js';
 import { escalateToHumanFunction } from '../escalation/escalate-to-human.js';
 import { injectHistoryFunction } from '../history/inject-history.js';
+import { getConversationContextFunction } from '../context/get-conversation-context.js';
 
 /**
  * Registro de todas las funciones disponibles
@@ -22,6 +23,7 @@ export const FUNCTION_REGISTRY: Record<string, FunctionDefinition> = {
   
   // Funciones de contexto e historial
   inject_history: injectHistoryFunction,
+  get_conversation_context: getConversationContextFunction,
   
   // Funciones de booking (documentadas, pendientes de implementación)
   // create_booking: createBookingFunction,

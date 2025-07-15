@@ -81,15 +81,14 @@ import metricsRouter, {
 // Importar nuevo módulo modularizado de inyección de historial/contexto
 import { injectHistory, cleanupExpiredCaches, getCacheStats } from './utils/context/historyInjection.js';
 
+// Importar nuevo sistema de locks simplificado
+import { simpleLockManager } from './utils/simpleLockManager.js';
+
 // --- Variables Globales ---
 let appConfig: AppConfig;
 let openaiClient: OpenAI;
 let server: http.Server;
 let isServerInitialized = false;
-
-// 🔧 ETAPA 1: Sistema de locks para prevenir race conditions
-const threadLocks = new Map<string, boolean>(); // userId -> isLocked
-const lockTimeout = 30000; // 30 segundos máximo por lock
 
 const activeRuns = new Map<string, { id: string; status: string; startTime: number; userId: string }>();
 const userMessageBuffers = new Map<string, {
@@ -118,17 +117,19 @@ const globalMessageBuffers = new Map<string, {
     isTyping: boolean,
     typingCount: number
 }>();
-const BUFFER_WINDOW_MS = 8000; // 8 segundos para agrupar mensajes
-const TYPING_EXTENSION_MS = 5000; // 5 segundos extra por typing
-const MAX_TYPING_COUNT = 3; // Máximo 3 typings antes de forzar procesamiento
+const BUFFER_WINDOW_MS = 8000; // 8 segundos para agrupar mensajes (mejorado para párrafos largos)
+const TYPING_EXTENSION_MS = 5000; // 5 segundos extra por typing (más generoso)
+const MAX_TYPING_COUNT = 8; // Máximo 8 typings antes de forzar procesamiento (más humano)
 
-// 🔧 ETAPA 2: Cache de historial para optimizar fetches
-const historyCache = new Map<string, { history: string; timestamp: number }>();
-const HISTORY_CACHE_TTL = 60 * 60 * 1000; // 1 hora en ms
+    // 🔧 ETAPA 2: Cache de historial para optimizar fetches
+    const historyCache = new Map<string, { history: string; timestamp: number }>();
+    const HISTORY_CACHE_TTL = 60 * 60 * 1000; // 1 hora en ms
+    const HISTORY_CACHE_MAX_SIZE = 50; // 🔧 MEJORADO: Límite de tamaño
 
-// 🔧 ETAPA 3: Cache de inyección de contexto relevante (TTL 1 min)
-const contextInjectionCache = new Map<string, { context: string; timestamp: number }>();
-const CONTEXT_INJECTION_TTL = 60 * 1000; // 1 minuto
+    // 🔧 ETAPA 3: Cache de inyección de contexto relevante (TTL 1 min)
+    const contextInjectionCache = new Map<string, { context: string; timestamp: number }>();
+    const CONTEXT_INJECTION_TTL = 60 * 1000; // 1 minuto
+    const CONTEXT_CACHE_MAX_SIZE = 30; // 🔧 MEJORADO: Límite de tamaño
 
 // 🔧 NUEVO: Sistema de typing dinámico
 // Configuración de timeouts optimizada para mejor UX
@@ -140,63 +141,13 @@ const MAX_MESSAGE_LENGTH = 5000;
 
 
 
-// 🔧 ETAPA 1: Funciones de lock para prevenir race conditions
+// 🔧 NUEVO: Sistema de locks simplificado con colas
 async function acquireThreadLock(userId: string): Promise<boolean> {
-    if (threadLocks.has(userId)) {
-        logWarning('THREAD_LOCK_BUSY', `Thread ya está siendo procesado`, {
-            userId,
-            isLocked: threadLocks.get(userId)
-        });
-        
-        // 🔧 ETAPA 4: Incrementar métrica de race errors
-        try {
-            const { incrementRaceErrors } = require('./routes/metrics');
-            incrementRaceErrors();
-        } catch (e) { 
-            // Ignorar en test/local si no existe
-            logDebug('RACE_ERROR_METRIC_ERROR', 'No se pudo incrementar métrica de race error', { error: e.message });
-        }
-        
-        return false;
-    }
-    
-    threadLocks.set(userId, true);
-    
-    // Auto-release lock después de timeout
-    setTimeout(() => {
-        if (threadLocks.get(userId)) {
-            threadLocks.delete(userId);
-            logWarning('THREAD_LOCK_TIMEOUT', `Lock liberado por timeout`, {
-                userId,
-                timeoutMs: lockTimeout
-            });
-            
-            // 🔧 ETAPA 4: Incrementar métrica de race errors por timeout
-            try {
-                const { incrementRaceErrors } = require('./routes/metrics');
-                incrementRaceErrors();
-            } catch (e) { 
-                // Ignorar en test/local si no existe
-                logDebug('RACE_ERROR_METRIC_ERROR', 'No se pudo incrementar métrica de race error por timeout', { error: e.message });
-            }
-        }
-    }, lockTimeout);
-    
-    logInfo('THREAD_LOCK_ACQUIRED', `Lock adquirido para thread`, {
-        userId,
-        timeoutMs: lockTimeout
-    });
-    
-    return true;
+    return await simpleLockManager.acquireUserLock(userId);
 }
 
 function releaseThreadLock(userId: string): void {
-    if (threadLocks.has(userId)) {
-        threadLocks.delete(userId);
-        logInfo('THREAD_LOCK_RELEASED', `Lock liberado manualmente`, {
-            userId
-        });
-    }
+    simpleLockManager.releaseUserLock(userId);
 }
 
 // 🔧 ETAPA 2: Función para generar resumen automático de historial (del comentario externo)
@@ -228,25 +179,24 @@ async function generateHistorialSummary(threadId: string, userId: string): Promi
             return acc;
         }, 0);
         
-        // 🔧 ETAPA 2: Threshold configurable para activar resumen
-        const SUMMARY_THRESHOLD = parseInt(process.env.HISTORIAL_SUMMARY_THRESHOLD || '5000');
+        // 🔧 SIMPLIFICADO: Solo generar resumen si hay muchos mensajes (no por tokens)
+        const MESSAGE_THRESHOLD = 50; // Generar resumen si hay más de 50 mensajes
         
-        if (estimatedTokens <= SUMMARY_THRESHOLD) {
-            logInfo('HISTORIAL_SUMMARY_SKIP', 'Tokens insuficientes para resumen', {
+        if (messages.data.length <= MESSAGE_THRESHOLD) {
+            logInfo('HISTORIAL_SUMMARY_SKIP', 'Thread corto, no necesita resumen', {
                 threadId,
                 userId,
-                estimatedTokens,
-                threshold: SUMMARY_THRESHOLD
+                messageCount: messages.data.length,
+                threshold: MESSAGE_THRESHOLD
             });
             return false;
         }
         
-        logWarning('HISTORIAL_SUMMARY_NEEDED', 'Thread con alto uso de tokens, generando resumen', {
+        logWarning('HISTORIAL_SUMMARY_NEEDED', 'Thread largo, generando resumen', {
             threadId,
             userId,
-            estimatedTokens,
-            threshold: SUMMARY_THRESHOLD,
-            messageCount: messages.data.length
+            messageCount: messages.data.length,
+            threshold: MESSAGE_THRESHOLD
         });
         
         // Crear texto de conversación para resumen
@@ -404,14 +354,20 @@ process.on('uncaughtException', (error, origin) => {
         details: { error: { message: error.message, stack: error.stack }, origin }
     }, null, 2));
     
-    // 🔧 MEJORADO: Log detallado antes de salir
-    logError('SYSTEM_CRASH', 'Excepción no capturada causando crash', {
-        error: error.message,
-        origin,
-        stack: error.stack
-    });
+    // 🔧 ETAPA 1: Log detallado antes de salir
+    try {
+        logError('SYSTEM_CRASH', 'Excepción no capturada causando crash', {
+            error: error.message,
+            origin,
+            stack: error.stack
+        });
+    } catch (logError) {
+        // 🔧 ETAPA 1: Capturar errores en logging para evitar crash doble
+        console.error('[ERROR] LOG_ERROR:', logError.message);
+    }
     
-    setTimeout(() => process.exit(1), 1000);
+    // 🔧 ETAPA 1: Delay más largo para permitir logs
+    setTimeout(() => process.exit(1), 2000);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -423,14 +379,20 @@ process.on('unhandledRejection', (reason, promise) => {
         details: { error: { message: error.message, stack: error.stack }, promise }
     }, null, 2));
     
-    // 🔧 MEJORADO: Log detallado antes de salir
-    logError('SYSTEM_CRASH', 'Rechazo de promesa no manejado causando crash', {
-        error: error.message,
-        promise: promise.toString(),
-        stack: error.stack
-    });
+    // 🔧 ETAPA 1: Log detallado antes de salir
+    try {
+        logError('SYSTEM_CRASH', 'Rechazo de promesa no manejado causando crash', {
+            error: error.message,
+            promise: promise.toString(),
+            stack: error.stack
+        });
+    } catch (logError) {
+        // 🔧 ETAPA 1: Capturar errores en logging para evitar crash doble
+        console.error('[ERROR] LOG_ERROR:', logError.message);
+    }
     
-    setTimeout(() => process.exit(1), 1000);
+    // 🔧 ETAPA 1: Delay más largo para permitir logs
+    setTimeout(() => process.exit(1), 2000);
 });
 
 // --- Declaración de Funciones Auxiliares ---
@@ -484,6 +446,21 @@ function setupEndpoints() {
                     "Detección de propiedades (1722, 715, 1317)"
                 ],
                 description: "Flujo híbrido que combina respuestas fijas con OpenAI según complejidad"
+            },
+
+            // 🔧 NUEVO: Información del sistema de locks simplificado
+            simpleLockSystem: {
+                enabled: true,
+                type: "user-based-locks-with-queues",
+                timeoutSeconds: 15,
+                features: [
+                    "Locks por usuario (no por mensaje)",
+                    "Sistema de colas para procesamiento ordenado",
+                    "Timeout automático de 15 segundos",
+                    "Liberación automática al terminar"
+                ],
+                stats: simpleLockManager.getStats(),
+                description: "Sistema híbrido que combina simplicidad del proyecto antiguo con robustez del actual"
             }
         });
     });
@@ -497,6 +474,44 @@ function setupEndpoints() {
             status: isServerInitialized ? 'ready' : 'initializing',
             webhookUrl: appConfig.webhookUrl,
             threads: stats
+        });
+    });
+
+    // 🔧 NUEVO: Endpoint para monitorear el sistema de locks
+    app.get('/locks', (req, res) => {
+        const stats = simpleLockManager.getStats();
+        res.json({
+            system: 'SimpleLockManager',
+            timestamp: new Date().toISOString(),
+            environment: appConfig.environment,
+            stats: {
+                activeLocks: stats.activeLocks,
+                activeQueues: stats.activeQueues,
+                totalUsers: stats.activeLocks + stats.activeQueues
+            },
+            configuration: {
+                timeoutSeconds: 15,
+                lockType: 'user-based',
+                queueEnabled: true,
+                autoRelease: true
+            },
+            description: 'Sistema híbrido de locks con colas - combina simplicidad y robustez'
+        });
+    });
+
+    // 🔧 NUEVO: Endpoint para limpiar locks (solo en desarrollo)
+    app.post('/locks/clear', (req: Request, res: Response) => {
+        if (appConfig.environment === 'cloud-run') {
+            return res.status(403).json({
+                error: 'No permitido en producción',
+                message: 'Este endpoint solo está disponible en desarrollo'
+            });
+        }
+        
+        simpleLockManager.clearAll();
+        res.json({
+            message: 'Todos los locks y colas han sido limpiados',
+            timestamp: new Date().toISOString()
         });
     });
     
@@ -605,6 +620,9 @@ function setupWebhooks() {
         const delay = buffer.isTyping ? TYPING_EXTENSION_MS : BUFFER_WINDOW_MS;
         buffer.timer = setTimeout(() => processGlobalBuffer(userId), delay);
         
+        // Log mejorado con delay real
+        console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${delay / 1000}s...`);
+        
         logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
             userJid: getShortUserId(userId),
             userName,
@@ -625,23 +643,48 @@ function setupWebhooks() {
         if (isTyping) {
             buffer.typingCount++;
             
-            // Extender timer si está escribiendo
+            // Limpiar timer existente
             if (buffer.timer) {
                 clearTimeout(buffer.timer);
-                const delay = Math.min(TYPING_EXTENSION_MS * buffer.typingCount, BUFFER_WINDOW_MS * 2);
-                buffer.timer = setTimeout(() => processGlobalBuffer(userId), delay);
-                
-                logInfo('GLOBAL_BUFFER_TYPING', `Timer extendido por typing`, {
+            }
+            
+            // 🔧 ETAPA 2: Chequeo de buffer largo por typing (>60s)
+            if (buffer.typingCount > 12 && buffer.messages.length > 3) { // ~60s de typing (1 minuto máximo)
+                logInfo('BUFFER_LONG_TYPING', `Buffer largo detectado durante typing, procesando parcialmente`, {
                     userJid: getShortUserId(userId),
                     userName: buffer.userName,
                     typingCount: buffer.typingCount,
-                    delay,
+                    messageCount: buffer.messages.length,
                     environment: appConfig.environment
                 });
+                
+                // Procesar buffer parcial para evitar esperas largas
+                processGlobalBuffer(userId);
+                return;
             }
+            
+            // Acumular extensiones dinámicamente y forzar procesamiento si typingCount > MAX_TYPING_COUNT
+            const extraDelay = buffer.typingCount * TYPING_EXTENSION_MS; // Acumular por typing
+            const delay = BUFFER_WINDOW_MS + Math.min(extraDelay, TYPING_EXTENSION_MS * MAX_TYPING_COUNT); // Cap a 3 typings max
+            
+            buffer.timer = setTimeout(() => processGlobalBuffer(userId), delay);
+            
+            logInfo('GLOBAL_BUFFER_TYPING', `Timer extendido por typing`, {
+                userJid: getShortUserId(userId),
+                userName: buffer.userName,
+                typingCount: buffer.typingCount,
+                delay,
+                environment: appConfig.environment
+            });
         } else {
             // Reset typing count cuando deja de escribir
             buffer.typingCount = 0;
+            
+            // Reiniciar timer con delay base
+            if (buffer.timer) {
+                clearTimeout(buffer.timer);
+            }
+            buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
         }
     }
     
@@ -652,14 +695,120 @@ function setupWebhooks() {
             return;
         }
         
-        const combinedText = buffer.messages.join(' ');
-        const messageCount = buffer.messages.length;
+        // 🔧 ETAPA 1: Filtrar mensajes cortos/incompletos antes de concatenar (relajado)
+        const ALLOWED_SHORT = ['si', 'ok', 'vale', 'gracias', 'yes', 'no', 'bueno', 'claro'];
         
-        logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global`, {
+        const filteredMessages = buffer.messages.filter(msg => {
+            const cleanMsg = msg.trim();
+            
+            // 🔧 ETAPA 1: Permitir confirmaciones cortas comunes
+            if (cleanMsg.length < 3 && ALLOWED_SHORT.includes(cleanMsg.toLowerCase())) {
+                logDebug('BUFFER_ALLOW_SHORT', `Confirmación corta permitida`, {
+                    userJid: getShortUserId(userId),
+                    message: cleanMsg,
+                    length: cleanMsg.length
+                });
+                return true;
+            }
+            
+            // Ignorar mensajes muy cortos (menos de 3 caracteres) que no son confirmaciones
+            if (cleanMsg.length < 3) {
+                logDebug('BUFFER_FILTER_SHORT', `Mensaje muy corto filtrado`, {
+                    userJid: getShortUserId(userId),
+                    message: cleanMsg,
+                    length: cleanMsg.length
+                });
+                return false;
+            }
+            
+            // Ignorar patrones de ruido como "m", "mm", "mmm"
+            if (/^m+$/i.test(cleanMsg)) {
+                logDebug('BUFFER_FILTER_NOISE', `Patrón de ruido filtrado`, {
+                    userJid: getShortUserId(userId),
+                    message: cleanMsg
+                });
+                return false;
+            }
+            
+            // Ignorar mensajes que solo contienen puntos suspensivos
+            if (/^\.{2,}$/.test(cleanMsg)) {
+                logDebug('BUFFER_FILTER_ELLIPSIS', `Puntos suspensivos filtrados`, {
+                    userJid: getShortUserId(userId),
+                    message: cleanMsg
+                });
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Si no quedan mensajes válidos después del filtrado, limpiar buffer
+        if (filteredMessages.length === 0) {
+            logInfo('BUFFER_EMPTY_AFTER_FILTER', `Buffer vacío después de filtrado`, {
+                userJid: getShortUserId(userId),
+                userName: buffer.userName,
+                originalCount: buffer.messages.length
+            });
+            globalMessageBuffers.delete(userId);
+            return;
+        }
+        
+        // 🔧 ETAPA 1: Mejorar concatenación con limpieza de espacios
+        const combinedText = filteredMessages
+            .join(' ')
+            .replace(/\s+/g, ' ') // Reemplazar múltiples espacios con uno solo
+            .trim();
+        
+        const messageCount = filteredMessages.length;
+        const originalCount = buffer.messages.length;
+        
+        // 🔧 CRÍTICO: Validar mensajes cortos durante typing
+        const hasShortMessages = filteredMessages.some(msg => msg.length <= 3);
+        const isTypingActive = buffer.isTyping;
+        
+        if (hasShortMessages && isTypingActive && messageCount < 3) {
+            logWarning('PREMATURE_PROCESSING_DETECTED', 'Procesamiento prematuro de mensajes cortos durante typing', {
+                userJid: getShortUserId(userId),
+                userName: buffer.userName,
+                messageCount,
+                hasShortMessages,
+                isTypingActive,
+                combinedText: combinedText.substring(0, 50) + '...',
+                environment: appConfig.environment
+            });
+            
+            console.log(`⏳ [BUFFER_WAIT] ${buffer.userName}: Mensajes cortos durante typing → Esperando 2s extra...`);
+            
+            // Esperar 2 segundos extra antes de procesar
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Verificar si llegaron más mensajes durante la espera
+            const updatedBuffer = globalMessageBuffers.get(userId);
+            if (updatedBuffer && updatedBuffer.messages.length > originalCount) {
+                logInfo('BUFFER_UPDATED_DURING_WAIT', 'Buffer actualizado durante espera, procesando versión actualizada', {
+                    userJid: getShortUserId(userId),
+                    originalCount,
+                    newCount: updatedBuffer.messages.length,
+                    environment: appConfig.environment
+                });
+                
+                // Continuar con el buffer actualizado
+                return;
+            }
+        }
+        
+        // Log mejorado para procesamiento de buffer con información de filtrado
+        console.log(`🔄 [BUFFER_PROCESS] ${buffer.userName}: ${messageCount}/${originalCount} mensajes → "${combinedText.substring(0, 40)}..."`);
+        
+        logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global con filtrado`, {
             userJid: getShortUserId(userId),
             userName: buffer.userName,
-            messageCount,
+            originalCount,
+            filteredCount: messageCount,
+            filteredOut: originalCount - messageCount,
             combinedText: combinedText.substring(0, 100) + '...',
+            hasShortMessages,
+            isTypingActive,
             environment: appConfig.environment
         });
         
@@ -670,6 +819,61 @@ function setupWebhooks() {
         await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
     }
     
+    // 🔧 ETAPA 1: Función para limpiar runs huérfanos automáticamente
+    async function cleanupOldRuns(threadId: string, userId: string): Promise<number> {
+        try {
+            const runs = await openaiClient.beta.threads.runs.list(threadId, { limit: 10 });
+            let cancelledCount = 0;
+            
+            for (const run of runs.data) {
+                // Cancelar runs que están en estado activo por más de 5 minutos
+                if (['queued', 'in_progress', 'requires_action'].includes(run.status)) {
+                    const runAge = Date.now() - new Date(run.created_at).getTime();
+                    const fiveMinutes = 5 * 60 * 1000;
+                    
+                    if (runAge > fiveMinutes) {
+                        try {
+                            await openaiClient.beta.threads.runs.cancel(threadId, run.id);
+                            cancelledCount++;
+                            
+                            logWarning('OLD_RUN_CANCELLED', `Run huérfano cancelado automáticamente`, {
+                                userId: getShortUserId(userId),
+                                threadId,
+                                runId: run.id,
+                                status: run.status,
+                                ageMinutes: Math.round(runAge / 1000 / 60)
+                            });
+                        } catch (cancelError) {
+                            logError('OLD_RUN_CANCEL_ERROR', `Error cancelando run huérfano`, {
+                                userId: getShortUserId(userId),
+                                threadId,
+                                runId: run.id,
+                                error: cancelError.message
+                            });
+                        }
+                    }
+                }
+            }
+            
+            if (cancelledCount > 0) {
+                logInfo('OLD_RUNS_CLEANUP', `Cleanup automático completado`, {
+                    userId: getShortUserId(userId),
+                    threadId,
+                    runsCancelled: cancelledCount
+                });
+            }
+            
+            return cancelledCount;
+        } catch (error) {
+            logError('OLD_RUNS_CLEANUP_ERROR', `Error en cleanup de runs huérfanos`, {
+                userId: getShortUserId(userId),
+                threadId,
+                error: error.message
+            });
+            return 0;
+        }
+    }
+
     // 🔧 NUEVA FUNCIÓN: Verificar si hay runs activos para un usuario
     async function isRunActive(userId: string): Promise<boolean> {
         try {
@@ -679,6 +883,9 @@ function setupWebhooks() {
             if (!threadRecord) {
                 return false; // No hay thread, no hay runs activos
             }
+            
+            // 🔧 ETAPA 1: Limpiar runs huérfanos antes de verificar
+            await cleanupOldRuns(threadRecord.threadId, shortUserId);
             
             const runs = await openaiClient.beta.threads.runs.list(threadRecord.threadId, { limit: 5 });
             const activeRuns = runs.data.filter(r => 
@@ -707,34 +914,84 @@ function setupWebhooks() {
     }
 
     async function processCombinedMessage(userId: string, combinedText: string, chatId: string, userName: string, messageCount: number): Promise<void> {
-        // Filtro inicial: ignorar mensajes triviales/ruido
-        const cleanText = combinedText.trim();
-        if (cleanText.length < 3 || /^[\?\.]+$/.test(cleanText)) {
-            logInfo('IGNORED_NOISE', 'Mensaje ignorado por ser ruido/trivial', {
-                userJid: getShortUserId(userId),
-                messageCount,
-                combinedText: cleanText,
-                environment: appConfig.environment
-            });
-            return;
-        }
+        
+        
+        // 🔧 NUEVO: Usar sistema de colas en lugar de procesamiento directo
+        const shortUserId = getShortUserId(userId);
+        
+        // Crear función de procesamiento para la cola
+        const processFunction = async () => {
+            // 🔧 NUEVO: Verificar y manejar runs activos de manera más inteligente
+            const threadRecord = threadPersistence.getThread(shortUserId);
+            if (threadRecord) {
+                try {
+                    const runs = await openaiClient.beta.threads.runs.list(threadRecord.threadId, { limit: 5 });
+                    const activeRuns = runs.data.filter(r => 
+                        ['queued', 'in_progress', 'requires_action'].includes(r.status)
+                    );
+                    
+                    if (activeRuns.length > 0) {
+                        // 🔧 NUEVO: Si hay un run en requires_action, intentar procesarlo
+                        const requiresActionRun = activeRuns.find(r => r.status === 'requires_action');
+                        if (requiresActionRun) {
+                            logInfo('RUN_REQUIRES_ACTION', `Procesando run en requires_action para ${userName}`, {
+                                userJid: shortUserId,
+                                runId: requiresActionRun.id,
+                                environment: appConfig.environment
+                            });
+                            
+                            // Intentar procesar el run que requiere acción
+                            try {
+                                // Aquí podrías agregar lógica para procesar tool calls si es necesario
+                                // Por ahora, cancelamos el run para permitir nuevo procesamiento
+                                await openaiClient.beta.threads.runs.cancel(threadRecord.threadId, requiresActionRun.id);
+                                logInfo('RUN_CANCELLED', `Run cancelado para permitir nuevo procesamiento`, {
+                                    userJid: shortUserId,
+                                    runId: requiresActionRun.id,
+                                    environment: appConfig.environment
+                                });
+                            } catch (cancelError) {
+                                logWarning('RUN_CANCEL_ERROR', `Error cancelando run`, {
+                                    userJid: shortUserId,
+                                    runId: requiresActionRun.id,
+                                    error: cancelError.message,
+                                    environment: appConfig.environment
+                                });
+                            }
+                        } else {
+                            // Run en progreso normal, saltar procesamiento
+                            logWarning('BUFFER_PROCESS_SKIPPED', `Procesamiento de buffer saltado - run activo para ${userName}`, {
+                                userJid: shortUserId,
+                                messageCount,
+                                combinedText: cleanText.substring(0, 50) + '...',
+                                environment: appConfig.environment
+                            });
+                            console.log(`⏸️ [BUFFER_SKIP] ${userName}: Run activo → Saltando procesamiento`);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    logError('RUN_CHECK_ERROR', `Error verificando runs para ${userName}`, {
+                        userJid: shortUserId,
+                        error: error.message,
+                        environment: appConfig.environment
+                    });
+                }
+            }
 
-        // Verificar runs activos antes de procesar
-        const hasActiveRun = await isRunActive(userId);
-        if (hasActiveRun) {
-            logWarning('BUFFER_PROCESS_SKIPPED', `Procesamiento de buffer saltado - run activo para ${userName}`, {
-                userJid: getShortUserId(userId),
-                messageCount,
-                combinedText: cleanText.substring(0, 50) + '...',
-                environment: appConfig.environment
-            });
-            console.log(`⏸️ [BUFFER_SKIP] ${userName}: Run activo → Saltando procesamiento`);
-            return;
-        }
-
-        // Todo mensaje relevante va directo a OpenAI
+            // Todo mensaje relevante va directo a OpenAI
             const response = await processWithOpenAI(combinedText, userId, chatId, userName);
             await sendWhatsAppMessage(chatId, response);
+        };
+        
+        // 🔧 NUEVO: Agregar a la cola del usuario
+        const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        simpleLockManager.addToQueue(shortUserId, messageId, { combinedText, chatId, userName }, processFunction);
+        
+        // 🔧 NUEVO: Procesar la cola si no hay lock activo
+        if (!simpleLockManager.hasActiveLock(shortUserId)) {
+            await simpleLockManager.processQueue(shortUserId);
+        }
     }
     
     async function subscribeToPresence(userId: string): Promise<void> {
@@ -952,7 +1209,7 @@ function setupWebhooks() {
         }
     }
 
-    // Función para procesar mensajes agrupados
+    // 🔧 NUEVO: Función para procesar mensajes agrupados con sistema de colas
     async function processUserMessages(userId: string) {
         const buffer = userMessageBuffers.get(userId);
         if (!buffer || buffer.messages.length === 0) {
@@ -962,135 +1219,162 @@ function setupWebhooks() {
 
         const shortUserId = getShortUserId(userId);
         
-        // 🔧 ETAPA 3: Iniciar tracing de request
-        const requestId = startRequestTracing(shortUserId);
-        
-        // Asegurar agrupación efectiva
-        let combinedMessage;
-        if (buffer.messages.length > 1) {
-            combinedMessage = buffer.messages.join('\n\n');
-            logInfo('BUFFER_GROUPED', `Agrupados ${buffer.messages.length} msgs`, { 
-                userId: shortUserId,
-                requestId 
-            });
-        } else {
-            combinedMessage = buffer.messages[0];
-        }
-
-        // 🔧 ETAPA 2: Análisis de Contexto y Disponibilidad
-        const contextAnalysis = analyzeForContextInjection(buffer.messages, requestId);
-        const isAvailabilityQuery = /disponibilidad|disponible|libre/i.test(combinedMessage);
-        const hasCompleteAvailability = isAvailabilityQuery ? isAvailabilityComplete(combinedMessage) : true;
-        
-        // Log del análisis
-        logInfo('HYBRID_ANALYSIS', 'Análisis híbrido completado', {
-            userId: shortUserId,
-            isAvailabilityQuery,
-            hasCompleteAvailability,
-            contextNeedsInjection: contextAnalysis.needsInjection,
-            contextMatchPercentage: contextAnalysis.matchPercentage,
-            requestId
-        });
-
-        // 🔧 ETAPA 2: Manejo de Disponibilidad Incompleta
-        if (isAvailabilityQuery && !hasCompleteAvailability) {
-            const availabilityResponse = "¡Claro! 😊 Para consultar disponibilidad necesito algunos detalles:\n\n" +
-                "• ¿Cuántas personas?\n" +
-                "• ¿Fechas de entrada y salida? (formato: DD/MM/YYYY)\n" +
-                "• ¿Algún apartamento específico? (1722-A, 715, 1317)\n\n" +
-                "Una vez me proporciones esta información, podré consultar la disponibilidad exacta para ti.";
+        // 🔧 NUEVO: Crear función de procesamiento para la cola
+        const processFunction = async () => {
+            // 🔧 ETAPA 3: Iniciar tracing de request
+            const requestId = startRequestTracing(shortUserId);
             
-            logInfo('AVAILABILITY_INCOMPLETE', 'Consulta de disponibilidad incompleta, solicitando detalles', {
+            // Asegurar agrupación efectiva
+            let combinedMessage;
+            if (buffer.messages.length > 1) {
+                combinedMessage = buffer.messages.join('\n\n');
+                logInfo('BUFFER_GROUPED', `Agrupados ${buffer.messages.length} msgs`, { 
+                    userId: shortUserId,
+                    requestId 
+                });
+            } else {
+                combinedMessage = buffer.messages[0];
+            }
+
+            // 🔧 ETAPA 2: Análisis de Contexto y Disponibilidad
+            const contextAnalysis = analyzeForContextInjection(buffer.messages, requestId);
+            const isAvailabilityQuery = /disponibilidad|disponible|libre/i.test(combinedMessage);
+            const hasCompleteAvailability = isAvailabilityQuery ? isAvailabilityComplete(combinedMessage) : true;
+            
+            // Log del análisis
+            logInfo('HYBRID_ANALYSIS', 'Análisis híbrido completado', {
                 userId: shortUserId,
-                messageLength: combinedMessage.length,
+                isAvailabilityQuery,
+                hasCompleteAvailability,
+                contextNeedsInjection: contextAnalysis.needsInjection,
+                contextMatchPercentage: contextAnalysis.matchPercentage,
                 requestId
             });
-            
-            // Enviar respuesta y continuar buffering
-            await sendWhatsAppMessage(buffer.chatId, availabilityResponse);
-            
-            // NO limpiar buffer - continuar esperando detalles
-            return;
-        }
 
-        // --- ETAPA 3: Check temático para forzar syncIfNeeded ---
-        const thematicKeywords = ["pasado", "reserva", "anterior", "previo", "historial", "cotización", "confirmación"];
-        const thematicMatch = thematicKeywords.some(kw => combinedMessage.toLowerCase().includes(kw));
-        const forceSync = thematicMatch;
+            // 🔧 ETAPA 2: Manejo de Disponibilidad Incompleta
+            if (isAvailabilityQuery && !hasCompleteAvailability) {
+                const availabilityResponse = "¡Claro! 😊 Para consultar disponibilidad necesito algunos detalles:\n\n" +
+                    "• ¿Cuántas personas?\n" +
+                    "• ¿Fechas de entrada y salida? (formato: DD/MM/YYYY)\n" +
+                    "• ¿Algún apartamento específico? (1722-A, 715, 1317)\n\n" +
+                    "Una vez me proporciones esta información, podré consultar la disponibilidad exacta para ti.";
+                
+                logInfo('AVAILABILITY_INCOMPLETE', 'Consulta de disponibilidad incompleta, solicitando detalles', {
+                    userId: shortUserId,
+                    messageLength: combinedMessage.length,
+                    requestId
+                });
+                
+                // Enviar respuesta y continuar buffering
+                await sendWhatsAppMessage(buffer.chatId, availabilityResponse);
+                
+                // NO limpiar buffer - continuar esperando detalles
+                return;
+            }
 
-        // Log de detección temática
-        if (thematicMatch) {
-            logInfo('THEMATIC_SYNC', 'Forzando syncIfNeeded por keyword temática', {
-                userId: shortUserId,
-                keywords: thematicKeywords.filter(kw => combinedMessage.toLowerCase().includes(kw)),
+            // --- ETAPA 3: Check temático para forzar syncIfNeeded ---
+            const thematicKeywords = ["pasado", "reserva", "anterior", "previo", "historial", "cotización", "confirmación"];
+            const thematicMatch = thematicKeywords.some(kw => combinedMessage.toLowerCase().includes(kw));
+            const forceSync = thematicMatch;
+
+            // Log de detección temática
+            if (thematicMatch) {
+                logInfo('THEMATIC_SYNC', 'Forzando syncIfNeeded por keyword temática', {
+                    userId: shortUserId,
+                    keywords: thematicKeywords.filter(kw => combinedMessage.toLowerCase().includes(kw)),
+                    requestId
+                });
+                // Incrementar métrica de hits de patrones temáticos
+                try {
+                    const { patternHitsCounter } = require('./routes/metrics');
+                    patternHitsCounter.inc();
+                } catch (e) { /* ignorar en test/local */ }
+            }
+
+            // Sincronizar labels/perfil antes de procesar (forzar si match temático)
+            await guestMemory.getOrCreateProfile(userId, forceSync);
+
+            // 🔧 ETAPA 3: Actualizar etapa del flujo
+            updateRequestStage(requestId, 'processing');
+
+            logInfo('MESSAGE_PROCESS', `Procesando mensajes agrupados`, {
+                userId,
+                shortUserId,
+                chatId: buffer.chatId,
+                messageCount: buffer.messages.length,
+                totalLength: combinedMessage.length,
+                preview: combinedMessage.substring(0, 100) + '...',
+                isAvailabilityQuery,
+                contextNeedsInjection: contextAnalysis.needsInjection,
+                environment: appConfig.environment,
                 requestId
             });
-            // Incrementar métrica de hits de patrones temáticos
-            try {
-                const { patternHitsCounter } = require('./routes/metrics');
-                patternHitsCounter.inc();
-            } catch (e) { /* ignorar en test/local */ }
+
+            // Log compacto - Inicio
+            console.log(`🤖 [BOT] ${buffer.messages.length} msgs → OpenAI`);
+            
+            // Enviar a OpenAI con el userId original y la información completa del cliente
+            const startTime = Date.now();
+            const response = await processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.name, requestId, contextAnalysis);
+            const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
+            
+            // Log mejorado con preview completo y duración real
+            const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
+            console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 "${preview}"`);
+            
+            // 🔧 ETAPA 2: Incrementar métrica de mensajes procesados
+            incrementMessages();
+            
+            // Enviar respuesta a WhatsApp
+            await sendWhatsAppMessage(buffer.chatId, response);
+
+            // 🔧 ETAPA 3: Finalizar tracing y loggear resumen
+            const tracingSummary = endRequestTracing(requestId);
+            if (tracingSummary) {
+                logRequestTracing('Request completado', {
+                    ...tracingSummary,
+                    responseLength: response.length,
+                    aiDuration: parseFloat(aiDuration)
+                });
+            }
+
+            // 🔧 ETAPA 2: Programar cleanup on-demand después de procesamiento exitoso
+            scheduleCleanup();
+            scheduleCacheCleanup();
+            scheduleTokenCleanup();
+
+            // Limpiar buffer, timer y estado de typing
+            userMessageBuffers.delete(userId);
+            if (userActivityTimers.has(userId)) {
+                clearTimeout(userActivityTimers.get(userId)!);
+                userActivityTimers.delete(userId);
+            }
+            userTypingState.delete(userId); // Limpiar estado de typing
+        };
+        
+        // 🔧 NUEVO: Agregar a la cola del usuario
+        const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        simpleLockManager.addToQueue(shortUserId, messageId, buffer, processFunction);
+        
+        // 🔧 NUEVO: Procesar la cola si no hay lock activo
+        if (!simpleLockManager.hasActiveLock(shortUserId)) {
+            await simpleLockManager.processQueue(shortUserId);
         }
-
-        // Sincronizar labels/perfil antes de procesar (forzar si match temático)
-        await guestMemory.getOrCreateProfile(userId, forceSync);
-
-        // 🔧 ETAPA 3: Actualizar etapa del flujo
-        updateRequestStage(requestId, 'processing');
-
-        logInfo('MESSAGE_PROCESS', `Procesando mensajes agrupados`, {
-            userId,
-            shortUserId,
-            chatId: buffer.chatId,
-            messageCount: buffer.messages.length,
-            totalLength: combinedMessage.length,
-            preview: combinedMessage.substring(0, 100) + '...',
-            isAvailabilityQuery,
-            contextNeedsInjection: contextAnalysis.needsInjection,
-            environment: appConfig.environment,
-            requestId
-        });
-
-        // Log compacto - Inicio
-        console.log(`🤖 [BOT] ${buffer.messages.length} msgs → OpenAI`);
-        
-        // Enviar a OpenAI con el userId original y la información completa del cliente
-        const startTime = Date.now();
-        const response = await processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.name, requestId, contextAnalysis);
-        const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
-        
-        // Log compacto - Resultado
-        const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
-        console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 "${preview}"`);
-        
-        // 🔧 ETAPA 2: Incrementar métrica de mensajes procesados
-        incrementMessages();
-        
-        // Enviar respuesta a WhatsApp
-        await sendWhatsAppMessage(buffer.chatId, response);
-
-        // 🔧 ETAPA 3: Finalizar tracing y loggear resumen
-        const tracingSummary = endRequestTracing(requestId);
-        if (tracingSummary) {
-            logRequestTracing('Request completado', {
-                ...tracingSummary,
-                responseLength: response.length,
-                aiDuration: parseFloat(aiDuration)
-            });
-        }
-
-        // Limpiar buffer, timer y estado de typing
-        userMessageBuffers.delete(userId);
-        if (userActivityTimers.has(userId)) {
-            clearTimeout(userActivityTimers.get(userId)!);
-            userActivityTimers.delete(userId);
-        }
-        userTypingState.delete(userId); // Limpiar estado de typing
     }
 
     // Función para envío de mensajes a WhatsApp
     async function sendWhatsAppMessage(chatId: string, message: string) {
         const shortUserId = getShortUserId(chatId);
+        
+        // 🔧 NUEVO: No enviar mensajes vacíos
+        if (!message || message.trim() === '') {
+            logInfo('WHATSAPP_SKIP_EMPTY', `Saltando envío de mensaje vacío para ${shortUserId}`, {
+                chatId,
+                messageLength: message?.length || 0,
+                environment: appConfig.environment
+            });
+            return true; // Retornar true para no generar error
+        }
         
         try {
             logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
@@ -1109,7 +1393,7 @@ function setupWebhooks() {
                 body: JSON.stringify({
                     to: chatId,
                     body: message,
-                    typing_time: 3
+                    typing_time: message.includes('🔄') || message.includes('📊') ? 5 : 3 // Extender typing para tool responses
                 })
             });
             
@@ -1152,30 +1436,9 @@ function setupWebhooks() {
         }
     }
 
-    // Función principal de procesamiento con OpenAI
+    // 🔧 NUEVO: Función principal de procesamiento con OpenAI (sin manejo de locks)
     const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string = null, userName: string = null, requestId?: string, contextAnalysis?: { needsInjection: boolean; matchPercentage: number; reason: string }): Promise<string> => {
         const shortUserId = getShortUserId(userJid);
-        
-        // 🔧 ETAPA 1: Adquirir lock para prevenir race conditions
-        const lockAcquired = await acquireThreadLock(shortUserId);
-        if (!lockAcquired) {
-            logWarning('THREAD_LOCK_REJECTED', 'Procesamiento rechazado - thread ocupado', {
-                userId: shortUserId,
-                requestId
-            });
-            return 'Lo siento, estoy procesando otro mensaje. Por favor espera un momento y vuelve a intentar.';
-        }
-        
-        // 🔧 ETAPA 1: Liberar lock al final de la función
-        try {
-            releaseThreadLock(shortUserId);
-        } catch (lockError) {
-            logError('THREAD_LOCK_RELEASE_ERROR', 'Error liberando lock', {
-                userId: shortUserId,
-                error: lockError.message,
-                requestId
-            });
-        }
         
         // 🔧 ETAPA 1: Tracking de métricas de performance
         const startTime = Date.now();
@@ -1295,9 +1558,9 @@ function setupWebhooks() {
                  }
              }
              
-             // 🔧 FIX RACE CONDITION: Verificar que no hay runs activos antes de agregar mensaje
+             // 🔧 MEJORADO: Backoff progresivo para manejo de runs activos
              let addAttempts = 0;
-             const maxAddAttempts = 10;
+             const maxAddAttempts = 15; // Aumentado de 10 a 15
              
              while (addAttempts < maxAddAttempts) {
                  try {
@@ -1308,16 +1571,20 @@ function setupWebhooks() {
                      );
                      
                      if (activeRuns.length > 0) {
-                         logWarning('ACTIVE_RUN_BEFORE_ADD', `Run activo detectado antes de agregar mensaje, esperando...`, {
+                         // 🔧 MEJORADO: Backoff progresivo (1s, 2s, 3s...)
+                         const backoffDelay = Math.min((addAttempts + 1) * 1000, 5000); // Máximo 5s
+                         
+                         logWarning('ACTIVE_RUN_BEFORE_ADD', `Run activo detectado antes de agregar mensaje, esperando con backoff...`, {
                              shortUserId,
                              threadId,
                              activeRuns: activeRuns.map(r => ({ id: r.id, status: r.status })),
                              attempt: addAttempts + 1,
+                             backoffDelay,
                              requestId
                          });
                          
-                         // Esperar a que se complete
-                         await new Promise(resolve => setTimeout(resolve, 1000));
+                         // Esperar con backoff progresivo
+                         await new Promise(resolve => setTimeout(resolve, backoffDelay));
                          addAttempts++;
                          continue;
                      }
@@ -1337,19 +1604,23 @@ function setupWebhooks() {
                      
                  } catch (addError) {
                      if (addError.message && addError.message.includes('while a run') && addError.message.includes('is active')) {
-                         logWarning('RACE_CONDITION_RETRY', `Race condition detectada, reintentando...`, {
+                         // 🔧 MEJORADO: Backoff progresivo para race conditions
+                         const backoffDelay = Math.min((addAttempts + 1) * 1000, 5000);
+                         
+                         logWarning('RACE_CONDITION_RETRY', `Race condition detectada, reintentando con backoff...`, {
                              shortUserId,
                              threadId,
                              attempt: addAttempts + 1,
+                             backoffDelay,
                              error: addError.message,
                              requestId
                          });
                          
-                         await new Promise(resolve => setTimeout(resolve, 1000));
+                         await new Promise(resolve => setTimeout(resolve, backoffDelay));
                          addAttempts++;
                          
                          if (addAttempts >= maxAddAttempts) {
-                             throw new Error(`Race condition persistente después de ${maxAddAttempts} intentos`);
+                             throw new Error(`Race condition persistente después de ${maxAddAttempts} intentos con backoff progresivo`);
                          }
                          continue;
                      } else {
@@ -1372,20 +1643,22 @@ function setupWebhooks() {
                  requestId 
              });
             
-            // Esperar respuesta
+            // Polling normal (sin cambios del plan original)
             let attempts = 0;
-            const maxAttempts = 60;
+            const maxAttempts = 30;
+            const pollingInterval = 1000;
             
             while (['queued', 'in_progress'].includes(run.status) && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, pollingInterval));
                 run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
                 attempts++;
                 
-                if (attempts % 20 === 0) {  // Cambiado de %10 a %20
+                if (attempts % 10 === 0) {
                     logInfo('OPENAI_POLLING', `Esperando...`, { 
                         shortUserId, 
                         runId: run.id, 
                         status: run.status,
+                        attempts,
                         requestId
                     });
                 }
@@ -1410,14 +1683,12 @@ function setupWebhooks() {
                 setTokensUsed(totalTokens);
                 setLatency(durationMs);
                 
-                // 🔧 ETAPA 2: Logs de warning para thresholds
-                if (totalTokens > 5000) {
-                    logWarning('HIGH_TOKEN_USAGE', `Uso alto de tokens detectado`, {
+                // 🔧 SIMPLIFICADO: Solo log informativo de tokens (sin warnings innecesarios)
+                if (totalTokens > 0) {
+                    logInfo('TOKEN_USAGE', `Tokens utilizados`, {
                         shortUserId,
                         threadId,
                         totalTokens,
-                        threshold: 5000,
-                        isHighUsage: true,
                         requestId
                     });
                 }
@@ -1488,7 +1759,19 @@ function setupWebhooks() {
                         contextTokens,
                         requestId
                     });
-                    return 'Lo siento, hubo un problema procesando tu solicitud. Por favor intenta de nuevo.';
+                    
+                    // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
+                    // En lugar de enviar un mensaje automático, simplemente logear el error
+                    // y permitir que el flujo continúe naturalmente
+                    logWarning('NO_ASSISTANT_RESPONSE', 'OpenAI no generó respuesta, permitiendo flujo natural', {
+                        shortUserId,
+                        runId: run.id,
+                        threadId,
+                        requestId
+                    });
+                    
+                    // Retornar string vacío para que el sistema maneje el flujo naturalmente
+                    return '';
                 }
                 
                 // Corregir el type guard para content:
@@ -1511,10 +1794,38 @@ function setupWebhooks() {
                         contextTokens,
                         requestId
                     });
-                    return 'Lo siento, hubo un problema procesando tu solicitud. Por favor intenta de nuevo.';
+                    
+                    // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
+                    logWarning('INVALID_CONTENT_TYPE', 'Tipo de contenido inválido, permitiendo flujo natural', {
+                        shortUserId,
+                        runId: run.id,
+                        threadId,
+                        requestId
+                    });
+                    
+                    return '';
                 }
                 
                 const responseText = content.text.value;
+                
+                // Validación básica (sin cambios del plan original)
+                if (responseText === userMsg || responseText === userMsg.trim()) {
+                    logError('RESPONSE_ECHO_DETECTED', 'Bot enviando input del usuario como respuesta', {
+                        shortUserId,
+                        runId: run.id,
+                        threadId,
+                        userMsg: userMsg.substring(0, 50) + '...',
+                        responseText: responseText.substring(0, 50) + '...',
+                        userMsgLength: userMsg.length,
+                        responseLength: responseText.length,
+                        requestId
+                    });
+                    
+                    incrementFallbacks();
+                    return '';
+                }
+                
+
                 
                 // Detectar posible loop en respuesta
                 if (responseText.includes('Las funciones se ejecutaron correctamente')) {
@@ -1557,7 +1868,7 @@ function setupWebhooks() {
                 
                 return responseText;
             } else if (run.status === 'requires_action' && run.required_action?.type === 'submit_tool_outputs') {
-                // Manejar function calling
+                // Manejar function calling - SIMPLIFICADO
                 const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
                 
                 // 🔧 ETAPA 3: Actualizar etapa del flujo
@@ -1565,17 +1876,14 @@ function setupWebhooks() {
                     updateRequestStage(requestId, 'function_calling');
                 }
                 
-                // 🔧 REVERTIDO: Solo log en debug mode para reducir verbose
-                if (process.env.ENABLE_VERBOSE_LOGS === 'true') {
-                    logFunctionCallingStart('function_calling_required', {
-                        shortUserId,
-                        threadId,
-                        runId: run.id,
-                        toolCallsCount: toolCalls.length,
-                        environment: appConfig.environment,
-                        requestId
-                    });
-                }
+                logFunctionCallingStart('function_calling_required', {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    toolCallsCount: toolCalls.length,
+                    environment: appConfig.environment,
+                    requestId
+                });
                 
                 const toolOutputs = [];
                 
@@ -1657,39 +1965,74 @@ function setupWebhooks() {
                     tool_outputs: toolOutputs
                 });
                 
-                // 🔧 REVERTIDO: Solo log en debug mode para reducir verbose
-                if (process.env.ENABLE_VERBOSE_LOGS === 'true') {
-                    logToolOutputsSubmitted('Tool outputs enviados a OpenAI', {
-                        shortUserId,
-                        threadId,
-                        runId: run.id,
-                        requestId,
-                        outputs: toolOutputs.map(o => ({ 
-                            id: o.tool_call_id, 
-                            outputLength: o.output.length,
-                            outputPreview: o.output.substring(0, 100) + '...'
-                        })),
-                        totalOutputs: toolOutputs.length
-                    });
-                }
+                logToolOutputsSubmitted('Tool outputs enviados a OpenAI', {
+                    shortUserId,
+                    threadId,
+                    runId: run.id,
+                    requestId,
+                    outputs: toolOutputs.map(o => ({ 
+                        id: o.tool_call_id, 
+                        outputLength: o.output.length,
+                        outputPreview: o.output.substring(0, 100) + '...'
+                    })),
+                    totalOutputs: toolOutputs.length
+                });
                 
-                // Esperar a que complete después del function calling
-                attempts = 0;
-                while (['queued', 'in_progress'].includes(run.status) && attempts < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                // 🔧 MEJORADO: Polling post-tool con delay inicial y reintentos fijos
+                // Log inmediato después de submit para depuración
+                logInfo('POST_SUBMIT_STATUS', 'Status después de submit tool outputs', { 
+                    shortUserId,
+                    runId: run.id,
+                    runStatus: run.status,
+                    requestId
+                });
+                
+                // Delay inicial para dar tiempo a OpenAI de actualizar status
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 2s simple
+                
+                let postAttempts = 0;
+                const maxPostAttempts = 3; // Bajo para eficiencia, evita overhead
+                
+                while (postAttempts < maxPostAttempts) {
                     run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
-                    attempts++;
                     
-                    if (attempts % 10 === 0) {
-                        logInfo('OPENAI_POLLING_POST_TOOLS', `Esperando después de tool outputs...`, { 
-                            shortUserId, 
-                            runId: run.id, 
+                    logInfo('POST_TOOL_POLLING', `Polling post-tool - Intento ${postAttempts + 1}/${maxPostAttempts}`, { 
+                        shortUserId, 
+                        runId: run.id, 
+                        status: run.status,
+                        attempt: postAttempts + 1,
+                        requestId
+                    });
+                    
+                    if (run.status === 'completed') {
+                        break; // Éxito, salir del loop
+                    }
+                    
+                    if (!['queued', 'in_progress'].includes(run.status)) {
+                        // Status inesperado (failed, cancelled, etc.), salir
+                        logWarning('POST_TOOL_UNEXPECTED_STATUS', `Status inesperado en polling post-tool`, {
+                            shortUserId,
+                            runId: run.id,
                             status: run.status,
-                            attempts,
+                            attempt: postAttempts + 1,
                             requestId
                         });
+                        break;
                     }
+                    
+                    // Esperar antes del siguiente intento
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Espera fija de 2s
+                    postAttempts++;
                 }
+                
+                // Log final del polling
+                logInfo('POST_TOOL_POLLING_COMPLETE', 'Polling post-tool completado', { 
+                    shortUserId,
+                    runId: run.id,
+                    attempts: postAttempts, 
+                    finalStatus: run.status,
+                    requestId
+                });
                 
                 if (run.status === 'completed') {
                     // 🔧 ETAPA 3: Actualizar etapa del flujo
@@ -1714,14 +2057,15 @@ function setupWebhooks() {
                                 requestId
                             });
                             
-                            // 🔧 ETAPA 1: Liberar lock antes de retornar
-                            releaseThreadLock(shortUserId);
+                            // Log bonito para terminal
+                            console.log(`✅ [TOOL_SUCCESS] Respuesta recibida después de ${toolCalls.length} tool calls`);
+                            
                             return responseText;
                         }
                     }
                     
-                    // 🔧 MEJORADO: Fallback inteligente con retry automático
-                    logWarning('ASSISTANT_NO_RESPONSE_POST_TOOL', 'No mensaje de assistant después de tool outputs, iniciando retry', { 
+                    // SIMPLIFICADO: Fallback básico si no hay respuesta
+                    logWarning('ASSISTANT_NO_RESPONSE_POST_TOOL', 'No mensaje de assistant después de tool outputs', { 
                         shortUserId,
                         runId: run.id, 
                         threadId,
@@ -1730,181 +2074,39 @@ function setupWebhooks() {
                         requestId
                     });
                     
-                    // 🔧 NUEVO: Retry automático con mensaje específico
-                    try {
-                        await openaiClient.beta.threads.messages.create(threadId, {
-                            role: 'user',
-                            content: 'Por favor resume los resultados de la consulta anterior de manera amigable y detallada para el usuario.'
-                        });
-                        
-                        const retryRun = await openaiClient.beta.threads.runs.create(threadId, { 
-                            assistant_id: secrets.ASSISTANT_ID 
-                        });
-                        
-                        logInfo('FUNCTION_CALLING_RETRY', 'Retry iniciado para obtener respuesta del assistant', {
-                            shortUserId,
-                            threadId,
-                            originalRunId: run.id,
-                            retryRunId: retryRun.id,
-                            requestId
-                        });
-                        
-                        // Polling para el retry (más corto que el original)
-                        let retryAttempts = 0;
-                        const maxRetryAttempts = 30;
-                        
-                        while (['queued', 'in_progress'].includes(retryRun.status) && retryAttempts < maxRetryAttempts) {
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                            const updatedRetryRun = await openaiClient.beta.threads.runs.retrieve(threadId, retryRun.id);
-                            retryAttempts++;
-                            
-                            if (retryAttempts % 10 === 0) {
-                                logInfo('FUNCTION_CALLING_RETRY_POLLING', `Esperando retry...`, { 
-                                    shortUserId, 
-                                    retryRunId: retryRun.id, 
-                                    status: updatedRetryRun.status,
-                                    attempts: retryAttempts,
-                                    requestId
-                                });
-                            }
-                            
-                            if (updatedRetryRun.status === 'completed') {
-                                const retryMessages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
-                                const retryAssistantMessage = retryMessages.data[0];
-                                
-                                if (retryAssistantMessage && retryAssistantMessage.content && retryAssistantMessage.content.length > 0) {
-                                    const retryContent = retryAssistantMessage.content[0];
-                                    if (retryContent.type === 'text' && retryContent.text.value && retryContent.text.value.trim() !== '') {
-                                        const retryResponseText = retryContent.text.value;
-                                        
-                                        logSuccess('FUNCTION_CALLING_RETRY_SUCCESS', `Retry exitoso - respuesta obtenida`, {
-                                            shortUserId,
-                                            threadId,
-                                            responseLength: retryResponseText.length,
-                                            retryRunId: retryRun.id,
-                                            retryAttempts,
-                                            requestId
-                                        });
-                                        
-                                        // 🔧 ETAPA 1: Liberar lock antes de retornar
-                                        releaseThreadLock(shortUserId);
-                                        return retryResponseText;
-                                    }
-                                }
-                                break;
-                            }
-                        }
-                        
-                        logWarning('FUNCTION_CALLING_RETRY_FAILED', 'Retry falló o timeout, usando fallback con tool outputs', {
-                            shortUserId,
-                            threadId,
-                            retryRunId: retryRun.id,
-                            retryAttempts,
-                            requestId
-                        });
-                        
-                    } catch (retryError) {
-                        logError('FUNCTION_CALLING_RETRY_ERROR', 'Error durante retry automático', {
-                            shortUserId,
-                            threadId,
-                            error: retryError.message,
-                            requestId
-                        });
-                    }
-                    
-                    // 🔧 ETAPA 3: Log específico para assistant sin respuesta post-tools
-                    logAssistantNoResponse('No message after tool outputs and retry', {
+                    // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
+                    logWarning('NO_RESPONSE_POST_TOOL', 'No respuesta después de tool outputs, permitiendo flujo natural', {
                         shortUserId,
                         runId: run.id,
                         threadId,
-                        requestId,
-                        reason: 'no_assistant_message_after_tools_and_retry',
-                        toolCallsExecuted: toolCalls.length,
-                        toolOutputsCount: toolOutputs.length
+                        requestId
                     });
+                    
+                    return '';
                 }
                 
-                // 🔧 MEJORADO: Fallback inteligente que incluye los tool outputs
-                // Si el assistant no generó respuesta después de function calling y retry, 
-                // construimos una respuesta útil con los resultados
-                logWarning('FUNCTION_CALLING_FALLBACK', `Assistant no generó respuesta post-function calling y retry, usando fallback inteligente`, {
+                // 🔧 MEJORADO: Fallback con información detallada del status
+                logWarning('FUNCTION_CALLING_TIMEOUT', 'Run no completado después de tool outputs', {
                     shortUserId,
                     threadId,
                     runId: run.id,
-                    toolCallsExecuted: toolCalls.length,
-                    environment: appConfig.environment,
+                    attempts: postAttempts,
+                    finalStatus: run.status,
                     requestId
                 });
                 
-                // 🔧 MEJORADO: Construir respuesta más inteligente con los tool outputs
-                let fallbackResponse = '✅ **Consulta completada exitosamente**\n\n';
+                // Log bonito para terminal con información clara
+                console.log(`⚠️ [TOOL_TIMEOUT] Run no completado (status: ${run.status}) después de tools - Intentos: ${postAttempts}`);
                 
-                for (const toolOutput of toolOutputs) {
-                    const toolCall = toolCalls.find(tc => tc.id === toolOutput.tool_call_id);
-                    if (toolCall) {
-                        const functionName = toolCall.function.name;
-                        
-                        // Formatear la respuesta según la función
-                        if (functionName === 'check_availability') {
-                            try {
-                                const availabilityData = JSON.parse(toolOutput.output);
-                                if (availabilityData.success && availabilityData.data) {
-                                    fallbackResponse += `🏨 **Disponibilidad encontrada:**\n`;
-                                    fallbackResponse += availabilityData.data;
-                                    fallbackResponse += '\n\n';
-                                } else {
-                                    fallbackResponse += `❌ **No hay disponibilidad** para las fechas solicitadas.\n\n`;
-                                }
-                            } catch (parseError) {
-                                // Si no es JSON, usar el output directo
-                                fallbackResponse += `📊 **Resultado de consulta:**\n${toolOutput.output}\n\n`;
-                            }
-                        } else if (functionName === 'escalate_to_human') {
-                            fallbackResponse += `👨‍💼 **Escalamiento iniciado:**\n${toolOutput.output}\n\n`;
-                        } else {
-                            // Para otras funciones
-                            fallbackResponse += `⚙️ **${functionName}:**\n${toolOutput.output}\n\n`;
-                        }
-                    }
-                }
-                
-                fallbackResponse += '💬 ¿Te gustaría consultar otras fechas, ver fotos o necesitas más información?';
-                
-                logSuccess('FUNCTION_CALLING_FALLBACK_SUCCESS', `Fallback inteligente generado con tool outputs`, {
+                // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
+                logWarning('FUNCTION_CALLING_TIMEOUT', 'Run no completado después de tool outputs, permitiendo flujo natural', {
                     shortUserId,
-                    threadId,
-                    responseLength: fallbackResponse.length,
-                    toolOutputsIncluded: toolOutputs.length,
-                    fallbackReason: 'assistant_no_response_after_retry',
-                    environment: appConfig.environment,
-                    requestId
-                });
-                
-                // 🔧 ETAPA 1: Loggear métricas del fallback
-                const fallbackDurationMs = Date.now() - startTime;
-                
-                // 🔧 ETAPA 2: Actualizar métricas Prometheus
-                incrementFallbacks();
-                setTokensUsed(totalTokens);
-                setLatency(fallbackDurationMs);
-                
-                logFallbackTriggered('Fallback post-function calling and retry', {
-                    shortUserId,
-                    threadId,
                     runId: run.id,
-                    reason: 'assistant_no_response_after_tools_and_retry',
-                    durationMs: fallbackDurationMs,
-                    totalTokens,
-                    contextTokens,
-                    toolCallsExecuted: toolCalls.length,
-                    toolOutputsIncluded: toolOutputs.length,
-                    retryAttempted: true,
+                    threadId,
                     requestId
                 });
                 
-                // 🔧 ETAPA 1: Liberar lock antes de retornar
-                releaseThreadLock(shortUserId);
-                return fallbackResponse;
+                return '';
             } else {
                 logError('OPENAI_RUN_ERROR', `Run falló o timeout`, {
                     shortUserId,
@@ -1916,132 +2118,108 @@ function setupWebhooks() {
                     requestId
                 });
                 
-                // 🔧 ETAPA 1: Liberar lock antes de retornar
-                releaseThreadLock(shortUserId);
-                return 'Lo siento, hubo un problema procesando tu solicitud. Por favor intenta de nuevo.';
+                // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
+                logWarning('OPENAI_RUN_ERROR', 'Run falló o timeout, permitiendo flujo natural', {
+                    shortUserId,
+                    runId: run.id,
+                    threadId,
+                    requestId
+                });
+                
+                return '';
             }
             
         } catch (error) {
-            logError('OPENAI_ERROR', `Error en procesamiento OpenAI para ${shortUserId}`, {
-                error: error.message,
-                stack: error.stack,
-                environment: appConfig.environment,
-                requestId
-            });
-            
-            // 🔧 NUEVO: Manejo específico para runs activos
-            if (error.message && error.message.includes('while a run') && error.message.includes('is active')) {
-                // Obtener threadId del threadPersistence
-                const threadRecord = threadPersistence.getThread(shortUserId);
-                if (!threadRecord) {
-                    logError('NO_THREAD_FOR_RECOVERY', `No se puede recuperar: thread no existe`, {
-                        shortUserId,
-                        error: error.message,
-                        requestId
-                    });
-                    // 🔧 ETAPA 1: Liberar lock antes de retornar
-                    releaseThreadLock(shortUserId);
-                    return 'Lo siento, hubo un error técnico. Por favor intenta de nuevo en unos momentos.';
-                }
+            // 🔧 NUEVO: Manejo específico para context length exceeded
+            if (error?.code === 'context_length_exceeded' || 
+                error?.message?.includes('maximum context length') ||
+                error?.message?.includes('context_length_exceeded')) {
                 
-                const threadId = threadRecord.threadId;
-                
-                logWarning('ACTIVE_RUN_ERROR', `Run activo detectado, intentando cancelar y reintentar`, {
+                logWarning('CONTEXT_LENGTH_EXCEEDED', 'Context length exceeded, creando nuevo thread con resumen', {
                     shortUserId,
-                    threadId,
+                    threadId: threadPersistence.getThread(shortUserId)?.threadId,
                     error: error.message,
                     requestId
                 });
                 
                 try {
-                    // Intentar cancelar runs activos
-                    const runs = await openaiClient.beta.threads.runs.list(threadId, { limit: 5 });
-                    const activeRuns = runs.data.filter(r => 
-                        ['queued', 'in_progress', 'requires_action'].includes(r.status)
-                    );
+                    // Crear nuevo thread
+                    const newThread = await openaiClient.beta.threads.create();
+                    const oldThreadId = threadPersistence.getThread(shortUserId)?.threadId;
                     
-                    if (activeRuns.length > 0) {
-                        logInfo('CANCELLING_ACTIVE_RUNS', `Cancelando ${activeRuns.length} runs activos`, {
-                            shortUserId,
-                            threadId,
-                            activeRuns: activeRuns.map(r => ({ id: r.id, status: r.status })),
-                            requestId
-                        });
-                        
-                        // Cancelar todos los runs activos
-                        for (const run of activeRuns) {
-                            try {
-                                await openaiClient.beta.threads.runs.cancel(threadId, run.id);
-                                logSuccess('ACTIVE_RUN_CANCELLED', `Run cancelado: ${run.id}`, {
-                                    shortUserId,
-                                    threadId,
-                                    runId: run.id,
-                                    previousStatus: run.status,
-                                    requestId
-                                });
-                            } catch (cancelError) {
-                                logError('RUN_CANCEL_ERROR', `Error cancelando run ${run.id}`, {
-                                    shortUserId,
-                                    threadId,
-                                    runId: run.id,
-                                    error: cancelError.message,
-                                    requestId
-                                });
-                            }
+                    // Generar resumen mínimo del thread anterior
+                    let summary = '';
+                    if (oldThreadId) {
+                        try {
+                            summary = await generateThreadSummary(oldThreadId, shortUserId);
+                        } catch (summaryError) {
+                            logWarning('SUMMARY_GENERATION_FAILED', 'Error generando resumen para nuevo thread', {
+                                shortUserId,
+                                oldThreadId,
+                                error: summaryError.message,
+                                requestId
+                            });
                         }
-                        
-                        // Esperar un momento para que las cancelaciones tomen efecto
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        
-                        // Reintentar el procesamiento
-                        logInfo('RETRY_AFTER_RUN_CANCELLATION', `Reintentando procesamiento después de cancelar runs`, {
-                            shortUserId,
-                            threadId,
-                            requestId
-                        });
-                        
-                        // Reintentar solo una vez para evitar loops infinitos
-                        // 🔧 ETAPA 1: Liberar lock antes del retry recursivo
-                        releaseThreadLock(shortUserId);
-                        return await processWithOpenAI(userMsg, userJid, chatId, userName, requestId, contextAnalysis);
                     }
-                } catch (recoveryError) {
-                    logError('RUN_RECOVERY_ERROR', `Error en recuperación de runs activos`, {
+                    
+                    // Agregar resumen como mensaje del usuario si existe
+                    if (summary) {
+                        await openaiClient.beta.threads.messages.create(newThread.id, {
+                            role: 'user',
+                            content: `[RESUMEN DE CONVERSACIÓN ANTERIOR]\n${summary}\n\n--- CONTINUAR CONVERSACIÓN ---`
+                        });
+                    }
+                    
+                    // Actualizar persistencia con nuevo thread
+                    threadPersistence.setThread(shortUserId, newThread.id, chatId, userName);
+                    
+                    logSuccess('NEW_THREAD_CREATED', 'Nuevo thread creado para manejar context length exceeded', {
                         shortUserId,
-                        threadId,
+                        oldThreadId,
+                        newThreadId: newThread.id,
+                        summaryLength: summary.length,
+                        requestId
+                    });
+                    
+                    // Reintentar con nuevo thread
+                    releaseThreadLock(shortUserId);
+                    return await processWithOpenAI(userMsg, userJid, chatId, userName, requestId, contextAnalysis);
+                    
+                } catch (recoveryError) {
+                    logError('CONTEXT_LENGTH_RECOVERY_FAILED', 'Error en recuperación de context length exceeded', {
+                        shortUserId,
                         error: recoveryError.message,
                         requestId
                     });
                 }
             }
             
-            // 🔧 ETAPA 9: Remove thread SOLO si error real (thread not found) Y thread es viejo
-            if (error.message && error.message.includes('thread not found')) {
-                const isThreadOld = threadPersistence.isThreadOld(shortUserId);
-                if (isThreadOld) {
-                    threadPersistence.removeThread(shortUserId, 'thread_not_found_error');
-                    logWarning('THREAD_REMOVED', `Thread removido por error real: ${error.message}`, { 
-                        userId: shortUserId,
-                        isThreadOld,
-                        reason: 'thread_not_found_error'
-                    });
-                } else {
-                    logInfo('THREAD_REMOVE_SKIPPED', `Thread NO removido - no es viejo`, { 
-                        userId: shortUserId,
-                        isThreadOld,
-                        error: error.message,
-                        reason: 'thread_not_old'
-                    });
-                }
-            }
+            // 🔧 ETAPA 1: Loggear error general
+            const durationMs = Date.now() - startTime;
             
-            // 🔧 ETAPA 1: Liberar lock antes de retornar
-            releaseThreadLock(shortUserId);
-            return 'Lo siento, hubo un error técnico. Por favor intenta de nuevo en unos momentos.';
+            logError('OPENAI_PROCESS_ERROR', `Error en procesamiento con OpenAI`, {
+                shortUserId,
+                threadId: threadPersistence.getThread(shortUserId)?.threadId,
+                error: error.message,
+                durationMs,
+                totalTokens,
+                contextTokens,
+                environment: appConfig.environment,
+                requestId
+            });
+            
+            // 🔧 ETAPA 2: Incrementar métrica de fallbacks
+            incrementFallbacks();
+            
+            // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
+            logWarning('OPENAI_PROCESS_ERROR', 'Error en procesamiento con OpenAI, permitiendo flujo natural', {
+                shortUserId,
+                error: error.message,
+                requestId
+            });
+            
+            return '';
         }
-        // 🔧 ETAPA 1: ELIMINAR REMOCIÓN AUTOMÁTICA DE THREADS
-        // Los threads se mantienen activos para reutilizar contexto
-        // Solo se remueven en cleanup automático o errores fatales
     };
 
     // Webhook Principal
@@ -2198,47 +2376,81 @@ async function initializeBot() {
     
 
     
-    // 🔧 ETAPA 1: Cleanup automático de threads viejos
-    // Ejecutar cada hora para mantener threads activos limpios
-    setInterval(() => {
-        try {
-            const removedCount = threadPersistence.cleanupOldThreads(1); // 1 mes = threads muy viejos
-            if (removedCount > 0) {
-                logInfo('THREAD_CLEANUP', `Cleanup automático: ${removedCount} threads viejos removidos`);
-            }
-            
-            // 🔧 ETAPA 2: Actualizar métrica de threads activos
-            const stats = threadPersistence.getStats();
-            updateActiveThreads(stats.activeThreads);
-            
-        } catch (error) {
-            logError('THREAD_CLEANUP', 'Error en cleanup automático', { error: error.message });
-        }
-    }, 60 * 60 * 1000); // Cada hora
+    // 🔧 ETAPA 2: Cleanup on-demand en lugar de automático fijo
+    // Solo ejecutar cuando hay actividad real
+    let cleanupScheduled = false;
     
-    // 🔧 ETAPA 2: Cleanup automático del cache de historial
-    // Ejecutar cada 2 horas para evitar crecimiento indefinido
-    setInterval(() => {
-        try {
-            const now = Date.now();
-            let expiredCount = 0;
-            
-            for (const [userId, cacheEntry] of historyCache.entries()) {
-                if ((now - cacheEntry.timestamp) > HISTORY_CACHE_TTL) {
-                    historyCache.delete(userId);
-                    expiredCount++;
+    const scheduleCleanup = () => {
+        if (!cleanupScheduled) {
+            cleanupScheduled = true;
+            setTimeout(() => {
+                try {
+                    const removedCount = threadPersistence.cleanupOldThreads(1); // 1 mes = threads muy viejos
+                    if (removedCount > 0) {
+                        logInfo('THREAD_CLEANUP', `Cleanup on-demand: ${removedCount} threads viejos removidos`);
+                    }
+                    
+                    // Actualizar métrica de threads activos
+                    const stats = threadPersistence.getStats();
+                    updateActiveThreads(stats.activeThreads);
+                    
+                } catch (error) {
+                    logError('THREAD_CLEANUP', 'Error en cleanup on-demand', { error: error.message });
+                } finally {
+                    cleanupScheduled = false;
                 }
-            }
-            
-            if (expiredCount > 0) {
-                logInfo('HISTORY_CACHE_CLEANUP', `Cache cleanup: ${expiredCount} entradas expiradas removidas`, {
-                    remainingEntries: historyCache.size
-                });
-            }
-        } catch (error) {
-            logError('HISTORY_CACHE_CLEANUP', 'Error en cleanup del cache', { error: error.message });
+            }, 5 * 60 * 1000); // 5 minutos después de actividad
         }
-    }, 2 * 60 * 60 * 1000); // Cada 2 horas
+    };
+    
+    // 🔧 ETAPA 2: Cleanup de cache on-demand en lugar de automático fijo
+    let cacheCleanupScheduled = false;
+    
+    const scheduleCacheCleanup = () => {
+        if (!cacheCleanupScheduled) {
+            cacheCleanupScheduled = true;
+            setTimeout(() => {
+                try {
+                    const now = Date.now();
+                    let expiredCount = 0;
+                    let sizeLimitCount = 0;
+                    
+                    // Limpiar entradas expiradas
+                    for (const [userId, cacheEntry] of historyCache.entries()) {
+                        if ((now - cacheEntry.timestamp) > HISTORY_CACHE_TTL) {
+                            historyCache.delete(userId);
+                            expiredCount++;
+                        }
+                    }
+                    
+                    // Limpiar por límite de tamaño (LRU eviction)
+                    if (historyCache.size > HISTORY_CACHE_MAX_SIZE) {
+                        const entriesToDelete = Array.from(historyCache.entries())
+                            .sort((a, b) => a[1].timestamp - b[1].timestamp)
+                            .slice(0, historyCache.size - HISTORY_CACHE_MAX_SIZE);
+                        
+                        for (const [userId] of entriesToDelete) {
+                            historyCache.delete(userId);
+                            sizeLimitCount++;
+                        }
+                    }
+                    
+                    if (expiredCount > 0 || sizeLimitCount > 0) {
+                        logInfo('HISTORY_CACHE_CLEANUP', `Cache cleanup on-demand completado`, {
+                            expiredCount,
+                            sizeLimitCount,
+                            remainingEntries: historyCache.size,
+                            maxSize: HISTORY_CACHE_MAX_SIZE
+                        });
+                    }
+                } catch (error) {
+                    logError('HISTORY_CACHE_CLEANUP', 'Error en cleanup del cache', { error: error.message });
+                } finally {
+                    cacheCleanupScheduled = false;
+                }
+            }, 10 * 60 * 1000); // 10 minutos después de actividad
+        }
+    };
     
     // 🔧 NUEVO: Cleanup automático de caches de inyección
     // Ejecutar cada 10 minutos para mantener caches limpios
@@ -2294,80 +2506,84 @@ async function initializeBot() {
         }
     }, 5 * 60 * 1000); // Cada 5 minutos
     
-    // 🔧 ETAPA 4: Cleanup automático de threads con alto uso de tokens
-    // Ejecutar cada hora para mantener threads eficientes
-    setInterval(async () => {
-        try {
-            await cleanupHighTokenThreads();
-        } catch (error) {
-            logError('TOKEN_CLEANUP_ERROR', 'Error en cleanup de threads con alto uso de tokens', { error: error.message });
-        }
-    }, 60 * 60 * 1000); // Cada hora (reducido de 30 min para menos overhead)
+    // 🔧 ETAPA 2: Cleanup de threads con alto uso de tokens on-demand
+    let tokenCleanupScheduled = false;
     
-    // 🔧 ETAPA 2: Memory logs mejorados para detectar leaks (del comentario externo)
-    // Ejecutar cada 5 minutos para monitorear recursos
-    setInterval(() => {
-        try {
-            const memUsage = process.memoryUsage();
-            const cpuUsage = process.cpuUsage();
-            
-            // 🔧 ETAPA 2: Cálculo de métricas de memoria
-            const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
-            const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
-            const rssMB = memUsage.rss / 1024 / 1024;
-            const externalMB = memUsage.external / 1024 / 1024;
-            
-            // 🔧 ETAPA 2: Detección de memory leaks
-            const heapUsagePercentage = (heapUsedMB / heapTotalMB) * 100;
-            const isHighMemory = heapUsedMB > 300; // Threshold más conservador
-            const isMemoryLeak = heapUsagePercentage > 95; // >95% del heap usado (ajustado para evitar falsos positivos)
-            
-            logInfo('MEMORY_USAGE', 'Métricas de memoria del sistema', {
-                memory: {
-                    rss: Math.round(rssMB) + 'MB',
-                    heapUsed: Math.round(heapUsedMB) + 'MB',
-                    heapTotal: Math.round(heapTotalMB) + 'MB',
-                    heapUsagePercent: Math.round(heapUsagePercentage) + '%',
-                    external: Math.round(externalMB) + 'MB'
-                },
-                cpu: {
-                    user: Math.round(cpuUsage.user / 1000) + 'ms',
-                    system: Math.round(cpuUsage.system / 1000) + 'ms'
-                },
-                threads: {
-                    active: threadPersistence.getStats().activeThreads,
-                    total: threadPersistence.getStats().totalThreads
-                },
-                caches: {
-                    historyCache: historyCache.size,
-                    contextCache: contextInjectionCache.size,
-                    globalBuffers: globalMessageBuffers.size
-                },
-                uptime: Math.round(process.uptime()) + 's'
-            });
-            
-            // 🔧 ETAPA 2: Alertas específicas para memory leaks
-            if (isHighMemory) {
-                logWarning('HIGH_MEMORY_USAGE', 'Uso alto de memoria detectado', {
-                    heapUsedMB: Math.round(heapUsedMB),
-                    threshold: 300,
-                    heapUsagePercent: Math.round(heapUsagePercentage) + '%'
-                });
-            }
-            
-            if (isMemoryLeak) {
-                logError('MEMORY_LEAK_DETECTED', 'Posible memory leak detectado', {
-                    heapUsedMB: Math.round(heapUsedMB),
-                    heapUsagePercent: Math.round(heapUsagePercentage) + '%',
-                    threshold: 95,
-                    recommendation: 'Uso de memoria crítico - considerar optimización o restart'
-                });
-            }
-            
-        } catch (error) {
-            logError('MEMORY_METRICS_ERROR', 'Error obteniendo métricas de memoria', { error: error.message });
+    const scheduleTokenCleanup = () => {
+        if (!tokenCleanupScheduled) {
+            tokenCleanupScheduled = true;
+            setTimeout(async () => {
+                try {
+                    await cleanupHighTokenThreads();
+                } catch (error) {
+                    logError('TOKEN_CLEANUP_ERROR', 'Error en cleanup de threads con alto uso de tokens', { error: error.message });
+                } finally {
+                    tokenCleanupScheduled = false;
+                }
+            }, 30 * 60 * 1000); // 30 minutos después de actividad
         }
-    }, 5 * 60 * 1000); // Cada 5 minutos
+    };
+    
+                // Memory logs originales (sin cambios del plan original)
+            setInterval(() => {
+                try {
+                    const memUsage = process.memoryUsage();
+                    const cpuUsage = process.cpuUsage();
+                    
+                    const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
+                    const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
+                    const rssMB = memUsage.rss / 1024 / 1024;
+                    const externalMB = memUsage.external / 1024 / 1024;
+                    
+                    const heapUsagePercentage = (heapUsedMB / heapTotalMB) * 100;
+                    const isHighMemory = heapUsedMB > 300;
+                    const isMemoryLeak = heapUsagePercentage > 95;
+                    
+                    logInfo('MEMORY_USAGE', 'Métricas de memoria del sistema', {
+                        memory: {
+                            rss: Math.round(rssMB) + 'MB',
+                            heapUsed: Math.round(heapUsedMB) + 'MB',
+                            heapTotal: Math.round(heapTotalMB) + 'MB',
+                            heapUsagePercent: Math.round(heapUsagePercentage) + '%',
+                            external: Math.round(externalMB) + 'MB'
+                        },
+                        cpu: {
+                            user: Math.round(cpuUsage.user / 1000) + 'ms',
+                            system: Math.round(cpuUsage.system / 1000) + 'ms'
+                        },
+                        threads: {
+                            active: threadPersistence.getStats().activeThreads,
+                            total: threadPersistence.getStats().totalThreads
+                        },
+                        caches: {
+                            historyCache: historyCache.size,
+                            contextCache: contextInjectionCache.size,
+                            globalBuffers: globalMessageBuffers.size
+                        },
+                        uptime: Math.round(process.uptime()) + 's'
+                    });
+                    
+                    if (isHighMemory) {
+                        logWarning('HIGH_MEMORY_USAGE', 'Uso alto de memoria detectado', {
+                            heapUsedMB: Math.round(heapUsedMB),
+                            threshold: 300,
+                            heapUsagePercent: Math.round(heapUsagePercentage) + '%'
+                        });
+                    }
+                    
+                    if (isMemoryLeak) {
+                        logError('MEMORY_LEAK_DETECTED', 'Posible memory leak detectado', {
+                            heapUsedMB: Math.round(heapUsedMB),
+                            heapUsagePercent: Math.round(heapUsagePercentage) + '%',
+                            threshold: 95,
+                            recommendation: 'Uso de memoria crítico - considerar optimización o restart'
+                        });
+                    }
+                    
+                } catch (error) {
+                    logError('MEMORY_METRICS_ERROR', 'Error obteniendo métricas de memoria', { error: error.message });
+                }
+            }, 5 * 60 * 1000); // Cada 5 minutos (original)
 }
 
 // 🔧 ETAPA 3.1: Función para generar resumen automático de historial
@@ -2648,7 +2864,7 @@ async function cleanupHighTokenThreads() {
     }
 }
 
-// 🔧 NUEVA FUNCIÓN: Recuperación de runs huérfanos al inicio del bot
+// 🔧 ETAPA 1: Recuperación mejorada de runs huérfanos al inicio del bot
 async function recoverOrphanedRuns() {
     try {
         logInfo('ORPHANED_RUNS_RECOVERY_START', 'Iniciando recuperación de runs huérfanos');
@@ -2665,31 +2881,26 @@ async function recoverOrphanedRuns() {
                 for (const run of runs.data) {
                     runsChecked++;
                     
-                    // Cancelar runs que están en estado in_progress o queued por más de 5 minutos
-                    if (['in_progress', 'queued'].includes(run.status)) {
-                        const runAge = Date.now() - new Date(run.created_at).getTime();
-                        const fiveMinutes = 5 * 60 * 1000;
-                        
-                        if (runAge > fiveMinutes) {
-                            try {
-                                await openaiClient.beta.threads.runs.cancel(threadInfo.threadId, run.id);
-                                runsCancelled++;
-                                
-                                logWarning('ORPHANED_RUN_CANCELLED', `Run huérfano cancelado`, {
-                                    userId,
-                                    threadId: threadInfo.threadId,
-                                    runId: run.id,
-                                    status: run.status,
-                                    ageMinutes: Math.round(runAge / 1000 / 60)
-                                });
-                            } catch (cancelError) {
-                                logError('ORPHANED_RUN_CANCEL_ERROR', `Error cancelando run huérfano`, {
-                                    userId,
-                                    threadId: threadInfo.threadId,
-                                    runId: run.id,
-                                    error: cancelError.message
-                                });
-                            }
+                    // 🔧 ETAPA 1: Cancelar TODOS los runs activos al inicio (más agresivo)
+                    if (['queued', 'in_progress', 'requires_action'].includes(run.status)) {
+                        try {
+                            await openaiClient.beta.threads.runs.cancel(threadInfo.threadId, run.id);
+                            runsCancelled++;
+                            
+                            logWarning('ORPHANED_RUN_CANCELLED', `Run huérfano cancelado al inicio`, {
+                                userId,
+                                threadId: threadInfo.threadId,
+                                runId: run.id,
+                                status: run.status,
+                                ageMinutes: Math.round((Date.now() - new Date(run.created_at).getTime()) / 1000 / 60)
+                            });
+                        } catch (cancelError) {
+                            logError('ORPHANED_RUN_CANCEL_ERROR', `Error cancelando run huérfano`, {
+                                userId,
+                                threadId: threadInfo.threadId,
+                                runId: run.id,
+                                error: cancelError.message
+                            });
                         }
                     }
                 }
