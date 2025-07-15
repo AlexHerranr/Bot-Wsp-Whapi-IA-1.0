@@ -972,17 +972,40 @@ function generateDateRangeInclusive(startDate: string, endDate: string): string[
  * Genera rango de fechas
  */
 function generateDateRange(startDate: string, endDate: string): string[] {
-    const dates: string[] = [];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    // IMPORTANTE: No incluir la fecha de fin (día de checkout)
-    // Del 15 al 18 = 3 noches (15, 16, 17), el 18 es checkout
-    for (let date = new Date(start); date < end; date.setDate(date.getDate() + 1)) {
-        dates.push(date.toISOString().split('T')[0]);
+    try {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        // Validar fechas
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            throw new Error('Fechas inválidas');
+        }
+        
+        if (start >= end) {
+            throw new Error('Fecha de fin debe ser posterior a fecha de inicio');
+        }
+        
+        // Calcular noches usando diferencia de tiempo (más seguro que loops)
+        const totalNights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (totalNights <= 0 || totalNights > 365) {
+            throw new Error('Rango de fechas inválido');
+        }
+        
+        const dates: string[] = [];
+        const currentDate = new Date(start);
+        
+        // IMPORTANTE: No incluir la fecha de fin (día de checkout)
+        // Del 15 al 18 = 3 noches (15, 16, 17), el 18 es checkout
+        for (let i = 0; i < totalNights; i++) {
+            dates.push(currentDate.toISOString().split('T')[0]);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        return dates;
+    } catch (error) {
+        throw new Error(`Error calculando rango de fechas: ${error instanceof Error ? error.message : String(error)}`);
     }
-    
-    return dates;
 }
 
 /**

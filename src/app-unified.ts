@@ -179,8 +179,8 @@ async function generateHistorialSummary(threadId: string, userId: string): Promi
             return acc;
         }, 0);
         
-        // 🔧 SIMPLIFICADO: Solo generar resumen si hay muchos mensajes (no por tokens)
-        const MESSAGE_THRESHOLD = 50; // Generar resumen si hay más de 50 mensajes
+        // 🔧 ETAPA 3.1: Solo generar resumen si hay muchos mensajes (threshold aumentado)
+        const MESSAGE_THRESHOLD = 100; // Generar resumen si hay más de 100 mensajes (aumentado de 50)
         
         if (messages.data.length <= MESSAGE_THRESHOLD) {
             logInfo('HISTORIAL_SUMMARY_SKIP', 'Thread corto, no necesita resumen', {
@@ -500,7 +500,7 @@ function setupEndpoints() {
     });
 
     // 🔧 NUEVO: Endpoint para limpiar locks (solo en desarrollo)
-    app.post('/locks/clear', (req: Request, res: Response) => {
+    app.post('/locks/clear', (req: any, res: any) => {
         if (appConfig.environment === 'cloud-run') {
             return res.status(403).json({
                 error: 'No permitido en producción',
@@ -649,7 +649,7 @@ function setupWebhooks() {
             }
             
             // 🔧 ETAPA 2: Chequeo de buffer largo por typing (>60s)
-            if (buffer.typingCount > 12 && buffer.messages.length > 3) { // ~60s de typing (1 minuto máximo)
+            if (buffer.typingCount > 3 && buffer.messages.length > 1) { // Reducido de 12 a 3 para respuesta más rápida
                 logInfo('BUFFER_LONG_TYPING', `Buffer largo detectado durante typing, procesando parcialmente`, {
                     userJid: getShortUserId(userId),
                     userName: buffer.userName,
@@ -963,7 +963,7 @@ function setupWebhooks() {
                             logWarning('BUFFER_PROCESS_SKIPPED', `Procesamiento de buffer saltado - run activo para ${userName}`, {
                                 userJid: shortUserId,
                                 messageCount,
-                                combinedText: cleanText.substring(0, 50) + '...',
+                                combinedText: combinedText.substring(0, 50) + '...',
                                 environment: appConfig.environment
                             });
                             console.log(`⏸️ [BUFFER_SKIP] ${userName}: Run activo → Saltando procesamiento`);
@@ -983,6 +983,39 @@ function setupWebhooks() {
             const response = await processWithOpenAI(combinedText, userId, chatId, userName);
             await sendWhatsAppMessage(chatId, response);
         };
+        
+        // 🔧 ETAPA 2.2: Chequeo de run activo antes de agregar a cola
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries) {
+            try {
+                const isActive = await isRunActive(shortUserId);
+                if (isActive) {
+                    logWarning('RUN_ACTIVE_BEFORE_QUEUE', `Run activo detectado antes de agregar a cola`, {
+                        userJid: shortUserId,
+                        userName,
+                        attempt: retryCount + 1,
+                        environment: appConfig.environment
+                    });
+                    
+                    // Esperar 1s y retry
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    retryCount++;
+                    continue;
+                }
+                
+                // No hay run activo, proceder normalmente
+                break;
+            } catch (error) {
+                logError('RUN_CHECK_ERROR', `Error verificando runs para ${userName}`, {
+                    userJid: shortUserId,
+                    error: error.message,
+                    environment: appConfig.environment
+                });
+                break; // Continuar sin verificación si falla
+            }
+        }
         
         // 🔧 NUEVO: Agregar a la cola del usuario
         const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1339,9 +1372,7 @@ function setupWebhooks() {
             }
 
             // 🔧 ETAPA 2: Programar cleanup on-demand después de procesamiento exitoso
-            scheduleCleanup();
-            scheduleCacheCleanup();
-            scheduleTokenCleanup();
+            // 🔧 ETAPA 3.2: Cleanup unificado se maneja automáticamente
 
             // Limpiar buffer, timer y estado de typing
             userMessageBuffers.delete(userId);
@@ -1493,6 +1524,29 @@ function setupWebhooks() {
                 });
             }
             
+            // 🔧 ETAPA 1.3: Cleanup de runs huérfanos al inicio
+            if (threadId) {
+                try {
+                    const cleanedRuns = await cleanupOldRuns(threadId, shortUserId);
+                    if (cleanedRuns > 0) {
+                        logInfo('CLEANUP_RUNS_INTEGRATED', `Runs huérfanos limpiados al inicio`, {
+                            shortUserId,
+                            threadId,
+                            cleanedRuns,
+                            requestId
+                        });
+                    }
+                } catch (cleanupError) {
+                    logWarning('CLEANUP_RUNS_ERROR', 'Error en cleanup de runs al inicio', {
+                        shortUserId,
+                        threadId,
+                        error: cleanupError.message,
+                        requestId
+                    });
+                    // Continuar sin cleanup si falla
+                }
+            }
+            
             // 🔧 NUEVO: Usar función modularizada de inyección de historial
             if (config.enableHistoryInject) {
                 try {
@@ -1642,6 +1696,30 @@ function setupWebhooks() {
                  shortUserId,
                  requestId 
              });
+             
+             // 🔧 ETAPA 2.3: Mensaje interino para demoras largas
+             let interimMessageSent = false;
+             const interimTimer = setTimeout(async () => {
+                 if (chatId && !interimMessageSent) {
+                     try {
+                         await sendWhatsAppMessage(chatId, "Verificando disponibilidad...");
+                         interimMessageSent = true;
+                         logInfo('INTERIM_MESSAGE_SENT', 'Mensaje interino enviado por demora', {
+                             shortUserId,
+                             chatId,
+                             delay: 5000,
+                             requestId
+                         });
+                     } catch (error) {
+                         logWarning('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje interino', {
+                             shortUserId,
+                             chatId,
+                             error: error.message,
+                             requestId
+                         });
+                     }
+                 }
+             }, 5000); // 5 segundos
             
             // Polling normal (sin cambios del plan original)
             let attempts = 0;
@@ -1845,6 +1923,9 @@ function setupWebhooks() {
                     requestId
                 });
                 
+                // 🔧 ETAPA 2.3: Limpiar timer interino
+                clearTimeout(interimTimer);
+                
                 // 🔧 ETAPA 2: Loggear métricas finales de performance con memoria
                 const finalDurationMs = Date.now() - startTime;
                 const memUsage = process.memoryUsage();
@@ -1978,7 +2059,7 @@ function setupWebhooks() {
                     totalOutputs: toolOutputs.length
                 });
                 
-                // 🔧 MEJORADO: Polling post-tool con delay inicial y reintentos fijos
+                // 🔧 ETAPA 3.3: Polling post-tool mejorado con backoff progresivo
                 // Log inmediato después de submit para depuración
                 logInfo('POST_SUBMIT_STATUS', 'Status después de submit tool outputs', { 
                     shortUserId,
@@ -1988,10 +2069,10 @@ function setupWebhooks() {
                 });
                 
                 // Delay inicial para dar tiempo a OpenAI de actualizar status
-                await new Promise(resolve => setTimeout(resolve, 2000)); // 2s simple
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Reducido de 2s a 1s
                 
                 let postAttempts = 0;
-                const maxPostAttempts = 3; // Bajo para eficiencia, evita overhead
+                const maxPostAttempts = 5; // Aumentado de 3 a 5 para más robustez
                 
                 while (postAttempts < maxPostAttempts) {
                     run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
@@ -2020,8 +2101,9 @@ function setupWebhooks() {
                         break;
                     }
                     
-                    // Esperar antes del siguiente intento
-                    await new Promise(resolve => setTimeout(resolve, 2000)); // Espera fija de 2s
+                    // 🔧 ETAPA 3.3: Backoff progresivo (1s, 2s, 3s, 4s, 5s)
+                    const backoffDelay = Math.min((postAttempts + 1) * 1000, 5000);
+                    await new Promise(resolve => setTimeout(resolve, backoffDelay));
                     postAttempts++;
                 }
                 
@@ -2380,77 +2462,35 @@ async function initializeBot() {
     // Solo ejecutar cuando hay actividad real
     let cleanupScheduled = false;
     
-    const scheduleCleanup = () => {
+    // 🔧 ETAPA 3.2: Función unificada de cleanup
+    const scheduleUnifiedCleanup = () => {
         if (!cleanupScheduled) {
             cleanupScheduled = true;
             setTimeout(() => {
                 try {
+                    // 1. Cleanup de threads viejos
                     const removedCount = threadPersistence.cleanupOldThreads(1); // 1 mes = threads muy viejos
                     if (removedCount > 0) {
-                        logInfo('THREAD_CLEANUP', `Cleanup on-demand: ${removedCount} threads viejos removidos`);
+                        logInfo('THREAD_CLEANUP', `Cleanup unificado: ${removedCount} threads viejos removidos`);
                     }
                     
                     // Actualizar métrica de threads activos
                     const stats = threadPersistence.getStats();
                     updateActiveThreads(stats.activeThreads);
                     
+                    // 2. Cleanup de caches expirados
+                    cleanupExpiredCaches();
+                    
                 } catch (error) {
-                    logError('THREAD_CLEANUP', 'Error en cleanup on-demand', { error: error.message });
+                    logError('UNIFIED_CLEANUP', 'Error en cleanup unificado', { error: error.message });
                 } finally {
                     cleanupScheduled = false;
                 }
-            }, 5 * 60 * 1000); // 5 minutos después de actividad
+            }, 10 * 60 * 1000); // 10 minutos después de actividad (unificado)
         }
     };
     
-    // 🔧 ETAPA 2: Cleanup de cache on-demand en lugar de automático fijo
-    let cacheCleanupScheduled = false;
-    
-    const scheduleCacheCleanup = () => {
-        if (!cacheCleanupScheduled) {
-            cacheCleanupScheduled = true;
-            setTimeout(() => {
-                try {
-                    const now = Date.now();
-                    let expiredCount = 0;
-                    let sizeLimitCount = 0;
-                    
-                    // Limpiar entradas expiradas
-                    for (const [userId, cacheEntry] of historyCache.entries()) {
-                        if ((now - cacheEntry.timestamp) > HISTORY_CACHE_TTL) {
-                            historyCache.delete(userId);
-                            expiredCount++;
-                        }
-                    }
-                    
-                    // Limpiar por límite de tamaño (LRU eviction)
-                    if (historyCache.size > HISTORY_CACHE_MAX_SIZE) {
-                        const entriesToDelete = Array.from(historyCache.entries())
-                            .sort((a, b) => a[1].timestamp - b[1].timestamp)
-                            .slice(0, historyCache.size - HISTORY_CACHE_MAX_SIZE);
-                        
-                        for (const [userId] of entriesToDelete) {
-                            historyCache.delete(userId);
-                            sizeLimitCount++;
-                        }
-                    }
-                    
-                    if (expiredCount > 0 || sizeLimitCount > 0) {
-                        logInfo('HISTORY_CACHE_CLEANUP', `Cache cleanup on-demand completado`, {
-                            expiredCount,
-                            sizeLimitCount,
-                            remainingEntries: historyCache.size,
-                            maxSize: HISTORY_CACHE_MAX_SIZE
-                        });
-                    }
-                } catch (error) {
-                    logError('HISTORY_CACHE_CLEANUP', 'Error en cleanup del cache', { error: error.message });
-                } finally {
-                    cacheCleanupScheduled = false;
-                }
-            }, 10 * 60 * 1000); // 10 minutos después de actividad
-        }
-    };
+    // 🔧 ETAPA 3.2: Eliminadas funciones de cleanup individuales (unificadas)
     
     // 🔧 NUEVO: Cleanup automático de caches de inyección
     // Ejecutar cada 10 minutos para mantener caches limpios
@@ -2506,23 +2546,7 @@ async function initializeBot() {
         }
     }, 5 * 60 * 1000); // Cada 5 minutos
     
-    // 🔧 ETAPA 2: Cleanup de threads con alto uso de tokens on-demand
-    let tokenCleanupScheduled = false;
-    
-    const scheduleTokenCleanup = () => {
-        if (!tokenCleanupScheduled) {
-            tokenCleanupScheduled = true;
-            setTimeout(async () => {
-                try {
-                    await cleanupHighTokenThreads();
-                } catch (error) {
-                    logError('TOKEN_CLEANUP_ERROR', 'Error en cleanup de threads con alto uso de tokens', { error: error.message });
-                } finally {
-                    tokenCleanupScheduled = false;
-                }
-            }, 30 * 60 * 1000); // 30 minutos después de actividad
-        }
-    };
+    // 🔧 ETAPA 3.2: Eliminada función scheduleTokenCleanup (unificada)
     
                 // Memory logs originales (sin cambios del plan original)
             setInterval(() => {
