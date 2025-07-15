@@ -21,7 +21,7 @@ steps:
       - '--min-instances=1'
       - '--max-instances=10'
       - '--no-cpu-throttling'
-      - '--set-env-vars=NODE_ENV=production,PORT=8080'
+      - '--set-env-vars=NODE_ENV=production'
 
 images:
   - 'gcr.io/$PROJECT_ID/bot-wsp-whapi-ia'
