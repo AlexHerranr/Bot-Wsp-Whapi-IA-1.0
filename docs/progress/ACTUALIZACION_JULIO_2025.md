@@ -41,6 +41,12 @@
 - **Solución**: Función centralizada `injectHistory()` encapsula toda la lógica
 - **Resultado**: Código más mantenible y predecible
 
+### **6. Optimizaciones Recientes (Julio 2025)** ✅ **NUEVO**
+- **Eliminación del Mensaje Interino Duplicado**: Un solo mensaje específico para consultas de disponibilidad
+- **Eliminación Completa del Fuzzy Parsing**: Código simplificado, OpenAI maneja la inteligencia
+- **Validación de Fechas Simplificada**: Solo formato YYYY-MM-DD y fechas válidas
+- **Flujo de Mensajes Optimizado**: 100% de mensajes procesados por OpenAI
+
 ---
 
 ## 📊 Métricas de Performance

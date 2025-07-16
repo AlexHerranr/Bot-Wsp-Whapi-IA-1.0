@@ -107,19 +107,15 @@ const manualMessageBuffers = new Map<string, {
 }>();
 const manualTimers = new Map<string, NodeJS.Timeout>();
 
-// 🔧 NUEVO: Sistema de buffering proactivo global
+// 🔧 ETAPA 1: BUFFER UNIFICADO - 5 SEGUNDOS PARA MENSAJES Y TYPING
 const globalMessageBuffers = new Map<string, {
     messages: string[],
     chatId: string,
     userName: string,
     lastActivity: number,
-    timer: NodeJS.Timeout | null,
-    isTyping: boolean,
-    typingCount: number
+    timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 8000; // 8 segundos para agrupar mensajes (mejorado para párrafos largos)
-const TYPING_EXTENSION_MS = 5000; // 5 segundos extra por typing (más generoso)
-const MAX_TYPING_COUNT = 8; // Máximo 8 typings antes de forzar procesamiento (más humano)
+const BUFFER_WINDOW_MS = 5000; // 5 segundos para mensajes Y typing
 
     // 🔧 ETAPA 2: Cache de historial para optimizar fetches
     const historyCache = new Map<string, { history: string; timestamp: number }>();
@@ -179,15 +175,16 @@ async function generateHistorialSummary(threadId: string, userId: string): Promi
             return acc;
         }, 0);
         
-        // 🔧 ETAPA 3.1: Solo generar resumen si hay muchos mensajes (threshold aumentado)
-        const MESSAGE_THRESHOLD = 100; // Generar resumen si hay más de 100 mensajes (aumentado de 50)
+        // 🔧 ETAPA 4: Optimizar para threads cortos - threshold más alto
+        const MESSAGE_THRESHOLD = 150; // Solo generar resumen si hay más de 150 mensajes (aumentado de 100)
         
         if (messages.data.length <= MESSAGE_THRESHOLD) {
             logInfo('HISTORIAL_SUMMARY_SKIP', 'Thread corto, no necesita resumen', {
                 threadId,
                 userId,
                 messageCount: messages.data.length,
-                threshold: MESSAGE_THRESHOLD
+                threshold: MESSAGE_THRESHOLD,
+                reason: 'thread_too_short'
             });
             return false;
         }
@@ -398,6 +395,9 @@ process.on('unhandledRejection', (reason, promise) => {
 // --- Declaración de Funciones Auxiliares ---
 
 function setupEndpoints() {
+    // 🔧 NUEVO: Inicializar dashboard web
+    botDashboard.setupRoutes(app);
+    
     app.get('/health', (req, res) => {
         const stats = threadPersistence.getStats();
         res.status(200).json({
@@ -600,9 +600,7 @@ function setupWebhooks() {
                 chatId,
                 userName,
                 lastActivity: Date.now(),
-                timer: null,
-                isTyping: false,
-                typingCount: 0
+                timer: null
             };
             globalMessageBuffers.set(userId, buffer);
         }
@@ -611,81 +609,45 @@ function setupWebhooks() {
         buffer.messages.push(messageText);
         buffer.lastActivity = Date.now();
         
-        // Limpiar timer existente
+        // 🔧 UNIFICADO: Reiniciar timer de 5 segundos (igual que typing)
         if (buffer.timer) {
             clearTimeout(buffer.timer);
         }
+        buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
         
-        // Configurar nuevo timer
-        const delay = buffer.isTyping ? TYPING_EXTENSION_MS : BUFFER_WINDOW_MS;
-        buffer.timer = setTimeout(() => processGlobalBuffer(userId), delay);
-        
-        // Log mejorado con delay real
-        console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${delay / 1000}s...`);
+        console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ 5s...`);
         
         logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
             userJid: getShortUserId(userId),
             userName,
             messageText: messageText.substring(0, 50) + '...',
             bufferSize: buffer.messages.length,
-            delay,
-            isTyping: buffer.isTyping,
+            delay: BUFFER_WINDOW_MS,
             environment: appConfig.environment
         });
     }
     
+    // 🔧 NUEVO: Función unificada para typing (mismo timer que mensajes)
     function updateTypingStatus(userId: string, isTyping: boolean): void {
         const buffer = globalMessageBuffers.get(userId);
         if (!buffer) return;
         
-        buffer.isTyping = isTyping;
-        
-        if (isTyping) {
-            buffer.typingCount++;
-            
-            // Limpiar timer existente
-            if (buffer.timer) {
-                clearTimeout(buffer.timer);
-            }
-            
-            // 🔧 ETAPA 2: Chequeo de buffer largo por typing (>60s)
-            if (buffer.typingCount > 3 && buffer.messages.length > 1) { // Reducido de 12 a 3 para respuesta más rápida
-                logInfo('BUFFER_LONG_TYPING', `Buffer largo detectado durante typing, procesando parcialmente`, {
-                    userJid: getShortUserId(userId),
-                    userName: buffer.userName,
-                    typingCount: buffer.typingCount,
-                    messageCount: buffer.messages.length,
-                    environment: appConfig.environment
-                });
-                
-                // Procesar buffer parcial para evitar esperas largas
-                processGlobalBuffer(userId);
-                return;
-            }
-            
-            // Acumular extensiones dinámicamente y forzar procesamiento si typingCount > MAX_TYPING_COUNT
-            const extraDelay = buffer.typingCount * TYPING_EXTENSION_MS; // Acumular por typing
-            const delay = BUFFER_WINDOW_MS + Math.min(extraDelay, TYPING_EXTENSION_MS * MAX_TYPING_COUNT); // Cap a 3 typings max
-            
-            buffer.timer = setTimeout(() => processGlobalBuffer(userId), delay);
-            
-            logInfo('GLOBAL_BUFFER_TYPING', `Timer extendido por typing`, {
-                userJid: getShortUserId(userId),
-                userName: buffer.userName,
-                typingCount: buffer.typingCount,
-                delay,
-                environment: appConfig.environment
-            });
-        } else {
-            // Reset typing count cuando deja de escribir
-            buffer.typingCount = 0;
-            
-            // Reiniciar timer con delay base
-            if (buffer.timer) {
-                clearTimeout(buffer.timer);
-            }
-            buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
+        // 🔧 UNIFICADO: Reiniciar timer de 5 segundos cuando llega typing
+        if (buffer.timer) {
+            clearTimeout(buffer.timer);
         }
+        
+        // CRÍTICO: Mismo timer de 5 segundos que para mensajes
+        buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
+        
+        console.log(`✍️ [TYPING] ${buffer.userName}: Escribiendo... → ⏳ 5s...`);
+        
+        logInfo('GLOBAL_BUFFER_TYPING', `Timer reiniciado por typing`, {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            delay: BUFFER_WINDOW_MS,
+            environment: appConfig.environment
+        });
     }
     
     async function processGlobalBuffer(userId: string): Promise<void> {
@@ -762,53 +724,16 @@ function setupWebhooks() {
         const messageCount = filteredMessages.length;
         const originalCount = buffer.messages.length;
         
-        // 🔧 CRÍTICO: Validar mensajes cortos durante typing
-        const hasShortMessages = filteredMessages.some(msg => msg.length <= 3);
-        const isTypingActive = buffer.isTyping;
-        
-        if (hasShortMessages && isTypingActive && messageCount < 3) {
-            logWarning('PREMATURE_PROCESSING_DETECTED', 'Procesamiento prematuro de mensajes cortos durante typing', {
-                userJid: getShortUserId(userId),
-                userName: buffer.userName,
-                messageCount,
-                hasShortMessages,
-                isTypingActive,
-                combinedText: combinedText.substring(0, 50) + '...',
-                environment: appConfig.environment
-            });
-            
-            console.log(`⏳ [BUFFER_WAIT] ${buffer.userName}: Mensajes cortos durante typing → Esperando 2s extra...`);
-            
-            // Esperar 2 segundos extra antes de procesar
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Verificar si llegaron más mensajes durante la espera
-            const updatedBuffer = globalMessageBuffers.get(userId);
-            if (updatedBuffer && updatedBuffer.messages.length > originalCount) {
-                logInfo('BUFFER_UPDATED_DURING_WAIT', 'Buffer actualizado durante espera, procesando versión actualizada', {
-                    userJid: getShortUserId(userId),
-                    originalCount,
-                    newCount: updatedBuffer.messages.length,
-                    environment: appConfig.environment
-                });
-                
-                // Continuar con el buffer actualizado
-                return;
-            }
-        }
-        
-        // Log mejorado para procesamiento de buffer con información de filtrado
+        // 🔧 SIMPLIFICADO: Procesar inmediatamente después de 5 segundos
         console.log(`🔄 [BUFFER_PROCESS] ${buffer.userName}: ${messageCount}/${originalCount} mensajes → "${combinedText.substring(0, 40)}..."`);
         
-        logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global con filtrado`, {
+        logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global después de 5 segundos`, {
             userJid: getShortUserId(userId),
             userName: buffer.userName,
             originalCount,
             filteredCount: messageCount,
             filteredOut: originalCount - messageCount,
             combinedText: combinedText.substring(0, 100) + '...',
-            hasShortMessages,
-            isTypingActive,
             environment: appConfig.environment
         });
         
@@ -826,12 +751,18 @@ function setupWebhooks() {
             let cancelledCount = 0;
             
             for (const run of runs.data) {
-                // Cancelar runs que están en estado activo por más de 5 minutos
+                // Cancelar runs que están en estado activo por más de 10 minutos
                 if (['queued', 'in_progress', 'requires_action'].includes(run.status)) {
-                    const runAge = Date.now() - new Date(run.created_at).getTime();
-                    const fiveMinutes = 5 * 60 * 1000;
+                    // 🔧 ETAPA 3: Corregir timestamp - OpenAI usa Unix timestamp en segundos
+                    const runCreatedAt = typeof run.created_at === 'number' 
+                        ? run.created_at * 1000  // OpenAI usa Unix timestamp en segundos
+                        : new Date(run.created_at).getTime();
                     
-                    if (runAge > fiveMinutes) {
+                    const runAge = Date.now() - runCreatedAt;
+                    const ageMinutes = Math.floor(runAge / 60000);
+                    
+                    // Solo cancelar si realmente es viejo (más de 10 minutos)
+                    if (ageMinutes > 10) {
                         try {
                             await openaiClient.beta.threads.runs.cancel(threadId, run.id);
                             cancelledCount++;
@@ -841,7 +772,7 @@ function setupWebhooks() {
                                 threadId,
                                 runId: run.id,
                                 status: run.status,
-                                ageMinutes: Math.round(runAge / 1000 / 60)
+                                ageMinutes
                             });
                         } catch (cancelError) {
                             logError('OLD_RUN_CANCEL_ERROR', `Error cancelando run huérfano`, {
@@ -1524,8 +1455,8 @@ function setupWebhooks() {
                 });
             }
             
-            // 🔧 ETAPA 1.3: Cleanup de runs huérfanos al inicio
-            if (threadId) {
+            // 🔧 ETAPA 4: Cleanup simplificado - solo si es thread nuevo
+            if (threadId && isNewThread) {
                 try {
                     const cleanedRuns = await cleanupOldRuns(threadId, shortUserId);
                     if (cleanedRuns > 0) {
@@ -1590,16 +1521,23 @@ function setupWebhooks() {
                 }
             }
              
-             // 🔧 ETAPA 2: Summary automático de historial para threads con alto uso de tokens
-             if (!isNewThread) {
+             // 🔧 ETAPA 4: Summary optimizado - solo para threads muy largos
+             if (!isNewThread && config.enableHistoryInject) {
                  try {
-                     const summaryGenerated = await generateHistorialSummary(threadId, shortUserId);
-                     if (summaryGenerated) {
-                         logInfo('HISTORIAL_SUMMARY_INTEGRATED', 'Resumen de historial integrado antes de procesar mensaje', {
-                             userId: shortUserId,
-                             threadId,
-                             requestId
-                         });
+                     // Solo generar resumen si el thread es muy largo (más de 200 mensajes)
+                     const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
+                     const messageCount = messages.data.length;
+                     
+                     if (messageCount > 200) {
+                         const summaryGenerated = await generateHistorialSummary(threadId, shortUserId);
+                         if (summaryGenerated) {
+                             logInfo('HISTORIAL_SUMMARY_INTEGRATED', 'Resumen de historial integrado antes de procesar mensaje', {
+                                 userId: shortUserId,
+                                 threadId,
+                                 messageCount,
+                                 requestId
+                             });
+                         }
                      }
                  } catch (summaryError) {
                      logWarning('HISTORIAL_SUMMARY_INTEGRATION_ERROR', 'Error integrando resumen de historial', {
@@ -1697,29 +1635,7 @@ function setupWebhooks() {
                  requestId 
              });
              
-             // 🔧 ETAPA 2.3: Mensaje interino para demoras largas
-             let interimMessageSent = false;
-             const interimTimer = setTimeout(async () => {
-                 if (chatId && !interimMessageSent) {
-                     try {
-                         await sendWhatsAppMessage(chatId, "Verificando disponibilidad...");
-                         interimMessageSent = true;
-                         logInfo('INTERIM_MESSAGE_SENT', 'Mensaje interino enviado por demora', {
-                             shortUserId,
-                             chatId,
-                             delay: 5000,
-                             requestId
-                         });
-                     } catch (error) {
-                         logWarning('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje interino', {
-                             shortUserId,
-                             chatId,
-                             error: error.message,
-                             requestId
-                         });
-                     }
-                 }
-             }, 5000); // 5 segundos
+             // 🔧 ELIMINADO: Mensaje interino duplicado - ya se envía específicamente en function calling
             
             // Polling normal (sin cambios del plan original)
             let attempts = 0;
@@ -1923,8 +1839,7 @@ function setupWebhooks() {
                     requestId
                 });
                 
-                // 🔧 ETAPA 2.3: Limpiar timer interino
-                clearTimeout(interimTimer);
+                // 🔧 ELIMINADO: Timer interino duplicado
                 
                 // 🔧 ETAPA 2: Loggear métricas finales de performance con memoria
                 const finalDurationMs = Date.now() - startTime;
@@ -1951,6 +1866,22 @@ function setupWebhooks() {
             } else if (run.status === 'requires_action' && run.required_action?.type === 'submit_tool_outputs') {
                 // Manejar function calling - SIMPLIFICADO
                 const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
+                
+                // 🔧 ETAPA 2: MENSAJE INTERINO INTELIGENTE
+                const hasAvailabilityCheck = toolCalls.some(tc => 
+                    tc.function.name === 'check_availability'
+                );
+                
+                if (hasAvailabilityCheck && chatId) {
+                    // Enviar mensaje INMEDIATAMENTE
+                    await sendWhatsAppMessage(chatId, "Permítame consultar disponibilidad en mi sistema... 🔍");
+                    logInfo('AVAILABILITY_INTERIM_SENT', 'Mensaje interino enviado', { 
+                        userId: shortUserId,
+                        chatId,
+                        environment: appConfig.environment,
+                        requestId
+                    });
+                }
                 
                 // 🔧 ETAPA 3: Actualizar etapa del flujo
                 if (requestId) {
@@ -2518,16 +2449,16 @@ async function initializeBot() {
     
 
     
-    // 🔧 NUEVO: Cleanup automático del buffer global
-    // Ejecutar cada 5 minutos para limpiar buffers viejos
+    // 🔧 ETAPA 4: Cleanup optimizado del buffer global
+    // Ejecutar cada 10 minutos para limpiar buffers viejos (reducido de 5 a 10)
     setInterval(() => {
         try {
             const now = Date.now();
             let expiredCount = 0;
             
-            // Limpiar buffers globales después de 10 minutos de inactividad
+            // Limpiar buffers globales después de 15 minutos de inactividad (aumentado de 10 a 15)
             for (const [userId, buffer] of globalMessageBuffers.entries()) {
-                if ((now - buffer.lastActivity) > 10 * 60 * 1000) { // 10 minutos
+                if ((now - buffer.lastActivity) > 15 * 60 * 1000) { // 15 minutos
                     if (buffer.timer) {
                         clearTimeout(buffer.timer);
                     }
@@ -2544,7 +2475,7 @@ async function initializeBot() {
         } catch (error) {
             logError('GLOBAL_BUFFER_CLEANUP', 'Error en cleanup del buffer global', { error: error.message });
         }
-    }, 5 * 60 * 1000); // Cada 5 minutos
+    }, 10 * 60 * 1000); // Cada 10 minutos (reducido de 5 a 10)
     
     // 🔧 ETAPA 3.2: Eliminada función scheduleTokenCleanup (unificada)
     

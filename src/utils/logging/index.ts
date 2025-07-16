@@ -1,5 +1,7 @@
 // src/utils/logging/index.ts
 
+import { botDashboard } from '../monitoring/dashboard.js';
+
 const IS_PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.K_SERVICE;
 const DETAILED_LOGS = process.env.ENABLE_DETAILED_LOGS === 'true' || !IS_PRODUCTION;
 
@@ -240,6 +242,24 @@ function enrichedLog(
             const { detailedLog } = require('../logger');
             detailedLog(level, category, message, details);
         }
+    }
+    
+    // 🔧 NUEVO: Enviar log al dashboard
+    try {
+        const emoji = { 'SUCCESS': '✅', 'ERROR': '❌', 'WARNING': '⚠️', 'INFO': 'ℹ️' }[level];
+        const dashboardLogEntry = `${emoji} [${category.toUpperCase()}] ${message}`;
+        if (details?.userName || details?.shortUserId) {
+            const userName = details.userName || details.shortUserId;
+            botDashboard.logActivity(userName, message, 
+                level === 'ERROR' ? 'error' : 
+                level === 'SUCCESS' ? 'completed' : 
+                category === 'MESSAGE_RECEIVED' ? 'received' : 'processing'
+            );
+        }
+        botDashboard.addLog(dashboardLogEntry);
+    } catch (error) {
+        // Silenciar errores del dashboard para no afectar el logging principal
+        console.error('Dashboard log error:', error.message);
     }
 }
 

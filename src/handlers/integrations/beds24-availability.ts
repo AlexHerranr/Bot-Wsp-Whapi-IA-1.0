@@ -20,10 +20,8 @@ import axios from 'axios';
 const availabilityCache = new Map<string, { data: OptimizedResult; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
-// 🔧 ETAPA 1.2: Función de validación de fechas con fuzzy parsing
 /**
- * Valida y corrige fechas con fuzzy parsing para manejar typos comunes
- * Ejemplo: "agosot" → "agosto", "15 de agosot" → "2025-08-15"
+ * Validación simple de fechas: solo formato y validez básica.
  */
 function validateAndFixDates(startDate: string, endDate: string): {
     startDate: string;
@@ -33,121 +31,33 @@ function validateAndFixDates(startDate: string, endDate: string): {
 } {
     const corrections: string[] = [];
     let isValid = true;
-    
-    // 🔧 ETAPA 3: Mapeo expandido de typos comunes en meses con fuzzy matching
-    const monthTypos: Record<string, string> = {
-        // Typos comunes de agosto
-        'agosot': 'agosto', 'agosto': 'agosto', 'agost': 'agosto', 'agust': 'agosto',
-        // Typos comunes de septiembre
-        'septiembre': 'septiembre', 'septiempre': 'septiembre', 'septiem': 'septiembre',
-        // Typos comunes de octubre
-        'octubre': 'octubre', 'octubr': 'octubre', 'octub': 'octubre',
-        // Typos comunes de noviembre
-        'noviembre': 'noviembre', 'noviempre': 'noviembre', 'noviem': 'noviembre',
-        // Typos comunes de diciembre
-        'diciembre': 'diciembre', 'diciem': 'diciembre', 'diciembr': 'diciembre',
-        // Typos comunes de enero
-        'enero': 'enero', 'ener': 'enero', 'enro': 'enero',
-        // Typos comunes de febrero
-        'febrero': 'febrero', 'febrer': 'febrero', 'febre': 'febrero',
-        // Typos comunes de marzo
-        'marzo': 'marzo', 'marz': 'marzo', 'mar': 'marzo',
-        // Typos comunes de abril
-        'abril': 'abril', 'abri': 'abril', 'abr': 'abril',
-        // Typos comunes de mayo
-        'mayo': 'mayo', 'may': 'mayo',
-        // Typos comunes de junio
-        'junio': 'junio', 'juni': 'junio', 'jun': 'junio',
-        // Typos comunes de julio
-        'julio': 'julio', 'juli': 'julio', 'jul': 'julio'
-    };
-    
-    // 🔧 ETAPA 3: Función mejorada para procesar una fecha con fuzzy matching
-    function processDate(dateStr: string, isStartDate: boolean): string {
-        let processedDate = dateStr;
-        
-        // Si ya es formato YYYY-MM-DD, validar
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (dateRegex.test(dateStr)) {
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) {
-                isValid = false;
-                corrections.push(`Fecha inválida: ${dateStr}`);
-                return dateStr;
-            }
-            return dateStr;
-        }
-        
-        // Intentar parsear fechas en formato texto
-        const lowerDate = dateStr.toLowerCase();
-        
-        // 🔧 ETAPA 3: Patrones expandidos para fechas
-        const patterns = [
-            /(\d{1,2})\s+(?:de\s+)?([a-z]+)/, // "15 de agosot" o "15 agosot"
-            /(\d{1,2})\/(\d{1,2})/, // "15/8" o "15/08"
-            /(\d{1,2})-(\d{1,2})/, // "15-8" o "15-08"
-            /(\d{1,2})\.(\d{1,2})/ // "15.8" o "15.08"
-        ];
-        
-        for (const pattern of patterns) {
-            const match = lowerDate.match(pattern);
-            if (match) {
-                let day: number;
-                let monthText: string;
-                let monthNum: number;
-                
-                if (pattern.source.includes('[a-z]')) {
-                    // Patrón de texto: "15 de agosot"
-                    day = parseInt(match[1]);
-                    monthText = match[2];
-                    
-                    // 🔧 ETAPA 3: Fuzzy matching para meses con typos
-                    let correctedMonth = monthText;
-                    if (monthTypos[monthText]) {
-                        correctedMonth = monthTypos[monthText];
-                        if (correctedMonth !== monthText) {
-                            corrections.push(`Corregido typo en mes: "${monthText}" → "${correctedMonth}"`);
-                        }
-                    }
-                    
-                    // Mapear mes a número
-                    const monthMap: Record<string, number> = {
-                        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
-                        'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
-                        'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
-                    };
-                    
-                    monthNum = monthMap[correctedMonth];
-                } else {
-                    // Patrón numérico: "15/8"
-                    day = parseInt(match[1]);
-                    monthNum = parseInt(match[2]);
-                }
-                
-                if (monthNum && day >= 1 && day <= 31 && monthNum >= 1 && monthNum <= 12) {
-                    const currentYear = new Date().getFullYear();
-                    const formattedMonth = monthNum.toString().padStart(2, '0');
-                    const formattedDay = day.toString().padStart(2, '0');
-                    processedDate = `${currentYear}-${formattedMonth}-${formattedDay}`;
-                    
-                    corrections.push(`Fecha parseada: "${dateStr}" → "${processedDate}"`);
-                    return processedDate;
-                }
-            }
-        }
-        
-        // Si no se pudo procesar, marcar como inválida
+
+    // Validar formato YYYY-MM-DD
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(startDate)) {
         isValid = false;
-        corrections.push(`No se pudo procesar fecha: ${dateStr}`);
-        return dateStr;
+        corrections.push(`Formato inválido para startDate: ${startDate}`);
     }
-    
-    const processedStartDate = processDate(startDate, true);
-    const processedEndDate = processDate(endDate, false);
-    
+    if (!dateRegex.test(endDate)) {
+        isValid = false;
+        corrections.push(`Formato inválido para endDate: ${endDate}`);
+    }
+
+    // Validar fechas reales
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime())) {
+        isValid = false;
+        corrections.push(`Fecha inválida: ${startDate}`);
+    }
+    if (isNaN(end.getTime())) {
+        isValid = false;
+        corrections.push(`Fecha inválida: ${endDate}`);
+    }
+
     return {
-        startDate: processedStartDate,
-        endDate: processedEndDate,
+        startDate,
+        endDate,
         corrections,
         isValid
     };
@@ -1018,32 +928,17 @@ export async function handleAvailabilityCheck(args: any, requestId?: string): Pr
     // 🔧 MEJORADO: Validación robusta de parámetros según OpenAI best practices
     let { startDate, endDate, propertyId = null, roomId = null, maxTransfers = null } = args;
     
-    // 🔧 ETAPA 1.2: Validación de fechas con fuzzy parsing
     const dateValidation = validateAndFixDates(startDate, endDate);
-    
     if (!dateValidation.isValid) {
-        logError('BEDS24_VALIDATION', 'Fechas inválidas después de fuzzy parsing', { 
+        logError('BEDS24_VALIDATION', 'Fechas inválidas', {
             originalStartDate: startDate,
             originalEndDate: endDate,
-            corrections: dateValidation.corrections
+            errors: dateValidation.corrections
         });
         return `Error: No se pudieron procesar las fechas. ${dateValidation.corrections.join(', ')}`;
     }
-    
-    // Usar las fechas corregidas
     startDate = dateValidation.startDate;
     endDate = dateValidation.endDate;
-    
-    // Log de correcciones si las hubo
-    if (dateValidation.corrections.length > 0) {
-        logInfo('BEDS24_DATE_CORRECTIONS', 'Fechas corregidas con fuzzy parsing', {
-            originalStartDate: args.startDate,
-            originalEndDate: args.endDate,
-            correctedStartDate: startDate,
-            correctedEndDate: endDate,
-            corrections: dateValidation.corrections
-        });
-    }
     
     // 🔧 ETAPA 8: Fix Function Date Hallucination
     // Ajustar fechas si la IA alucina el año (e.g., 2024 en lugar de 2025)
@@ -1102,13 +997,27 @@ export async function handleAvailabilityCheck(args: any, requestId?: string): Pr
     yesterday.setDate(yesterday.getDate() - 1);
     
     if (start <= yesterday) {
+        // 🔧 ETAPA 2.3: MENSAJE TÉCNICO INTERNO PARA OPENAI
+        const now = new Date();
+        const currentTime = now.toLocaleTimeString('es-CO', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+        });
+        const currentDate = now.toLocaleDateString('es-CO', { 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric' 
+        });
+        
         logError('BEDS24_VALIDATION', 'Fecha de inicio no puede ser del pasado', { 
             startDate, 
             currentDate: today.toISOString().split('T')[0],
             dateAdjusted,
             originalStartDate: args.startDate
         });
-        return 'Error: La fecha de inicio no puede ser del pasado. Por favor especifica fechas futuras.';
+        
+        return `mensaje tecnico** llama nuevamente a la funcion con las fechas correctas, ya que las fechas son pasadas, hoy es (${currentDate} y son las ${currentTime}), paso a seguir: confirma con el huesped las fechas correctas, o llama nuevamente a la funcion check_availability**`;
     }
     
     // Validación de parámetros opcionales
@@ -1152,37 +1061,56 @@ export async function handleAvailabilityCheck(args: any, requestId?: string): Pr
             requestId
         });
 
-        // 🔧 ETAPA 1: Try-catch específico para getCachedAvailabilityAndPrices
+        // 🔧 ETAPA 2.2: RETRY INTERNO PARA BEDS24
+        let attempts = 0;
+        const maxAttempts = 2;
+        let lastError = null;
         let result: OptimizedResult;
-        try {
-            // Obtener datos combinados: disponibilidad + precios (USANDO CACHÉ)
-            result = await getCachedAvailabilityAndPrices(startDate, endDate, propertyId, roomId);
-        } catch (cacheError) {
-            logError('BEDS24_CACHE_ERROR', 'Error en consulta cacheada', {
-                error: cacheError instanceof Error ? cacheError.message : String(cacheError),
-                stack: cacheError instanceof Error ? cacheError.stack : undefined,
+        
+        while (attempts < maxAttempts) {
+            attempts++;
+            
+            try {
+                // Lógica existente de consulta con cache
+                result = await getCachedAvailabilityAndPrices(startDate, endDate, propertyId, roomId);
+                
+                // Si llegamos aquí, la consulta fue exitosa
+                break;
+                
+            } catch (error) {
+                lastError = error;
+                logWarning('BEDS24_RETRY', `Intento ${attempts} falló`, { 
+                    error: error instanceof Error ? error.message : String(error),
+                    attempt: attempts,
+                    maxAttempts,
+                    startDate,
+                    endDate,
+                    propertyId,
+                    roomId,
+                    requestId
+                });
+                
+                if (attempts < maxAttempts) {
+                    // Esperar 5 segundos antes del siguiente intento
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    continue;
+                }
+            }
+        }
+        
+        // Si llegamos aquí y no tenemos resultado, todos los intentos fallaron
+        if (!result) {
+            logError('BEDS24_ALL_ATTEMPTS_FAILED', 'Todos los intentos de consulta fallaron', {
+                attempts: maxAttempts,
+                lastError: lastError instanceof Error ? lastError.message : String(lastError),
                 startDate,
                 endDate,
                 propertyId,
-                roomId
+                roomId,
+                requestId
             });
             
-            // 🔧 Fallback: intentar consulta directa sin cache
-            try {
-                logInfo('BEDS24_FALLBACK', 'Intentando consulta directa sin cache', {
-                    startDate,
-                    endDate
-                });
-                result = await getAvailabilityAndPricesOptimized(startDate, endDate, propertyId, roomId);
-            } catch (directError) {
-                logError('BEDS24_DIRECT_ERROR', 'Error en consulta directa', {
-                    error: directError instanceof Error ? directError.message : String(directError),
-                    startDate,
-                    endDate
-                });
-                
-                return 'Error: No se pudo obtener información de disponibilidad. Por favor intenta más tarde.';
-            }
+            return "Error tecnico** dile al huesped que el sistema de reservas esta fallando en este momento, que en un momentico lo volvemremos a intentar... paso a seguir: envia mensaje al huesped";
         }
 
         // 🔧 ETAPA 2: Verificar si el resultado tiene error
@@ -1219,11 +1147,7 @@ export async function handleAvailabilityCheck(args: any, requestId?: string): Pr
             requestId
         });
 
-        if (error instanceof Beds24Error) {
-            return `❌ Error de Beds24: ${error.message}`;
-        }
-
-        return `❌ Error al consultar disponibilidad. Por favor intenta nuevamente.`;
+        return "Error tecnico** dile al huesped que el sistema de reservas esta fallando en este momento, que en un momentico lo volvemremos a intentar... paso a seguir: envia mensaje al huesped";
     }
 }
 
