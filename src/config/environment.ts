@@ -86,14 +86,14 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     // Webhook URL dinámica
     const webhookUrl = process.env.WEBHOOK_URL || (
         isCloudRun 
-            ? `${process.env.CLOUD_RUN_URL || 'https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app'}/hook`
+            ? `${process.env.RAILWAY_URL || 'https://bot-wsp-whapi-ia-10-production.up.railway.app'}/hook`
             : 'https://actual-bobcat-handy.ngrok-free.app/hook'
     );
     
     // Base URL dinámica
     const baseUrl = process.env.BASE_URL || (
         isCloudRun 
-            ? process.env.CLOUD_RUN_URL || 'https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app'
+            ? process.env.RAILWAY_URL || 'https://bot-wsp-whapi-ia-10-production.up.railway.app'
             : `http://localhost:${port}`
     );
     
