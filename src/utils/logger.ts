@@ -62,6 +62,83 @@ const colors = {
     RED: '\x1b[31m'        // Red
 };
 
+// --- Mapeo de emojis por categoría ---
+const categoryEmojis: Record<string, string> = {
+    // MENSAJES
+    'MESSAGE_RECEIVED': '💬⬅️',
+    'MESSAGE_SENT': '💬➡️',
+    'MESSAGE_PROCESSING': '⚙️',
+    
+    // APIs Y SERVICIOS EXTERNOS
+    'OPENAI': '🤖',
+    'OPENAI_REQUEST': '🤖',
+    'OPENAI_RESPONSE': '🤖',
+    'OPENAI_RUN_COMPLETED': '🤖',
+    'BEDS24': '🏠',
+    'BEDS24_REQUEST': '🏠',
+    'BEDS24_API_CALL': '🏠',
+    'BEDS24_RESPONSE_DETAIL': '🏠',
+    'BEDS24_RESPONSE_SUMMARY': '🏠',
+    'WHAPI': '💬',
+    'WHATSAPP_IN': '💬',
+    'WHATSAPP_OUT': '💬',
+    'WHATSAPP_SEND': '💬',
+    'AUTH_SERVICE': '🔑',
+    'HTTP_REQUEST': '🌐',
+    
+    // SISTEMA INTERNO
+    'LOCK_SYSTEM': '🔒',
+    'THREAD_CREATED': '🔀',
+    'THREAD_PERSIST': '🔀',
+    'THREAD_CLEANUP': '🔀',
+    'THREAD_REUSE': '🔀',
+    'THREAD_CREATE': '🔀',
+    'WEBHOOK': '🔔',
+    'RATE_LIMIT': '⏳',
+    'PERSISTENCE': '💾',
+    'BUFFER': '🔄',
+    'MESSAGE_BUFFER': '🔄',
+    'METRICS': '📊',
+    'BOT_STARTED': '🚀',
+    'SERVER_START': '🚀',
+    'BOT_STOPPED': '⛔',
+    'DEBUG': '🐞',
+    'PERFORMANCE': '⚡',
+    'MEMORY': '📦',
+    'CONNECTION': '🔗',
+    'LOG': '📜',
+    
+    // ERRORES Y ALERTAS
+    'FATAL_ERROR': '☠️',
+    'ALERT': '🚨',
+    'WARNING': '⚠️',
+    'RECOVERY': '🔧',
+    
+    // FUNCIONES
+    'FUNCTION_CALLING_START': '⚙️',
+    'FUNCTION_EXECUTING': '⚙️',
+    'FUNCTION_HANDLER': '⚙️',
+    'FUNCTION_EXECUTED': '⚙️',
+    
+    // PROCESAMIENTO
+    'AI_PROCESSING': '🤖',
+    'MESSAGE_PROCESS': '⚙️',
+    'WHATSAPP_CHUNKS_COMPLETE': '💬',
+    
+    // INICIALIZACIÓN
+    'THREADS_LOADED': '💾',
+    'STARTUP': '🚀',
+    'CONFIG': '⚙️',
+    'APP_INIT': '🚀',
+    'OPENAI_INIT': '🤖',
+    'LOGGER_INIT': '📜'
+};
+
+// --- Función para obtener emoji de categoría ---
+const getCategoryEmoji = (category: string): string => {
+    return categoryEmojis[category] || '';
+};
+
 // --- Funciones de Sesión ---
 const ensureLogDirectory = (): void => {
     if (isCloudRun) return; // No crear archivos en Cloud Run
@@ -186,13 +263,13 @@ const formatSimpleConsoleEntry = (entry: LogEntry): string => {
     
     // === INICIO DEL BOT === (Sin prefijos)
     if (category === 'SERVER_START') {
-        return `${colors.BRIGHT}${colors.GREEN}🚀 Bot TeAlquilamos iniciado y listo${colors.RESET}`;
+        return `${colors.BRIGHT}${colors.GREEN}${getCategoryEmoji(category)} Bot TeAlquilamos iniciado y listo${colors.RESET}`;
     }
     
     if (category === 'THREADS_LOADED') {
         const totalThreads = details?.totalThreads || 0;
         if (totalThreads > 0) {
-            return `${colors.WHITE}💾 ${totalThreads} conversación${totalThreads > 1 ? 'es' : ''} activa${totalThreads > 1 ? 's' : ''}${colors.RESET}`;
+            return `${colors.WHITE}${getCategoryEmoji(category)} ${totalThreads} conversación${totalThreads > 1 ? 'es' : ''} activa${totalThreads > 1 ? 's' : ''}${colors.RESET}`;
         }
         return '';
     }
@@ -222,26 +299,26 @@ const formatSimpleConsoleEntry = (entry: LogEntry): string => {
     // === OPENAI Y FUNCIONES === 
     if (category === 'OPENAI_REQUEST') {
         const action = details?.action || message;
-        return `${colors.BLUE}🤖 OpenAI → ${action}${colors.RESET}`;
+        return `${colors.BLUE}${getCategoryEmoji(category)} OpenAI → ${action}${colors.RESET}`;
     }
     
     if (category === 'OPENAI_RESPONSE' || category === 'OPENAI_RUN_COMPLETED') {
         const duration = details?.duration;
         if (duration) {
-            return `${colors.GREEN}✅ OpenAI → Respuesta completa (${duration}ms)${colors.RESET}`;
+            return `${colors.GREEN}${getCategoryEmoji(category)} OpenAI → Respuesta completa (${duration}ms)${colors.RESET}`;
         }
-        return `${colors.GREEN}✅ OpenAI → ${message}${colors.RESET}`;
+        return `${colors.GREEN}${getCategoryEmoji(category)} OpenAI → ${message}${colors.RESET}`;
     }
     
     if (category === 'FUNCTION_CALLING_START') {
         const count = details?.toolCallsCount || message.match(/\d+/)?.[0] || '?';
-        return `${colors.YELLOW}⚙️ Ejecutando ${count} función(es)...${colors.RESET}`;
+        return `${colors.YELLOW}${getCategoryEmoji(category)} Ejecutando ${count} función(es)...${colors.RESET}`;
     }
     
     if (category === 'FUNCTION_EXECUTING') {
         const functionName = details?.functionName || message.match(/función: (\w+)/)?.[1] || 'función';
-        const args = details?.arguments ? ` → ${JSON.stringify(details.arguments)}` : '';
-        return `${colors.YELLOW}  ↳ ${functionName}${args}${colors.RESET}`;
+        // Resumir mejor - solo mostrar función activa
+        return `${colors.YELLOW}  ↳ ${functionName} ejecutándose...${colors.RESET}`;
     }
     
     if (category === 'FUNCTION_HANDLER' || category === 'FUNCTION_EXECUTED') {
@@ -253,11 +330,12 @@ const formatSimpleConsoleEntry = (entry: LogEntry): string => {
     if (category === 'BEDS24_REQUEST') {
         const dates = details?.dateFrom && details?.dateTo ? 
             ` (${details.dateFrom} → ${details.dateTo})` : '';
-        return `${colors.CYAN}🏨 Beds24 → Consultando disponibilidad${dates}${colors.RESET}`;
+        return `${colors.CYAN}${getCategoryEmoji(category)} Beds24 → Consultando disponibilidad${dates}${colors.RESET}`;
     }
     
     if (category === 'BEDS24_API_CALL') {
-        return `${colors.CYAN}  ↳ API Call: ${message}${colors.RESET}`;
+        // Resumir mejor - solo mostrar que está activo
+        return `${colors.CYAN}  ↳ Consultando API...${colors.RESET}`;
     }
     
     if (category === 'BEDS24_RESPONSE_DETAIL') {
@@ -266,48 +344,61 @@ const formatSimpleConsoleEntry = (entry: LogEntry): string => {
     }
     
     if (category === 'BEDS24_RESPONSE_SUMMARY') {
-        return `${colors.GREEN}🏨 Beds24 → ${message}${colors.RESET}`;
+        return `${colors.GREEN}${getCategoryEmoji(category)} Beds24 → ${message}${colors.RESET}`;
     }
     
     // === MENSAJES Y PROCESAMIENTO ===
     if (category === 'MESSAGE_RECEIVED') {
-        const preview = details?.preview || details?.messagePreview || message;
+        const fullMessage = details?.messageText || details?.preview || details?.messagePreview || message;
         const user = details?.userName || details?.userId || 'Usuario';
-        return `${colors.CYAN}📨 ${user}: "${preview}"${colors.RESET}`;
+        
+        // Si el mensaje es muy largo, truncar inteligentemente
+        const displayMessage = fullMessage.length > 100 
+            ? fullMessage.substring(0, 97) + '...' 
+            : fullMessage;
+        
+        return `${colors.CYAN}${getCategoryEmoji(category)} ${user}: "${displayMessage}"${colors.RESET}`;
     }
     
     if (category === 'MESSAGE_PROCESS') {
         const count = details?.messageCount || '?';
-        return `${colors.YELLOW}⏳ Procesando ${count} mensajes agrupados...${colors.RESET}`;
+        return `${colors.YELLOW}${getCategoryEmoji(category)} Procesando ${count} mensajes agrupados...${colors.RESET}`;
     }
     
     if (category === 'WHATSAPP_SEND' && entry.level === 'SUCCESS') {
-        const preview = details?.preview?.substring(0, 50) || message;
-        return `${colors.GREEN}✅ WhatsApp → Mensaje enviado${colors.RESET}`;
+        const fullMessage = details?.messageText || details?.preview || message;
+        
+        // Si el mensaje es muy largo, truncar inteligentemente
+        const displayMessage = fullMessage.length > 80 
+            ? fullMessage.substring(0, 77) + '...' 
+            : fullMessage;
+        
+        return `${colors.GREEN}${getCategoryEmoji(category)} WhatsApp → "${displayMessage}"${colors.RESET}`;
     }
     
     if (category === 'WHATSAPP_CHUNKS_COMPLETE') {
         const chunks = details?.totalChunks || message.match(/\d+/)?.[0] || '?';
-        return `${colors.GREEN}✅ WhatsApp → ${chunks} párrafos enviados${colors.RESET}`;
+        return `${colors.GREEN}${getCategoryEmoji(category)} WhatsApp → ${chunks} párrafos enviados${colors.RESET}`;
     }
     
     // === THREAD MANAGEMENT ===
     if (category === 'THREAD_CREATED') {
         const threadId = details?.threadId || message.match(/thread_\w+/)?.[0] || '';
-        return `${colors.BLUE}🧵 Thread creado: ${threadId}${colors.RESET}`;
+        return `${colors.BLUE}${getCategoryEmoji(category)} Thread creado: ${threadId}${colors.RESET}`;
     }
     
+    // THREAD_PERSIST y THREAD_CLEANUP - Solo técnico, no en terminal
     if (category === 'THREAD_PERSIST' || category === 'THREAD_CLEANUP') {
-        return `${colors.DIM}💾 ${message}${colors.RESET}`;
+        return ''; // No mostrar en consola
     }
     
     // === ERRORES ===
     if (entry.level === 'ERROR') {
-        return `${colors.RED}❌ Error: ${message}${colors.RESET}`;
+        return `${colors.RED}${getCategoryEmoji(category)} Error: ${message}${colors.RESET}`;
     }
     
     if (entry.level === 'WARNING' && !message.includes('Webhook recibido sin mensajes')) {
-        return `${colors.YELLOW}⚠️ ${message}${colors.RESET}`;
+        return `${colors.YELLOW}${getCategoryEmoji(category)} ${message}${colors.RESET}`;
     }
     
     // === IGNORAR LOGS TÉCNICOS ===
