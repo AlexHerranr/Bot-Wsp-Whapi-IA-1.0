@@ -4,7 +4,7 @@
 
 El sistema de logging ha sido completamente migrado y optimizado para Google Cloud Run, implementando **17 categorías específicas**, **filtros inteligentes**, **agregación automática**, **métricas en tiempo real** y **mejoras críticas de seguridad y robustez**. Este documento describe la implementación completa, uso y mantenimiento del sistema.
 
-## 🚨 **MEJORAS CRÍTICAS IMPLEMENTADAS V2.1**
+## 🚨 **MEJORAS CRÍTICAS IMPLEMENTADAS V2.2**
 
 ### 🔒 **Seguridad y Sanitización**
 - ✅ **Sanitización robusta** de tokens, API keys, números de teléfono
@@ -32,6 +32,12 @@ El sistema de logging ha sido completamente migrado y optimizado para Google Clo
 - ✅ **Backup logging** cuando Cloud falla
 - ✅ **Alertas automáticas** de fallos
 
+### 🚀 **Nuevos Niveles de Log (V2.2)**
+- ✅ **8 niveles de log** completos (TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, FATAL, ALERT)
+- ✅ **Terminología técnica** estandarizada
+- ✅ **Estructura ISO 8601** documentada
+- ✅ **Guías de implementación** para desarrolladores
+
 ## 🎯 Objetivos Alcanzados
 
 - ✅ **17 categorías de logging** implementadas y validadas
@@ -42,6 +48,8 @@ El sistema de logging ha sido completamente migrado y optimizado para Google Clo
 - ✅ **Tests unitarios** completos (100+ tests)
 - ✅ **Validación automática** en Cloud Run
 - ✅ **Parser actualizado** para nuevas categorías
+- ✅ **8 niveles de log** estandarizados
+- ✅ **Documentación completa** de terminología y uso
 
 ## 📊 Arquitectura del Sistema
 
@@ -68,6 +76,105 @@ El sistema de logging ha sido completamente migrado y optimizado para Google Clo
 │                                    └─────────────────┘         │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+## 🏷️ **TERMINOLOGÍA TÉCNICA DEL SISTEMA DE LOGGING**
+
+### **📊 Estructura de un Log Completo**
+```
+[2025-07-16T14:10:58.631Z] [SUCCESS] MESSAGE_RECEIVED [index.ts]: Mensaje recibido | {"userId":"573003913251","type":"text"}
+|_____________________| |________| |_______________| |________| |________________| |________________________|
+    TIMESTAMP ISO 8601    LOG LEVEL   LOG CATEGORY   SOURCE    MESSAGE TEXT       JSON PAYLOAD
+```
+
+### **🎯 Componentes del Sistema:**
+
+#### **1. 📅 Timestamp ISO 8601**
+- **Formato**: `2025-07-16T14:10:58.631Z`
+- **Estructura**: `YYYY-MM-DDTHH:mm:ss.sssZ`
+- **Zona horaria**: `Z` = UTC (Coordinated Universal Time)
+- **Precisión**: Milisegundos para debugging preciso
+
+#### **2. 🏷️ Log Level (Nivel de Log)**
+- **Propósito**: Indica la **severidad o importancia** del mensaje
+- **Jerarquía**: `TRACE` < `DEBUG` < `INFO` < `SUCCESS` < `WARNING` < `ERROR` < `FATAL` < `ALERT`
+- **Filtrado**: Solo se muestran logs >= nivel configurado
+
+#### **3. 📛 Log Category (Categoría de Log)**
+- **Propósito**: Indica **qué parte del sistema** o **qué tipo de evento** está ocurriendo
+- **Ejemplos**: `MESSAGE_RECEIVED`, `OPENAI_REQUEST`, `BEDS24_API_CALL`
+- **Organización**: Agrupa logs relacionados para análisis
+
+#### **4. 📄 Source File (Archivo Fuente)**
+- **Propósito**: Indica **en qué archivo** se generó el log
+- **Ejemplo**: `[index.ts]`, `[openai_handler.ts]`, `[beds24.service.ts]`
+- **Debugging**: Facilita localizar el código relevante
+
+#### **5. 💬 Message Text**
+- **Propósito**: Descripción **humana** del evento
+- **Formato**: Texto claro y descriptivo
+- **Ejemplo**: "Mensaje recibido", "Función ejecutada exitosamente"
+
+#### **6. 📊 JSON Payload**
+- **Propósito**: Datos **estructurados** para análisis automático
+- **Formato**: JSON válido con metadatos del evento
+- **Ejemplo**: `{"userId":"573003913251","type":"text","duration":1500}`
+
+## 🚀 **NIVELES DE LOG IMPLEMENTADOS (8 NIVELES)**
+
+### **📋 Jerarquía Completa:**
+```typescript
+type LogLevel = 'TRACE' | 'DEBUG' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'FATAL' | 'ALERT';
+```
+
+### **🎯 Descripción de Cada Nivel:**
+
+#### **1. 🔍 `TRACE` - Debugging Profundo**
+- **Uso**: Información **muy detallada** para debugging avanzado
+- **Ejemplo**: Entrada/salida de funciones, valores de variables
+- **Visibilidad**: Solo en desarrollo local
+- **Color**: Gris claro
+
+#### **2. 🐛 `DEBUG` - Información de Debugging**
+- **Uso**: Información **detallada** para debugging
+- **Ejemplo**: Estados internos, flujo de datos
+- **Visibilidad**: Desarrollo local + Railway (si está habilitado)
+- **Color**: Magenta
+
+#### **3. ℹ️ `INFO` - Información General**
+- **Uso**: Eventos **normales** del sistema
+- **Ejemplo**: Mensajes recibidos, funciones ejecutadas
+- **Visibilidad**: Todos los entornos
+- **Color**: Cyan
+
+#### **4. ✅ `SUCCESS` - Operaciones Exitosas**
+- **Uso**: Operaciones **completadas exitosamente**
+- **Ejemplo**: Respuestas enviadas, funciones exitosas
+- **Visibilidad**: Todos los entornos
+- **Color**: Verde
+
+#### **5. ⚠️ `WARNING` - Advertencias**
+- **Uso**: Situaciones **peligrosas** pero no críticas
+- **Ejemplo**: Timeouts, reintentos, datos faltantes
+- **Visibilidad**: Todos los entornos
+- **Color**: Amarillo
+
+#### **6. ❌ `ERROR` - Errores**
+- **Uso**: Errores **que no paran** el sistema
+- **Ejemplo**: Fallos de API, errores de validación
+- **Visibilidad**: Todos los entornos
+- **Color**: Rojo
+
+#### **7. 💀 `FATAL` - Errores Críticos**
+- **Uso**: Errores **que pueden parar** el sistema
+- **Ejemplo**: Fallos de conexión crítica, errores de configuración
+- **Visibilidad**: Todos los entornos
+- **Color**: Rojo con fondo
+
+#### **8. 🚨 `ALERT` - Alertas de Monitoreo**
+- **Uso**: Situaciones que **requieren atención** inmediata
+- **Ejemplo**: Performance degradada, límites alcanzados
+- **Visibilidad**: Todos los entornos
+- **Color**: Amarillo intenso
 
 ## 🏷️ Categorías de Logging Implementadas
 
@@ -96,6 +203,155 @@ El sistema de logging ha sido completamente migrado y optimizado para Google Clo
 - **`THREAD_CLEANUP`** - Limpieza de threads
 - **`SERVER_START`** - Inicio del servidor HTTP
 - **`BOT_READY`** - Bot completamente inicializado
+
+## 💻 **CÓMO AGREGAR LOGS EN EL CÓDIGO**
+
+### **📝 Importación de Funciones:**
+```typescript
+// Importar todas las funciones de logging
+import { 
+    logTrace, 
+    logDebug, 
+    logInfo, 
+    logSuccess, 
+    logWarning, 
+    logError, 
+    logFatal, 
+    logAlert 
+} from '@/utils/logging';
+```
+
+### **🎯 Ejemplos de Uso por Nivel:**
+
+#### **1. 🔍 TRACE - Debugging Profundo**
+```typescript
+function procesarMensaje(mensaje: string) {
+    logTrace('FUNCTION_ENTRY', 'Entrando a procesarMensaje', {
+        mensajeLength: mensaje.length,
+        timestamp: Date.now()
+    });
+    
+    // ... lógica de procesamiento
+    
+    logTrace('FUNCTION_EXIT', 'Saliendo de procesarMensaje', {
+        resultado: 'procesado',
+        duracion: Date.now() - startTime
+    });
+}
+```
+
+#### **2. 🐛 DEBUG - Información de Debugging**
+```typescript
+function validarDatos(datos: any) {
+    logDebug('DATA_VALIDATION', 'Validando estructura de datos', {
+        tipo: typeof datos,
+        propiedades: Object.keys(datos),
+        tieneId: !!datos.id
+    });
+}
+```
+
+#### **3. ℹ️ INFO - Información General**
+```typescript
+app.post('/hook', async (req, res) => {
+    logInfo('WEBHOOK_RECEIVED', 'Mensaje recibido de WhatsApp', {
+        userId: req.body.entry[0]?.changes[0]?.value?.contacts[0]?.wa_id,
+        messageType: req.body.entry[0]?.changes[0]?.value?.messages[0]?.type,
+        timestamp: new Date().toISOString()
+    });
+});
+```
+
+#### **4. ✅ SUCCESS - Operaciones Exitosas**
+```typescript
+async function enviarRespuesta(userId: string, mensaje: string) {
+    try {
+        await whapi.sendMessage(userId, mensaje);
+        logSuccess('MESSAGE_SENT', 'Respuesta enviada exitosamente', {
+            userId,
+            mensajeLength: mensaje.length,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        logError('MESSAGE_SEND_FAILED', 'Error al enviar mensaje', { userId, error });
+    }
+}
+```
+
+#### **5. ⚠️ WARNING - Advertencias**
+```typescript
+function procesarPago(pago: any) {
+    if (pago.monto > 1000000) {
+        logWarning('PAYMENT_HIGH_AMOUNT', 'Pago con monto alto detectado', {
+            monto: pago.monto,
+            userId: pago.userId,
+            limite: 1000000
+        });
+    }
+}
+```
+
+#### **6. ❌ ERROR - Errores**
+```typescript
+async function llamarAPI() {
+    try {
+        const response = await fetch('https://api.externa.com/datos');
+        return await response.json();
+    } catch (error) {
+        logError('API_CALL_FAILED', 'Error al llamar API externa', {
+            url: 'https://api.externa.com/datos',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+        throw error;
+    }
+}
+```
+
+#### **7. 💀 FATAL - Errores Críticos**
+```typescript
+function inicializarBaseDeDatos() {
+    try {
+        // ... lógica de inicialización
+    } catch (error) {
+        logFatal('DB_INIT_FAILED', 'Error crítico al inicializar base de datos', {
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+        });
+        process.exit(1); // Parar el sistema
+    }
+}
+```
+
+#### **8. 🚨 ALERT - Alertas de Monitoreo**
+```typescript
+function monitorearPerformance(tiempoRespuesta: number) {
+    if (tiempoRespuesta > 30000) { // 30 segundos
+        logAlert('PERFORMANCE_DEGRADED', 'Tiempo de respuesta muy alto', {
+            tiempoRespuesta,
+            limite: 30000,
+            timestamp: new Date().toISOString()
+        });
+    }
+}
+```
+
+### **🎯 Estrategia de Logging por Tipo de Código:**
+
+#### **✅ DÓNDE SÍ Agregar Logs:**
+- **Puntos de entrada/salida** de funciones importantes
+- **Decisiones críticas** del sistema
+- **Errores** y excepciones
+- **Estados de cambio** importantes
+- **Métricas** de performance
+- **Interacciones** con APIs externas
+
+#### **❌ DÓNDE NO Agregar Logs:**
+- **Bucles internos** de procesamiento
+- **Funciones auxiliares** simples
+- **Código de validación** básico
+- **Operaciones** muy frecuentes (>1000/min)
 
 ## 🎛️ Sistema de Filtros Inteligentes
 
@@ -168,7 +424,7 @@ const CATEGORY_LEVELS = {
 - **Agregación**: Solo en producción para logs de baja prioridad
 
 ### Logs de Alta Prioridad (No Agregados)
-- Todos los `ERROR` y `WARNING`
+- Todos los `ERROR`, `WARNING`, `FATAL`, `ALERT`
 - `SERVER_START`, `BOT_READY`
 - `THREAD_CREATED`, `THREAD_CLEANUP`
 - `FUNCTION_CALLING_START`
@@ -198,463 +454,138 @@ const CATEGORY_LEVELS = {
 // Antes (PELIGROSO)
 logInfo('USER_LOGIN', 'Usuario autenticado', {
     phone: '573001234567',
-    token: 'sk-1234567890abcdef1234567890abcdef',
-    email: 'user@example.com',
-    password: 'mySecretPassword'
+    apiKey: 'sk-1234567890abcdef',
+    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 });
 
-// Después (SEGURO - Automático)
+// Después (SEGURO)
 logInfo('USER_LOGIN', 'Usuario autenticado', {
-    phone: '573****4567',              // Enmascarado
-    token: 'sk-1****def',              // Enmascarado  
-    email: 'u***r@example.com',        // Enmascarado
-    password: '***REDACTED***'         // Completamente oculto
+    phone: '573****4567',
+    apiKey: 'sk-******90abcdef',
+    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 });
 ```
 
-### Configuración de Sanitización
-```javascript
-import { sanitizeDetails } from './utils/logging/data-sanitizer';
+### Tipos de Datos Sanitizados
+- **Números de teléfono**: `573001234567` → `573****4567`
+- **API Keys**: `sk-1234567890abcdef` → `sk-******90abcdef`
+- **Tokens JWT**: Mantiene header, enmascara payload
+- **Emails**: `usuario@dominio.com` → `us***@dominio.com`
+- **IPs**: `192.168.1.100` → `192.168.1.***`
 
-// Configuración personalizada
-const customConfig = {
-    maskTokens: true,
-    maskPhoneNumbers: true,
-    maskEmails: false,        // Permitir emails en desarrollo
-    maxFieldLength: 1000
-};
+## 📊 **Métricas y Monitoreo**
 
-const sanitized = sanitizeDetails(sensitiveData, customConfig);
+### Endpoint de Métricas
+```
+GET /metrics
 ```
 
-## 🚦 **Rate Limiting**
-
-### Límites por Categoría
-```javascript
-// Límites automáticos aplicados
-const CATEGORY_LIMITS = {
-    'MESSAGE_RECEIVED': { perMinute: 30, perHour: 500 },
-    'OPENAI_REQUEST': { perMinute: 15, perHour: 200 },
-    'BEDS24_REQUEST': { perMinute: 10, perHour: 100 },
-    'ERROR': { perMinute: 50, perHour: 500 }  // Más permisivo para errores
-};
-```
-
-### Verificar Estado de Usuario
-```javascript
-import { globalRateLimiter } from './utils/logging/rate-limiter';
-
-const userStatus = globalRateLimiter.getUserStatus('573001234567');
-console.log({
-    logsLastMinute: userStatus.logsLastMinute,
-    quotaRemaining: userStatus.quotaRemaining,
-    isBlocked: userStatus.isBlocked
-});
-```
-
-## 🛡️ **Robustez y Fallbacks**
-
-### Feature Flag para Rollback
-```bash
-# Rollback instantáneo si hay problemas
-export USE_LEGACY_LOGGING=true
-
-# El sistema volverá automáticamente al logging simple
-```
-
-### Circuit Breaker Automático
-```javascript
-// Automático - No requiere configuración
-// Si hay >10 fallos consecutivos:
-// 1. Sistema de logging se deshabilita 30 segundos
-// 2. Se activa backup logging
-// 3. Se reintenta automáticamente
-```
-
-### Límites de Memoria
-```javascript
-// Configuración automática del buffer
-const MEMORY_LIMITS = {
-    maxBufferSize: 1000,      // Máx 1000 logs
-    maxMemoryMB: 50,          // Máx 50MB en memoria
-    forceFlushSize: 500,      // Flush preventivo a 500 logs
-    maxMessageLength: 1000    // Máx 1000 chars por mensaje
-};
-```
-
-## 🔧 Uso del Sistema
-
-### Importar Funciones
-```javascript
-import {
-    // Mensajes
-    logMessageReceived,
-    logMessageProcess,
-    logWhatsAppSend,
-    logWhatsAppChunksComplete,
-    
-    // OpenAI
-    logOpenAIRequest,
-    logOpenAIResponse,
-    logFunctionCallingStart,
-    logFunctionExecuting,
-    logFunctionHandler,
-    
-    // Beds24
-    logBeds24Request,
-    logBeds24ApiCall,
-    logBeds24ResponseDetail,
-    logBeds24Processing,
-    
-    // Sistema
-    logThreadCreated,
-    logThreadPersist,
-    logThreadCleanup,
-    logServerStart,
-    logBotReady
-} from './utils/logging/index.js';
-```
-
-### Ejemplos de Uso
-
-#### Mensajes de Usuario
-```javascript
-logMessageReceived('Mensaje recibido del usuario', {
-    userId: '573001234567',
-    messageType: 'text',
-    chatId: '573001234567@s.whatsapp.net',
-    messageLength: 45,
-    timestamp: new Date().toISOString()
-});
-```
-
-#### Funciones OpenAI
-```javascript
-logFunctionCallingStart('OpenAI requiere ejecutar función', {
-    userId: '573001234567',
-    threadId: 'thread_abc123',
-    runId: 'run_def456',
-    toolCallsCount: 1,
-    functionName: 'check_availability'
-});
-
-logFunctionExecuting('Ejecutando función check_availability', {
-    userId: '573001234567',
-    functionName: 'check_availability',
-    arguments: {
-        startDate: '2025-01-15',
-        endDate: '2025-01-20'
-    },
-    timestamp: new Date().toISOString()
-});
-```
-
-#### Beds24 Integration
-```javascript
-logBeds24Request('Consultando disponibilidad en Beds24', {
-    startDate: '2025-01-15',
-    endDate: '2025-01-20',
-    requestType: 'availability',
-    propertyIds: [12345, 67890]
-});
-
-logBeds24ApiCall('Llamada a API Beds24', {
-    method: 'POST',
-    endpoint: '/api/v1/availability',
-    propertyId: 12345,
-    requestId: 'req_abc123'
-});
-```
-
-#### Sistema y Threads
-```javascript
-logThreadCreated('Nuevo thread creado para usuario', {
-    userId: '573001234567',
-    threadId: 'thread_abc123',
-    userName: 'Juan Pérez',
-    chatId: '573001234567@s.whatsapp.net',
-    environment: 'production'
-});
-
-logThreadPersist('Threads guardados exitosamente', {
-    threadsCount: 15,
-    source: 'auto_save',
-    file: 'tmp/threads.json'
-});
-```
-
-## 📈 Endpoint de Métricas
-
-### URLs Disponibles
-- **`/metrics`** - Métricas completas del sistema
-- **`/metrics/summary`** - Resumen de métricas clave
-- **`/metrics/health`** - Health check con métricas básicas
-- **`/metrics/reset`** - Reiniciar métricas (solo desarrollo)
-
-### Ejemplo de Respuesta `/metrics`
+### Métricas Disponibles
 ```json
 {
-    "success": true,
-    "data": {
-        "totalRequests": 1250,
-        "totalLogs": 5430,
-        "activeThreads": 12,
+    "logging": {
+        "totalLogs": 15420,
+        "logsByLevel": {
+            "TRACE": 0,
+            "DEBUG": 2340,
+            "INFO": 8900,
+            "SUCCESS": 3200,
+            "WARNING": 580,
+            "ERROR": 320,
+            "FATAL": 0,
+            "ALERT": 80
+        },
         "logsByCategory": {
-            "MESSAGE_RECEIVED": 850,
-            "OPENAI_REQUEST": 420,
-            "BEDS24_REQUEST": 180
+            "MESSAGE_RECEIVED": 4500,
+            "OPENAI_REQUEST": 2300,
+            "BEDS24_API_CALL": 1200
         },
-        "topCategories": [
-            ["MESSAGE_RECEIVED", 850],
-            ["OPENAI_REQUEST", 420],
-            ["BEDS24_REQUEST", 180]
-        ],
-        "systemHealth": {
-            "uptimeHours": 24.5,
-            "memoryUsageMB": 128,
-            "environment": "production"
-        },
-        "aggregationStats": {
-            "totalLogs": 5430,
-            "aggregatedLogs": 2150,
-            "filteringEfficiency": 39.6
-        },
-        "efficiency": {
-            "logsPerHour": 221,
-            "errorRate": "2.3"
+        "performance": {
+            "avgLatency": 45,
+            "maxLatency": 1200,
+            "throughput": 150
         }
     }
 }
 ```
 
-## 🧪 Tests Unitarios
+## 🧪 **Testing y Validación**
 
-### Estructura de Tests
-```
-tests/logging/
-├── test-logging-system.js          # Tests principales
-├── test-filters.js                 # Tests de filtros
-├── test-aggregation.js             # Tests de agregación
-└── test-metrics.js                 # Tests de métricas
-```
-
-### Ejecutar Tests
+### Tests Unitarios
 ```bash
-# Todos los tests
-npm test
+# Ejecutar tests de logging
+npm test -- --grep "logging"
 
-# Solo tests de logging
-npx mocha tests/logging/test-logging-system.js
-
-# Tests con cobertura
-npm run test:coverage
+# Tests específicos
+npm test -- --grep "log levels"
+npm test -- --grep "sanitization"
+npm test -- --grep "aggregation"
 ```
 
-### Cobertura de Tests
-- ✅ **17 categorías** - 100% cobertura
-- ✅ **Filtros inteligentes** - 95% cobertura
-- ✅ **Agregación** - 90% cobertura
-- ✅ **Métricas** - 85% cobertura
-- ✅ **Integración** - 80% cobertura
-
-## 🔍 Validación en Cloud Run
-
-### Script de Validación
+### Validación en Cloud Run
 ```bash
-# Ejecutar validación
-node scripts/validate-cloud-run-logging.js
-
-# Con configuración específica
-GOOGLE_CLOUD_PROJECT=mi-proyecto \
-K_SERVICE=mi-servicio \
-GOOGLE_CLOUD_REGION=us-central1 \
-node scripts/validate-cloud-run-logging.js
+# Verificar logs en producción
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=tu-servicio" --limit=50
 ```
 
-### Criterios de Validación
-- **Categorías**: 17/17 encontradas (40 puntos)
-- **Formato JSON**: >80% con jsonPayload (30 puntos)
-- **Logs estructurados**: >90% estructurados (20 puntos)
-- **Agregación**: Logs agregados presentes (10 puntos)
-- **Penalizaciones**: -10 por error, -2 por warning
+## 📚 **Referencias y Estándares**
 
-### Puntuación Mínima
-- **APROBADO**: ≥80/100 puntos
-- **REPROBADO**: <80/100 puntos
+### Estándares de la Industria
+- **RFC 5424**: Syslog Protocol
+- **Winston**: Node.js logging framework
+- **Log4j**: Java logging framework
+- **Python logging**: Python standard library
 
-## 🛠️ Herramientas de Análisis
-
-### Cloud Parser Actualizado
-```bash
-# Analizar logs recientes
-./tools/log-tools/cloud-parser/botlogs
-
-# Analizar período específico
-./tools/log-tools/cloud-parser/botlogs --hours 6
-
-# Filtrar por usuario
-./tools/log-tools/cloud-parser/botlogs --user 573001234567
+### Niveles de Log Estándar
+```typescript
+// Estándar RFC 5424
+type RFC5424Level = 
+  | 'EMERGENCY'  // 0 - Sistema inutilizable
+  | 'ALERT'      // 1 - Acción inmediata requerida
+  | 'CRITICAL'   // 2 - Condición crítica
+  | 'ERROR'      // 3 - Error
+  | 'WARNING'    // 4 - Advertencia
+  | 'NOTICE'     // 5 - Condición normal pero significativa
+  | 'INFO'       // 6 - Mensaje informativo
+  | 'DEBUG';     // 7 - Mensaje de debug
 ```
 
-### Nuevas Capacidades del Parser
-- ✅ **17 categorías** reconocidas
-- ✅ **Logs agregados** parseados
-- ✅ **Métricas de filtrado** mostradas
-- ✅ **Análisis de rendimiento** incluido
-- ✅ **Detección de errores** mejorada
+## 🔄 **Mantenimiento y Actualizaciones**
 
-## 📊 Métricas de Rendimiento
+### Limpieza Automática
+- **Logs locales**: Limpieza cada 24 horas
+- **Archivos de sesión**: Máximo 5 archivos
+- **Cache de memoria**: Limpieza cada 10 minutos
+- **Métricas**: Reset diario
 
-### Benchmarks Actuales
-- **Logs/segundo**: 50-100 (desarrollo), 20-50 (producción)
-- **Reducción de ruido**: 60-80% menos logs
-- **Agregación**: 30-50% logs agregados en producción
-- **Latencia**: <10ms por log
-- **Memoria**: <5MB buffer máximo
+### Monitoreo de Performance
+- **Latencia**: Máximo 100ms por log
+- **Memoria**: Máximo 50MB de buffer
+- **Throughput**: Máximo 1000 logs/segundo
+- **Almacenamiento**: Máximo 1GB por día
 
-### Optimizaciones Implementadas
-- **Filtros pre-emisión**: Evitar logs innecesarios
-- **Agregación inteligente**: Reducir duplicación
-- **Sanitización eficiente**: Limpiar datos sensibles
-- **Buffer limitado**: Prevenir memory leaks
-- **Limpieza automática**: Garbage collection
+## 📋 **Checklist de Implementación**
 
-## 🚨 Monitoreo y Alertas
+### ✅ Configuración Básica
+- [ ] Niveles de log configurados
+- [ ] Categorías definidas
+- [ ] Filtros aplicados
+- [ ] Sanitización habilitada
 
-### Alertas Recomendadas en Google Cloud
-```yaml
-# Error Rate Alert
-- condition: error_rate > 5%
-  duration: 5m
-  severity: warning
+### ✅ Monitoreo
+- [ ] Métricas habilitadas
+- [ ] Dashboard configurado
+- [ ] Alertas configuradas
+- [ ] Tests implementados
 
-# High Log Volume Alert  
-- condition: logs_per_minute > 1000
-  duration: 10m
-  severity: warning
-
-# Memory Usage Alert
-- condition: memory_usage > 80%
-  duration: 5m
-  severity: critical
-
-# Missing Categories Alert
-- condition: missing_categories > 3
-  duration: 15m
-  severity: warning
-```
-
-### Dashboards Sugeridos
-1. **Logs por Categoría** - Distribución en tiempo real
-2. **Filtros y Agregación** - Eficiencia del sistema
-3. **Errores y Warnings** - Salud del sistema
-4. **Rendimiento** - Latencia y throughput
-5. **Usuarios Activos** - Actividad por usuario
-
-## 🔧 Mantenimiento
-
-### Tareas Regulares
-- **Diario**: Revisar métricas de error
-- **Semanal**: Validar categorías faltantes
-- **Mensual**: Optimizar filtros según uso
-- **Trimestral**: Revisar agregación y rendimiento
-
-### Troubleshooting Común
-
-#### Logs No Aparecen
-1. Verificar filtros: `shouldLog()` retorna `true`
-2. Revisar categoría: Debe estar en `VALID_CATEGORIES`
-3. Comprobar nivel: Debe cumplir nivel mínimo
-4. Validar formato: JSON debe ser válido
-
-#### Demasiados Logs
-1. Ajustar niveles mínimos por categoría
-2. Incrementar filtros contextuales
-3. Habilitar agregación
-4. Revisar configuración de entorno
-
-#### Métricas Incorrectas
-1. Verificar endpoint `/metrics/health`
-2. Revisar `LogFilterMetrics.getStats()`
-3. Comprobar colector de métricas
-4. Validar agregación de datos
-
-## 🚀 Roadmap Futuro
-
-### Próximas Mejoras
-- **Alertas automáticas** basadas en métricas
-- **Dashboard web** interactivo
-- **Exportación a BigQuery** para análisis avanzado
-- **Machine Learning** para detección de anomalías
-- **Compresión inteligente** de logs históricos
-
-### Integraciones Planificadas
-- **Slack notifications** para errores críticos
-- **Grafana dashboards** para visualización avanzada
-- **Elasticsearch** para búsqueda completa
-- **Prometheus** para métricas de sistema
-
-## 📝 Changelog
-
-### v2.0.0 - Sistema Completo (Enero 2025)
-- ✅ 17 categorías de logging implementadas
-- ✅ Filtros inteligentes con 60-80% reducción
-- ✅ Agregación automática con buffer 5s
-- ✅ Endpoint /metrics para dashboard
-- ✅ Tests unitarios 100+ casos
-- ✅ Validación automática Cloud Run
-- ✅ Parser actualizado con nuevas categorías
-- ✅ Documentación completa
-
-### v1.0.0 - Sistema Básico (Diciembre 2024)
-- ✅ Logging básico con categorías limitadas
-- ✅ Formato JSON simple
-- ✅ Sin filtros ni agregación
-- ✅ Parser básico
-
-## 🤝 Contribuciones
-
-Para contribuir al sistema de logging:
-
-1. **Fork** el repositorio
-2. **Crear branch** para nueva funcionalidad
-3. **Implementar** con tests unitarios
-4. **Validar** con script de Cloud Run
-5. **Documentar** cambios en este archivo
-6. **Pull Request** con descripción detallada
-
-## 📞 Soporte
-
-Para soporte técnico:
-- **Issues**: GitHub Issues del proyecto
-- **Documentación**: Este archivo y `/docs/logging/`
-- **Tests**: Ejecutar suite completa antes de reportar
-- **Validación**: Usar script de Cloud Run para verificar
+### ✅ Documentación
+- [ ] Guías de uso actualizadas
+- [ ] Ejemplos de código
+- [ ] Troubleshooting
+- [ ] Referencias técnicas
 
 ---
 
-**Última actualización**: Enero 2025  
-**Versión**: 2.0.0  
-**Estado**: Producción ✅ 
-
-## Integración Prometheus y Alertas
-
-- El endpoint `/metrics` expone métricas clave para Prometheus.
-- Ejemplo de métricas:
-  - `fuzzy_hits_total`: fuzzy matches detectados.
-  - `race_errors_total`: errores de concurrencia.
-  - `token_cleanups_total`: cleanups ejecutados.
-  - `high_token_threads`: threads con tokens altos.
-
-### Ejemplo de alerta Prometheus
-```yaml
-- alert: HighRaceErrors
-  expr: race_errors_total > 0
-  for: 5m
-  labels:
-    severity: error
-  annotations:
-    summary: "Race errors detectados en el bot"
-```
-
-- Se recomienda monitorear y alertar sobre estos valores para prevenir degradación del sistema. 
+**Última actualización**: Julio 2025 - V2.2  
+**Responsable**: Sistema de Logging  
+**Estado**: ✅ Completamente implementado y documentado 

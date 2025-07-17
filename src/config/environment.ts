@@ -272,9 +272,9 @@ export const developmentConfig = {
 };
 
 /**
- * Configuración específica para Cloud Run
+ * Configuración específica para Railway
  */
-export const cloudRunConfig = {
+export const railwayConfig = {
     // Configuración de recursos
     maxMemory: '1Gi',
     maxCPU: '1',

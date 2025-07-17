@@ -49,7 +49,7 @@ node scripts/assistant-management/assistant-cli.js status
 
 ### **2. Variables de Entorno Requeridas**
 ```env
-OPENAI_API_KEY=sk-proj-...
+OPENAI_API_KEY=sk-xxxxxx
 OPENAI_ASSISTANT_ID=asst_KkDuq2r9cL5EZSZa95sXkpVR
 ```
 

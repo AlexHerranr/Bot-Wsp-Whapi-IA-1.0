@@ -41,6 +41,6 @@ Write-Host "   - NO incluyas comillas adicionales en los valores"
 Write-Host "   - Los valores se guardaran de forma segura en Secret Manager"
 Write-Host ""
 Write-Host "EJEMPLO REAL:" -ForegroundColor Green
-Write-Host "   echo 'sk-proj-abcd1234...' | gcloud secrets versions add OPENAI_API_KEY --project=$ProjectId --data-file=-"
+Write-Host "   echo 'sk-xxxxxx...' | gcloud secrets versions add OPENAI_API_KEY --project=$ProjectId --data-file=-"
 Write-Host ""
 Write-Host "Una vez agregados todos los valores, el bot funcionara en Cloud Run!" -ForegroundColor Green 

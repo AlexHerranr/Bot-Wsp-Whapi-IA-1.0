@@ -1,4 +1,5 @@
-export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
+// 🚀 NUEVO: Niveles de log extendidos
+export type LogLevel = 'TRACE' | 'DEBUG' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'FATAL' | 'ALERT';
 
 interface CategoryConfig {
     [category: string]: boolean | undefined;
@@ -33,7 +34,7 @@ export const LogConfig = {
  *   2. The category is not explicitly disabled.
  */
 export const shouldLog = (category: string, level: LogLevel = 'INFO'): boolean => {
-    const levels: LogLevel[] = ['DEBUG', 'INFO', 'WARNING', 'ERROR'];
+    const levels: LogLevel[] = ['TRACE', 'DEBUG', 'INFO', 'SUCCESS', 'WARNING', 'ERROR', 'FATAL', 'ALERT'];
     const currentLevelIdx = levels.indexOf(LogConfig.level);
     const messageLevelIdx = levels.indexOf(level);
 

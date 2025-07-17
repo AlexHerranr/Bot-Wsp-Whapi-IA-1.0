@@ -3,7 +3,7 @@ import path from 'path';
 import { LogConfig, shouldLog } from './log-config';
 
 // --- Tipos ---
-export type LogLevel = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'DEBUG';
+export type LogLevel = 'TRACE' | 'DEBUG' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'FATAL' | 'ALERT';
 
 interface LogEntry {
     timestamp: string;
@@ -43,11 +43,14 @@ let sessionInitialized = false;
 
 // --- Colores para consola ---
 const colors = {
+    TRACE: '\x1b[90m',     // Gris claro
     INFO: '\x1b[36m',      // Cyan
     SUCCESS: '\x1b[32m',   // Green
     WARNING: '\x1b[33m',   // Yellow
     ERROR: '\x1b[31m',     // Red
     DEBUG: '\x1b[35m',     // Magenta
+    FATAL: '\x1b[41m', // Rojo con fondo
+    ALERT: '\x1b[33m',// Amarillo intenso
     RESET: '\x1b[0m',      // Reset
     BRIGHT: '\x1b[1m',     // Bright
     DIM: '\x1b[2m',        // Dim
@@ -479,7 +482,24 @@ export const logError = (category: string, message: string, details?: any): void
 };
 
 export const logDebug = (category: string, message: string, details?: any): void => {
-    detailedLog('DEBUG', category, message, details);
+    if (!isCloudRun && LogConfig.enableDetailedLogs) {
+        detailedLog('DEBUG', category, message, details);
+    }
+};
+
+// 🚀 NUEVO: Funciones de conveniencia para nuevos niveles
+export const logTrace = (category: string, message: string, details?: any): void => {
+    if (!isCloudRun && LogConfig.enableDetailedLogs) {
+        detailedLog('TRACE', category, message, details);
+    }
+};
+
+export const logFatal = (category: string, message: string, details?: any): void => {
+    detailedLog('FATAL', category, message, details);
+};
+
+export const logAlert = (category: string, message: string, details?: any): void => {
+    detailedLog('ALERT', category, message, details);
 };
 
 // --- Funciones Especializadas ---

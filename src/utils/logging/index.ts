@@ -5,7 +5,8 @@ import { botDashboard } from '../monitoring/dashboard.js';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.K_SERVICE;
 const DETAILED_LOGS = process.env.ENABLE_DETAILED_LOGS === 'true' || !IS_PRODUCTION;
 
-type LogLevel = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+// 🚀 NUEVO: Niveles de log extendidos
+type LogLevel = 'TRACE' | 'DEBUG' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'FATAL' | 'ALERT';
 
 // 🔧 ETAPA 3: Sistema de tracing con requestId
 const activeRequests = new Map<string, {
@@ -442,6 +443,11 @@ export const logRequestTracing = (msg: string, details?: Record<string, any>) =>
 export const logToolOutputsSubmitted = (msg: string, details?: Record<string, any>) => enrichedLog('TOOL_OUTPUTS_SUBMITTED', msg, details);
 export const logAssistantNoResponse = (msg: string, details?: Record<string, any>) => enrichedLog('ASSISTANT_NO_RESPONSE', msg, details);
 export const logFlowStageUpdate = (msg: string, details?: Record<string, any>) => enrichedLog('FLOW_STAGE_UPDATE', msg, details);
+
+// 🚀 NUEVO: Funciones de conveniencia para nuevos niveles
+export const logTrace = (cat: string, msg: string, details?: Record<string, any>) => enrichedLog(cat, msg, details, 'TRACE');
+export const logFatal = (cat: string, msg: string, details?: Record<string, any>) => enrichedLog(cat, msg, details, 'FATAL');
+export const logAlert = (cat: string, msg: string, details?: Record<string, any>) => enrichedLog(cat, msg, details, 'ALERT');
 
 // 🔧 ETAPA 3: Exportar funciones de tracing
 export {

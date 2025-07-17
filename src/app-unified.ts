@@ -28,6 +28,9 @@ import {
     logError,
     logWarning,
     logDebug,
+    logFatal,
+    logAlert,
+    logTrace,
     logMessageReceived,
     logMessageProcess,
     logWhatsAppSend,
@@ -353,10 +356,13 @@ process.on('uncaughtException', (error, origin) => {
     
     // 🔧 ETAPA 1: Log detallado antes de salir
     try {
-        logError('SYSTEM_CRASH', 'Excepción no capturada causando crash', {
+        logFatal('SYSTEM_CRASH', 'Excepción no capturada causando crash del sistema', {
             error: error.message,
             origin,
-            stack: error.stack
+            stack: error.stack,
+            timestamp: new Date().toISOString(),
+            processUptime: process.uptime(),
+            memoryUsage: process.memoryUsage()
         });
     } catch (logError) {
         // 🔧 ETAPA 1: Capturar errores en logging para evitar crash doble
@@ -378,10 +384,13 @@ process.on('unhandledRejection', (reason, promise) => {
     
     // 🔧 ETAPA 1: Log detallado antes de salir
     try {
-        logError('SYSTEM_CRASH', 'Rechazo de promesa no manejado causando crash', {
+        logFatal('PROMISE_REJECTION', 'Rechazo de promesa no manejado causando crash del sistema', {
             error: error.message,
             promise: promise.toString(),
-            stack: error.stack
+            stack: error.stack,
+            timestamp: new Date().toISOString(),
+            processUptime: process.uptime(),
+            memoryUsage: process.memoryUsage()
         });
     } catch (logError) {
         // 🔧 ETAPA 1: Capturar errores en logging para evitar crash doble
@@ -2385,7 +2394,9 @@ async function initializeBot() {
     console.log('✅ Bot completamente inicializado');
     
     // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (del comentario externo)
+    logInfo('ORPHANED_RUNS_RECOVERY_START', 'Iniciando recuperación de runs huérfanos');
     await recoverOrphanedRuns();
+    logSuccess('ORPHANED_RUNS_RECOVERY_COMPLETE', 'Recuperación de runs huérfanos completada');
     
 
     
@@ -2519,19 +2530,20 @@ async function initializeBot() {
                     });
                     
                     if (isHighMemory) {
-                        logWarning('HIGH_MEMORY_USAGE', 'Uso alto de memoria detectado', {
+                        logAlert('HIGH_MEMORY_USAGE', 'Uso alto de memoria detectado', {
                             heapUsedMB: Math.round(heapUsedMB),
                             threshold: 300,
-                            heapUsagePercent: Math.round(heapUsagePercentage) + '%'
+                            heapUsagePercent: Math.round(heapUsagePercentage) + '%',
+                            recommendation: 'Monitorear uso de memoria'
                         });
                     }
                     
                     if (isMemoryLeak) {
-                        logError('MEMORY_LEAK_DETECTED', 'Posible memory leak detectado', {
+                        logFatal('MEMORY_LEAK_DETECTED', 'Posible memory leak crítico detectado', {
                             heapUsedMB: Math.round(heapUsedMB),
                             heapUsagePercent: Math.round(heapUsagePercentage) + '%',
                             threshold: 95,
-                            recommendation: 'Uso de memoria crítico - considerar optimización o restart'
+                            recommendation: 'Uso de memoria crítico - considerar optimización o restart inmediato'
                         });
                     }
                     

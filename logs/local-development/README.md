@@ -1,160 +1,362 @@
-# 📁 Logs de Desarrollo Local - Tipo 2
+# 💻 Sistema de Logging - Desarrollo Local
 
-> **🤖 PARA IAs: Logs técnicos detallados guardados en archivos durante desarrollo local.**
+## 🎯 **Descripción General**
 
-## 🎯 **Propósito**
+Este directorio contiene **logs de desarrollo local** del bot de WhatsApp. En desarrollo local, el sistema utiliza **8 niveles de log** completos, **logs detallados** y **formato legible** para debugging.
 
-Estos logs contienen **toda la información técnica** necesaria para debugging detallado durante desarrollo local. Incluyen:
+## 🚀 **Niveles de Log en Desarrollo Local**
 
-- ✅ Timestamps precisos ISO
-- ✅ Categorías técnicas específicas
-- ✅ Información del archivo fuente
-- ✅ Detalles JSON completos
-- ✅ Información de sesión y usuario
-
-## 📂 **Estructura de Archivos**
-
-```
-local-development/
-├── README.md                           # 🎯 ESTE ARCHIVO
-└── sessions/                           # Archivos de sesión individuales
-    ├── bot-session-2025-07-10T01-17-56.log
-    ├── bot-session-2025-07-10T01-37-40.log
-    └── ...
+### **📋 Todos los Niveles Disponibles:**
+```typescript
+type LogLevel = 'TRACE' | 'DEBUG' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'FATAL' | 'ALERT';
 ```
 
-## 📝 **Formato de Logs**
-
-### **Estructura Estándar**
+### **🎯 Configuración de Desarrollo:**
+```typescript
+// Desarrollo local - Todos los niveles visibles
+const config = {
+    level: 'TRACE',              // 🔍 Nivel más detallado
+    enableDetailedLogs: true,    // 📊 Logs completos
+    maxLogsPerMinute: 5000,      // 🚀 Sin límites estrictos
+    enableLogAggregation: false  // 📝 Sin agregación
+};
 ```
-[TIMESTAMP] [LEVEL] CATEGORY [source]: Message | {json_details}
+
+## 🏷️ **Terminología Técnica**
+
+### **📊 Estructura de un Log en Desarrollo:**
+```
+[2025-07-16T14:10:58.631Z] [SUCCESS] MESSAGE_RECEIVED [index.ts]: Mensaje recibido | {"userId":"573003913251","type":"text"}
+|_____________________| |________| |_______________| |________| |________________| |________________________|
+    TIMESTAMP ISO 8601    LOG LEVEL   LOG CATEGORY   SOURCE    MESSAGE TEXT       JSON PAYLOAD
 ```
 
-### **Ejemplo Real**
+### **🎯 Componentes Visibles en Desarrollo:**
+- **📅 Timestamp ISO 8601**: `YYYY-MM-DDTHH:mm:ss.sssZ` (UTC)
+- **🏷️ Log Level**: Severidad del mensaje (TRACE → ALERT)
+- **📛 Log Category**: Tipo de evento (`MESSAGE_RECEIVED`, `OPENAI_REQUEST`, etc.)
+- **📄 Source File**: Archivo donde se generó el log (`[index.ts]`)
+- **💬 Message Text**: Descripción humana del evento
+- **📊 JSON Payload**: Datos estructurados para análisis
+
+## 💻 **Cómo Usar en Desarrollo Local**
+
+### **📝 Importación para Desarrollo:**
+```typescript
+// Importar todas las funciones para debugging completo
+import { 
+    logTrace,    // 🔍 Debugging profundo
+    logDebug,    // 🐛 Información de debugging
+    logInfo,     // ℹ️ Información general
+    logSuccess,  // ✅ Operaciones exitosas
+    logWarning,  // ⚠️ Advertencias
+    logError,    // ❌ Errores
+    logFatal,    // 💀 Errores críticos
+    logAlert     // 🚨 Alertas de monitoreo
+} from '@/utils/logging';
 ```
-[2025-07-10T01:18:06.722Z] [INFO] FUNCTION_CALLING_START [app-unified.ts]: OpenAI requiere ejecutar 1 función(es) | {"shortUserId":"573003913251","threadId":"thread_6YLULxd75f351plgSL8M4rxl","runId":"run_zo2dVj8y0jdiGmRIZ4n5UHi9","toolCallsCount":1,"functions":[{"id":"call_1VPq033qxN4U5lun0pYouiuf","name":"check_availability","argsLength":49}],"environment":"local"}
+
+### **🎯 Ejemplos de Uso en Desarrollo:**
+
+#### **1. 🔍 TRACE - Debugging Profundo**
+```typescript
+function procesarMensaje(mensaje: string) {
+    logTrace('FUNCTION_ENTRY', 'Entrando a procesarMensaje', {
+        mensajeLength: mensaje.length,
+        timestamp: Date.now(),
+        args: arguments
+    });
+    
+    // ... lógica de procesamiento
+    
+    logTrace('FUNCTION_EXIT', 'Saliendo de procesarMensaje', {
+        resultado: 'procesado',
+        duracion: Date.now() - startTime
+    });
+}
 ```
 
-## 🔍 **Categorías de Logs Incluidas**
+#### **2. 🐛 DEBUG - Información de Debugging**
+```typescript
+function validarDatos(datos: any) {
+    logDebug('DATA_VALIDATION', 'Validando estructura de datos', {
+        tipo: typeof datos,
+        propiedades: Object.keys(datos),
+        tieneId: !!datos.id,
+        esArray: Array.isArray(datos)
+    });
+}
+```
 
-### **📨 Mensajes y Comunicación**
-- `MESSAGE_RECEIVED` - Mensajes de usuarios
-- `MESSAGE_PROCESS` - Procesamiento de mensajes
-- `WHATSAPP_SEND` - Envío de respuestas
-- `WHATSAPP_CHUNKS_COMPLETE` - Mensajes largos divididos
+#### **3. ℹ️ INFO - Información General**
+```typescript
+app.post('/hook', async (req, res) => {
+    logInfo('WEBHOOK_RECEIVED', 'Mensaje recibido de WhatsApp', {
+        userId: req.body.entry[0]?.changes[0]?.value?.contacts[0]?.wa_id,
+        messageType: req.body.entry[0]?.changes[0]?.value?.messages[0]?.type,
+        timestamp: new Date().toISOString(),
+        bodySize: JSON.stringify(req.body).length
+    });
+});
+```
 
-### **🤖 OpenAI y Funciones**
-- `OPENAI_REQUEST` - Solicitudes a OpenAI
-- `OPENAI_RESPONSE` - Respuestas de OpenAI
-- `FUNCTION_CALLING_START` - Inicio de funciones
-- `FUNCTION_EXECUTING` - Ejecución de funciones
-- `FUNCTION_HANDLER` - Manejo de funciones
+#### **4. ✅ SUCCESS - Operaciones Exitosas**
+```typescript
+async function enviarRespuesta(userId: string, mensaje: string) {
+    try {
+        await whapi.sendMessage(userId, mensaje);
+        logSuccess('MESSAGE_SENT', 'Respuesta enviada exitosamente', {
+            userId,
+            mensajeLength: mensaje.length,
+            timestamp: new Date().toISOString(),
+            duration: Date.now() - startTime
+        });
+    } catch (error) {
+        logError('MESSAGE_SEND_FAILED', 'Error al enviar mensaje', { userId, error });
+    }
+}
+```
 
-### **🏨 Integración Beds24**
-- `BEDS24_REQUEST` - Consultas a Beds24
-- `BEDS24_API_CALL` - Llamadas API
-- `BEDS24_RESPONSE_DETAIL` - Respuestas completas
-- `BEDS24_PROCESSING` - Procesamiento de datos
+#### **5. ⚠️ WARNING - Advertencias**
+```typescript
+function procesarPago(pago: any) {
+    if (pago.monto > 1000000) {
+        logWarning('PAYMENT_HIGH_AMOUNT', 'Pago con monto alto detectado', {
+            monto: pago.monto,
+            userId: pago.userId,
+            limite: 1000000,
+            timestamp: new Date().toISOString()
+        });
+    }
+}
+```
 
-### **🔧 Sistema y Threads**
-- `THREAD_CREATED` - Creación de threads
-- `THREAD_PERSIST` - Guardado de threads
-- `THREAD_CLEANUP` - Limpieza de threads
-- `SERVER_START` - Inicio del servidor
-- `BOT_READY` - Bot inicializado
+#### **6. ❌ ERROR - Errores**
+```typescript
+async function llamarAPI() {
+    try {
+        const response = await fetch('https://api.externa.com/datos');
+        return await response.json();
+    } catch (error) {
+        logError('API_CALL_FAILED', 'Error al llamar API externa', {
+            url: 'https://api.externa.com/datos',
+            error: error.message,
+            statusCode: error.status,
+            timestamp: new Date().toISOString()
+        });
+        throw error;
+    }
+}
+```
 
-### **⚠️ Errores y Warnings**
-- `ERROR` - Todos los errores
-- `WARNING` - Advertencias importantes
-- `SUCCESS` - Operaciones exitosas
+#### **7. 💀 FATAL - Errores Críticos**
+```typescript
+function inicializarBaseDeDatos() {
+    try {
+        // ... lógica de inicialización
+    } catch (error) {
+        logFatal('DB_INIT_FAILED', 'Error crítico al inicializar base de datos', {
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+        });
+        process.exit(1); // Parar el sistema
+    }
+}
+```
 
-## 📊 **Header de Sesión**
+#### **8. 🚨 ALERT - Alertas de Monitoreo**
+```typescript
+function monitorearPerformance(tiempoRespuesta: number) {
+    if (tiempoRespuesta > 30000) { // 30 segundos
+        logAlert('PERFORMANCE_DEGRADED', 'Tiempo de respuesta muy alto', {
+            tiempoRespuesta,
+            limite: 30000,
+            timestamp: new Date().toISOString()
+        });
+    }
+}
+```
 
-Cada archivo comienza con información de contexto:
+## 🏷️ **Categorías de Logging en Desarrollo**
 
+### **📱 Mensajes y Comunicación (4 categorías)**
+- **`MESSAGE_RECEIVED`** - Mensajes entrantes de WhatsApp
+- **`MESSAGE_PROCESS`** - Procesamiento de mensajes agrupados
+- **`WHATSAPP_SEND`** - Envío de respuestas a WhatsApp
+- **`WHATSAPP_CHUNKS_COMPLETE`** - Completado de mensajes largos
+
+### **🤖 OpenAI y Funciones (5 categorías)**
+- **`OPENAI_REQUEST`** - Solicitudes a OpenAI API
+- **`OPENAI_RESPONSE`** - Respuestas de OpenAI API
+- **`FUNCTION_CALLING_START`** - Inicio de ejecución de funciones
+- **`FUNCTION_EXECUTING`** - Ejecución específica de función
+- **`FUNCTION_HANDLER`** - Manejo de resultados de función
+
+### **🏨 Integración Beds24 (4 categorías)**
+- **`BEDS24_REQUEST`** - Solicitudes de disponibilidad
+- **`BEDS24_API_CALL`** - Llamadas a API Beds24
+- **`BEDS24_RESPONSE_DETAIL`** - Respuestas detalladas de Beds24
+- **`BEDS24_PROCESSING`** - Procesamiento de datos de disponibilidad
+
+### **🧵 Sistema y Threads (4 categorías)**
+- **`THREAD_CREATED`** - Creación de threads OpenAI
+- **`THREAD_PERSIST`** - Persistencia de threads
+- **`THREAD_CLEANUP`** - Limpieza de threads
+- **`SERVER_START`** - Inicio del servidor HTTP
+- **`BOT_READY`** - Bot completamente inicializado
+
+## 🎯 **Estrategia de Logging en Desarrollo**
+
+### **✅ DÓNDE SÍ Agregar Logs (Desarrollo):**
+- **Puntos de entrada/salida** de funciones importantes
+- **Decisiones críticas** del sistema
+- **Errores** y excepciones
+- **Estados de cambio** importantes
+- **Métricas** de performance
+- **Interacciones** con APIs externas
+- **Debugging** de flujos complejos
+- **Validación** de datos
+
+### **❌ DÓNDE NO Agregar Logs (Desarrollo):**
+- **Bucles internos** de procesamiento
+- **Funciones auxiliares** simples
+- **Código de validación** básico
+- **Operaciones** muy frecuentes (>1000/min)
+
+## 📁 **Estructura de Archivos de Desarrollo**
+
+### **📂 Directorio de Sesiones:**
+```
+logs/local-development/
+├── README.md                    # 📖 Este archivo
+├── sessions/                    # 📁 Sesiones de desarrollo
+│   ├── bot-session-2025-07-16T14-10-58.log  # 📄 Log de sesión actual
+│   ├── bot-session-2025-07-16T10-30-15.log  # 📄 Log de sesión anterior
+│   └── ...                      # 📄 Más sesiones
+└── README.md                    # 📖 Documentación general
+```
+
+### **📄 Formato de Archivo de Sesión:**
 ```
 === NUEVA SESIÓN DEL BOT ===
-Timestamp: 2025:07:10 01:17:56 (Colombia UTC-5)
-Session ID: session-2025-07-10T01-17-56
-PID: 17536
+Timestamp: 2025:07:16 14:10:58 (Colombia UTC-5)
+Session ID: session-2025-07-16T14-10-58
+PID: 17280
 Node Version: v22.16.0
-Log Type: Desarrollo Local Detallado
 =============================
+
+[2025-07-16T14:10:58.631Z] [SUCCESS] LOGGER_INIT [unknown.ts]: Sistema de logging por sesión inicializado | {"sessionId":"session-2025-07-16T14-10-58","logFile":"logs\\bot-session-2025-07-16T14-10-58.log","maxSessions":5,"bufferInterval":100,"maxBufferSize":50}
+[2025-07-16T14:10:58.742Z] [INFO] THREAD_PERSIST [index.ts]: 0 threads cargados desde archivo | {"threadsCount":0,"source":"file_load","file":"tmp/threads.json"}
+...
 ```
 
-## 🎛️ **Configuración**
+## 🔧 **Configuración de Desarrollo**
 
-### **Ubicación del Código**
-- **Logger**: `src/utils/logging/file-logger.ts`
-- **Configuración**: `src/utils/logging/index.ts`
-
-### **Parámetros**
-- **Directorio**: `logs/local-development/sessions`
-- **Máximo sesiones**: 5 (limpieza automática)
-- **Buffer**: 50 entradas o 100ms
-- **Formato**: Detallado con JSON
-
-## 🚀 **Uso**
-
-### **Automático**
-Los logs se generan automáticamente cuando ejecutas:
+### **🌍 Variables de Entorno (Desarrollo):**
 ```bash
-npm run dev
+# Habilitar logs detallados
+ENABLE_DETAILED_LOGS=true
+
+# Nivel de log más detallado
+LOG_LEVEL=TRACE
+
+# Sin límites estrictos
+MAX_LOGS_PER_MINUTE=5000
+
+# Sin agregación
+ENABLE_LOG_AGGREGATION=false
 ```
 
-### **Ubicación de Archivos**
-```bash
-# Ver sesiones más recientes
-ls -la logs/local-development/sessions/
+### **📊 Configuración Automática:**
+```typescript
+// El sistema detecta automáticamente que está en desarrollo
+const isCloudRun = !!process.env.K_SERVICE || !!process.env.RAILWAY_URL;
+const isLocal = !isCloudRun;
 
-# Ver última sesión
+// Y aplica configuración de desarrollo
+if (isLocal) {
+    // Todos los niveles visibles
+    // Logs detallados habilitados
+    // Sin límites estrictos
+    // Sin agregación
+}
+```
+
+## 📊 **Métricas en Desarrollo**
+
+### **Endpoint de Métricas:**
+```
+GET /metrics
+```
+
+### **Métricas Disponibles en Desarrollo:**
+- **Total de logs** por nivel y categoría
+- **Performance** (latencia, throughput)
+- **Filtros** y eficiencia de agregación
+- **Errores** y warnings
+- **Debugging** de flujos
+
+## 🔒 **Seguridad en Desarrollo**
+
+### **Datos Protegidos Automáticamente:**
+- **Números de teléfono**: `573001234567` → `573****4567`
+- **API Keys**: `sk-1234567890abcdef` → `sk-******90abcdef`
+- **Tokens JWT**: Mantiene header, enmascara payload
+- **Emails**: `usuario@dominio.com` → `us***@dominio.com`
+
+### **⚠️ Nota de Seguridad:**
+En desarrollo local, algunos datos sensibles pueden ser más visibles para facilitar el debugging, pero siempre se aplica sanitización básica.
+
+## 🧪 **Testing en Desarrollo**
+
+### **Ejecutar Tests:**
+```bash
+# Tests de logging
+npm test -- --grep "logging"
+
+# Tests específicos
+npm test -- --grep "log levels"
+npm test -- --grep "sanitization"
+npm test -- --grep "aggregation"
+```
+
+### **Validación Local:**
+```bash
+# Verificar logs locales
 tail -f logs/local-development/sessions/bot-session-*.log
+
+# Analizar logs específicos
+grep "ERROR" logs/local-development/sessions/bot-session-*.log
+grep "WARNING" logs/local-development/sessions/bot-session-*.log
 ```
 
-### **Análisis**
-```bash
-# Buscar errores
-grep "ERROR" logs/local-development/sessions/*.log
+## 🔄 **Mantenimiento en Desarrollo**
 
-# Buscar usuario específico
-grep "573003913251" logs/local-development/sessions/*.log
+### **Limpieza Automática:**
+- **Logs locales**: Limpieza cada 24 horas
+- **Archivos de sesión**: Máximo 5 archivos
+- **Cache de memoria**: Limpieza cada 10 minutos
 
-# Ver funciones ejecutadas
-grep "FUNCTION_" logs/local-development/sessions/*.log
-```
+### **Monitoreo de Performance:**
+- **Latencia**: Máximo 100ms por log
+- **Memoria**: Máximo 50MB de buffer
+- **Throughput**: Máximo 1000 logs/segundo
 
-## 🔄 **Mantenimiento Automático**
+## 📚 **Documentación Relacionada**
 
-- **Limpieza**: Se mantienen solo las últimas 5 sesiones
-- **Rotación**: Automática por timestamp
-- **Buffer**: Optimizado para rendimiento
-- **Encoding**: UTF-8 para caracteres especiales
+### **📖 Documentación Completa:**
+- **Implementación técnica**: `docs/logging/LOGGING_SYSTEM_COMPLETE.md`
+- **Punto de entrada**: `src/utils/logging/README.md`
+- **Índice principal**: `logs/README.md`
 
-## 🤖 **Para IAs: Cómo Analizar**
-
-### **Flujo Típico de Sesión**
-1. **SERVER_START** - Bot iniciando
-2. **THREAD_PERSIST** - Cargando threads existentes
-3. **MESSAGE_RECEIVED** - Usuario envía mensaje
-4. **OPENAI_REQUEST** - Procesando con IA
-5. **FUNCTION_CALLING_START** - Ejecutando funciones
-6. **BEDS24_REQUEST** - Consultando disponibilidad
-7. **OPENAI_RESPONSE** - Respuesta generada
-8. **WHATSAPP_SEND** - Enviando respuesta
-
-### **Información Clave por Categoría**
-- **shortUserId**: ID del usuario (ej: "573003913251")
-- **threadId**: Thread de OpenAI (ej: "thread_6YLULxd75f351plgSL8M4rxl")
-- **runId**: Run de OpenAI (ej: "run_zo2dVj8y0jdiGmRIZ4n5UHi9")
-- **duration**: Tiempo de ejecución en ms
-- **environment**: Siempre "local" en estos logs
-
-### **Debugging Común**
-- **Errores de OpenAI**: Buscar `OPENAI_` + `ERROR`
-- **Problemas Beds24**: Buscar `BEDS24_` + `ERROR`
-- **Timeouts**: Buscar `duration` > 30000
-- **Usuarios específicos**: Buscar por número de teléfono
+### **🔧 Archivos de Implementación:**
+- **Funciones principales**: `src/utils/logging/index.ts`
+- **Configuración**: `src/utils/log-config.ts`
+- **Logger base**: `src/utils/logger.ts`
 
 ---
 
-**🤖 Para IAs**: Estos logs contienen la información MÁS COMPLETA del sistema. Úsalos para entender el flujo técnico detallado y debugging profundo. 
+**Última actualización**: Julio 2025 - V2.2  
+**Responsable**: Sistema de Logging  
+**Estado**: ✅ Completamente implementado y documentado 

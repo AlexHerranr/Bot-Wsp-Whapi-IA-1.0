@@ -1,15 +1,17 @@
 # 🚀 Deployment Guide - TeAlquilamos Bot
 
+> **Nota histórica:** Este proyecto fue desplegado originalmente en Google Cloud Run, pero desde julio 2025 la plataforma de despliegue definitiva es Railway. Toda la documentación y configuración está ahora optimizada para Railway. Si necesitas referencias antiguas de Cloud Run, consulta el historial de cambios o los archivos archivados.
+
 ## Configuración Unificada (Un código, múltiples entornos)
 
-Este bot está diseñado para funcionar automáticamente tanto en desarrollo local como en Google Cloud Run sin necesidad de cambios manuales en el código.
+Este bot está diseñado para funcionar automáticamente tanto en desarrollo local como en Railway sin necesidad de cambios manuales en el código.
 
 ## 🎯 Configuración Automática
 
 ### Detección de Entorno
 El sistema detecta automáticamente el entorno:
-- **Local**: Cuando no hay variable `K_SERVICE` (Cloud Run)
-- **Cloud Run**: Cuando existe `K_SERVICE` o `NODE_ENV=production`
+- **Local**: Cuando no hay variable `RAILWAY_URL`
+- **Railway**: Cuando existe `RAILWAY_URL` o `NODE_ENV=production`
 
 ### Variables Dinámicas
 ```typescript
@@ -20,9 +22,9 @@ Local:
 - Logs: Detallados
 - OpenAI: Timeout 45s, 3 reintentos
 
-Cloud Run:
+Railway:
 - Puerto: 8080
-- Webhook: https://bot-wsp-whapi-ia-908808352514.northamerica-northeast1.run.app/hook
+- Webhook: https://bot-wsp-whapi-ia-production.up.railway.app/hook
 - Logs: Producción
 - OpenAI: Timeout 30s, 2 reintentos
 ```
@@ -36,18 +38,14 @@ npm run dev
 
 # Desarrollo con ngrok (recomendado)
 npm run dev:local
-
-# Simular entorno Cloud Run localmente
-npm run dev:cloud
 ```
 
-### Deployment a Cloud Run
+### Deployment a Railway
 ```bash
-# Deploy manual (recomendado)
-npm run deploy
-
-# Deploy automático (directo)
-npm run deploy:auto
+# Railway despliega automáticamente con cada push
+git add .
+git commit -m "feat: Actualización del bot"
+git push origin main
 ```
 
 ### Health Checks
@@ -55,7 +53,7 @@ npm run deploy:auto
 # Health check local
 npm run health-check:local
 
-# Health check Cloud Run
+# Health check Railway
 npm run health-check
 
 # Ver configuración actual
@@ -83,14 +81,6 @@ PORT=3008
 # URLs personalizadas
 WEBHOOK_URL=https://your-custom-webhook.com/hook
 BASE_URL=https://your-custom-base.com
-
-# Configuración de logs
-LOG_LEVEL=development
-ENABLE_DETAILED_LOGS=true
-
-# OpenAI optimización
-OPENAI_TIMEOUT=30000
-OPENAI_RETRIES=2
 ```
 
 ## 🔄 Flujo de Desarrollo
