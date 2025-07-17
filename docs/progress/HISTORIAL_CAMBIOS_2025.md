@@ -316,5 +316,14 @@ Implementación completa de **Etapa 3: Logging Específico para Flujos Críticos
 
 ---
 
+## Julio 2025
+
+- 🔥 Eliminada la función `analyzeForContextInjection` y toda lógica de análisis de contexto/disponibilidad.
+- 🤖 OpenAI ahora solicita contexto histórico o detalles de disponibilidad usando function calling (`get_conversation_context`).
+- 🧹 Código principal simplificado, sin reglas ni thresholds manuales.
+- Documentación e inventario actualizados para reflejar la nueva arquitectura.
+
+---
+
 *Documento creado: 13 de Julio, 2025*
 *Última actualización: 13 de Julio, 2025* 

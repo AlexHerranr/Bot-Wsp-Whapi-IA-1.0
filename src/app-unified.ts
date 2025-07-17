@@ -30,26 +30,27 @@ import {
     logDebug,
     logFatal,
     logAlert,
-    logTrace,
+    // 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
+    // logTrace,                    // ❌ No se usa - comentado para registro
     logMessageReceived,
-    logMessageProcess,
-    logWhatsAppSend,
-    logWhatsAppChunksComplete,
+    // logMessageProcess,           // ❌ No se usa - comentado para registro
+    // logWhatsAppSend,            // ❌ No se usa - comentado para registro
+    // logWhatsAppChunksComplete,  // ❌ No se usa - comentado para registro
     logOpenAIRequest,
     logOpenAIResponse,
     logFunctionCallingStart,
     logFunctionExecuting,
     logFunctionHandler,
-    logBeds24Request,
-    logBeds24ApiCall,
-    logBeds24ResponseDetail,
-    logBeds24Processing,
+    // logBeds24Request,           // ❌ No se usa - comentado para registro
+    // logBeds24ApiCall,           // ❌ No se usa - comentado para registro
+    // logBeds24ResponseDetail,    // ❌ No se usa - comentado para registro
+    // logBeds24Processing,        // ❌ No se usa - comentado para registro
     logThreadCreated,
-    logThreadPersist,
-    logThreadCleanup,
+    // logThreadPersist,           // ❌ No se usa - comentado para registro
+    // logThreadCleanup,           // ❌ No se usa - comentado para registro
     logServerStart,
-    logBotReady,
-    logContextTokens,
+    // logBotReady,                // ❌ No se usa - comentado para registro
+    // logContextTokens,           // ❌ No se usa - comentado para registro
     logOpenAIUsage,
     logOpenAILatency,
     logFallbackTriggered,
@@ -58,7 +59,7 @@ import {
     logRequestTracing,
     logToolOutputsSubmitted,
     logAssistantNoResponse,
-    logFlowStageUpdate,
+    // logFlowStageUpdate,         // ❌ No se usa - comentado para registro
     startRequestTracing,
     updateRequestStage,
     registerToolCall,
@@ -66,7 +67,8 @@ import {
     endRequestTracing
 } from './utils/logging/index.js';
 import { threadPersistence } from './utils/persistence/index.js';
-import { getChatHistory } from './utils/whapi/index';
+// 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
+// import { getChatHistory } from './utils/whapi/index';  // ❌ No se usa - comentado para registro
 import { guestMemory } from './utils/persistence/index';
 import { whapiLabels } from './utils/whapi/index';
 import { getConfig } from './config/environment';
@@ -77,8 +79,9 @@ import metricsRouter, {
     incrementFallbacks, 
     setTokensUsed, 
     setLatency, 
-    incrementMessages, 
-    updateActiveThreads 
+    incrementMessages
+    // 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
+    // updateActiveThreads  // ❌ No se usa - comentado para registro
 } from './routes/metrics.js';
 
 // Importar nuevo módulo modularizado de inyección de historial/contexto
@@ -93,24 +96,7 @@ let openaiClient: OpenAI;
 let server: http.Server;
 let isServerInitialized = false;
 
-const activeRuns = new Map<string, { id: string; status: string; startTime: number; userId: string }>();
-const userMessageBuffers = new Map<string, {
-    messages: string[],
-    chatId: string,
-    name: string,
-    lastActivity: number
-}>();
-const userActivityTimers = new Map<string, NodeJS.Timeout>();
-const userTypingState = new Map();
-const botSentMessages = new Set<string>();
-const manualMessageBuffers = new Map<string, {
-    messages: string[],
-    agentName: string,
-    timestamp: number
-}>();
-const manualTimers = new Map<string, NodeJS.Timeout>();
-
-// 🔧 ETAPA 1: BUFFER UNIFICADO - 5 SEGUNDOS PARA MENSAJES Y TYPING
+// 🔧 SIMPLIFICADO: UN SOLO BUFFER UNIFICADO - 5 SEGUNDOS PARA TODO
 const globalMessageBuffers = new Map<string, {
     messages: string[],
     chatId: string,
@@ -118,27 +104,30 @@ const globalMessageBuffers = new Map<string, {
     lastActivity: number,
     timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 5000; // 5 segundos para mensajes Y typing
+const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para mensajes, typing, hooks, entrada manual
 
-    // 🔧 ETAPA 2: Cache de historial para optimizar fetches
-    const historyCache = new Map<string, { history: string; timestamp: number }>();
-    const HISTORY_CACHE_TTL = 60 * 60 * 1000; // 1 hora en ms
-    const HISTORY_CACHE_MAX_SIZE = 50; // 🔧 MEJORADO: Límite de tamaño
+// 🔧 ELIMINADOS: Buffers obsoletos y redundantes
+// const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
+// const userActivityTimers = new Map<string, NodeJS.Timeout>();
+// const userTypingState = new Map();
+// const manualMessageBuffers = new Map<string, { messages: string[], agentName: string, timestamp: number }>();
+// const manualTimers = new Map<string, NodeJS.Timeout>();
 
-    // 🔧 ETAPA 3: Cache de inyección de contexto relevante (TTL 1 min)
-    const contextInjectionCache = new Map<string, { context: string; timestamp: number }>();
-    const CONTEXT_INJECTION_TTL = 60 * 1000; // 1 minuto
-    const CONTEXT_CACHE_MAX_SIZE = 30; // 🔧 MEJORADO: Límite de tamaño
+const botSentMessages = new Set<string>();
+
+// 🔧 ELIMINADOS: Caches duplicados migrados a historyInjection.ts
+// Los caches historyCache y contextInjectionCache ahora están centralizados
+// en el módulo historyInjection.ts para evitar duplicación y optimizar memoria
+
+const MAX_MESSAGE_LENGTH = 5000;
 
 // 🔧 NUEVO: Sistema de typing dinámico
 // Configuración de timeouts optimizada para mejor UX
-const FALLBACK_TIMEOUT = 2000; // 2 segundos si no hay typing detectable (más rápido)
-const POST_TYPING_DELAY = 3000; // 3 segundos después de que deje de escribir (más natural)
-const MAX_BUFFER_SIZE = 10; // Límite máximo de mensajes por buffer (anti-spam)
-const MAX_BOT_MESSAGES = 1000;
-const MAX_MESSAGE_LENGTH = 5000;
-
-
+// 🔧 CONSTANTES OBSOLETAS COMENTADAS PARA REGISTRO
+// const FALLBACK_TIMEOUT = 2000; // 2 segundos si no hay typing detectable (más rápido)  // ❌ No se usa - comentado para registro
+// const POST_TYPING_DELAY = 3000; // 3 segundos después de que deje de escribir (más natural)  // ❌ No se usa - comentado para registro
+// const MAX_BUFFER_SIZE = 10; // Límite máximo de mensajes por buffer (anti-spam)  // ❌ No se usa - comentado para registro
+// const MAX_BOT_MESSAGES = 1000;  // ❌ No se usa - comentado para registro
 
 // 🔧 NUEVO: Sistema de locks simplificado con colas
 async function acquireThreadLock(userId: string): Promise<boolean> {
@@ -149,146 +138,9 @@ function releaseThreadLock(userId: string): void {
     simpleLockManager.releaseUserLock(userId);
 }
 
-// 🔧 ETAPA 2: Función para generar resumen automático de historial (del comentario externo)
-async function generateHistorialSummary(threadId: string, userId: string): Promise<boolean> {
-    try {
-        logInfo('HISTORIAL_SUMMARY_START', 'Iniciando generación de resumen de historial', {
-            threadId,
-            userId
-        });
-        
-        // Obtener mensajes del thread (últimos 50 para análisis)
-        const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 50 });
-        
-        if (messages.data.length < 10) {
-            logInfo('HISTORIAL_SUMMARY_SKIP', 'Thread muy corto, no necesita resumen', {
-                threadId,
-                userId,
-                messageCount: messages.data.length
-            });
-            return false;
-        }
-        
-        // Calcular tokens estimados
-        const estimatedTokens = messages.data.reduce((acc, msg) => {
-            const content = msg.content[0];
-            if (content && content.type === 'text' && 'text' in content) {
-                return acc + Math.ceil((content.text?.value?.length || 0) / 4);
-            }
-            return acc;
-        }, 0);
-        
-        // 🔧 ETAPA 4: Optimizar para threads cortos - threshold más alto
-        const MESSAGE_THRESHOLD = 150; // Solo generar resumen si hay más de 150 mensajes (aumentado de 100)
-        
-        if (messages.data.length <= MESSAGE_THRESHOLD) {
-            logInfo('HISTORIAL_SUMMARY_SKIP', 'Thread corto, no necesita resumen', {
-                threadId,
-                userId,
-                messageCount: messages.data.length,
-                threshold: MESSAGE_THRESHOLD,
-                reason: 'thread_too_short'
-            });
-            return false;
-        }
-        
-        logWarning('HISTORIAL_SUMMARY_NEEDED', 'Thread largo, generando resumen', {
-            threadId,
-            userId,
-            messageCount: messages.data.length,
-            threshold: MESSAGE_THRESHOLD
-        });
-        
-        // Crear texto de conversación para resumen
-        const conversationText = messages.data
-            .reverse() // Ordenar cronológicamente
-            .map(msg => {
-                const content = msg.content[0];
-                if (content && content.type === 'text' && 'text' in content) {
-                    const role = msg.role === 'user' ? 'Cliente' : 'Asistente';
-                    return `${role}: ${content.text.value}`;
-                }
-                return null;
-            })
-            .filter(Boolean)
-            .join('\n\n');
-        
-        // Generar resumen usando modelo global configurado
-        const summaryResponse = await openaiClient.chat.completions.create({
-            model: process.env.OPENAI_MODEL || 'gpt-4', // Usar modelo global (revertido)
-            messages: [
-                {
-                    role: 'system',
-                    content: `Eres un asistente especializado en crear resúmenes concisos de conversaciones de WhatsApp para un bot de reservas hoteleras.
-                    
-                    Tu tarea es crear un resumen que capture:
-                    1. El propósito principal de la conversación
-                    2. Información clave del cliente (preferencias, fechas, etc.)
-                    3. Estado actual de la consulta/reserva
-                    4. Cualquier información importante para continuar la conversación
-                    
-                    El resumen debe ser:
-                    - Máximo 200 palabras
-                    - En español
-                    - Estructurado y fácil de leer
-                    - Mantener solo información relevante para el negocio`
-                },
-                {
-                    role: 'user',
-                    content: `Genera un resumen de esta conversación:\n\n${conversationText}`
-                }
-            ],
-            max_tokens: 200,
-            temperature: 0.3
-        });
-        
-        const summary = summaryResponse.choices[0]?.message?.content || 'Error generando resumen';
-        
-        // Agregar resumen como mensaje del sistema
-        await openaiClient.beta.threads.messages.create(threadId, {
-            role: 'user',
-            content: `RESUMEN DE CONVERSACIÓN ANTERIOR:\n\n${summary}\n\n--- CONTINUAR CONVERSACIÓN ---`
-        });
-        
-        // 🔧 ETAPA 2: Poda de mensajes antiguos (mantener últimos 20)
-        const messagesToDelete = messages.data.slice(20);
-        let deletedCount = 0;
-        
-        for (const msg of messagesToDelete) {
-            try {
-                await openaiClient.beta.threads.messages.del(threadId, msg.id);
-                deletedCount++;
-            } catch (deleteError) {
-                logWarning('HISTORIAL_SUMMARY_DELETE_ERROR', 'Error eliminando mensaje antiguo', {
-                    threadId,
-                    userId,
-                    messageId: msg.id,
-                    error: deleteError.message
-                });
-            }
-        }
-        
-        logSuccess('HISTORIAL_SUMMARY_COMPLETE', 'Resumen de historial generado y mensajes podados', {
-            threadId,
-            userId,
-            originalTokens: estimatedTokens,
-            summaryLength: summary.length,
-            messagesDeleted: deletedCount,
-            messagesKept: 20,
-            reductionPercentage: Math.round(((estimatedTokens - (summary.length / 4)) / estimatedTokens) * 100)
-        });
-        
-        return true;
-        
-    } catch (error) {
-        logError('HISTORIAL_SUMMARY_ERROR', 'Error generando resumen de historial', {
-            threadId,
-            userId,
-            error: error.message
-        });
-        return false;
-    }
-}
+// 🔧 ELIMINADO: Función generateHistorialSummary obsoleta
+// El sistema ahora usa get_conversation_context para contexto histórico
+// OpenAI puede solicitar el contexto que necesite usando la función registrada
 
 // --- Aplicación Express ---
 const app = express();
@@ -415,7 +267,7 @@ function setupEndpoints() {
             environment: appConfig.environment,
             port: appConfig.port,
             initialized: isServerInitialized,
-            activeBuffers: userMessageBuffers.size,
+            activeBuffers: globalMessageBuffers.size,
             threadStats: stats,
             // 🔧 ETAPA 1: Información adicional de threads para debug
             threadInfo: {
@@ -424,15 +276,11 @@ function setupEndpoints() {
                 inactiveThreads: stats.totalThreads - stats.activeThreads,
                 lastCleanup: new Date().toISOString()
             },
-            // 🔧 ETAPA 2: Información del cache de historial
-            historyCache: {
-                size: historyCache.size,
-                ttlMinutes: Math.round(HISTORY_CACHE_TTL / 1000 / 60),
-                sampleEntries: Array.from(historyCache.entries()).slice(0, 3).map(([userId, entry]) => ({
-                    userId: userId.substring(0, 8) + '...',
-                    ageMinutes: Math.round((Date.now() - entry.timestamp) / 1000 / 60),
-                    historyLines: entry.history.split('\n').length
-                }))
+            // 🔧 ETAPA 2: Información del cache centralizado en historyInjection.ts
+            centralizedCache: {
+                description: "Caches centralizados en historyInjection.ts para optimizar memoria",
+                modules: ["historyCache", "contextInjectionCache", "injectionCache"],
+                cleanupInterval: "10 minutos"
             },
 
             // 🔧 ETAPA 2: Información de flujo híbrido
@@ -666,82 +514,21 @@ function setupWebhooks() {
             return;
         }
         
-        // 🔧 ETAPA 1: Filtrar mensajes cortos/incompletos antes de concatenar (relajado)
-        const ALLOWED_SHORT = ['si', 'ok', 'vale', 'gracias', 'yes', 'no', 'bueno', 'claro'];
-        
-        const filteredMessages = buffer.messages.filter(msg => {
-            const cleanMsg = msg.trim();
-            
-            // 🔧 ETAPA 1: Permitir confirmaciones cortas comunes
-            if (cleanMsg.length < 3 && ALLOWED_SHORT.includes(cleanMsg.toLowerCase())) {
-                logDebug('BUFFER_ALLOW_SHORT', `Confirmación corta permitida`, {
-                    userJid: getShortUserId(userId),
-                    message: cleanMsg,
-                    length: cleanMsg.length
-                });
-                return true;
-            }
-            
-            // Ignorar mensajes muy cortos (menos de 3 caracteres) que no son confirmaciones
-            if (cleanMsg.length < 3) {
-                logDebug('BUFFER_FILTER_SHORT', `Mensaje muy corto filtrado`, {
-                    userJid: getShortUserId(userId),
-                    message: cleanMsg,
-                    length: cleanMsg.length
-                });
-                return false;
-            }
-            
-            // Ignorar patrones de ruido como "m", "mm", "mmm"
-            if (/^m+$/i.test(cleanMsg)) {
-                logDebug('BUFFER_FILTER_NOISE', `Patrón de ruido filtrado`, {
-                    userJid: getShortUserId(userId),
-                    message: cleanMsg
-                });
-                return false;
-            }
-            
-            // Ignorar mensajes que solo contienen puntos suspensivos
-            if (/^\.{2,}$/.test(cleanMsg)) {
-                logDebug('BUFFER_FILTER_ELLIPSIS', `Puntos suspensivos filtrados`, {
-                    userJid: getShortUserId(userId),
-                    message: cleanMsg
-                });
-                return false;
-            }
-            
-            return true;
-        });
-        
-        // Si no quedan mensajes válidos después del filtrado, limpiar buffer
-        if (filteredMessages.length === 0) {
-            logInfo('BUFFER_EMPTY_AFTER_FILTER', `Buffer vacío después de filtrado`, {
-                userJid: getShortUserId(userId),
-                userName: buffer.userName,
-                originalCount: buffer.messages.length
-            });
-            globalMessageBuffers.delete(userId);
-            return;
-        }
-        
-        // 🔧 ETAPA 1: Mejorar concatenación con limpieza de espacios
-        const combinedText = filteredMessages
+        // 🚀 SIMPLIFICADO: Sin filtros - todos los mensajes van a OpenAI
+        const combinedText = buffer.messages
             .join(' ')
             .replace(/\s+/g, ' ') // Reemplazar múltiples espacios con uno solo
             .trim();
         
-        const messageCount = filteredMessages.length;
-        const originalCount = buffer.messages.length;
+        const messageCount = buffer.messages.length;
         
         // 🔧 SIMPLIFICADO: Procesar inmediatamente después de 5 segundos
-        console.log(`🔄 [BUFFER_PROCESS] ${buffer.userName}: ${messageCount}/${originalCount} mensajes → "${combinedText.substring(0, 40)}..."`);
+        console.log(`🔄 [BUFFER_PROCESS] ${buffer.userName}: ${messageCount} mensajes → "${combinedText.substring(0, 40)}..."`);
         
         logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global después de 5 segundos`, {
             userJid: getShortUserId(userId),
             userName: buffer.userName,
-            originalCount,
-            filteredCount: messageCount,
-            filteredOut: originalCount - messageCount,
+            messageCount,
             combinedText: combinedText.substring(0, 100) + '...',
             environment: appConfig.environment
         });
@@ -1020,128 +807,16 @@ function setupWebhooks() {
 
     // 🔧 ETAPA 2: Funciones para Flujo Híbrido
     
-    // Función para detectar si una consulta de disponibilidad está completa
-    function isAvailabilityComplete(messageText: string): boolean {
-        const hasPeople = /\d+\s*(personas?|gente|huespedes?)/i.test(messageText);
-        const hasDates = /\d{1,2}\/\d{1,2}|\d{4}-\d{2}-\d{2}|del\s+\d+|\d+\s+al\s+\d+/i.test(messageText);
-        const hasSpecificProperty = /apartamento|habitación|propiedad|1722|715|1317/i.test(messageText);
-        
-        return hasPeople && hasDates;
-    }
+    // 🚀 ELIMINADO: Función de análisis de disponibilidad arbitrario
+    // OpenAI ahora decide si necesita más información para consultas de disponibilidad
 
     // Función para analizar si necesita inyección de contexto
-    function analyzeForContextInjection(messages: string[], requestId?: string): { needsInjection: boolean; matchPercentage: number; reason: string } {
-        if (messages.length === 0) {
-            return { needsInjection: false, matchPercentage: 0, reason: 'no_messages' };
-        }
-        
-        const lastMessage = messages[messages.length - 1].toLowerCase();
-        
-        // 🔧 ETAPA 3: Keywords expandidas con fuzzy matching
-        const expandedKeywords = [
-            // Referencias temporales
-            'antes', 'dijiste', 'hablamos', 'recuerdas', 'mencionaste', 'anterior', 'pasado', 'previo',
-            // Referencias a conversación previa
-            'reinicio', 'reiniciaste', 'error', 'problema', 'no respondiste', 'se cortó', 'se corto', 'no respondiste',
-            // Referencias a servicios
-            'cotizaste', 'precio', 'fechas', 'disponibilidad', 'apartamento', 'habitación', 'reserva', 'booking',
-            // Referencias a propiedades
-            '1722', '715', '1317', 'apartamento', 'casa', 'propiedad',
-            // 🔧 ETAPA 3: Nuevas keywords del comentario externo
-            'confirmación', 'confirmacion', 'cotización', 'cotizacion', 'historial', 'reserva', 'anterior'
-        ];
-        
-        // 🔧 ETAPA 3: Análisis con fuzzy matching
-        let foundKeywords = [];
-        let totalScore = 0;
-        let fuzzyMatches = 0;
-        
-        for (const keyword of expandedKeywords) {
-            // Match exacto
-            if (lastMessage.includes(keyword)) {
-                foundKeywords.push(keyword);
-                totalScore += 1;
-            } else {
-                // 🔧 ETAPA 3: Fuzzy matching con tolerance de 3 caracteres
-                const distance = levenshtein.get(lastMessage, keyword);
-                const tolerance = 3;
-                
-                if (distance <= tolerance) {
-                    foundKeywords.push(`${keyword} (fuzzy:${distance})`);
-                    totalScore += 0.8; // Score reducido para fuzzy matches
-                    fuzzyMatches++;
-                    
-                    logInfo('FUZZY_CONTEXT_MATCH', `Fuzzy match encontrado para contexto`, {
-                        keyword,
-                        distance,
-                        tolerance,
-                        originalMessage: lastMessage.substring(0, 50) + '...',
-                        requestId
-                    });
-                    
-                    // 🔧 ETAPA 3: Incrementar métrica de fuzzy hits
-                    try {
-                        const { incrementFuzzyHits } = require('./routes/metrics');
-                        incrementFuzzyHits();
-                    } catch (e) { 
-                        // Ignorar en test/local si no existe
-                        logDebug('FUZZY_METRIC_ERROR', 'No se pudo incrementar métrica fuzzy', { error: e.message });
-                    }
-                }
-            }
-        }
-        
-        // 🔧 ETAPA 3: Dynamic threshold mejorado
-        const messageLength = lastMessage.length;
-        let dynamicThreshold = 5; // Base 5% (reducido de 10%)
-        
-        if (messageLength < 30) {
-            dynamicThreshold = 8; // Mensajes cortos, threshold más alto (reducido de 15%)
-        } else if (messageLength > 100) {
-            dynamicThreshold = 3; // Mensajes largos, threshold más bajo (reducido de 8%)
-        }
-        
-        // 🔧 ETAPA 3: Bonus por palabras clave específicas
-        const highValueKeywords = ['reinicio', 'error', 'antes', 'dijiste', 'cotizaste', 'confirmación', 'historial'];
-        const highValueMatches = foundKeywords.filter(kw => highValueKeywords.some(hvk => kw.includes(hvk)));
-        totalScore += highValueMatches.length * 0.5; // Bonus extra
-        
-        const matchPercentage = (totalScore / expandedKeywords.length) * 100;
-        const needsInjection = matchPercentage >= dynamicThreshold;
-        
-        const reason = needsInjection 
-            ? `context_keywords_found_${foundKeywords.length}_fuzzy_${fuzzyMatches}_score_${totalScore.toFixed(1)}`
-            : `insufficient_context_${matchPercentage.toFixed(1)}%_threshold_${dynamicThreshold}%`;
-        
-        // Log del análisis
-        logInfo('CONTEXT_ANALYSIS', 'Análisis de inyección de contexto completado', {
-            lastMessage: lastMessage.substring(0, 50) + '...',
-            foundKeywords,
-            highValueMatches,
-            fuzzyMatches,
-            totalScore: totalScore.toFixed(1),
-            matchPercentage: matchPercentage.toFixed(1),
-            dynamicThreshold: dynamicThreshold.toFixed(1),
-            needsInjection,
-            reason,
-            requestId
-        });
-        
-        return { needsInjection, matchPercentage, reason };
-    }
+    // 🚀 ELIMINADO: Función de análisis de contexto arbitrario
+    // OpenAI ahora decide cuándo necesita contexto usando get_conversation_context
 
     // Función para obtener contexto relevante del historial
     async function getRelevantContext(userId: string, requestId?: string): Promise<string> {
-        // --- ETAPA 3: Revisar cache antes de calcular ---
-        const cached = contextInjectionCache.get(userId);
-        if (cached && (Date.now() - cached.timestamp < CONTEXT_INJECTION_TTL)) {
-            logInfo('CONTEXT_CACHE_HIT', 'Usando contexto relevante cacheado', {
-                userId: getShortUserId(userId),
-                ageMs: Date.now() - cached.timestamp,
-                requestId
-            });
-            return cached.context;
-        }
+        // 🔧 ELIMINADO: Cache local duplicado - ahora usa cache centralizado en historyInjection.ts
         try {
             // Obtener perfil del usuario (incluye etiquetas)
             const profile = await guestMemory.getOrCreateProfile(userId);
@@ -1157,13 +832,7 @@ function setupWebhooks() {
                 context += `Etiquetas actuales: ${chatInfo.labels.map((l: any) => l.name).join(', ')}\n`;
             }
             context += `=== FIN CONTEXTO ===\n\n`;
-            // --- ETAPA 3: Guardar en cache ---
-            contextInjectionCache.set(userId, { context, timestamp: Date.now() });
-            logInfo('CONTEXT_CACHE_STORE', 'Contexto relevante guardado en cache', {
-                userId: getShortUserId(userId),
-                contextLength: context.length,
-                requestId
-            });
+            
             logInfo('CONTEXT_INJECTION', 'Contexto relevante obtenido', {
                 userId: getShortUserId(userId),
                 contextLength: context.length,
@@ -1184,7 +853,7 @@ function setupWebhooks() {
 
     // 🔧 NUEVO: Función para procesar mensajes agrupados con sistema de colas
     async function processUserMessages(userId: string) {
-        const buffer = userMessageBuffers.get(userId);
+        const buffer = globalMessageBuffers.get(userId);
         if (!buffer || buffer.messages.length === 0) {
             logWarning('MESSAGE_PROCESS', `Buffer vacío o inexistente para ${getShortUserId(userId)}`);
             return;
@@ -1209,67 +878,7 @@ function setupWebhooks() {
                 combinedMessage = buffer.messages[0];
             }
 
-            // 🔧 ETAPA 2: Análisis de Contexto y Disponibilidad
-            const contextAnalysis = analyzeForContextInjection(buffer.messages, requestId);
-            const isAvailabilityQuery = /disponibilidad|disponible|libre/i.test(combinedMessage);
-            const hasCompleteAvailability = isAvailabilityQuery ? isAvailabilityComplete(combinedMessage) : true;
-            
-            // Log del análisis
-            logInfo('HYBRID_ANALYSIS', 'Análisis híbrido completado', {
-                userId: shortUserId,
-                isAvailabilityQuery,
-                hasCompleteAvailability,
-                contextNeedsInjection: contextAnalysis.needsInjection,
-                contextMatchPercentage: contextAnalysis.matchPercentage,
-                requestId
-            });
-
-            // 🔧 ETAPA 2: Manejo de Disponibilidad Incompleta
-            if (isAvailabilityQuery && !hasCompleteAvailability) {
-                const availabilityResponse = "¡Claro! 😊 Para consultar disponibilidad necesito algunos detalles:\n\n" +
-                    "• ¿Cuántas personas?\n" +
-                    "• ¿Fechas de entrada y salida? (formato: DD/MM/YYYY)\n" +
-                    "• ¿Algún apartamento específico? (1722-A, 715, 1317)\n\n" +
-                    "Una vez me proporciones esta información, podré consultar la disponibilidad exacta para ti.";
-                
-                logInfo('AVAILABILITY_INCOMPLETE', 'Consulta de disponibilidad incompleta, solicitando detalles', {
-                    userId: shortUserId,
-                    messageLength: combinedMessage.length,
-                    requestId
-                });
-                
-                // Enviar respuesta y continuar buffering
-                await sendWhatsAppMessage(buffer.chatId, availabilityResponse);
-                
-                // NO limpiar buffer - continuar esperando detalles
-                return;
-            }
-
-            // --- ETAPA 3: Check temático para forzar syncIfNeeded ---
-            const thematicKeywords = ["pasado", "reserva", "anterior", "previo", "historial", "cotización", "confirmación"];
-            const thematicMatch = thematicKeywords.some(kw => combinedMessage.toLowerCase().includes(kw));
-            const forceSync = thematicMatch;
-
-            // Log de detección temática
-            if (thematicMatch) {
-                logInfo('THEMATIC_SYNC', 'Forzando syncIfNeeded por keyword temática', {
-                    userId: shortUserId,
-                    keywords: thematicKeywords.filter(kw => combinedMessage.toLowerCase().includes(kw)),
-                    requestId
-                });
-                // Incrementar métrica de hits de patrones temáticos
-                try {
-                    const { patternHitsCounter } = require('./routes/metrics');
-                    patternHitsCounter.inc();
-                } catch (e) { /* ignorar en test/local */ }
-            }
-
-            // Sincronizar labels/perfil antes de procesar (forzar si match temático)
-            await guestMemory.getOrCreateProfile(userId, forceSync);
-
-            // 🔧 ETAPA 3: Actualizar etapa del flujo
-            updateRequestStage(requestId, 'processing');
-
+            // 🚀 SIMPLIFICADO: OpenAI decide todo - sin análisis arbitrario
             logInfo('MESSAGE_PROCESS', `Procesando mensajes agrupados`, {
                 userId,
                 shortUserId,
@@ -1277,18 +886,22 @@ function setupWebhooks() {
                 messageCount: buffer.messages.length,
                 totalLength: combinedMessage.length,
                 preview: combinedMessage.substring(0, 100) + '...',
-                isAvailabilityQuery,
-                contextNeedsInjection: contextAnalysis.needsInjection,
                 environment: appConfig.environment,
                 requestId
             });
+
+            // Sincronizar labels/perfil antes de procesar
+            await guestMemory.getOrCreateProfile(userId, false);
+
+            // 🔧 ETAPA 3: Actualizar etapa del flujo
+            updateRequestStage(requestId, 'processing');
 
             // Log compacto - Inicio
             console.log(`🤖 [BOT] ${buffer.messages.length} msgs → OpenAI`);
             
             // Enviar a OpenAI con el userId original y la información completa del cliente
             const startTime = Date.now();
-            const response = await processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.name, requestId, contextAnalysis);
+            const response = await processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.userName, requestId);
             const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
             
             // Log mejorado con preview completo y duración real
@@ -1315,12 +928,11 @@ function setupWebhooks() {
             // 🔧 ETAPA 3.2: Cleanup unificado se maneja automáticamente
 
             // Limpiar buffer, timer y estado de typing
-            userMessageBuffers.delete(userId);
-            if (userActivityTimers.has(userId)) {
-                clearTimeout(userActivityTimers.get(userId)!);
-                userActivityTimers.delete(userId);
+            globalMessageBuffers.delete(userId);
+            if (globalMessageBuffers.has(userId)) {
+                clearTimeout(globalMessageBuffers.get(userId)!.timer);
+                globalMessageBuffers.delete(userId);
             }
-            userTypingState.delete(userId); // Limpiar estado de typing
         };
         
         // 🔧 NUEVO: Agregar a la cola del usuario
@@ -1408,15 +1020,14 @@ function setupWebhooks() {
     }
 
     // 🔧 NUEVO: Función principal de procesamiento con OpenAI (sin manejo de locks)
-    const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string = null, userName: string = null, requestId?: string, contextAnalysis?: { needsInjection: boolean; matchPercentage: number; reason: string }): Promise<string> => {
+    const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string = null, userName: string = null, requestId?: string): Promise<string> => {
         const shortUserId = getShortUserId(userJid);
         
         // 🔧 ETAPA 1: Tracking de métricas de performance
         const startTime = Date.now();
         let contextTokens = 0;
         let totalTokens = 0;
-        let historyInjection = '';
-        let labelsStr = '';
+        // Variables eliminadas - funcionalidad movida a historyInjection.ts
         
         try {
             // 🔧 ETAPA 3: Actualizar etapa del flujo si hay requestId (solo en debug)
@@ -1495,7 +1106,7 @@ function setupWebhooks() {
                         userJid, 
                         chatId, 
                         isNewThread, 
-                        contextAnalysis, 
+                        undefined, // contextAnalysis - ya no se usa
                         requestId
                     );
                     
@@ -1509,7 +1120,6 @@ function setupWebhooks() {
                             contextLength: injectionResult.contextLength,
                             historyLines: injectionResult.historyLines,
                             labelsCount: injectionResult.labelsCount,
-                            reason: injectionResult.reason,
                             requestId
                         });
                     } else {
@@ -1530,34 +1140,9 @@ function setupWebhooks() {
                 }
             }
              
-             // 🔧 ETAPA 4: Summary optimizado - solo para threads muy largos
-             if (!isNewThread && config.enableHistoryInject) {
-                 try {
-                     // Solo generar resumen si el thread es muy largo (más de 200 mensajes)
-                     const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
-                     const messageCount = messages.data.length;
-                     
-                     if (messageCount > 200) {
-                         const summaryGenerated = await generateHistorialSummary(threadId, shortUserId);
-                         if (summaryGenerated) {
-                             logInfo('HISTORIAL_SUMMARY_INTEGRATED', 'Resumen de historial integrado antes de procesar mensaje', {
-                                 userId: shortUserId,
-                                 threadId,
-                                 messageCount,
-                                 requestId
-                             });
-                         }
-                     }
-                 } catch (summaryError) {
-                     logWarning('HISTORIAL_SUMMARY_INTEGRATION_ERROR', 'Error integrando resumen de historial', {
-                         userId: shortUserId,
-                         threadId,
-                         error: summaryError.message,
-                         requestId
-                     });
-                     // Continuar sin resumen si falla
-                 }
-             }
+             // 🔧 ELIMINADO: Lógica de resumen automático obsoleta
+             // El sistema ahora usa get_conversation_context para contexto histórico
+             // OpenAI puede solicitar el contexto que necesite usando la función registrada
              
              // 🔧 MEJORADO: Backoff progresivo para manejo de runs activos
              let addAttempts = 0;
@@ -2152,12 +1737,12 @@ function setupWebhooks() {
             }
             
         } catch (error) {
-            // 🔧 NUEVO: Manejo específico para context length exceeded
+            // 🔧 SIMPLIFICADO: Manejo de context length exceeded - solo crear nuevo thread
             if (error?.code === 'context_length_exceeded' || 
                 error?.message?.includes('maximum context length') ||
                 error?.message?.includes('context_length_exceeded')) {
                 
-                logWarning('CONTEXT_LENGTH_EXCEEDED', 'Context length exceeded, creando nuevo thread con resumen', {
+                logWarning('CONTEXT_LENGTH_EXCEEDED', 'Context length exceeded, creando nuevo thread limpio', {
                     shortUserId,
                     threadId: threadPersistence.getThread(shortUserId)?.threadId,
                     error: error.message,
@@ -2165,32 +1750,9 @@ function setupWebhooks() {
                 });
                 
                 try {
-                    // Crear nuevo thread
+                    // Crear nuevo thread limpio (sin resumen automático)
                     const newThread = await openaiClient.beta.threads.create();
                     const oldThreadId = threadPersistence.getThread(shortUserId)?.threadId;
-                    
-                    // Generar resumen mínimo del thread anterior
-                    let summary = '';
-                    if (oldThreadId) {
-                        try {
-                            summary = await generateThreadSummary(oldThreadId, shortUserId);
-                        } catch (summaryError) {
-                            logWarning('SUMMARY_GENERATION_FAILED', 'Error generando resumen para nuevo thread', {
-                                shortUserId,
-                                oldThreadId,
-                                error: summaryError.message,
-                                requestId
-                            });
-                        }
-                    }
-                    
-                    // Agregar resumen como mensaje del usuario si existe
-                    if (summary) {
-                        await openaiClient.beta.threads.messages.create(newThread.id, {
-                            role: 'user',
-                            content: `[RESUMEN DE CONVERSACIÓN ANTERIOR]\n${summary}\n\n--- CONTINUAR CONVERSACIÓN ---`
-                        });
-                    }
                     
                     // Actualizar persistencia con nuevo thread
                     threadPersistence.setThread(shortUserId, newThread.id, chatId, userName);
@@ -2199,13 +1761,12 @@ function setupWebhooks() {
                         shortUserId,
                         oldThreadId,
                         newThreadId: newThread.id,
-                        summaryLength: summary.length,
                         requestId
                     });
                     
                     // Reintentar con nuevo thread
                     releaseThreadLock(shortUserId);
-                    return await processWithOpenAI(userMsg, userJid, chatId, userName, requestId, contextAnalysis);
+                    return await processWithOpenAI(userMsg, userJid, chatId, userName, requestId);
                     
                 } catch (recoveryError) {
                     logError('CONTEXT_LENGTH_RECOVERY_FAILED', 'Error en recuperación de context length exceeded', {
@@ -2284,15 +1845,13 @@ function setupWebhooks() {
 
                     if (status === 'typing' || status === 'recording') {
                         // Usuario está escribiendo - actualizar estado global
-                        userTypingState.set(userId, true);
                         updateTypingStatus(userId, true);
                         
                         console.log(`✍️ ${shortUserId} está escribiendo... (extendiendo buffer)`);
                         
                     } else if (status === 'online' || status === 'offline' || status === 'pending') {
                         // Usuario dejó de escribir - actualizar estado global
-                        if (userTypingState.get(userId) === true) {
-                            userTypingState.set(userId, false);
+                        if (globalMessageBuffers.has(userId)) {
                             updateTypingStatus(userId, false);
                             
                             console.log(`⏸️ ${shortUserId} dejó de escribir`);
@@ -2328,6 +1887,153 @@ function setupWebhooks() {
             
             // Procesar cada mensaje
             for (const message of messages) {
+                // 🔧 PROCESAR MENSAJES MANUALES DEL AGENTE (from_me: true)
+                if (message.from_me && message.type === 'text' && message.text?.body) {
+                    
+                    // 🚫 FILTRAR: Verificar si es un mensaje del bot (no manual)
+                    if (botSentMessages.has(message.id)) {
+                        logDebug('BOT_MESSAGE_FILTERED', `Mensaje del bot ignorado: ${message.id}`);
+                        continue; // Saltar, no es un mensaje manual real
+                    }
+                    
+                    // ✅ Es un mensaje manual real del agente
+                    const chatId = message.chat_id;
+                    const text = message.text.body.trim();
+                    const fromName = message.from_name || 'Agente';
+                    const shortClientId = getShortUserId(chatId);
+                    
+                    // Verificar si hay thread activo
+                    const threadRecord = threadPersistence.getThread(shortClientId);
+                    if (!threadRecord) {
+                        console.log(`⚠️  [AGENT] Sin conversación activa con ${shortClientId}`);
+                        logWarning('MANUAL_NO_THREAD', `No hay conversación activa`, { 
+                            shortClientId: shortClientId,
+                            agentName: fromName,
+                            reason: 'cliente_debe_escribir_primero'
+                        });
+                        continue;
+                    }
+                    
+                    // 🎯 Log compacto - Solo primer mensaje del grupo
+                    if (!globalMessageBuffers.has(chatId)) {
+                        const clientName = threadRecord.userName || 'Cliente';
+                        console.log(`🔧 [AGENT] ${fromName} → ${clientName}: "${text.substring(0, 25)}${text.length > 25 ? '...' : ''}"`);
+                    }
+                    
+                    // Solo log técnico detallado
+                    logInfo('MANUAL_DETECTED', `Mensaje manual del agente detectado`, {
+                        shortClientId: shortClientId,
+                        agentName: fromName,
+                        messageText: text.substring(0, 100),
+                        messageLength: text.length,
+                        timestamp: new Date().toISOString(),
+                        chatId: chatId
+                    });
+                    
+                    // 📦 AGRUPAR MENSAJES MANUALES (usando buffer global)
+                    if (!globalMessageBuffers.has(chatId)) {
+                        globalMessageBuffers.set(chatId, {
+                            messages: [],
+                            chatId: chatId,
+                            userName: fromName,
+                            lastActivity: Date.now(),
+                            timer: null
+                        });
+                        logInfo('MANUAL_BUFFER_CREATE', `Buffer manual creado`, { 
+                            shortClientId: shortClientId, 
+                            agentName: fromName 
+                        });
+                    }
+                    
+                    const buffer = globalMessageBuffers.get(chatId)!;
+                    buffer.messages.push(text);
+                    buffer.lastActivity = Date.now();
+                    
+                    // Solo log técnico
+                    logInfo('MANUAL_BUFFERING', `Mensaje manual agregado al buffer`, {
+                        shortClientId: shortClientId,
+                        bufferCount: buffer.messages.length,
+                        agentName: fromName,
+                        timeoutSeconds: BUFFER_WINDOW_MS / 1000
+                    });
+                    
+                    // Cancelar timer anterior si existe
+                    if (buffer.timer) {
+                        clearTimeout(buffer.timer);
+                    }
+                    
+                    // Establecer nuevo timer de 5 segundos (igual que mensajes normales)
+                    buffer.timer = setTimeout(async () => {
+                        const finalBuffer = globalMessageBuffers.get(chatId);
+                        if (finalBuffer && finalBuffer.messages.length > 0) {
+                            const combinedMessage = finalBuffer.messages.join(' ');
+                            
+                            try {
+                                // Solo logs técnicos
+                                logInfo('MANUAL_PROCESSING', `Procesando mensajes manuales agrupados`, {
+                                    shortClientId: shortClientId,
+                                    messageCount: finalBuffer.messages.length,
+                                    agentName: finalBuffer.userName,
+                                    combinedLength: combinedMessage.length,
+                                    preview: combinedMessage.substring(0, 100),
+                                    threadId: threadRecord.threadId
+                                });
+                                
+                                logInfo('MANUAL_SYNC_START', `Iniciando sincronización con OpenAI`, {
+                                    shortClientId: shortClientId,
+                                    threadId: threadRecord.threadId,
+                                    messagePreview: combinedMessage.substring(0, 50),
+                                    agentName: finalBuffer.userName
+                                });
+                                
+                                // 1. Agregar contexto del sistema - INSTRUCCIÓN SIMPLE
+                                await openaiClient.beta.threads.messages.create(threadRecord.threadId, {
+                                    role: 'user',
+                                    content: `[Mensaje manual escrito por agente ${finalBuffer.userName} - NO RESPONDER]`
+                                });
+                                
+                                // 2. Agregar el mensaje manual agrupado
+                                await openaiClient.beta.threads.messages.create(threadRecord.threadId, {
+                                    role: 'assistant',
+                                    content: combinedMessage
+                                });
+                                
+                                // 3. Actualizar thread
+                                threadPersistence.setThread(shortClientId, threadRecord.threadId, chatId, finalBuffer.userName);
+                                
+                                // 🎯 Log compacto final
+                                const msgCount = finalBuffer.messages.length > 1 ? `${finalBuffer.messages.length} msgs` : '1 msg';
+                                console.log(`✅ [BOT] Enviado a 🤖 OpenAI → Contexto actualizado (${msgCount})`);
+                                
+                                // Solo log técnico
+                                logSuccess('MANUAL_SYNC_SUCCESS', `Mensajes manuales sincronizados exitosamente`, {
+                                    shortClientId: shortClientId,
+                                    agentName: finalBuffer.userName,
+                                    messageCount: finalBuffer.messages.length,
+                                    totalLength: combinedMessage.length,
+                                    preview: combinedMessage.substring(0, 100),
+                                    threadId: threadRecord.threadId,
+                                    timestamp: new Date().toISOString()
+                                });
+                                
+                            } catch (error) {
+                                console.log(`❌ [AGENT] Error sincronizando con OpenAI: ${error.message}`);
+                                logError('MANUAL_SYNC_ERROR', `Error sincronizando mensajes manuales`, {
+                                    error: error.message,
+                                    threadId: threadRecord.threadId,
+                                    chatId: shortClientId,
+                                    messageCount: finalBuffer.messages.length
+                                });
+                            }
+                        }
+                        
+                        // Limpiar buffer
+                        globalMessageBuffers.delete(chatId);
+                    }, BUFFER_WINDOW_MS);
+                    
+                    continue; // Procesar siguiente mensaje
+                }
+                
                 // Skip mensajes del bot para evitar self-loops
                 if (message.from_me) {
                     logDebug('MESSAGE_SKIP', `Skipped bot message`, { id: message.id, from: message.from });
@@ -2400,39 +2106,7 @@ async function initializeBot() {
     
 
     
-    // 🔧 ETAPA 2: Cleanup on-demand en lugar de automático fijo
-    // Solo ejecutar cuando hay actividad real
-    let cleanupScheduled = false;
-    
-    // 🔧 ETAPA 3.2: Función unificada de cleanup
-    const scheduleUnifiedCleanup = () => {
-        if (!cleanupScheduled) {
-            cleanupScheduled = true;
-            setTimeout(() => {
-                try {
-                    // 1. Cleanup de threads viejos
-                    const removedCount = threadPersistence.cleanupOldThreads(1); // 1 mes = threads muy viejos
-                    if (removedCount > 0) {
-                        logInfo('THREAD_CLEANUP', `Cleanup unificado: ${removedCount} threads viejos removidos`);
-                    }
-                    
-                    // Actualizar métrica de threads activos
-                    const stats = threadPersistence.getStats();
-                    updateActiveThreads(stats.activeThreads);
-                    
-                    // 2. Cleanup de caches expirados
-                    cleanupExpiredCaches();
-                    
-                } catch (error) {
-                    logError('UNIFIED_CLEANUP', 'Error en cleanup unificado', { error: error.message });
-                } finally {
-                    cleanupScheduled = false;
-                }
-            }, 10 * 60 * 1000); // 10 minutos después de actividad (unificado)
-        }
-    };
-    
-    // 🔧 ETAPA 3.2: Eliminadas funciones de cleanup individuales (unificadas)
+    // 🔧 ETAPA 3.2: Cleanup automático ya configurado (ver setInterval más abajo)
     
     // 🔧 NUEVO: Cleanup automático de caches de inyección
     // Ejecutar cada 10 minutos para mantener caches limpios
@@ -2522,8 +2196,7 @@ async function initializeBot() {
                             total: threadPersistence.getStats().totalThreads
                         },
                         caches: {
-                            historyCache: historyCache.size,
-                            contextCache: contextInjectionCache.size,
+                            centralizedCache: "Caches centralizados en historyInjection.ts",
                             globalBuffers: globalMessageBuffers.size
                         },
                         uptime: Math.round(process.uptime()) + 's'
@@ -2553,283 +2226,9 @@ async function initializeBot() {
             }, 5 * 60 * 1000); // Cada 5 minutos (original)
 }
 
-// 🔧 ETAPA 3.1: Función para generar resumen automático de historial
-async function generateThreadSummary(threadId: string, userId: string): Promise<string> {
-    try {
-        logInfo('THREAD_SUMMARY_START', 'Iniciando generación de resumen de thread', {
-            threadId,
-            userId
-        });
-        
-        // Obtener mensajes del thread (últimos 50 para contexto)
-        const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 50 });
-        
-        if (messages.data.length === 0) {
-            return 'No hay mensajes en este thread para resumir.';
-        }
-        
-        // Crear prompt para generar resumen
-        const conversationText = messages.data
-            .reverse() // Ordenar cronológicamente
-            .map(msg => {
-                const content = msg.content[0];
-                if (content && content.type === 'text' && 'text' in content) {
-                    const role = msg.role === 'user' ? 'Cliente' : 'Asistente';
-                    return `${role}: ${content.text.value}`;
-                }
-                return null;
-            })
-            .filter(Boolean)
-            .join('\n\n');
-        
-        // Generar resumen usando OpenAI (modelo global configurado)
-        const summaryResponse = await openaiClient.chat.completions.create({
-            model: process.env.OPENAI_MODEL || 'gpt-4', // Usar modelo global configurado
-            messages: [
-                {
-                    role: 'system',
-                    content: `Eres un asistente especializado en crear resúmenes concisos de conversaciones de WhatsApp para un bot de reservas hoteleras. 
-                    
-                    Tu tarea es crear un resumen que capture:
-                    1. El propósito principal de la conversación
-                    2. Información clave del cliente (preferencias, fechas, etc.)
-                    3. Estado actual de la consulta/reserva
-                    4. Cualquier información importante para continuar la conversación
-                    
-                    El resumen debe ser:
-                    - Máximo 200 palabras
-                    - En español
-                    - Estructurado y fácil de leer
-                    - Mantener solo información relevante para el negocio`
-                },
-                {
-                    role: 'user',
-                    content: `Genera un resumen de esta conversación:\n\n${conversationText}`
-                }
-            ],
-            max_tokens: 300,
-            temperature: 0.3
-        });
-        
-        const summary = summaryResponse.choices[0]?.message?.content || 'Error generando resumen';
-        
-        logSuccess('THREAD_SUMMARY_GENERATED', 'Resumen de thread generado exitosamente', {
-            threadId,
-            userId,
-            originalMessages: messages.data.length,
-            summaryLength: summary.length,
-            estimatedTokens: Math.ceil(summary.length / 4)
-        });
-        
-        return summary;
-        
-    } catch (error) {
-        logError('THREAD_SUMMARY_ERROR', 'Error generando resumen de thread', {
-            threadId,
-            userId,
-            error: error.message
-        });
-        return 'Error generando resumen de la conversación.';
-    }
-}
-
-// 🔧 ETAPA 3.2: Función para optimizar thread con resumen automático
-async function optimizeThreadWithSummary(threadId: string, userId: string, chatId: string, userName: string): Promise<boolean> {
-    try {
-        logInfo('THREAD_OPTIMIZATION_START', 'Iniciando optimización de thread con resumen', {
-            threadId,
-            userId
-        });
-        
-        // Generar resumen del thread actual
-        const summary = await generateThreadSummary(threadId, userId);
-        
-        // Crear nuevo thread
-        const newThread = await openaiClient.beta.threads.create();
-        
-        // Agregar resumen como contexto inicial
-        await openaiClient.beta.threads.messages.create(newThread.id, {
-            role: 'user',
-            content: `RESUMEN DE CONVERSACIÓN ANTERIOR:\n\n${summary}\n\n--- CONTINUAR CONVERSACIÓN ---`
-        });
-        
-        // Actualizar threadPersistence
-        threadPersistence.setThread(userId, newThread.id, chatId, userName);
-        
-        // Eliminar thread viejo
-        try {
-            await openaiClient.beta.threads.del(threadId);
-            logSuccess('OLD_THREAD_DELETED', 'Thread viejo eliminado después de optimización', {
-                userId,
-                oldThreadId: threadId,
-                newThreadId: newThread.id
-            });
-        } catch (deleteError) {
-            logWarning('THREAD_DELETE_ERROR', 'Error eliminando thread viejo', {
-                userId,
-                threadId,
-                error: deleteError.message
-            });
-        }
-        
-        logSuccess('THREAD_OPTIMIZATION_COMPLETE', 'Thread optimizado con resumen exitosamente', {
-            userId,
-            oldThreadId: threadId,
-            newThreadId: newThread.id,
-            summaryLength: summary.length
-        });
-        
-        return true;
-        
-    } catch (error) {
-        logError('THREAD_OPTIMIZATION_ERROR', 'Error optimizando thread con resumen', {
-            threadId,
-            userId,
-            error: error.message
-        });
-        return false;
-    }
-}
-
-// 🔧 ETAPA 3.3: Función mejorada para limpiar threads con alto uso de tokens
-async function cleanupHighTokenThreads() {
-    try {
-        const threads = threadPersistence.getAllThreadsInfo();
-        let threadsChecked = 0;
-        let threadsCleaned = 0;
-        let threadsOptimized = 0;
-        
-        for (const [userId, threadInfo] of Object.entries(threads)) {
-            try {
-                // Verificar si el thread es reciente (últimas 24 horas)
-                const lastActivity = new Date(threadInfo.lastActivity);
-                const hoursSinceActivity = (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60);
-                
-                if (hoursSinceActivity > 24) {
-                    // Thread viejo, verificar uso de tokens
-                    const messages = await openaiClient.beta.threads.messages.list(threadInfo.threadId, { limit: 50 });
-                    // 🔧 ETAPA 4: Estimación mejorada de tokens con métricas
-                    const totalTokens = messages.data.reduce((acc, msg) => {
-                        // Estimación más precisa: 1 token ≈ 4 caracteres para texto, bonus para prompts largos
-                        const content = msg.content[0];
-                        if (content && content.type === 'text' && 'text' in content) {
-                            const textLength = content.text?.value?.length || 0;
-                            const baseTokens = Math.ceil(textLength / 4);
-                            // Bonus para mensajes largos (más overhead de procesamiento)
-                            const bonusTokens = textLength > 500 ? Math.ceil(textLength / 100) : 0;
-                            return acc + baseTokens + bonusTokens;
-                        }
-                        return acc;
-                    }, 0);
-                    
-                    threadsChecked++;
-                    
-                    // 🔧 ETAPA 3.1: Threshold de tokens por thread (configurable)
-                    const TOKEN_THRESHOLD = parseInt(process.env.THREAD_TOKEN_THRESHOLD || '8000');
-                    
-                    if (totalTokens > TOKEN_THRESHOLD) {
-                        logWarning('HIGH_TOKEN_THREAD_DETECTED', `Thread con alto uso de tokens detectado`, {
-                            userId,
-                            threadId: threadInfo.threadId,
-                            estimatedTokens: totalTokens,
-                            threshold: TOKEN_THRESHOLD,
-                            hoursSinceActivity: Math.round(hoursSinceActivity)
-                        });
-                        
-                        // 🔧 ETAPA 4: Actualizar métrica de threads con alto uso de tokens
-                        try {
-                            const { setHighTokenThreads } = require('./routes/metrics');
-                            setHighTokenThreads(threadsChecked + 1);
-                        } catch (e) { 
-                            // Ignorar en test/local si no existe
-                            logDebug('HIGH_TOKEN_METRIC_ERROR', 'No se pudo actualizar métrica de threads con alto uso', { error: e.message });
-                        }
-                        
-                        // 🔧 ETAPA 3.2: Intentar optimización con resumen primero
-                        const optimizationSuccess = await optimizeThreadWithSummary(
-                            threadInfo.threadId, 
-                            userId, 
-                            threadInfo.chatId, 
-                            threadInfo.userName
-                        );
-                        
-                        if (optimizationSuccess) {
-                            threadsOptimized++;
-                        } else {
-                            // Fallback: limpieza tradicional (migrar últimos 10 mensajes)
-                            const newThread = await openaiClient.beta.threads.create();
-                            
-                            // Migrar solo los últimos 10 mensajes
-                            const recentMessages = messages.data.slice(0, 10);
-                            for (const msg of recentMessages.reverse()) {
-                                const content = msg.content[0];
-                                if (content && content.type === 'text' && 'text' in content && content.text?.value) {
-                                    await openaiClient.beta.threads.messages.create(newThread.id, {
-                                        role: msg.role,
-                                        content: content.text.value
-                                    });
-                                }
-                            }
-                            
-                            // Actualizar threadPersistence
-                            threadPersistence.setThread(userId, newThread.id, threadInfo.chatId, threadInfo.userName);
-                            
-                            // Eliminar thread viejo
-                            try {
-                                await openaiClient.beta.threads.del(threadInfo.threadId);
-                                logSuccess('OLD_THREAD_DELETED', `Thread viejo eliminado`, {
-                                    userId,
-                                    oldThreadId: threadInfo.threadId,
-                                    newThreadId: newThread.id,
-                                    estimatedTokens: totalTokens
-                                });
-                            } catch (deleteError) {
-                                logWarning('THREAD_DELETE_ERROR', `Error eliminando thread viejo`, {
-                                    userId,
-                                    threadId: threadInfo.threadId,
-                                    error: deleteError.message
-                                });
-                            }
-                            
-                            threadsCleaned++;
-                        }
-                    }
-                }
-                
-                // Pequeña pausa para evitar rate limiting
-                await new Promise(resolve => setTimeout(resolve, 200));
-                
-            } catch (threadError) {
-                logError('TOKEN_CLEANUP_THREAD_ERROR', `Error verificando thread ${userId}`, {
-                    userId,
-                    threadId: threadInfo.threadId,
-                    error: threadError.message
-                });
-            }
-        }
-        
-        if (threadsCleaned > 0 || threadsOptimized > 0) {
-            logSuccess('TOKEN_CLEANUP_COMPLETE', `Cleanup de tokens completado`, {
-                threadsChecked,
-                threadsCleaned,
-                threadsOptimized,
-                totalThreads: Object.keys(threads).length
-            });
-            
-            // 🔧 ETAPA 4: Incrementar métricas de cleanup
-            try {
-                const { incrementTokenCleanups } = require('./routes/metrics');
-                incrementTokenCleanups();
-            } catch (e) { 
-                // Ignorar en test/local si no existe
-                logDebug('TOKEN_CLEANUP_METRIC_ERROR', 'No se pudo incrementar métrica de cleanup', { error: e.message });
-            }
-        }
-        
-    } catch (error) {
-        logError('TOKEN_CLEANUP_ERROR', 'Error en cleanup de threads con alto uso de tokens', { error: error.message });
-    }
-}
+// 🔧 ELIMINADO: Funciones de resumen automático obsoletas
+// El sistema ahora usa get_conversation_context para contexto histórico
+// OpenAI puede solicitar el contexto que necesite usando la función registrada
 
 // 🔧 ETAPA 1: Recuperación mejorada de runs huérfanos al inicio del bot
 async function recoverOrphanedRuns() {

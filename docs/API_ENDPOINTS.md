@@ -215,7 +215,8 @@ GET /metrics/cache
 
 ### **Fuzzy Parsing**
 - `detectSimplePattern(message)`: Detecta patrones simples con fuzzy matching
-- `analyzeForContextInjection(messages)`: Analiza necesidad de inyección de contexto
+- 🔥 La función `analyzeForContextInjection(messages)` ha sido eliminada.
+- 🤖 OpenAI ahora decide cuándo necesita contexto histórico y lo solicita usando la función `get_conversation_context`.
 - `validateAndFixDates(startDate, endDate)`: Valida y corrige fechas con typos
 
 ## **Variables de Entorno**
