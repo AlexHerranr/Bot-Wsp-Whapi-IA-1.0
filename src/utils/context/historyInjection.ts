@@ -91,10 +91,11 @@ export async function injectHistory(
         // 🔧 2. Verificar si ya se inyectó recientemente (evitar duplicados)
         const needsInjection = await checkNeedsInjection(threadId, shortUserId, isNewThread, requestId);
         if (!needsInjection) {
-            logInfo('HISTORY_INJECTION_SKIP_RECENT', 'Saltando inyección - ya inyectado recientemente', {
+            logInfo('HISTORY_INJECTION_SKIP_RECENT', 'Saltando inyección - delegado a OpenAI', {
                 userId: shortUserId,
                 threadId,
                 isNewThread,
+                reason: isNewThread ? 'new_thread_delegated_to_openai' : 'recently_injected',
                 requestId
             });
             
@@ -104,29 +105,12 @@ export async function injectHistory(
                 contextLength: 0,
                 historyLines: 0,
                 labelsCount: 0,
-                reason: 'recently_injected'
+                reason: isNewThread ? 'new_thread_delegated_to_openai' : 'recently_injected'
             };
         }
         
-        // 🔧 3. Para threads nuevos: inyectar historial completo
-        if (isNewThread) {
-            const historyResult = await injectNewThreadHistory(threadId, shortUserId, chatId, requestId);
-            tokensUsed += historyResult.tokensUsed;
-            contextLength += historyResult.contextLength;
-            historyLines += historyResult.historyLines;
-            labelsCount += historyResult.labelsCount;
-            
-            // Marcar como inyectado
-            markAsInjected(threadId, shortUserId);
-            
-            logSuccess('HISTORY_INJECTION_NEW_THREAD', 'Historial inyectado para thread nuevo', {
-                userId: shortUserId,
-                threadId,
-                tokensUsed: historyResult.tokensUsed,
-                historyLines: historyResult.historyLines,
-                requestId
-            });
-        }
+        // 🔧 3. Para threads nuevos: NO inyectar automáticamente (eliminado)
+        // OpenAI puede solicitar contexto usando get_conversation_context cuando lo necesite
         
         // 🔧 4. Para threads existentes: inyección condicional de contexto relevante
         if (!isNewThread && contextAnalysis?.needsInjection) {
@@ -153,7 +137,7 @@ export async function injectHistory(
             contextLength,
             historyLines,
             labelsCount,
-            reason: isNewThread ? 'new_thread_history' : 'conditional_context'
+            reason: isNewThread ? 'new_thread_delegated_to_openai' : 'conditional_context'
         };
         
     } catch (error) {
@@ -179,14 +163,16 @@ export async function injectHistory(
  * 🔧 FUNCIÓN NUEVA: Verificar si necesita inyección
  */
 async function checkNeedsInjection(threadId: string, shortUserId: string, isNewThread: boolean, requestId?: string): Promise<boolean> {
-    // Para threads nuevos, siempre necesita inyección
+    // 🔧 MODIFICADO: Para threads nuevos, NO inyectar automáticamente
+    // OpenAI puede solicitar contexto usando get_conversation_context cuando lo necesite
     if (isNewThread) {
-        logInfo('INJECTION_CHECK_NEW_THREAD', 'Thread nuevo necesita inyección', {
+        logInfo('INJECTION_CHECK_NEW_THREAD', 'Thread nuevo - sin inyección automática (OpenAI decide)', {
             userId: shortUserId,
             threadId,
+            reason: 'delegated_to_openai',
             requestId
         });
-        return true;
+        return false;
     }
     
     // Verificar cache de inyección reciente
@@ -257,152 +243,9 @@ function markAsInjected(threadId: string, shortUserId: string): void {
     });
 }
 
-/**
- * 🔧 FUNCIÓN ESPECÍFICA: Inyectar historial para threads nuevos
- */
-async function injectNewThreadHistory(
-    threadId: string, 
-    shortUserId: string, 
-    chatId: string, 
-    requestId?: string
-): Promise<InjectionResult> {
-    
-    let historyInjection = '';
-    let labelsStr = '';
-    let tokensUsed = 0;
-    
-    try {
-        // 🔧 Verificar cache primero
-        const cachedHistory = historyCache.get(shortUserId);
-        const now = Date.now();
-        
-        if (cachedHistory && (now - cachedHistory.timestamp) < HISTORY_CACHE_TTL) {
-            // Cache hit - usar historial cacheado
-            historyInjection = cachedHistory.history;
-            logInfo('HISTORY_CACHE_HIT', 'Usando historial cacheado', { 
-                userId: shortUserId,
-                cacheAge: Math.round((now - cachedHistory.timestamp) / 1000 / 60) + 'min',
-                historyLines: historyInjection.split('\n').length,
-                requestId
-            });
-        } else {
-            // Cache miss - obtener historial fresco
-            const historyLimit = 50; // Límite reducido para mejor performance
-            historyInjection = await getChatHistory(chatId, historyLimit);
-            
-            if (historyInjection) {
-                // 🔧 NUEVO: Comprimir historial si es muy largo
-                const historyLines = historyInjection.split('\n').length;
-                if (historyLines > COMPRESSION_THRESHOLD) {
-                    historyInjection = await compressHistory(historyInjection, shortUserId, requestId);
-                    logInfo('HISTORY_COMPRESSED', 'Historial comprimido para optimizar tokens', {
-                        userId: shortUserId,
-                        originalLines: historyLines,
-                        compressedLines: historyInjection.split('\n').length,
-                        requestId
-                    });
-                }
-                
-                // Cachear el resultado
-                historyCache.set(shortUserId, { 
-                    history: historyInjection, 
-                    timestamp: now 
-                });
-                
-                logSuccess('HISTORY_FETCH', 'Historial fresco obtenido y cacheado', { 
-                    userId: shortUserId,
-                    historyLimit,
-                    historyLines: historyInjection.split('\n').length,
-                    cacheSize: historyCache.size,
-                    requestId
-                });
-            } else {
-                logWarning('HISTORY_INJECT', 'No historial disponible', { 
-                    userId: shortUserId,
-                    requestId 
-                });
-            }
-        }
-        
-        // 🔧 Obtener etiquetas del usuario
-        try {
-            await guestMemory.syncIfNeeded(shortUserId, false, true, requestId);
-            const profile = guestMemory.getProfile(shortUserId);
-            labelsStr = profile?.whapiLabels ? JSON.stringify(profile.whapiLabels.map(l => l.name)) : '[]';
-            logInfo('LABELS_INJECT', `Etiquetas para inyección: ${labelsStr}`, { 
-                userId: shortUserId,
-                requestId 
-            });
-        } catch (error) {
-            labelsStr = '[]';
-            logWarning('SYNC_FAIL', 'Fallback sin labels', { 
-                error: error.message, 
-                userId: shortUserId,
-                requestId
-            });
-        }
-        
-        // 🔧 Inyectar contenido solo si hay algo que inyectar
-        if (historyInjection || labelsStr) {
-            const injectContent = `${historyInjection ? historyInjection + '\n\n' : ''}Hora actual: ${new Date().toLocaleString('es-ES', { timeZone: 'America/Bogota' })}\nEtiquetas actuales: ${labelsStr}`;
-            
-            // Inyectar en el thread
-            await injectContentToThread(threadId, injectContent);
-            
-            // Calcular tokens
-            tokensUsed = Math.ceil(injectContent.length / 4);
-            const historyLines = historyInjection ? historyInjection.split('\n').length : 0;
-            const labelsCount = labelsStr ? JSON.parse(labelsStr).length : 0;
-            
-            logContextTokens('Contexto inyectado para thread nuevo', {
-                shortUserId,
-                threadId,
-                contextLength: injectContent.length,
-                estimatedTokens: tokensUsed,
-                hasHistory: !!historyInjection,
-                hasLabels: !!labelsStr,
-                historyLines,
-                labelsCount,
-                requestId
-            });
-            
-            return {
-                success: true,
-                tokensUsed,
-                contextLength: injectContent.length,
-                historyLines,
-                labelsCount,
-                reason: 'new_thread_history_injected'
-            };
-        }
-        
-        return {
-            success: true,
-            tokensUsed: 0,
-            contextLength: 0,
-            historyLines: 0,
-            labelsCount: 0,
-            reason: 'no_content_to_inject'
-        };
-        
-    } catch (error) {
-        logError('NEW_THREAD_HISTORY_ERROR', 'Error inyectando historial para thread nuevo', {
-            userId: shortUserId,
-            threadId,
-            error: error.message,
-            requestId
-        });
-        
-        return {
-            success: false,
-            tokensUsed: 0,
-            contextLength: 0,
-            historyLines: 0,
-            labelsCount: 0,
-            reason: `error: ${error.message}`
-        };
-    }
-}
+// 🔧 ELIMINADO: Función injectNewThreadHistory obsoleta
+// Ya no se inyecta historial automáticamente para threads nuevos
+// OpenAI puede solicitar contexto usando get_conversation_context cuando lo necesite
 
 /**
  * 🔧 FUNCIÓN NUEVA: Comprimir historial largo
