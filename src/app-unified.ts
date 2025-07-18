@@ -445,7 +445,11 @@ function setupWebhooks() {
     };
     
     // 🔧 NUEVO: Función para suscribirse a presencia de usuario
-    const subscribedPresences = new Set<string>(); // Rastrea usuarios suscritos
+    const subscribedPresences = new Set<string>();
+    
+    // 🔧 NUEVO: Cache para contexto temporal (evitar envío repetitivo)
+    const contextCache = new Map<string, { context: string, timestamp: number }>();
+    const CONTEXT_CACHE_TTL = 5 * 60 * 1000; // 5 minutos // Rastrea usuarios suscritos
     
     // 🔧 NUEVO: Funciones para buffering proactivo global
     function addToGlobalBuffer(userId: string, messageText: string, chatId: string, userName: string): void {
@@ -816,33 +820,63 @@ function setupWebhooks() {
 
     // Función para obtener contexto relevante del historial
     async function getRelevantContext(userId: string, requestId?: string): Promise<string> {
-        // 🔧 ELIMINADO: Cache local duplicado - ahora usa cache centralizado en historyInjection.ts
         try {
+            const shortUserId = getShortUserId(userId);
+            const now = Date.now();
+            
+            // Verificar cache
+            const cached = contextCache.get(shortUserId);
+            if (cached && (now - cached.timestamp) < CONTEXT_CACHE_TTL) {
+                logInfo('CONTEXT_CACHE_HIT', 'Contexto temporal desde cache', {
+                    userId: shortUserId,
+                    cacheAge: Math.round((now - cached.timestamp) / 1000),
+                    requestId
+                });
+                return cached.context;
+            }
+            
             // Obtener perfil del usuario (incluye etiquetas)
             const profile = await guestMemory.getOrCreateProfile(userId);
             // Obtener información del chat desde Whapi
             const chatInfo = await whapiLabels.getChatInfo(userId);
-            let context = '';
-            if (profile.labels && profile.labels.length > 0) {
-                context += `=== CONTEXTO DEL CLIENTE ===\n`;
-                context += `Etiquetas: ${profile.labels.join(', ')}\n`;
-                context += `Última actividad: ${new Date(profile.lastActivity).toLocaleString('es-ES')}\n`;
-            }
-            if (chatInfo && chatInfo.labels) {
-                context += `Etiquetas actuales: ${chatInfo.labels.map((l: any) => l.name).join(', ')}\n`;
-            }
-            context += `=== FIN CONTEXTO ===\n\n`;
             
-            logInfo('CONTEXT_INJECTION', 'Contexto relevante obtenido', {
-                userId: getShortUserId(userId),
+            // 🔧 NUEVO: Contexto temporal MUY corto
+            const clientName = profile?.name || 'Cliente';
+            const contactName = chatInfo?.name || clientName;
+            const currentTime = new Date().toLocaleTimeString('es-ES', { 
+                timeZone: 'America/Bogota',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // Etiquetas del perfil y Whapi (solo las primeras 2)
+            const profileLabels = profile?.whapiLabels?.map((l: any) => l.name) || [];
+            const chatLabels = chatInfo?.labels?.map((l: any) => l.name) || [];
+            const allLabels = [...new Set([...profileLabels, ...chatLabels])].slice(0, 2); // Solo 2 etiquetas
+            
+            // Construir contexto temporal MUY corto
+            let context = `[${clientName} | ${currentTime}`;
+            if (allLabels.length > 0) {
+                context += ` | ${allLabels.join(', ')}`;
+            }
+            context += `]\n\n`;
+            
+            // Guardar en cache
+            contextCache.set(shortUserId, { context, timestamp: now });
+            
+            logInfo('CONTEXT_INJECTION', 'Contexto temporal generado', {
+                userId: shortUserId,
                 contextLength: context.length,
+                clientName,
+                contactName,
+                labelsCount: allLabels.length,
                 hasProfile: !!profile,
                 hasChatInfo: !!chatInfo,
                 requestId
             });
             return context;
         } catch (error) {
-            logError('CONTEXT_INJECTION_ERROR', 'Error obteniendo contexto relevante', {
+            logError('CONTEXT_INJECTION_ERROR', 'Error obteniendo contexto temporal', {
                 userId: getShortUserId(userId),
                 error: error.message,
                 requestId
@@ -1175,14 +1209,21 @@ function setupWebhooks() {
                          continue;
                      }
                      
-                     // No hay runs activos, agregar mensaje
+                     // No hay runs activos, agregar mensaje con contexto temporal
+                     // 🔧 NUEVO: Obtener contexto temporal para cada mensaje
+                     const temporalContext = await getRelevantContext(userJid, requestId);
+                     const messageWithContext = temporalContext + userMsg;
+                     
                      await openaiClient.beta.threads.messages.create(threadId, {
                          role: 'user',
-                         content: userMsg
+                         content: messageWithContext
                      });
                      
-                     logOpenAIRequest('message_added', { 
+                     logOpenAIRequest('message_added_with_context', { 
                          shortUserId,
+                         originalLength: userMsg.length,
+                         contextLength: temporalContext.length,
+                         totalLength: messageWithContext.length,
                          requestId 
                      });
                      
