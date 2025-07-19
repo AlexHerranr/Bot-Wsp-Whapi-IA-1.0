@@ -111,6 +111,13 @@
       "description": "Guías para desarrolladores y contribuidores",
       "files": [
         {
+          "path": "docs/development/GIT_WORKFLOW_MANUAL.md",
+          "title": "Manual de Git Workflow",
+          "description": "Mejores prácticas de control de versiones adaptadas al proyecto",
+          "updated": "Julio 2025",
+          "new": true
+        },
+        {
           "path": "docs/development/PLAN_ESTABILIZACION_BOT_V2.md",
           "title": "Plan de Estabilización V2",
           "description": "Plan de estabilización y mejoras del bot",
@@ -199,6 +206,15 @@
     }
   },
   "recent_updates": [
+    {
+      "date": "Julio 2025",
+      "title": "Manual de Git Workflow Profesional",
+      "description": "Implementación de mejores prácticas de control de versiones con flujo de trabajo adaptado al proyecto",
+      "files_updated": [
+        "docs/development/GIT_WORKFLOW_MANUAL.md",
+        "docs/DOCUMENTATION_MAP.json"
+      ]
+    },
     {
       "date": "Julio 2025",
       "title": "Sistema de Inyección de Historial Optimizado",
