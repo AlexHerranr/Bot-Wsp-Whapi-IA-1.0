@@ -25,6 +25,7 @@
 15. [Communities (Comunidades)](#communities)
 16. [Bots](#bots)
 17. [Calls (Llamadas)](#calls)
+18. [Webhooks](#webhooks)
 
 ---
 
@@ -1336,6 +1337,10 @@ Funciones de llamadas.
 
 ## Webhooks
 
+### 🛡️ **INFORMACIÓN CRÍTICA - TODOS LOS WEBHOOKS SON VÁLIDOS**
+
+**⚠️ IMPORTANTE:** Todos los tipos de webhooks de WHAPI son **completamente normales y válidos**. El sistema debe reconocer y manejar todos estos eventos para evitar spam de logs y prepararse para funcionalidades futuras.
+
 ### Eventos Disponibles
 
 - **messages:** POST, PUT, DELETE, PATCH
@@ -1349,71 +1354,145 @@ Funciones de llamadas.
 - **labels:** POST, DELETE
 - **calls:** POST
 
-### Configuración de Webhook
+### 📋 **Descripción Detallada de Cada Tipo de Webhook**
+
+#### **1. messages** - Mensajes de Chat
+- **POST**: Nuevo mensaje recibido
+- **PUT**: Mensaje actualizado
+- **DELETE**: Mensaje eliminado
+- **PATCH**: Mensaje modificado
+- **Uso actual**: ✅ Implementado en el bot
+
+#### **2. statuses** - Estados de Mensajes
+- **POST**: Nuevo estado (enviado, entregado, leído)
+- **PUT**: Estado actualizado
+- **Uso actual**: ✅ Implementado en el bot
+- **Ejemplo**: Confirmación de lectura de mensajes
+
+#### **3. chats** - Conversaciones
+- **POST**: Nueva conversación creada
+- **PUT**: Conversación actualizada
+- **DELETE**: Conversación eliminada
+- **PATCH**: Conversación modificada
+- **Uso futuro**: 📅 Gestión de conversaciones, archivo automático
+
+#### **4. contacts** - Contactos
+- **POST**: Nuevo contacto agregado
+- **PATCH**: Contacto actualizado
+- **Uso futuro**: 📅 Sincronización de contactos, CRM integration
+
+#### **5. groups** - Grupos
+- **POST**: Nuevo grupo creado
+- **PUT**: Grupo actualizado
+- **PATCH**: Grupo modificado
+- **Uso futuro**: 📅 Gestión de grupos, notificaciones masivas
+
+#### **6. presences** - Estados de Presencia
+- **POST**: Estado de "escribiendo..." (typing)
+- **Uso actual**: ✅ Implementado en el bot
+- **Ejemplo**: Detectar cuando usuario está escribiendo
+
+#### **7. channel** - Canal Principal
+- **POST**: Cambios en el canal
+- **PATCH**: Configuración del canal modificada
+- **Uso futuro**: 📅 Monitoreo de estado del canal
+
+#### **8. users** - Usuarios
+- **POST**: Nuevo usuario
+- **DELETE**: Usuario eliminado
+- **Uso futuro**: 📅 Gestión de usuarios del sistema
+
+#### **9. labels** - Etiquetas
+- **POST**: Nueva etiqueta creada
+- **DELETE**: Etiqueta eliminada
+- **Uso actual**: ✅ Implementado en el bot
+- **Ejemplo**: Categorización de contactos
+
+#### **10. calls** - Llamadas
+- **POST**: Nueva llamada
+- **Uso futuro**: 📅 Gestión de llamadas, integración con VoIP
+
+### 🛡️ **Configuración de Webhook**
 
 **URL Principal:** `https://actual-bobcat-handy.ngrok-free.app/hook`  
 **Modo:** body  
 **Método:** POST
 
+### 🛡️ **Manejo de Webhooks en el Código**
+
+#### **Estructura de Validación:**
+```typescript
+// Validar todos los tipos de webhooks válidos
+const hasValidWebhookData = 
+    (req.body.messages && Array.isArray(req.body.messages)) ||
+    (req.body.statuses && Array.isArray(req.body.statuses)) ||
+    (req.body.chats && Array.isArray(req.body.chats)) ||
+    (req.body.contacts && Array.isArray(req.body.contacts)) ||
+    (req.body.groups && Array.isArray(req.body.groups)) ||
+    (req.body.presences && Array.isArray(req.body.presences)) ||
+    (req.body.labels && Array.isArray(req.body.labels)) ||
+    (req.body.calls && Array.isArray(req.body.calls)) ||
+    (req.body.channel && typeof req.body.channel === 'object') ||
+    (req.body.users && Array.isArray(req.body.users));
+```
+
+#### **Logging Inteligente:**
+- **Webhooks válidos**: Log DEBUG informativo
+- **Webhooks inválidos**: Rate limiting (1 log/minuto máximo)
+- **Mensajes**: Procesamiento normal
+
+### 📋 **Casos de Uso por Tipo de Webhook**
+
+#### **Implementado Actualmente:**
+- ✅ **messages**: Procesamiento de mensajes de texto
+- ✅ **statuses**: Confirmaciones de entrega/lectura
+- ✅ **presences**: Detección de typing
+- ✅ **labels**: Categorización de contactos
+
+#### **Planificado para Futuro:**
+- 📅 **groups**: Gestión de grupos, notificaciones masivas
+- 📅 **contacts**: Sincronización con CRM
+- 📅 **chats**: Archivo automático de conversaciones
+- 📅 **channel**: Monitoreo de estado del bot
+- 📅 **calls**: Integración con sistema de llamadas
+- 📅 **users**: Gestión de usuarios del sistema
+
+### 🚨 **Problemas Comunes y Soluciones**
+
+#### **1. Spam de Logs de Webhooks**
+**Problema**: Logs repetitivos de "Webhook recibido sin mensajes válidos"
+**Causa**: No reconocer todos los tipos de webhooks válidos
+**Solución**: Implementar validación completa de todos los tipos
+
+#### **2. Pérdida de Eventos Importantes**
+**Problema**: Ignorar webhooks de grupos, contactos, etc.
+**Causa**: Solo procesar mensajes y statuses
+**Solución**: Preparar handlers para todos los tipos
+
+#### **3. Rate Limiting Excesivo**
+**Problema**: Bloquear webhooks legítimos
+**Causa**: Filtros demasiado restrictivos
+**Solución**: Rate limiting inteligente solo para webhooks realmente inválidos
+
+### 🔮 **Roadmap de Implementación**
+
+#### **Fase 1 - Actual (Completado):**
+- ✅ Procesamiento de mensajes
+- ✅ Estados de presencia (typing)
+- ✅ Confirmaciones de entrega
+- ✅ Etiquetas de contactos
+
+#### **Fase 2 - Próximos 3 meses:**
+- 📅 Gestión de grupos
+- 📅 Sincronización de contactos
+- 📅 Archivo automático de chats
+
+#### **Fase 3 - Próximos 6 meses:**
+- 📅 Integración con CRM
+- 📅 Sistema de llamadas
+- 📅 Monitoreo avanzado del canal
+
 ### Eventos Especiales
 
 - **Auto Download:** Habilitado para image, audio, voice, video, document, sticker
 - **Individual Proxy:** Configurado para Channel PUNISH-5CJRX
-
----
-
-## Casos de Uso Comunes
-
-### 1. Gestión de Mensajes Automatizados
-- Envío de respuestas automáticas
-- Notificaciones programadas
-- Mensajes de bienvenida
-
-### 2. Integración con CRM
-- Sincronización de contactos
-- Seguimiento de conversaciones
-- Gestión de leads
-
-### 3. E-commerce
-- Catálogos de productos
-- Procesamiento de órdenes
-- Atención al cliente
-
-### 4. Marketing
-- Campañas promocionales
-- Newsletters
-- Encuestas y feedback
-
-### 5. Soporte Técnico
-- Tickets de soporte
-- Escalamiento automático
-- Base de conocimientos
-
-### 6. Automatización de Negocios
-- Reservas y citas
-- Confirmaciones
-- Recordatorios
-
----
-
-## Mejores Prácticas
-
-1. **Rate Limiting:** Respetar los límites de la API
-2. **Error Handling:** Manejar errores apropiadamente
-3. **Webhook Security:** Validar webhooks
-4. **Data Privacy:** Cumplir con GDPR
-5. **Monitoring:** Monitorear uso y errores
-6. **Backup:** Mantener respaldos de datos importantes
-
----
-
-## Recursos Adicionales
-
-- **Knowledge Base:** Centro de ayuda completo
-- **Webhook Debugger:** Herramienta de debugging temporal
-- **Activity Safety Meter:** Monitoreo de seguridad
-- **API Documentation:** Documentación técnica detallada
-
----
-
-*Esta documentación se actualiza regularmente. Para la información más reciente, consulta la documentación oficial de Whapi.* 

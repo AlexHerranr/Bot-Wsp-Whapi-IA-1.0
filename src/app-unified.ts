@@ -90,6 +90,10 @@ import { injectHistory, cleanupExpiredCaches, getCacheStats } from './utils/cont
 // Importar nuevo sistema de locks simplificado
 import { simpleLockManager } from './utils/simpleLockManager.js';
 
+// Agregar al inicio del archivo (después de los imports)
+// 🔧 NUEVO: Rate limiting para logs spam
+const webhookCounts = new Map<string, { lastLog: number; count: number }>();
+
 // --- Variables Globales ---
 let appConfig: AppConfig;
 let openaiClient: OpenAI;
@@ -1906,15 +1910,48 @@ function setupWebhooks() {
             // Procesar mensajes normales
             
             if (!messages || !Array.isArray(messages)) {
-                // 🔧 MEJORADO: Solo log warning si no es un webhook de status
-                if (!req.body.statuses || !Array.isArray(req.body.statuses)) {
-                    logWarning('WEBHOOK', 'Webhook recibido sin mensajes válidos', { 
-                        body: req.body,
-                        environment: appConfig.environment
-                    });
+                // 🔧 MEJORADO: Reconocer TODOS los tipos de webhooks válidos de WHAPI
+                const hasValidWebhookData = 
+                    (req.body.statuses && Array.isArray(req.body.statuses)) ||
+                    (req.body.chats && Array.isArray(req.body.chats)) ||
+                    (req.body.contacts && Array.isArray(req.body.contacts)) ||
+                    (req.body.groups && Array.isArray(req.body.groups)) ||
+                    (req.body.presences && Array.isArray(req.body.presences)) ||
+                    (req.body.labels && Array.isArray(req.body.labels)) ||
+                    (req.body.calls && Array.isArray(req.body.calls)) ||
+                    (req.body.channel && typeof req.body.channel === 'object') ||
+                    (req.body.users && Array.isArray(req.body.users));
+                
+                if (!hasValidWebhookData) {
+                    // 🔧 NUEVO: Rate limiting para webhooks realmente inválidos
+                    const webhookKey = 'invalid_webhook';
+                    const now = Date.now();
+                    
+                    if (!webhookCounts.has(webhookKey) || (now - webhookCounts.get(webhookKey).lastLog) > 60000) {
+                        // Solo loggear una vez por minuto máximo
+                        logWarning('WEBHOOK', 'Webhook recibido sin datos válidos', { 
+                            body: req.body,
+                            environment: appConfig.environment,
+                            note: 'Rate limited - solo se loggea una vez por minuto'
+                        });
+                        
+                        webhookCounts.set(webhookKey, { lastLog: now, count: (webhookCounts.get(webhookKey)?.count || 0) + 1 });
+                    }
                 } else {
-                    logDebug('WEBHOOK_STATUS', 'Webhook de status recibido (normal)', {
-                        statusCount: req.body.statuses.length,
+                    // 🔧 MEJORADO: Log DEBUG para webhooks válidos sin mensajes
+                    const webhookType = req.body.statuses ? 'statuses' :
+                                       req.body.chats ? 'chats' :
+                                       req.body.contacts ? 'contacts' :
+                                       req.body.groups ? 'groups' :
+                                       req.body.presences ? 'presences' :
+                                       req.body.labels ? 'labels' :
+                                       req.body.calls ? 'calls' :
+                                       req.body.channel ? 'channel' :
+                                       req.body.users ? 'users' : 'unknown';
+                    
+                    logDebug('WEBHOOK_VALID', `Webhook válido recibido (${webhookType})`, {
+                        webhookType,
+                        dataCount: req.body[webhookType]?.length || 0,
                         environment: appConfig.environment
                     });
                 }
@@ -2205,66 +2242,76 @@ async function initializeBot() {
     
     // 🔧 ETAPA 3.2: Eliminada función scheduleTokenCleanup (unificada)
     
-                // Memory logs originales (sin cambios del plan original)
-            setInterval(() => {
-                try {
-                    const memUsage = process.memoryUsage();
-                    const cpuUsage = process.cpuUsage();
-                    
-                    const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
-                    const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
-                    const rssMB = memUsage.rss / 1024 / 1024;
-                    const externalMB = memUsage.external / 1024 / 1024;
-                    
-                    const heapUsagePercentage = (heapUsedMB / heapTotalMB) * 100;
-                    const isHighMemory = heapUsedMB > 300;
-                    const isMemoryLeak = heapUsagePercentage > 95;
-                    
-                    logInfo('MEMORY_USAGE', 'Métricas de memoria del sistema', {
-                        memory: {
-                            rss: Math.round(rssMB) + 'MB',
-                            heapUsed: Math.round(heapUsedMB) + 'MB',
-                            heapTotal: Math.round(heapTotalMB) + 'MB',
-                            heapUsagePercent: Math.round(heapUsagePercentage) + '%',
-                            external: Math.round(externalMB) + 'MB'
-                        },
-                        cpu: {
-                            user: Math.round(cpuUsage.user / 1000) + 'ms',
-                            system: Math.round(cpuUsage.system / 1000) + 'ms'
-                        },
-                        threads: {
-                            active: threadPersistence.getStats().activeThreads,
-                            total: threadPersistence.getStats().totalThreads
-                        },
-                        caches: {
-                            centralizedCache: "Caches centralizados en historyInjection.ts",
-                            globalBuffers: globalMessageBuffers.size
-                        },
-                        uptime: Math.round(process.uptime()) + 's'
-                    });
-                    
-                    if (isHighMemory) {
-                        logAlert('HIGH_MEMORY_USAGE', 'Uso alto de memoria detectado', {
-                            heapUsedMB: Math.round(heapUsedMB),
-                            threshold: 300,
-                            heapUsagePercent: Math.round(heapUsagePercentage) + '%',
-                            recommendation: 'Monitorear uso de memoria'
-                        });
+                // 🔧 OPTIMIZADO: Memory logs inteligentes - solo cuando hay problemas o cada 30 minutos
+                setInterval(() => {
+                    try {
+                        const memUsage = process.memoryUsage();
+                        const cpuUsage = process.cpuUsage();
+                        
+                        const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
+                        const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
+                        const rssMB = memUsage.rss / 1024 / 1024;
+                        const externalMB = memUsage.external / 1024 / 1024;
+                        
+                        const heapUsagePercentage = (heapUsedMB / heapTotalMB) * 100;
+                        const isHighMemory = heapUsedMB > 300;
+                        const isMemoryLeak = heapUsagePercentage > 95;
+                        const isModerateMemory = heapUsedMB > 200;
+                        
+                        // 🔧 NUEVO: Solo loggear cuando hay problemas o cada 30 minutos
+                        const shouldLogMemory = isHighMemory || isMemoryLeak || isModerateMemory || 
+                            (Date.now() % (30 * 60 * 1000) < 60000); // Cada 30 minutos
+                        
+                        if (shouldLogMemory) {
+                            logInfo('MEMORY_USAGE', 'Métricas de memoria del sistema', {
+                                memory: {
+                                    rss: Math.round(rssMB) + 'MB',
+                                    heapUsed: Math.round(heapUsedMB) + 'MB',
+                                    heapTotal: Math.round(heapTotalMB) + 'MB',
+                                    heapUsagePercent: Math.round(heapUsagePercentage) + '%',
+                                    external: Math.round(externalMB) + 'MB'
+                                },
+                                cpu: {
+                                    user: Math.round(cpuUsage.user / 1000) + 'ms',
+                                    system: Math.round(cpuUsage.system / 1000) + 'ms'
+                                },
+                                threads: {
+                                    active: threadPersistence.getStats().activeThreads,
+                                    total: threadPersistence.getStats().totalThreads
+                                },
+                                caches: {
+                                    centralizedCache: "Caches centralizados en historyInjection.ts",
+                                    globalBuffers: globalMessageBuffers.size
+                                },
+                                uptime: Math.round(process.uptime()) + 's',
+                                logReason: isHighMemory ? 'high_memory' : 
+                                          isMemoryLeak ? 'memory_leak' : 
+                                          isModerateMemory ? 'moderate_memory' : 'scheduled_30min'
+                            });
+                        }
+                        
+                        if (isHighMemory) {
+                            logAlert('HIGH_MEMORY_USAGE', 'Uso alto de memoria detectado', {
+                                heapUsedMB: Math.round(heapUsedMB),
+                                threshold: 300,
+                                heapUsagePercent: Math.round(heapUsagePercentage) + '%',
+                                recommendation: 'Monitorear uso de memoria'
+                            });
+                        }
+                        
+                        if (isMemoryLeak) {
+                            logFatal('MEMORY_LEAK_DETECTED', 'Posible memory leak crítico detectado', {
+                                heapUsedMB: Math.round(heapUsedMB),
+                                heapUsagePercent: Math.round(heapUsagePercentage) + '%',
+                                threshold: 95,
+                                recommendation: 'Uso de memoria crítico - considerar optimización o restart inmediato'
+                            });
+                        }
+                        
+                    } catch (error) {
+                        logError('MEMORY_METRICS_ERROR', 'Error obteniendo métricas de memoria', { error: error.message });
                     }
-                    
-                    if (isMemoryLeak) {
-                        logFatal('MEMORY_LEAK_DETECTED', 'Posible memory leak crítico detectado', {
-                            heapUsedMB: Math.round(heapUsedMB),
-                            heapUsagePercent: Math.round(heapUsagePercentage) + '%',
-                            threshold: 95,
-                            recommendation: 'Uso de memoria crítico - considerar optimización o restart inmediato'
-                        });
-                    }
-                    
-                } catch (error) {
-                    logError('MEMORY_METRICS_ERROR', 'Error obteniendo métricas de memoria', { error: error.message });
-                }
-            }, 5 * 60 * 1000); // Cada 5 minutos (original)
+                }, 5 * 60 * 1000); // Mantener intervalo de 5 minutos para detección rápida de problemas
 }
 
 // 🔧 ELIMINADO: Funciones de resumen automático obsoletas
