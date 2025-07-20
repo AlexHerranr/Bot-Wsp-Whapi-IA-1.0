@@ -790,9 +790,12 @@ function setupWebhooks() {
             
             console.log(`${getTimestamp()} 🎵 Transcribiendo audio de ${audioBuffer.byteLength} bytes...`);
             
+            // Convertir ArrayBuffer a Blob primero
+            const audioBlob = new Blob([audioBuffer], { type: 'audio/ogg' });
+            
             // Crear File object para Whisper
             const audioFile = new File(
-                [audioBuffer], 
+                [audioBlob], 
                 'audio.ogg', 
                 { type: 'audio/ogg' }
             );
