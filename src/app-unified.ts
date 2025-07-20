@@ -1282,21 +1282,23 @@ function setupWebhooks() {
                 // Convertir respuesta a buffer
                 const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
                 
-                // Enviar como nota de voz via WHAPI
-                const voiceEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/voice`;
-                const voicePayload = {
+                // Enviar como audio via WHAPI
+                const audioEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/audio`;
+                const audioPayload = {
                     to: chatId,
                     media: audioBuffer.toString('base64'),
-                    caption: "🔊" // Indicador opcional
+                    mime_type: 'audio/mpeg', // OpenAI TTS genera MP3
+                    seconds: Math.ceil(cleanMessage.length / 150 * 60), // Estimación aproximada de duración
+                    no_cache: true // Evitar cache para respuestas dinámicas
                 };
                 
-                const whapiResponse = await fetch(voiceEndpoint, {
+                const whapiResponse = await fetch(audioEndpoint, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(voicePayload)
+                    body: JSON.stringify(audioPayload)
                 });
                 
                 if (whapiResponse.ok) {
@@ -1310,12 +1312,13 @@ function setupWebhooks() {
                         }, 10 * 60 * 1000);
                     }
                     
-                    console.log(`${getTimestamp()} 🔊 [${shortUserId}] ✓ Respuesta de voz enviada`);
+                    console.log(`${getTimestamp()} 🔊 [${shortUserId}] ✓ Respuesta de audio enviada`);
                     
-                    logSuccess('VOICE_RESPONSE_SENT', 'Respuesta de voz enviada', {
+                    logSuccess('AUDIO_RESPONSE_SENT', 'Respuesta de audio enviada', {
                         userId: shortUserId,
                         messageLength,
-                        voice: process.env.TTS_VOICE || 'alloy'
+                        voice: process.env.TTS_VOICE || 'alloy',
+                        estimatedSeconds: audioPayload.seconds
                     });
                     
                     // Limpiar flag de voz después de responder
@@ -1326,15 +1329,16 @@ function setupWebhooks() {
                     
                     return true; // Éxito, no enviar texto
                 } else {
-                    throw new Error(`WHAPI error: ${whapiResponse.status}`);
+                    const errorData = await whapiResponse.json() as WHAPIError;
+                    throw new Error(`WHAPI error ${whapiResponse.status}: ${errorData.error?.message || 'Unknown error'}`);
                 }
                 
             } catch (voiceError: any) {
-                logError('VOICE_SEND_ERROR', 'Error enviando voz, fallback a texto', {
+                logError('AUDIO_SEND_ERROR', 'Error enviando audio, fallback a texto', {
                     userId: shortUserId,
                     error: voiceError.message
                 });
-                console.log(`${getTimestamp()} ⚠️ [${shortUserId}] Error en voz, enviando como texto`);
+                console.log(`${getTimestamp()} ⚠️ [${shortUserId}] Error en audio, enviando como texto`);
                 // Continuar con envío de texto
             }
         }
