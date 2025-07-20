@@ -483,20 +483,26 @@ function setupWebhooks() {
         buffer.messages.push(messageText);
         buffer.lastActivity = Date.now();
         
-        // 🔧 UNIFICADO: Reiniciar timer de 5 segundos (igual que typing)
+        // 🔧 OPTIMIZADO: Usar delay más corto para media (2s) vs texto normal (5s)
+        const isMediaMessage = messageText.includes('🎤 Transcripción:') || 
+                              messageText.includes('El usuario envió una imagen:');
+        const bufferDelay = isMediaMessage ? 2000 : BUFFER_WINDOW_MS;
+        
+        // Reiniciar timer con el delay apropiado
         if (buffer.timer) {
             clearTimeout(buffer.timer);
         }
-        buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
+        buffer.timer = setTimeout(() => processGlobalBuffer(userId), bufferDelay);
         
-        console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ 5s...`);
+        console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${bufferDelay/1000}s...`);
         
         logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
             userJid: getShortUserId(userId),
             userName,
             messageText: messageText.substring(0, 50) + '...',
             bufferSize: buffer.messages.length,
-            delay: BUFFER_WINDOW_MS,
+            delay: bufferDelay,
+            isMedia: isMediaMessage,
             environment: appConfig.environment
         });
     }
@@ -772,10 +778,43 @@ function setupWebhooks() {
     }
     
     // NUEVO: Función auxiliar para transcribir audio
-    async function transcribeAudio(audioUrl: string, userId: string): Promise<string> {
+    async function transcribeAudio(audioUrl: string | undefined, userId: string, messageId?: string): Promise<string> {
         try {
+            let finalAudioUrl = audioUrl;
+            
+            // Si no hay URL, intentar obtenerla desde WHAPI
+            if (!finalAudioUrl && messageId) {
+                try {
+                    const mediaResponse = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/media/${messageId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`
+                        }
+                    });
+                    
+                    if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json() as { url?: string; link?: string };
+                        finalAudioUrl = mediaData.url || mediaData.link;
+                        logSuccess('AUDIO_URL_FETCHED', 'URL de audio obtenida desde WHAPI', {
+                            userId: getShortUserId(userId),
+                            messageId
+                        });
+                    }
+                } catch (fetchError) {
+                    logError('AUDIO_URL_FETCH_ERROR', 'Error obteniendo URL de audio desde WHAPI', {
+                        userId: getShortUserId(userId),
+                        messageId,
+                        error: fetchError.message
+                    });
+                }
+            }
+            
+            // Si aún no hay URL, no podemos procesar
+            if (!finalAudioUrl) {
+                throw new Error('No se pudo obtener URL del audio');
+            }
+            
             // Descargar audio
-            const audioResponse = await fetch(audioUrl);
+            const audioResponse = await fetch(finalAudioUrl);
             if (!audioResponse.ok) {
                 throw new Error(`Error descargando audio: ${audioResponse.status}`);
             }
@@ -821,18 +860,45 @@ function setupWebhooks() {
                 return 'Nota de voz muy larga (máximo 5 minutos)';
             }
             
-            return 'Nota de voz recibida (no se pudo transcribir)';
+            // No retornar fallback genérico, mejor throw para que el caller decida
+            throw error;
         }
     }
     
     // NUEVO: Función auxiliar para analizar imágenes
-    async function analyzeImage(imageUrl: string, userId: string): Promise<string> {
+    async function analyzeImage(imageUrl: string | undefined, userId: string, messageId?: string): Promise<string> {
         try {
-            const maxSize = parseInt(process.env.MAX_IMAGE_SIZE || '20971520');
+            let finalImageUrl = imageUrl;
+            
+            // Si no hay URL, intentar obtenerla desde WHAPI
+            if (!finalImageUrl && messageId) {
+                try {
+                    const mediaResponse = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/media/${messageId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`
+                        }
+                    });
+                    
+                    if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json() as { url?: string; link?: string };
+                        finalImageUrl = mediaData.url || mediaData.link;
+                        logSuccess('IMAGE_URL_FETCHED', 'URL de imagen obtenida desde WHAPI', {
+                            userId: getShortUserId(userId),
+                            messageId
+                        });
+                    }
+                } catch (fetchError) {
+                    logError('IMAGE_URL_FETCH_ERROR', 'Error obteniendo URL de imagen desde WHAPI', {
+                        userId: getShortUserId(userId),
+                        messageId,
+                        error: fetchError.message
+                    });
+                }
+            }
             
             // Validar URL
-            if (!imageUrl || !imageUrl.startsWith('http')) {
-                throw new Error('URL de imagen inválida');
+            if (!finalImageUrl || !finalImageUrl.startsWith('http')) {
+                throw new Error('URL de imagen inválida o no disponible');
             }
             
             // Analizar con OpenAI Vision
@@ -848,7 +914,7 @@ function setupWebhooks() {
                         { 
                             type: 'image_url', 
                             image_url: { 
-                                url: imageUrl,
+                                url: finalImageUrl,
                                 detail: 'low' // Optimización de costos
                             } 
                         }
@@ -865,16 +931,18 @@ function setupWebhooks() {
                 userId,
                 error: error.message
             });
-            return 'Imagen recibida (no se pudo analizar)';
+            // No retornar fallback, mejor throw para que el caller decida
+            throw error;
         }
     }
     
     async function subscribeToPresence(userId: string): Promise<void> {
         if (subscribedPresences.has(userId)) {
-            logDebug('PRESENCE_ALREADY_SUBSCRIBED', `Ya suscrito a presencia de ${userId}`, {
-                userId,
-                environment: appConfig.environment
-            });
+            // Comentado para reducir spam en logs
+            // logDebug('PRESENCE_ALREADY_SUBSCRIBED', `Ya suscrito a presencia de ${userId}`, {
+            //     userId,
+            //     environment: appConfig.environment
+            // });
             return; // Ya suscrito
         }
         
@@ -1479,6 +1547,10 @@ function setupWebhooks() {
                 const thread = await openaiClient.beta.threads.create();
                 threadId = thread.id;
                 threadPersistence.setThread(shortUserId, threadId, chatId, userName);
+                
+                // Suscribirse a presencia solo cuando se crea un thread nuevo
+                await subscribeToPresence(shortUserId);
+                
                 logThreadCreated('Thread creado', { 
                     shortUserId,
                     threadId,
@@ -2597,7 +2669,7 @@ function setupWebhooks() {
                         addToGlobalBuffer(userJid, messageText, chatId, userName);
                         
                         // 🔧 NUEVO: Suscribirse a presencia del usuario (solo una vez)
-                        await subscribeToPresence(shortUserId);
+                        // await subscribeToPresence(shortUserId);
                         
                         console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → Buffer global`);
                     }
@@ -2613,17 +2685,18 @@ function setupWebhooks() {
                                 const imageUrl = message.image?.url || message.image?.link;
                                 
                                 if (!imageUrl) {
-                                    logWarning('IMAGE_NO_URL', 'Imagen sin URL', { userId: shortUserId });
-                                    addToGlobalBuffer(userJid, '[Cliente envió una imagen]', chatId, userName);
-                                    continue;
+                                    logWarning('IMAGE_NO_URL', 'Imagen sin URL en webhook, intentando fetch desde WHAPI', { 
+                                        userId: shortUserId,
+                                        messageId: message.id 
+                                    });
                                 }
                                 
                                 console.log(`${getTimestamp()} 🖼️ [${shortUserId}] Procesando imagen...`);
                                 
                                 // Analizar imagen de forma asíncrona
-                                analyzeImage(imageUrl, userJid).then(description => {
-                                    // Agregar descripción al buffer
-                                    const imageMessage = `[IMAGEN: ${description}]`;
+                                analyzeImage(imageUrl, userJid, message.id).then(description => {
+                                    // Agregar descripción al buffer con formato mejorado
+                                    const imageMessage = `El usuario envió una imagen: ${description}`;
                                     addToGlobalBuffer(userJid, imageMessage, chatId, userName);
                                     
                                     console.log(`${getTimestamp()} 🖼️ [${shortUserId}] Imagen analizada: ${description.substring(0, 50)}...`);
@@ -2634,8 +2707,12 @@ function setupWebhooks() {
                                         descriptionLength: description.length
                                     });
                                 }).catch(error => {
-                                    // Fallback en caso de error
-                                    addToGlobalBuffer(userJid, '[Cliente envió una imagen]', chatId, userName);
+                                    // No agregar fallback genérico al buffer si falla
+                                    logError('IMAGE_PROCESSING_FAILED', 'No se pudo procesar la imagen', {
+                                        userId: shortUserId,
+                                        error: error.message
+                                    });
+                                    // No agregamos nada al buffer para evitar ruido en OpenAI
                                 });
                                 
                             } catch (error) {
@@ -2643,11 +2720,13 @@ function setupWebhooks() {
                                     userId: shortUserId,
                                     error: error.message
                                 });
-                                addToGlobalBuffer(userJid, '[Cliente envió una imagen]', chatId, userName);
+                                // No agregar fallback al buffer
                             }
                         } else {
-                            // Si está deshabilitado, solo registrar
-                            addToGlobalBuffer(userJid, '[Cliente envió una imagen]', chatId, userName);
+                            // Si está deshabilitado, no registrar nada en el buffer
+                            logInfo('IMAGE_PROCESSING_DISABLED', 'Procesamiento de imagen deshabilitado', {
+                                userId: shortUserId
+                            });
                         }
                     }
                     // NUEVO: Procesar mensajes de voz
@@ -2665,9 +2744,10 @@ function setupWebhooks() {
                                                message.media?.url;
                                 
                                 if (!audioUrl) {
-                                    logWarning('AUDIO_NO_URL', 'Audio sin URL', { userId: shortUserIdVoice });
-                                    addToGlobalBuffer(userJid, '[Nota de voz recibida]', chatId, userName);
-                                    continue;
+                                    logWarning('AUDIO_NO_URL', 'Audio sin URL en webhook, intentando fetch desde WHAPI', { 
+                                        userId: shortUserIdVoice,
+                                        messageId: message.id 
+                                    });
                                 }
                                 
                                 console.log(`${getTimestamp()} 🎤 [${shortUserIdVoice}] Procesando nota de voz...`);
@@ -2696,9 +2776,9 @@ function setupWebhooks() {
                                 globalUserStates.set(userJid, userState);
                                 
                                 // Transcribir de forma asíncrona
-                                transcribeAudio(audioUrl, userJid).then(transcription => {
+                                transcribeAudio(audioUrl, userJid, message.id).then(transcription => {
                                     // Agregar transcripción al buffer con emoji indicador
-                                    const voiceMessage = `🎤 ${transcription}`;
+                                    const voiceMessage = `🎤 Transcripción: ${transcription}`;
                                     addToGlobalBuffer(userJid, voiceMessage, chatId, userName);
                                     
                                     console.log(`${getTimestamp()} 🎤 [${shortUserIdVoice}] Transcripción: "${transcription.substring(0, 50)}..."`);
@@ -2710,8 +2790,12 @@ function setupWebhooks() {
                                         words: transcription.split(' ').length
                                     });
                                 }).catch(error => {
-                                    // Fallback en caso de error
-                                    addToGlobalBuffer(userJid, '[Nota de voz recibida]', chatId, userName);
+                                    // No agregar fallback genérico al buffer si falla
+                                    logError('VOICE_PROCESSING_FAILED', 'No se pudo procesar la nota de voz', {
+                                        userId: shortUserIdVoice,
+                                        error: error.message
+                                    });
+                                    // No agregamos nada al buffer para evitar ruido en OpenAI
                                 });
                                 
                             } catch (error) {
@@ -2719,11 +2803,13 @@ function setupWebhooks() {
                                     userId: shortUserIdVoice,
                                     error: error.message
                                 });
-                                addToGlobalBuffer(userJid, '[Nota de voz recibida]', chatId, userName);
+                                // No agregar fallback al buffer
                             }
                         } else {
-                            // Si está deshabilitado, solo registrar
-                            addToGlobalBuffer(userJid, '[Nota de voz recibida]', chatId, userName);
+                            // Si está deshabilitado, no registrar nada en el buffer
+                            logInfo('VOICE_PROCESSING_DISABLED', 'Procesamiento de voz deshabilitado', {
+                                userId: shortUserIdVoice
+                            });
                         }
                     }
             }
