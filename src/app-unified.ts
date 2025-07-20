@@ -453,7 +453,7 @@ function setupWebhooks() {
     
     // 🔧 NUEVO: Cache para contexto temporal (evitar envío repetitivo)
     const contextCache = new Map<string, { context: string, timestamp: number }>();
-    const CONTEXT_CACHE_TTL = 5 * 60 * 1000; // 5 minutos // Rastrea usuarios suscritos
+    const CONTEXT_CACHE_TTL = 60 * 60 * 1000; // 1 hora // Rastrea usuarios suscritos
     
     // 🔧 NUEVO: Funciones para buffering proactivo global
     function addToGlobalBuffer(userId: string, messageText: string, chatId: string, userName: string): void {
@@ -828,9 +828,12 @@ function setupWebhooks() {
             const shortUserId = getShortUserId(userId);
             const now = Date.now();
             
-            // Verificar cache
+            // 🔧 MEJORADO: Verificar si es el primer mensaje después del reinicio
+            // Si el cache tiene más de 1 hora, es un reinicio del bot
             const cached = contextCache.get(shortUserId);
-            if (cached && (now - cached.timestamp) < CONTEXT_CACHE_TTL) {
+            const isFirstMessageAfterRestart = !cached || (now - cached.timestamp) > CONTEXT_CACHE_TTL;
+            
+            if (cached && !isFirstMessageAfterRestart && (now - cached.timestamp) < CONTEXT_CACHE_TTL) {
                 logInfo('CONTEXT_CACHE_HIT', 'Contexto temporal desde cache', {
                     userId: shortUserId,
                     cacheAge: Math.round((now - cached.timestamp) / 1000),
@@ -839,31 +842,52 @@ function setupWebhooks() {
                 return cached.context;
             }
             
+            // 🔧 NUEVO: Log para primer mensaje después del reinicio
+            if (isFirstMessageAfterRestart) {
+                logInfo('CONTEXT_FRESH_RESTART', 'Generando contexto fresco después del reinicio', {
+                    userId: shortUserId,
+                    hadCachedContext: !!cached,
+                    cacheAge: cached ? Math.round((now - cached.timestamp) / 1000) : 'none',
+                    requestId
+                });
+            }
+            
             // Obtener perfil del usuario (incluye etiquetas)
             const profile = await guestMemory.getOrCreateProfile(userId);
             // Obtener información del chat desde Whapi
             const chatInfo = await whapiLabels.getChatInfo(userId);
             
-            // 🔧 NUEVO: Contexto temporal MUY corto
+            // 🔧 MEJORADO: Extracción de nombre más robusta
             const clientName = profile?.name || 'Cliente';
             const contactName = chatInfo?.name || clientName;
-            const currentTime = new Date().toLocaleTimeString('es-ES', { 
+            
+            // 🔧 MEJORADO: Formato de fecha y hora más claro con AM/PM
+            const currentDate = new Date().toLocaleDateString('es-ES', { 
                 timeZone: 'America/Bogota',
-                hour: '2-digit',
-                minute: '2-digit'
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+
+            const currentTime = new Date().toLocaleTimeString('en-US', { 
+                timeZone: 'America/Bogota',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
             });
             
             // Etiquetas del perfil y Whapi (solo las primeras 2)
             const profileLabels = profile?.whapiLabels?.map((l: any) => l.name) || [];
             const chatLabels = chatInfo?.labels?.map((l: any) => l.name) || [];
-            const allLabels = [...new Set([...profileLabels, ...chatLabels])].slice(0, 2); // Solo 2 etiquetas
+            const allLabels = [...new Set([...profileLabels, ...chatLabels])].slice(0, 2);
             
-            // Construir contexto temporal MUY corto
-            let context = `[${clientName} | ${currentTime}`;
+            // 🔧 OPTIMIZADO: Construir contexto temporal SIN EMOJIS (menos tokens) y más claro para la IA
+            let context = `Fecha: ${currentDate} | Hora: ${currentTime} (Colombia)\n`;
+            context += `Cliente: ${clientName} | Contacto WhatsApp: ${contactName}`;
             if (allLabels.length > 0) {
-                context += ` | ${allLabels.join(', ')}`;
+                context += ` | Status: ${allLabels.join(', ')}`;
             }
-            context += `]\n\n`;
+            context += `\n---\nMensaje del cliente:\n`;
             
             // Guardar en cache
             contextCache.set(shortUserId, { context, timestamp: now });
@@ -876,6 +900,7 @@ function setupWebhooks() {
                 labelsCount: allLabels.length,
                 hasProfile: !!profile,
                 hasChatInfo: !!chatInfo,
+                isFirstMessageAfterRestart,
                 requestId
             });
             return context;
@@ -943,8 +968,15 @@ function setupWebhooks() {
             const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
             
             // Log mejorado con preview completo y duración real
-            const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
-            console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 "${preview}"`);
+            // Detectar si habrá división en párrafos
+            const willSplit = response.includes('\n\n') || response.split('\n').some(line => line.trim().match(/^[•\-\*]/));
+            if (willSplit) {
+                const paragraphCount = response.split(/\n\n+/).filter(p => p.trim()).length;
+                console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 ${paragraphCount} párrafos`);
+            } else {
+                const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
+                console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 "${preview}"`);
+            }
             
             // 🔧 ETAPA 2: Incrementar métrica de mensajes procesados
             incrementMessages();
@@ -983,7 +1015,7 @@ function setupWebhooks() {
         }
     }
 
-    // Función para envío de mensajes a WhatsApp
+    // Función para envío de mensajes a WhatsApp con división inteligente en párrafos
     async function sendWhatsAppMessage(chatId: string, message: string) {
         const shortUserId = getShortUserId(chatId);
         
@@ -994,59 +1026,188 @@ function setupWebhooks() {
                 messageLength: message?.length || 0,
                 environment: appConfig.environment
             });
-            return true; // Retornar true para no generar error
+            return true;
         }
         
         try {
-            logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
-                chatId,
-                messageLength: message.length,
-                preview: message.substring(0, 100) + '...',
-                environment: appConfig.environment
-            });
+            // 🎯 NUEVO: División inteligente de mensajes en párrafos
+            let chunks: string[] = [];
             
-            const response = await fetch(`${secrets.WHAPI_API_URL}/messages/text`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${secrets.WHAPI_TOKEN}`
-                },
-                body: JSON.stringify({
-                    to: chatId,
-                    body: message,
-                    typing_time: message.includes('🔄') || message.includes('📊') ? 5 : 3 // Extender typing para tool responses
-                })
-            });
+            // Primero intentar dividir por doble salto de línea
+            const paragraphs = message.split(/\n\n+/).map(chunk => chunk.trim()).filter(chunk => chunk.length > 0);
             
-            if (response.ok) {
-                const result = await response.json() as any;
+            // Si hay párrafos claramente separados, usarlos
+            if (paragraphs.length > 1) {
+                chunks = paragraphs;
+            } else {
+                // Si no hay párrafos, buscar listas con bullets
+                const lines = message.split('\n');
+                let currentChunk = '';
                 
-                // Tracking del mensaje del bot
-                if (result.sent && result.message?.id) {
-                    botSentMessages.add(result.message.id);
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const nextLine = lines[i + 1];
                     
-                    // Limpiar después de 10 minutos
-                    setTimeout(() => {
-                        botSentMessages.delete(result.message.id);
-                    }, 10 * 60 * 1000);
+                    // Si la línea actual termina con ":" y la siguiente empieza con bullet
+                    if (line.endsWith(':') && nextLine && nextLine.trim().match(/^[•\-\*]/)) {
+                        // Agregar la línea de título al chunk actual
+                        if (currentChunk) {
+                            chunks.push(currentChunk.trim());
+                        }
+                        currentChunk = line;
+                    } 
+                    // Si es una línea de bullet
+                    else if (line.trim().match(/^[•\-\*]/)) {
+                        currentChunk += '\n' + line;
+                        
+                        // Si la siguiente línea NO es un bullet, cerrar el chunk
+                        if (!nextLine || !nextLine.trim().match(/^[•\-\*]/)) {
+                            chunks.push(currentChunk.trim());
+                            currentChunk = '';
+                        }
+                    }
+                    // Línea normal
+                    else {
+                        if (currentChunk) {
+                            currentChunk += '\n' + line;
+                        } else {
+                            currentChunk = line;
+                        }
+                    }
                 }
                 
-                logSuccess('WHATSAPP_SEND', `Mensaje enviado exitosamente`, {
-                    shortUserId: shortUserId,
+                // Agregar cualquier chunk restante
+                if (currentChunk) {
+                    chunks.push(currentChunk.trim());
+                }
+            }
+            
+            // Filtrar chunks vacíos
+            chunks = chunks.filter(chunk => chunk.length > 0);
+            
+            // Si no se pudo dividir bien, usar el mensaje original
+            if (chunks.length === 0) {
+                chunks = [message];
+            }
+            
+            // 🎯 IMPLEMENTACIÓN DE ENVÍO
+            if (chunks.length === 1) {
+                // Mensaje único - enviar normalmente
+                logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
+                    chatId,
                     messageLength: message.length,
-                    messageId: result.message?.id,
+                    preview: message.substring(0, 100) + '...',
                     environment: appConfig.environment
                 });
-                return true;
+                
+                const response = await fetch(`${secrets.WHAPI_API_URL}/messages/text`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${secrets.WHAPI_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        to: chatId,
+                        body: message,
+                        typing_time: message.includes('🔄') || message.includes('📊') ? 5 : 3
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json() as any;
+                    
+                    // Tracking del mensaje del bot
+                    if (result.sent && result.message?.id) {
+                        botSentMessages.add(result.message.id);
+                        setTimeout(() => {
+                            botSentMessages.delete(result.message.id);
+                        }, 10 * 60 * 1000);
+                    }
+                    
+                    logSuccess('WHATSAPP_SEND', `Mensaje enviado exitosamente`, {
+                        shortUserId: shortUserId,
+                        messageLength: message.length,
+                        messageId: result.message?.id,
+                        environment: appConfig.environment
+                    });
+                    return true;
+                } else {
+                    const errorText = await response.text();
+                    logError('WHATSAPP_SEND', `Error enviando mensaje a ${shortUserId}`, { 
+                        status: response.status,
+                        statusText: response.statusText,
+                        error: errorText,
+                        environment: appConfig.environment
+                    });
+                    return false;
+                }
             } else {
-                const errorText = await response.text();
-                logError('WHATSAPP_SEND', `Error enviando mensaje a ${shortUserId}`, { 
-                    status: response.status,
-                    statusText: response.statusText,
-                    error: errorText,
+                // 🎯 NUEVO: Múltiples párrafos - enviar como mensajes separados
+                logInfo('WHATSAPP_CHUNKS', `Dividiendo mensaje largo en ${chunks.length} párrafos`, { 
+                    chatId: chatId,
+                    shortUserId: shortUserId,
+                    totalChunks: chunks.length,
+                    originalLength: message.length,
                     environment: appConfig.environment
                 });
-                return false;
+                
+                // Agregar indicador visual en consola
+                console.log(`📄 [BOT] Enviando ${chunks.length} párrafos...`);
+                
+                // Enviar cada chunk como mensaje independiente
+                for (let i = 0; i < chunks.length; i++) {
+                    const chunk = chunks[i];
+                    const isLastChunk = i === chunks.length - 1;
+                    
+                    const response = await fetch(`${secrets.WHAPI_API_URL}/messages/text`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${secrets.WHAPI_TOKEN}`
+                        },
+                        body: JSON.stringify({
+                            to: chatId,
+                            body: chunk,
+                            typing_time: i === 0 ? 3 : 2 // 3s primer mensaje, 2s siguientes
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json() as any;
+                        
+                        // Tracking del mensaje del bot
+                        if (result.sent && result.message?.id) {
+                            botSentMessages.add(result.message.id);
+                            setTimeout(() => {
+                                botSentMessages.delete(result.message.id);
+                            }, 10 * 60 * 1000);
+                        }
+                        
+                        // Pequeña pausa entre mensajes para mejor UX
+                        if (!isLastChunk) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+                    } else {
+                        const errorText = await response.text();
+                        logError('WHATSAPP_CHUNK_ERROR', `Error enviando párrafo ${i + 1}/${chunks.length}`, { 
+                            shortUserId: shortUserId,
+                            status: response.status,
+                            statusText: response.statusText,
+                            error: errorText,
+                            environment: appConfig.environment
+                        });
+                        return false;
+                    }
+                }
+                
+                logSuccess('WHATSAPP_CHUNKS_COMPLETE', `Todos los párrafos enviados exitosamente`, {
+                    shortUserId: shortUserId,
+                    totalChunks: chunks.length,
+                    originalLength: message.length,
+                    environment: appConfig.environment
+                });
+                
+                return true;
             }
         } catch (error) {
             logError('WHATSAPP_SEND', `Error de red enviando a ${shortUserId}`, { 
@@ -1058,6 +1219,37 @@ function setupWebhooks() {
     }
 
     // 🔧 NUEVO: Función principal de procesamiento con OpenAI (sin manejo de locks)
+    // 🔧 NUEVO: Función helper para enviar typing indicator
+    async function sendTypingIndicator(chatId: string): Promise<void> {
+        if (!chatId) return;
+        
+        try {
+            await fetch(`${secrets.WHAPI_API_URL}/presence`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${secrets.WHAPI_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    typing: true
+                })
+            });
+            
+            logInfo('TYPING_INDICATOR_SENT', 'Typing indicator enviado inmediatamente', {
+                chatId,
+                environment: appConfig.environment
+            });
+        } catch (error) {
+            // No bloquear el flujo si falla el typing indicator
+            logWarning('TYPING_INDICATOR_ERROR', 'Error enviando typing indicator', {
+                chatId,
+                error: error.message,
+                environment: appConfig.environment
+            });
+        }
+    }
+
     const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string = null, userName: string = null, requestId?: string): Promise<string> => {
         const shortUserId = getShortUserId(userJid);
         
@@ -1217,6 +1409,15 @@ function setupWebhooks() {
                      // 🔧 NUEVO: Obtener contexto temporal para cada mensaje
                      const temporalContext = await getRelevantContext(userJid, requestId);
                      const messageWithContext = temporalContext + userMsg;
+                     
+                     // 🔧 DEBUG: Log del contexto que se envía a OpenAI
+                     logInfo('CONTEXT_DEBUG', 'Contexto enviado a OpenAI', {
+                         shortUserId,
+                         contextPreview: temporalContext.substring(0, 200),
+                         messagePreview: userMsg.substring(0, 100),
+                         totalLength: messageWithContext.length,
+                         requestId
+                     });
                      
                      await openaiClient.beta.threads.messages.create(threadId, {
                          role: 'user',

@@ -304,6 +304,8 @@ class WhapiLabelsManager {
             return null;
         }
     }
+
+
 }
 
 // Exportar instancia singleton

@@ -133,6 +133,7 @@ class GuestMemory {
             }
             
             this.profiles.set(userId, newProfile);
+            
             // 🔧 FIX: Usar wrapper centralizado para nuevo perfil
             await this.syncIfNeeded(userId, forceSync, true); // isNewThread = true para perfiles nuevos
             

@@ -71,7 +71,7 @@ CMD ["node", "--max-old-space-size=768", "dist/app-unified.js"]
 El proyecto ahora tiene **UN SOLO ARCHIVO PRINCIPAL** que incluye:
 
 #### **✅ Funcionalidades Integradas:**
-1. **Sistema de Buffers (8 segundos)**: Agrupa mensajes del usuario
+1. **Sistema de Buffers (5 segundos)**: Agrupa mensajes del usuario
 2. **Function Calling Completo**: Beds24 + OpenAI con retry logic
 3. **Mensajes Manuales**: Detección y procesamiento de agentes
 4. **División Inteligente**: Mensajes largos divididos por párrafos
@@ -228,7 +228,7 @@ npm run config
 - **Deploy**: Proceso automatizado sin errores
 
 ### **✅ FUNCIONALIDADES ACTIVAS Y OPTIMIZADAS**
-1. **Buffers de 8 segundos** (6s en Cloud Run) ✅
+1. **Buffers de 5 segundos** (configurado para optimizar experiencia) ✅
 2. **Function calling** con Beds24 integrado ✅
 3. **Mensajes manuales** de agentes humanos ✅
 4. **División inteligente** de mensajes largos ✅
