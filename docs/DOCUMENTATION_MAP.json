@@ -1,6 +1,6 @@
 {
   "last_updated": "Julio 2025",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "sections": {
     "getting_started": {
       "title": "🚀 Inicio Rápido",
@@ -28,56 +28,61 @@
     },
     "features": {
       "title": "🎯 Funcionalidades",
-      "description": "Documentación de características principales",
+      "description": "Características principales del sistema",
       "files": [
         {
-          "path": "docs/features/FUNCTION_INVENTORY.md",
-          "title": "Inventario de Funciones",
-          "description": "Catálogo completo de funciones de OpenAI disponibles",
+          "path": "docs/features/CONTEXTO_TEMPORAL_OPTIMIZADO.md",
+          "title": "Contexto Temporal Optimizado",
+          "description": "Sistema de contexto temporal con formato AM/PM, cache 1 hora y detección de reinicio",
           "updated": "Julio 2025",
           "new": true
         },
         {
-          "path": "docs/features/HISTORY_INJECTION_IMPROVEMENTS.md",
-          "title": "Sistema de Inyección de Historial",
-          "description": "Mejoras implementadas en Julio 2025 para optimización de tokens y latencia",
-          "updated": "Julio 2025",
-          "new": true
-        },
-        {
-          "path": "docs/features/OPTIMIZACION_CLOUD_RUN.md",
-          "title": "Optimización de Cloud Run",
-          "description": "Mejoras de performance y optimización para Google Cloud Run",
-          "updated": "Julio 2025"
+          "path": "docs/features/TYPING_BASED_BUFFER.md",
+          "title": "Sistema de Buffer Inteligente",
+          "description": "Buffer basado en typing para respuestas naturales",
+          "updated": "Junio 2025"
         },
         {
           "path": "docs/features/BEDS24_INTEGRATION_COMPLETE.md",
           "title": "Integración Beds24",
-          "description": "Integración completa con sistema de gestión hotelera Beds24",
+          "description": "Integración completa con Beds24 para consultas de disponibilidad",
           "updated": "Junio 2025"
         },
         {
-          "path": "docs/features/ESCALATE_TO_HUMAN_SPEC.md",
-          "title": "Escalamiento a Humano",
-          "description": "Sistema de escalamiento automático a agentes humanos",
+          "path": "docs/features/CONTEXTO_HISTORIAL_CONVERSACION.md",
+          "title": "Contexto Histórico",
+          "description": "Sistema de contexto histórico para conversaciones",
           "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/features/SISTEMA_ETIQUETAS_SIMPLE.md",
+          "title": "Sistema de Etiquetas",
+          "description": "Sistema simple y eficiente de etiquetas",
+          "updated": "Junio 2025"
+        },
+        {
+          "path": "docs/features/SISTEMA_HIBRIDO_INTELIGENTE.md",
+          "title": "Sistema Híbrido Inteligente",
+          "description": "Sistema híbrido con patrones simples y flujo inteligente",
+          "updated": "Julio 2025"
         }
       ]
     },
     "architecture": {
       "title": "🏗️ Arquitectura",
-      "description": "Documentación técnica de la arquitectura del sistema",
+      "description": "Diseño y estructura del sistema",
       "files": [
         {
-          "path": "docs/architecture/LOCKING_AND_RECOVERY.md",
-          "title": "Sistema de Locks y Recuperación",
-          "description": "Mecanismos de prevención de race conditions y recuperación de errores",
+          "path": "docs/ARCHITECTURE.md",
+          "title": "Arquitectura General",
+          "description": "Diseño completo del sistema",
           "updated": "Junio 2025"
         },
         {
-          "path": "PROJECT_STRUCTURE.md",
-          "title": "Estructura del Proyecto",
-          "description": "Organización de archivos y directorios del proyecto",
+          "path": "docs/GOOGLE_CLOUD_ARCHITECTURE.md",
+          "title": "Arquitectura Google Cloud",
+          "description": "Arquitectura específica para Google Cloud Run",
           "updated": "Junio 2025"
         }
       ]
@@ -160,6 +165,13 @@
       "description": "Seguimiento del progreso y actualizaciones",
       "files": [
         {
+          "path": "docs/progress/ACTUALIZACION_ENERO_2025.md",
+          "title": "Actualización Julio 2025",
+          "description": "Contexto temporal optimizado y división inteligente de mensajes",
+          "updated": "Julio 2025",
+          "new": true
+        },
+        {
           "path": "docs/progress/ACTUALIZACION_JULIO_2025.md",
           "title": "Actualización Julio 2025",
           "description": "Mejoras del sistema de inyección de historial optimizado",
@@ -208,6 +220,18 @@
   "recent_updates": [
     {
       "date": "Julio 2025",
+      "title": "Contexto Temporal Optimizado y División de Mensajes",
+      "description": "Implementación de contexto temporal con formato AM/PM, cache 1 hora, detección de reinicio y división inteligente de mensajes en párrafos",
+      "files_updated": [
+        "src/app-unified.ts",
+        "docs/features/CONTEXTO_TEMPORAL_OPTIMIZADO.md",
+        "docs/progress/ACTUALIZACION_ENERO_2025.md",
+        "README.md",
+        "docs/DOCUMENTATION_MAP.json"
+      ]
+    },
+    {
+      "date": "Julio 2025",
       "title": "Manual de Git Workflow Profesional",
       "description": "Implementación de mejores prácticas de control de versiones con flujo de trabajo adaptado al proyecto",
       "files_updated": [
@@ -236,6 +260,26 @@
         "docs/features/OPTIMIZACION_CLOUD_RUN.md",
         "docs/progress/ESTADO_FINAL_PROYECTO.md"
       ]
+    }
+  ],
+  "new_features": [
+    {
+      "name": "Contexto Temporal Optimizado",
+      "description": "Formato AM/PM, cache 1 hora, detección de reinicio",
+      "status": "implemented",
+      "date": "Julio 2025"
+    },
+    {
+      "name": "División Inteligente de Mensajes",
+      "description": "Párrafos separados, typing diferenciado, pausas naturales",
+      "status": "implemented",
+      "date": "Julio 2025"
+    },
+    {
+      "name": "Sistema Híbrido Inteligente",
+      "description": "Patrones simples, flujo híbrido, inyección condicional",
+      "status": "implemented",
+      "date": "Julio 2025"
     }
   ],
   "key_features": {

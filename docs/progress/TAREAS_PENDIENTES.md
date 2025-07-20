@@ -1,296 +1,238 @@
-# 📋 TAREAS PENDIENTES - TEALQUILAMOS BOT
+# 📋 TAREAS PENDIENTES - BOT WHATSAPP
 
-*Fecha: 2025-07-04*
-*Estado: Sistema funcional con 10 features core completadas*
+## 🎯 **PRIORIDAD ALTA - FUNCIONALIDADES MEDIA**
 
----
+### 📱 **1. Detección de Respuestas Citadas**
+- **Estado**: 📋 Planificada
+- **Tiempo Estimado**: 30 minutos
+- **Descripción**: Implementar detección y enriquecimiento de contexto cuando usuarios responden a mensajes específicos
+- **Archivos a modificar**: `src/app-unified.ts`
+- **Configuración**: `ENABLE_REPLY_DETECTION=true`
+- **Dependencias**: Ninguna
 
-## ✅ **TAREAS COMPLETADAS RECIENTEMENTE**
+### 🖼️ **2. Procesamiento de Imágenes**
+- **Estado**: 📋 Planificada
+- **Tiempo Estimado**: 45 minutos
+- **Descripción**: Implementar análisis automático de imágenes usando OpenAI Vision
+- **Archivos a modificar**: `src/app-unified.ts`
+- **Configuración**: `ENABLE_IMAGE_PROCESSING=true`
+- **Dependencias**: OpenAI SDK v4+, node-fetch@3
 
-### 🎯 **Contexto Histórico para Clientes Nuevos - COMPLETADO**
-**📅 Completado: 4 Julio 2025**
-**🎯 Estado: ✅ IMPLEMENTADO Y PROBADO**
+### 🎤 **3. Transcripción de Voz**
+- **Estado**: 📋 Planificada
+- **Tiempo Estimado**: 60 minutos
+- **Descripción**: Implementar transcripción automática de notas de voz usando OpenAI Whisper
+- **Archivos a modificar**: `src/app-unified.ts`
+- **Configuración**: `ENABLE_VOICE_TRANSCRIPTION=true`
+- **Dependencias**: OpenAI SDK v4+, node-fetch@3
 
-#### **Cambios realizados:**
-- ✅ Implementó getChatHistory() en chatHistory.ts
-- ✅ Obtiene últimos 200 mensajes de WhatsApp vía API
-- ✅ Formatea mensajes con fecha, hora y remitente
-- ✅ Se activa solo cuando no existe thread previo
-- ✅ Integrado en processWithOpenAI() con contexto completo
-- ✅ Bot ahora recuerda conversaciones anteriores
-
-#### **Archivos creados/modificados:**
-- `src/utils/whapi/chatHistory.ts` - Nueva función getChatHistory()
-- `src/app.ts` - Integración del contexto histórico
-- `src/utils/core/enhancedLogger.ts` - Timezone Colombia (UTC-5)
-- `tests/test-chat-history.js` - Script de prueba
-- `docs/CONTEXTO_HISTORIAL_CONVERSACION.md` - Documentación completa
-
-#### **Resultado:**
-- Bot con memoria completa de conversaciones anteriores
-- Mejor experiencia para clientes recurrentes
-- Respuestas más contextualizadas desde el primer mensaje
-- Verificado en producción con éxito
-
-### 🎯 **Envío de Identidad y Metadatos a OpenAI - COMPLETADO**
-**📅 Completado: 4 Julio 2025**
-**🎯 Estado: ✅ IMPLEMENTADO Y VERIFICADO**
-
-#### **Cambios realizados:**
-- ✅ Envío de nombre del cliente (name + userName)
-- ✅ Inclusión de etiquetas del contacto en contexto
-- ✅ Actualización automática de metadatos cada 24 horas
-- ✅ Campo userName ahora se actualiza correctamente
-- ✅ Formato estructurado del contexto implementado
-
-#### **Archivos modificados:**
-- `src/app.ts` - Actualización de metadatos en líneas 424 y 467
-- `src/utils/persistence/threadPersistence.ts` - Ya actualizado
-- `tests/test-metadata-updates.js` - Verificador de metadatos
-
-### 🎯 **Optimización de Formato de Respuesta Beds24 - COMPLETADO**
-**📅 Completado: 3 Julio 2025**
-**🎯 Estado: ✅ IMPLEMENTADO Y PROBADO**
-
-#### **Cambios realizados:**
-- ✅ Cambió título principal de "DISPONIBILIDAD COMPLETA" a "Apartamentos Disponibles"
-- ✅ Reemplazó "Alternativas con traslado" por "Opciones Alternas cambiando de apartamento"
-- ✅ Eliminó referencia irrelevante a "SIN TRASLADO"
-- ✅ Aumentó límite de opciones alternas de 2 a 3
-- ✅ Actualizó tests para verificar nuevo formato
-
-#### **Archivos modificados:**
-- `src/handlers/integrations/beds24-availability.ts` - Función formatOptimizedResponse()
-- `tests/beds24/test-beds24.js` - Verificación de formato
-- `docs/HISTORIAL_CAMBIOS.md` - Documentación de cambios
-
-#### **Resultado:**
-- Formato más claro y directo para el usuario
-- Enfoque correcto en apartamentos disponibles como opción principal
-- Las opciones alternas se presentan como excepciones, no como la norma
-- Mejor experiencia de usuario
+### 🔊 **4. Respuestas de Voz**
+- **Estado**: 📋 Planificada
+- **Tiempo Estimado**: 45 minutos
+- **Descripción**: Implementar generación automática de respuestas en voz usando OpenAI TTS
+- **Archivos a modificar**: `src/app-unified.ts`
+- **Configuración**: `ENABLE_VOICE_RESPONSES=true`
+- **Dependencias**: OpenAI SDK v4+, WHAPI para envío de audio
 
 ---
 
-## 🔬 **ESTUDIO TÉCNICO - ARQUITECTURA MULTI-ASSISTANT**
+## 🔧 **PRIORIDAD MEDIA - OPTIMIZACIONES**
 
-### 🤖 **3. Evaluación Sistema Multi-Assistant vs Mono-Assistant**
-**📅 Timeline: 2-3 semanas (estudio + implementación)**
-**🎯 Estado: FASE DE ANÁLISIS**
+### 🏷️ **5. Sistema de Etiquetas Inteligente**
+- **Estado**: 🔄 En desarrollo
+- **Tiempo Estimado**: 2-3 horas
+- **Descripción**: Implementar etiquetado automático de conversaciones
+- **Archivos a modificar**: `src/services/`, `src/functions/`
+- **Dependencias**: Sistema de contexto existente
 
-#### **Propuesta Conceptual:**
-Evaluar si cambiar de 1 assistant a 2-3 assistants especializados mejora eficiencia, precisión y costos.
+### ⌨️ **6. Buffer Basado en Typing**
+- **Estado**: 🔄 En desarrollo
+- **Tiempo Estimado**: 1-2 horas
+- **Descripción**: Implementar procesamiento inteligente basado en indicadores de escritura
+- **Archivos a modificar**: `src/utils/messageBuffering.ts`
+- **Dependencias**: Sistema de buffer existente
 
-#### **Arquitectura Propuesta Inicial:**
+---
 
-**OPCIÓN A: 2 Assistants**
-```
-Usuario → Assistant Classifier → Assistant Specialist → Usuario
-```
+## 📊 **PRIORIDAD BAJA - MEJORAS**
 
-**OPCIÓN B: 3 Assistants**
-```
-Usuario → Classifier → [Pricing|Availability|Info] Specialist → Formatter → Usuario
-```
+### 🧠 **7. Optimizaciones de Memoria**
+- **Estado**: 📋 Planificada
+- **Tiempo Estimado**: 1 hora
+- **Descripción**: Implementar limpieza automática y gestión eficiente de memoria
+- **Archivos a modificar**: `src/app-unified.ts`
+- **Dependencias**: Sistema de estados existente
 
-#### **Especialización por Assistant:**
+### 📈 **8. Métricas Avanzadas**
+- **Estado**: 📋 Planificada
+- **Tiempo Estimado**: 1-2 horas
+- **Descripción**: Implementar métricas avanzadas y alertas automáticas
+- **Archivos a modificar**: `src/routes/metrics.ts`
+- **Dependencias**: Sistema de logging existente
 
-**🔍 Assistant 1: CLASSIFIER**
-- **Función**: Detectar intención + extraer datos estructurados
-- **Prompt**: Ultra-específico para clasificación
-- **Salida**: JSON con categoría + datos extraídos
-- **Tiempo estimado**: 0.5s
-- **Tokens**: ~100
+---
 
-**💰 Assistant 2A: PRICING SPECIALIST**
-- **Función**: Solo cálculos de precios y tarifas
-- **RAG Files**: `02_TARIFAS_TEMPORADAS.txt`, `04_CARGOS_SERVICIOS_TARIFARIOS.txt`
-- **Prompt**: "Eres calculadora de precios. Solo calculas, no vendes."
-- **Tiempo estimado**: 1.2s
-- **Tokens**: ~500
+## 🎯 **PLAN DE IMPLEMENTACIÓN DETALLADO**
 
-**📅 Assistant 2B: AVAILABILITY SPECIALIST**
-- **Función**: Solo verificación de disponibilidad
-- **RAG Files**: `03_INVENTARIO_APARTAMENTOS.txt`, `16_GESTION_DISPONIBILIDAD.txt`
-- **Functions**: `check_availability()`
-- **Prompt**: "Solo verificas fechas y apartamentos."
-- **Tiempo estimado**: 1.5s
+### **FASE 1: FUNCIONALIDADES MEDIA (3-4 horas)**
+1. **Etapa 0**: Preparación y validación (30 min)
+   - [ ] Crear branch de desarrollo
+   - [ ] Configurar variables de entorno
+   - [ ] Verificar dependencias
+   - [ ] Backup del código actual
 
-**✨ Assistant 3: FORMATTER (Opcional)**
-- **Función**: Humanizar respuestas técnicas
-- **RAG Files**: `17_COMUNICACION_NATURAL.txt`
-- **Prompt**: "Convierte respuestas técnicas en WhatsApp natural"
-- **Tiempo estimado**: 0.8s
+2. **Etapa 1**: Detección de respuestas citadas (30 min)
+   - [ ] Implementar interface UserState
+   - [ ] Agregar código de detección en webhook
+   - [ ] Configurar logs y métricas
+   - [ ] Probar funcionalidad
 
-#### **Estudio de Viabilidad Requerido:**
+3. **Etapa 2**: Procesamiento de imágenes (45 min)
+   - [ ] Implementar función analyzeImage
+   - [ ] Agregar caso 'image' en webhook
+   - [ ] Configurar manejo de errores
+   - [ ] Probar con diferentes tipos de imágenes
 
-**FASE 1: Análisis del Sistema Actual (1 semana)**
-- 📊 Clasificar manualmente 100-200 consultas reales de logs
-- ⏱️ Medir tiempos de respuesta actuales por tipo de consulta
-- 🎯 Evaluar precisión en cotizaciones y respuestas
-- 💰 Analizar consumo de tokens por consulta
-- 📈 Identificar patrones de errores o ineficiencias
+4. **Etapa 3**: Transcripción de voz (60 min)
+   - [ ] Implementar función transcribeAudio
+   - [ ] Agregar casos voice/audio/ptt en webhook
+   - [ ] Configurar validación de tamaño
+   - [ ] Probar transcripción en diferentes idiomas
 
-**Categorías de consultas a identificar:**
-- **PRICING**: "¿Cuánto cuesta...?" (~40% estimado)
-- **AVAILABILITY**: "¿Está disponible...?" (~30% estimado)  
-- **INFO/POLICIES**: "¿Qué horario...?" (~20% estimado)
-- **COMPLEX**: Reservas, quejas, casos múltiples (~10% estimado)
+5. **Etapa 4**: Respuestas de voz (45 min)
+   - [ ] Modificar función sendWhatsAppMessage
+   - [ ] Implementar lógica de decisión de voz
+   - [ ] Configurar TTS y envío de audio
+   - [ ] Probar fallbacks a texto
 
-**FASE 2: Implementación Gradual (1-2 semanas)**
-- 🔧 Crear Assistant Classifier
-- 🧪 Probar en paralelo con sistema actual
-- 📊 Comparar métricas: velocidad, precisión, costo
-- 🎯 Implementar Assistant Pricing si resultados positivos
+6. **Etapa 5**: Optimización y limpieza (30 min)
+   - [ ] Implementar limpieza automática
+   - [ ] Agregar endpoint de métricas
+   - [ ] Configurar logs de limpieza
+   - [ ] Verificar optimizaciones
 
-#### **Métricas de Éxito:**
-- ⚡ **Velocidad**: >40% reducción en tiempo respuesta
-- 🎯 **Precisión**: >95% accuracy en clasificación  
-- 💰 **Costos**: >30% reducción tokens para casos simples
-- 🔧 **Mantenimiento**: Debugging más fácil por especialización
+7. **Etapa 6**: Pruebas integrales y deploy (45 min)
+   - [ ] Pruebas de integración completas
+   - [ ] Validar casos límite
+   - [ ] Configurar para producción
+   - [ ] Deploy y monitoreo
 
-#### **Criterios de Decisión:**
-**✅ IMPLEMENTAR SI:**
-- 80%+ consultas son categorizables
-- Sistema actual >3s respuesta promedio
-- Errores frecuentes por confusión temática
-- Costos de tokens problemáticos
+### **FASE 2: OPTIMIZACIONES (2-3 horas)**
+- [ ] Sistema de etiquetas inteligente
+- [ ] Buffer basado en typing
+- [ ] Optimizaciones de memoria
 
-**❌ NO IMPLEMENTAR SI:**
-- Sistema actual ya eficiente
-- Consultas muy variadas/complejas
-- Overhead arquitectónico > beneficios
+### **FASE 3: ESCALABILIDAD (1-2 horas)**
+- [ ] Métricas avanzadas
+- [ ] Monitoreo en tiempo real
+- [ ] Alertas automáticas
 
-#### **Archivos Técnicos a Crear:**
-```
-├── src/handlers/multi-assistant-handler.ts    # Handler principal
-├── src/handlers/assistant-classifier.ts       # Clasificador específico  
-├── src/utils/analytics/bot-metrics.ts         # Sistema de métricas
-└── docs/MULTI_ASSISTANT_STUDY.md             # Documentación del estudio
+---
+
+## ⚙️ **CONFIGURACIÓN REQUERIDA**
+
+### **Variables de Entorno Nuevas**
+```env
+# === NUEVAS FUNCIONALIDADES MEDIA ===
+# Toggles principales (todas inician deshabilitadas para pruebas)
+ENABLE_REPLY_DETECTION=false
+ENABLE_IMAGE_PROCESSING=false
+ENABLE_VOICE_TRANSCRIPTION=false
+ENABLE_VOICE_RESPONSES=false
+
+# Configuración de voz
+TTS_VOICE=alloy                    # Opciones: alloy, echo, fable, onyx, nova, shimmer
+VOICE_THRESHOLD=150                # Caracteres mínimos para considerar respuesta de voz
+VOICE_RANDOM_PROBABILITY=0.1       # 10% de probabilidad de respuesta aleatoria en voz
+
+# Límites de seguridad
+MAX_IMAGE_SIZE=20971520           # 20MB máximo para imágenes
+MAX_AUDIO_SIZE=26214400          # 25MB máximo para audio (límite Whisper)
+MAX_AUDIO_DURATION=300           # 5 minutos máximo de duración
+
+# Configuración de procesamiento
+IMAGE_ANALYSIS_MODEL=gpt-4o-mini  # Modelo para análisis de imágenes
+WHISPER_LANGUAGE=es               # Idioma principal para transcripción
 ```
 
-#### **Fallback Strategy:**
-- Sistema actual como respaldo siempre
-- Implementación gradual sin riesgo
-- Rollback inmediato si problemas
+### **Dependencias Requeridas**
+- [ ] OpenAI SDK v4+ (ya instalado)
+- [ ] node-fetch@3 (instalar si no está)
+- [ ] Node.js 18+ (ya cumplido)
 
 ---
 
-## 🔥 **PRIORIDAD ALTA - SIGUIENTES PASOS**
+## 📈 **MÉTRICAS DE ÉXITO**
 
-### 📞 **4. Función escalate_to_human()**
-**📅 Timeline: 1-2 semanas**
-**🎯 Estado: ESPECIFICACIÓN COMPLETA**
+### **KPIs de Media**
+- **Adopción**: % usuarios usando voz, imágenes procesadas/día
+- **Performance**: Tiempo promedio transcripción < 3s, análisis imagen < 2s
+- **Costos**: Costo/usuario activo, tokens consumidos en Vision
+- **Calidad**: Tasa de fallback a texto < 5%
 
-#### **Implementación pendiente:**
-- 📋 Crear handler en `function-handler.ts`
-- 📋 Registrar función en OpenAI Assistant
-- 📋 Configurar contactos de agentes en `.env`
-- 📋 Implementar envío vía Whapi
-
-#### **Documentación lista:**
-- ✅ Especificación: `docs/ESCALATE_TO_HUMAN_SPEC.md`
-- ✅ Casos de uso documentados
-- ✅ Estructura técnica definida
+### **Monitoreo**
+- [ ] Endpoint `/metrics/media` para estadísticas
+- [ ] Logs con emojis específicos: 🎤🖼️🔊📱
+- [ ] Alertas automáticas para errores críticos
 
 ---
 
-### 🔀 **5. Pruebas Multi-Usuario**
-**📅 Timeline: 1 semana**
-- ⏳ Coordinar 3-5 personas simultáneas
-- ⏳ Verificar buffers independientes
-- ⏳ Medir performance bajo carga
+## 🚨 **CONSIDERACIONES TÉCNICAS**
+
+### **Riesgos y Mitigaciones**
+- **Alto consumo de tokens**: Fallbacks y límites configurables
+- **Latencia en media**: Procesamiento asíncrono
+- **Errores de API**: Manejo robusto de errores con fallbacks
+
+### **Optimizaciones**
+- **Toggles configurables** para activar/desactivar features
+- **Procesamiento asíncrono** para evitar bloqueos
+- **Fallbacks automáticos** para garantizar estabilidad
+- **Límites de seguridad** para controlar costos
 
 ---
 
-## 🔧 **PRIORIDAD MEDIA - PRÓXIMAS SEMANAS**
+## 🎉 **BENEFICIOS ESPERADOS**
 
-### 📱 **6. Dashboard Web de Monitoreo**
-- Interface para observar conversaciones
-- Métricas en tiempo real
-- Logs filtrados
+### **Experiencia de Usuario**
+- **30-50% mejora** en engagement
+- **Mejor accesibilidad** para usuarios con preferencias de voz
+- **Contexto visual** para consultas hoteleras
+- **Respuestas más naturales** y contextuales
 
-### 🛡️ **7. Sistema de Moderación**
-- Rate limiting por usuario
-- Detección de spam
-- Escalación automática
-
-### 📊 **8. Analytics y Métricas**
-- Tracking de usuarios activos
-- Tipos de consultas frecuentes
-- Success rate del bot
+### **Operacionales**
+- **Reducción de escalamientos** por mejor comprensión
+- **Mejor captura** de intenciones del usuario
+- **Optimización de recursos** con toggles configurables
 
 ---
 
-## ✅ **COMPLETADO RECIENTEMENTE**
+## 📚 **DOCUMENTACIÓN RELACIONADA**
 
-### 💬 **Mensajes por Párrafos Naturales**
-- ✅ División automática implementada
-- ✅ Delay natural entre chunks
-- ✅ **Evidencia**: Código en `src/app.ts` líneas 923-1099
+### **Documentos Principales**
+- [PLAN NUEVAS FUNCIONALIDADES.md](../features/PLAN%20NUEVAS%20FUNCIONALIDADES.md) - Plan completo de implementación
+- [FUNCTION_INVENTORY.md](../features/FUNCTION_INVENTORY.md) - Inventario de funciones actualizado
+- [SIGUIENTE_IMPLEMENTACION.md](../features/SIGUIENTE_IMPLEMENTACION.md) - Roadmap actualizado
 
-### 🤖 **Function Calling con Beds24**
-- ✅ `check_availability()` funcional
-- ✅ Structured outputs con `strict: true`
-- ✅ Retry logic robusto
-- ✅ **Evidencia**: Consultas exitosas con precios reales
-
-### 🔄 **Thread Persistence**
-- ✅ Sistema completo implementado
-- ✅ Auto-guardado cada 5 minutos
-- ✅ Reutilización automática de threads
-
-### 🔧 **Sincronización Manual**
-- ✅ Agentes pueden intervenir
-- ✅ Contexto preservado en OpenAI
-- ✅ Anti-duplicación funcionando
-
-### 📊 **Sistema de Metadatos**
-- ✅ Estructura optimizada
-- ✅ Campos innecesarios eliminados
-- ✅ Actualización automática en cada interacción
-
-### 🔄 **Manejo de Runs Activos**
-- ✅ Cancelación automática
-- ✅ Error 400 eliminado
-- ✅ Retry logic implementado
-
-### 🕐 **Contexto Temporal**
-- ✅ Fecha actual inyectada
-- ✅ Validación correcta de fechas
-- ✅ "Hoy" interpretado correctamente
-
-### 🛡️ **Error Handling**
-- ✅ Sistema robusto implementado
-- ✅ Logs estructurados
-- ✅ Validaciones completas
+### **Configuración**
+- [env.example](../../env.example) - Variables de entorno actualizadas
+- [package.json](../../package.json) - Dependencias del proyecto
 
 ---
 
-## 🚀 **PRÓXIMOS PASOS INMEDIATOS**
+## 🎯 **PRÓXIMOS PASOS**
 
-### **Esta Semana:**
-1. **Completar envío de identidad/metadatos** a OpenAI
-2. **Implementar obtención de historial** de Whapi
-3. **Pruebas con contexto enriquecido**
+### **Implementación Inmediata**
+1. **Revisar** [PLAN NUEVAS FUNCIONALIDADES.md](../features/PLAN%20NUEVAS%20FUNCIONALIDADES.md)
+2. **Configurar** variables de entorno en `env.example`
+3. **Seguir** las etapas del plan secuencialmente
+4. **Probar** cada funcionalidad antes de continuar
 
-### **Próxima Semana:**
-1. **Iniciar estudio multi-assistant** (Fase 1: Análisis del sistema actual)
-2. **Comenzar implementación escalate_to_human()**
-3. **Configurar agentes en variables**
-
-### **Semana 3-4:**
-1. **Completar análisis de métricas** del sistema actual
-2. **Decidir implementación multi-assistant** basada en datos
-3. **Pruebas multi-usuario coordinadas**
+### **Monitoreo Post-Implementación**
+- Verificar logs con emojis: 🎤🖼️🔊📱
+- Acceder a `/metrics/media` para estadísticas
+- Monitorear costos y performance
 
 ---
 
-*El sistema ya tiene 10 funcionalidades core completadas y funcionando en producción. El enfoque ahora es enriquecer el contexto, evaluar arquitectura multi-assistant basada en datos reales, y completar el ciclo de atención con escalamiento inteligente.*
-
----
-
-**📞 CONTACTO PARA IMPLEMENTACIÓN:**
-- **Especificación completa**: `docs/ESCALATE_TO_HUMAN_SPEC.md`
-- **Estado técnico**: Todo listo para desarrollo
-- **Dependencias**: Usar Whapi y function calling existentes 
+*Última actualización: Julio 2025 - Tareas de funcionalidades media agregadas* 

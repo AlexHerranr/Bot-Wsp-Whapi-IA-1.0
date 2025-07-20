@@ -73,6 +73,9 @@ import { guestMemory } from './utils/persistence/index';
 import { whapiLabels } from './utils/whapi/index';
 import { getConfig } from './config/environment';
 
+// NUEVO: Importar tipo UserState para funcionalidades media
+import type { UserState } from './utils/userStateManager.js';
+
 // Importar sistema de monitoreo
 import { botDashboard } from './utils/monitoring/dashboard.js';
 import metricsRouter, { 
@@ -119,11 +122,17 @@ const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para mensajes, typing, hooks,
 
 const botSentMessages = new Set<string>();
 
+// NUEVO: Map global para estados de usuario (funcionalidades media)
+const globalUserStates = new Map<string, UserState>();
+
 // 🔧 ELIMINADOS: Caches duplicados migrados a historyInjection.ts
 // Los caches historyCache y contextInjectionCache ahora están centralizados
 // en el módulo historyInjection.ts para evitar duplicación y optimizar memoria
 
 const MAX_MESSAGE_LENGTH = 5000;
+
+// NUEVO: Función helper para timestamps
+const getTimestamp = () => new Date().toISOString();
 
 // 🔧 NUEVO: Sistema de typing dinámico
 // Configuración de timeouts optimizada para mejor UX
@@ -2335,6 +2344,35 @@ function setupWebhooks() {
                         const chatId = message.chat_id;
                         const userName = cleanContactName(message.from_name);
                         let messageText = message.text.body;
+                        const shortUserId = getShortUserId(userJid);
+                        
+                        // NUEVO: Manejo de respuestas citadas
+                        if (process.env.ENABLE_REPLY_DETECTION === 'true' && message.context?.quoted_content) {
+                            const quotedText = message.context.quoted_content.body || 
+                                              message.context.quoted_content.caption || 
+                                              '[mensaje anterior sin texto]';
+                            
+                            // Enriquecer el mensaje con contexto
+                            const enhancedText = `[Usuario responde a: "${quotedText.substring(0, 50)}${quotedText.length > 50 ? '...' : ''}"] ${messageText}`;
+                            
+                            // Log para debugging
+                            logInfo('QUOTED_MESSAGE_DETECTED', 'Respuesta a mensaje detectada', {
+                                userId: shortUserId,
+                                quotedText: quotedText.substring(0, 100),
+                                currentText: messageText.substring(0, 100)
+                            });
+                            
+                            // Actualizar estadísticas
+                            const userState = globalUserStates.get(userJid) || {} as UserState;
+                            userState.quotedMessagesCount = (userState.quotedMessagesCount || 0) + 1;
+                            userState.lastMessageTime = Date.now();
+                            globalUserStates.set(userJid, userState);
+                            
+                            // Usar el texto enriquecido en lugar del original
+                            messageText = enhancedText;
+                            
+                            console.log(`${getTimestamp()} 📱 [${shortUserId}] Respuesta detectada a: "${quotedText.substring(0, 30)}..."`);
+                        }
                         
                         // Validación de tamaño de mensaje
                         if (messageText.length > MAX_MESSAGE_LENGTH) {

@@ -9,27 +9,31 @@ Un asistente virtual avanzado que utiliza **OpenAI GPT-4** y **WhatsApp Business
 ## 🎯 **Características Principales**
 
 ### **🤖 IA Avanzada**
-- **OpenAI GPT-4con Assistants API
+- **OpenAI GPT-4** con Assistants API
 - **Contexto persistente** entre conversaciones
+- **Contexto temporal optimizado** con fecha/hora AM/PM y nombres claros
 - **Respuestas naturales** y contextualizadas
 - **Función de escalamiento** a agentes humanos
 
 ### **💬 WhatsApp Integration**
 - **WhatsApp Business API** (Whapi)
 - **Mensajes en tiempo real**
+- **División inteligente de mensajes** en párrafos para mejor UX
+- **Typing indicators diferenciados** (3s primer mensaje, 2s siguientes)
 - **Sistema de etiquetas** automático
 - **Buffer basado en typing** para respuestas naturales
 
 ### **🏨 Gestión de Reservas**
-- **Integración Beds24 para consultas de disponibilidad
+- **Integración Beds24** para consultas de disponibilidad
 - **Sistema de reservas** automatizado
 - **Gestión de fechas** inteligente
 - **Información de propiedades** en tiempo real
 
 ### **⚡ Performance Optimizada**
 - **Respuestas rápidas** (<2 segundos)
-- **Cache inteligente** de historial
+- **Cache inteligente** de historial y contexto (TTL 1 hora)
 - **Sistema de lock** para prevenir duplicados
+- **Detección de reinicio** para contexto fresco
 - **Métricas en tiempo real**
 
 ---

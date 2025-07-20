@@ -1,125 +1,105 @@
-# 📋 Inventario de Funciones de OpenAI
+# 📋 INVENTARIO DE FUNCIONES DEL BOT
 
-*Última actualización: Julio 2025*
+## 🔧 Funciones Implementadas
 
----
+### 🤖 OpenAI Functions
+- `get_conversation_context` - Obtiene contexto de conversación
+- `inject_history` - Inyecta historial de conversación
+- `escalate_to_human` - Escala conversación a humano
 
-## 🎯 Funciones Disponibles
+### 🏨 Beds24 Functions
+- `beds24_availability` - Consulta disponibilidad de habitaciones
 
-### **1. Funciones de Disponibilidad**
+### 📱 Nuevas Funcionalidades Media (Planificadas)
+- **Detección de Respuestas Citadas** - Contexto mejorado cuando usuarios responden mensajes específicos
+- **Procesamiento de Imágenes** - Análisis automático de imágenes con OpenAI Vision
+- **Transcripción de Voz** - Conversión de notas de voz a texto con Whisper
+- **Respuestas de Voz** - Generación automática de respuestas en audio con TTS
 
-#### `check_availability`
-- **Categoría**: `availability`
-- **Descripción**: Verifica disponibilidad de apartamentos en fechas específicas
-- **Estado**: ✅ **ACTIVA**
-- **Versión**: 1.0.0
-- **Parámetros**:
-  - `check_in_date`: Fecha de llegada
-  - `check_out_date`: Fecha de salida
-  - `apartment_id`: ID del apartamento (opcional)
-- **Retorna**: Lista de apartamentos disponibles con precios
+## 🚧 Funciones en Desarrollo
 
----
+### 🎯 Próximas Implementaciones
+- Sistema de etiquetas inteligente
+- Buffer basado en typing
+- Optimizaciones de memoria
 
-### **2. Funciones de Escalamiento**
+## 📊 Estado de Implementación
 
-#### `escalate_to_human`
-- **Categoría**: `escalation`
-- **Descripción**: Escala la conversación a un agente humano cuando es necesario
-- **Estado**: ✅ **ACTIVA**
-- **Versión**: 1.0.0
-- **Parámetros**:
-  - `reason`: Razón del escalamiento
-  - `urgency`: Nivel de urgencia (low, medium, high)
-  - `context`: Contexto adicional de la conversación
-- **Retorna**: Confirmación del escalamiento
+| Función | Estado | Prioridad | Complejidad |
+|---------|--------|-----------|-------------|
+| get_conversation_context | ✅ Implementada | Alta | Media |
+| inject_history | ✅ Implementada | Alta | Media |
+| escalate_to_human | ✅ Implementada | Media | Baja |
+| beds24_availability | ✅ Implementada | Alta | Alta |
+| **Detección de Respuestas** | 📋 Planificada | Media | Baja |
+| **Procesamiento de Imágenes** | 📋 Planificada | Alta | Media |
+| **Transcripción de Voz** | 📋 Planificada | Alta | Alta |
+| **Respuestas de Voz** | 📋 Planificada | Media | Alta |
 
----
+## 🔄 Flujo de Funciones
 
-### **3. Funciones de Contexto e Historial**
+### Flujo Principal
+1. **Recepción de Mensaje** → Webhook
+2. **Análisis de Tipo** → Texto, Imagen, Audio, Voz
+3. **Procesamiento Específico** → Según tipo de medio
+4. **Inyección de Contexto** → get_conversation_context
+5. **Generación de Respuesta** → OpenAI + Funciones
+6. **Envío** → Texto o Voz según configuración
 
-#### `inject_history` ⭐ **NUEVA**
-- **Categoría**: `context`
-- **Descripción**: Inyecta historial de conversación de manera inteligente para mantener contexto. Solo se ejecuta cuando es necesario para evitar duplicados y optimizar tokens.
-- **Estado**: ✅ **ACTIVA**
-- **Versión**: 1.0.0
-- **Parámetros**:
-  - `thread_id`: ID del thread de OpenAI donde inyectar el historial
-  - `user_id`: ID del usuario de WhatsApp (formato: 1234567890@s.whatsapp.net)
-  - `chat_id`: ID del chat de WhatsApp
-  - `is_new_thread`: Indica si es un thread nuevo (true) o existente (false)
-  - `context_analysis`: Análisis de contexto para determinar si necesita inyección (opcional)
-    - `needs_injection`: Indica si necesita inyección de contexto
-    - `match_percentage`: Porcentaje de coincidencia con contexto relevante (0-100)
-    - `reason`: Razón por la que necesita o no inyección
-  - `request_id`: ID de la solicitud para tracking (opcional)
-- **Retorna**: Resultado de la inyección con métricas de tokens y contexto
-- **Características Especiales**:
-  - ✅ Inyección selectiva (solo cuando necesario)
-  - ✅ Compresión automática para historiales largos
-  - ✅ Cache inteligente (evita duplicados en 5 minutos)
-  - ✅ Logging detallado para depuración
-  - ✅ Optimización automática de tokens
+### Nuevas Rutas de Procesamiento
+- **📱 Respuestas Citadas**: `message.context?.quoted_content` → Enriquecimiento de contexto
+- **🖼️ Imágenes**: `message.type === 'image'` → OpenAI Vision → Descripción
+- **🎤 Audio/Voz**: `message.type === 'voice|audio|ptt'` → Whisper → Transcripción
+- **🔊 Respuestas de Voz**: Decisión inteligente → TTS → Audio
 
----
+## ⚙️ Configuración Requerida
 
-## 🔧 Funciones Pendientes de Implementación
+### Variables de Entorno para Media
+```env
+# Toggles principales
+ENABLE_REPLY_DETECTION=false
+ENABLE_IMAGE_PROCESSING=false
+ENABLE_VOICE_TRANSCRIPTION=false
+ENABLE_VOICE_RESPONSES=false
 
-### **Funciones de Booking**
-- `create_booking`: Crear reserva
-- `get_booking_details`: Obtener detalles de reserva
-- `cancel_booking`: Cancelar reserva
+# Configuración de voz
+TTS_VOICE=alloy
+VOICE_THRESHOLD=150
+VOICE_RANDOM_PROBABILITY=0.1
 
-### **Funciones de Gestión de Clientes**
-- `update_client_profile`: Actualizar perfil de cliente
-- `get_client_history`: Obtener historial de cliente
+# Límites de seguridad
+MAX_IMAGE_SIZE=20971520
+MAX_AUDIO_SIZE=26214400
+MAX_AUDIO_DURATION=300
 
----
+# Procesamiento
+IMAGE_ANALYSIS_MODEL=gpt-4o-mini
+WHISPER_LANGUAGE=es
+```
 
-## 📊 Estadísticas del Registro
+## 📈 Métricas y Monitoreo
 
-### **Funciones por Categoría**
-- **Availability**: 1 función
-- **Escalation**: 1 función
-- **Context**: 1 función
-- **Total**: 3 funciones activas
+### KPIs de Media
+- % usuarios usando voz
+- Imágenes procesadas/día
+- Respuestas citadas/día
+- Tiempo promedio transcripción
+- Tasa de fallback a texto
 
-### **Estado de Funciones**
-- ✅ **Activas**: 3
-- ⏳ **Pendientes**: 5
-- ❌ **Deshabilitadas**: 0
+### Endpoints de Monitoreo
+- `/metrics/media` - Estadísticas de funcionalidades media
+- Logs con emojis específicos: 🎤🖼️🔊📱
 
----
+## 🎯 Próximos Pasos
 
-## 🚀 Mejoras Recientes
-
-### **Julio 2025 - Sistema de Inyección de Historial**
-- ✅ Nueva función `inject_history` implementada
-- ✅ Sistema de cache inteligente para optimizar tokens
-- ✅ Compresión automática de historiales largos
-- ✅ Inyección selectiva para evitar duplicados
-- ✅ Logging detallado para monitoreo y depuración
-
-### **Beneficios Implementados**
-- **30-50% reducción de tokens** por conversación
-- **20-40% mejora en latencia** de respuestas
-- **100% eliminación** de inyecciones prematuras
-- **Mejor coherencia** conversacional
-- **Sistema más mantenible** y modular
+1. **Implementar Etapa 0** - Preparación y validación
+2. **Implementar Etapa 1** - Detección de respuestas citadas
+3. **Implementar Etapa 2** - Procesamiento de imágenes
+4. **Implementar Etapa 3** - Transcripción de voz
+5. **Implementar Etapa 4** - Respuestas de voz
+6. **Implementar Etapa 5** - Optimización y limpieza
+7. **Implementar Etapa 6** - Pruebas integrales y deploy
 
 ---
 
-## 📝 Notas de Implementación
-
-### **Configuración Manual en OpenAI**
-Las funciones deben ser agregadas manualmente en la interfaz de OpenAI:
-1. Ir al asistente en OpenAI
-2. Sección "Tools"
-3. Agregar función con la configuración JSON correspondiente
-4. Guardar cambios
-
-### **Registro Automático**
-Todas las funciones están registradas en `src/functions/registry/function-registry.ts` y se cargan automáticamente al iniciar el bot.
-
-### **Validación**
-El sistema valida automáticamente que todas las funciones estén correctamente configuradas al cargar el registro. 
+*Última actualización: Julio 2025 - Plan de funcionalidades media agregado* 

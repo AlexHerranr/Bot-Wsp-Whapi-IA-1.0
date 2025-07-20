@@ -1,258 +1,225 @@
-# 📊 Actualización Julio 2025 - Sistema de Inyección de Historial Optimizado
+# 📊 ACTUALIZACIÓN JULIO 2025 - BOT WHATSAPP
 
-*Fecha: Julio 2025*
+## 🎯 **RESUMEN EJECUTIVO**
 
----
+### ✅ **Logros Completados**
+- Sistema de logging unificado y optimizado
+- Integración completa con Beds24
+- Sistema de contexto temporal optimizado
+- Limpieza y reorganización del código
+- Optimizaciones de memoria y performance
 
-## 🎯 Resumen Ejecutivo
-
-**Objetivo**: Implementar un sistema de inyección de historial inteligente que elimine errores lógicos, reduzca tokens y mejore la coherencia conversacional del bot de WhatsApp.
-
-**Estado**: ✅ **COMPLETADO Y FUNCIONANDO**
-
-**Impacto**: Mejora significativa en performance, coherencia y mantenibilidad del sistema.
-
----
-
-## 🚀 Mejoras Implementadas
-
-### **1. Sistema de Inyección Selectiva** ✅
-- **Problema**: Inyección prematura y repetida de contexto causaba runs IA innecesarios
-- **Solución**: Función `checkNeedsInjection()` que verifica si realmente necesita inyección
-- **Resultado**: 100% eliminación de inyecciones prematuras
-
-### **2. Compresión Automática de Historial** ✅
-- **Problema**: Historiales de 200+ líneas sin compresión inflaban tokens
-- **Solución**: Compresión automática cuando historial > 50 líneas
-- **Resultado**: 30-50% reducción de tokens por conversación
-
-### **3. Cache Inteligente Multi-Nivel** ✅
-- **Problema**: Fetches repetidos de historial y duplicados de inyección
-- **Solución**: Sistema de cache con TTL diferenciado por tipo
-- **Resultado**: 20-40% mejora en latencia de respuestas
-
-### **4. Logging Detallado** ✅
-- **Problema**: Difícil depuración de problemas de inyección
-- **Solución**: Logs específicos para cada etapa del proceso
-- **Resultado**: Monitoreo y depuración facilitados
-
-### **5. Integración Modularizada** ✅
-- **Problema**: Lógica duplicada y dispersa en el código
-- **Solución**: Función centralizada `injectHistory()` encapsula toda la lógica
-- **Resultado**: Código más mantenible y predecible
-
-### **6. Optimizaciones Recientes (Julio 2025)** ✅ **NUEVO**
-- **Eliminación del Mensaje Interino Duplicado**: Un solo mensaje específico para consultas de disponibilidad
-- **Eliminación Completa del Fuzzy Parsing**: Código simplificado, OpenAI maneja la inteligencia
-- **Validación de Fechas Simplificada**: Solo formato YYYY-MM-DD y fechas válidas
-- **Flujo de Mensajes Optimizado**: 100% de mensajes procesados por OpenAI
+### 📱 **NUEVAS FUNCIONALIDADES MEDIA** ⭐ **PLANIFICADAS**
+- **Plan completo de implementación** de 4 nuevas funcionalidades
+- **Roadmap detallado** con 6 etapas de implementación
+- **Configuración modular** con toggles para control granular
 
 ---
 
-## 📊 Métricas de Performance
+## 🚀 **FUNCIONALIDADES MEDIA PLANIFICADAS**
 
-### **Antes de las Mejoras**:
-- ❌ Inyección en cada mensaje (200+ líneas)
-- ❌ Tokens: 2154 → 2186 (sin compresión)
-- ❌ Latencia: 57s por run innecesario
-- ❌ Runs prematuros sin mensaje nuevo
+### 📋 **Plan de Implementación**
+- **Documento**: [PLAN NUEVAS FUNCIONALIDADES.md](../features/PLAN%20NUEVAS%20FUNCIONALIDADES.md)
+- **Tiempo Total**: 3-4 horas
+- **Enfoque**: Implementación incremental con pruebas en cada etapa
 
-### **Después de las Mejoras**:
-- ✅ Inyección selectiva (solo cuando necesario)
-- ✅ Compresión automática (máximo 100 líneas)
-- ✅ Cache inteligente (evita duplicados)
-- ✅ Logging detallado (facilita depuración)
+### 🎯 **Funcionalidades a Implementar**
 
-### **Mejoras Cuantificadas**:
-- **Reducción de tokens**: 30-50% menos tokens por conversación
-- **Mejora de latencia**: 20-40% menos tiempo de respuesta
-- **Eliminación de runs prematuros**: 100% de runs innecesarios eliminados
-- **Mejor coherencia**: Contexto más relevante y actualizado
+#### 1. 📱 Detección de Respuestas Citadas
+- **Descripción**: Detectar cuando usuarios responden a mensajes específicos
+- **Beneficios**: Mejor comprensión conversacional, respuestas más contextuales
+- **Tiempo**: 30 minutos
+- **Configuración**: `ENABLE_REPLY_DETECTION=true`
 
----
+#### 2. 🖼️ Procesamiento de Imágenes
+- **Descripción**: Análisis automático de imágenes con OpenAI Vision
+- **Beneficios**: Contexto visual para consultas hoteleras
+- **Tiempo**: 45 minutos
+- **Configuración**: `ENABLE_IMAGE_PROCESSING=true`
 
-## 🔧 Archivos Modificados
+#### 3. 🎤 Transcripción de Voz
+- **Descripción**: Conversión de notas de voz a texto con Whisper
+- **Beneficios**: Accesibilidad, captura de consultas por voz
+- **Tiempo**: 60 minutos
+- **Configuración**: `ENABLE_VOICE_TRANSCRIPTION=true`
 
-### **Nuevos Archivos**:
-- `src/utils/context/historyInjection.ts` - Sistema modularizado de inyección
-- `src/functions/history/inject-history.ts` - Función para registro de OpenAI
-- `scripts/test-history-injection-simple.js` - Script de pruebas
-- `docs/features/HISTORY_INJECTION_IMPROVEMENTS.md` - Documentación detallada
-
-### **Archivos Modificados**:
-- `src/app-unified.ts` - Integración de función modularizada
-- `src/functions/registry/function-registry.ts` - Registro de nueva función
-- `docs/features/FUNCTION_INVENTORY.md` - Inventario actualizado
-- `docs/features/OPTIMIZACION_CLOUD_RUN.md` - Documentación de optimización
+#### 4. 🔊 Respuestas de Voz
+- **Descripción**: Generación automática de respuestas en audio con TTS
+- **Beneficios**: Experiencia más natural, mejor engagement
+- **Tiempo**: 45 minutos
+- **Configuración**: `ENABLE_VOICE_RESPONSES=true`
 
 ---
 
-## 🧪 Validación y Pruebas
+## 📊 **ESTADO ACTUAL DEL PROYECTO**
 
-### **Script de Pruebas Implementado**:
-```bash
-node scripts/test-history-injection-simple.js
+### ✅ **Funcionalidades Implementadas**
+- Sistema de logging completo con categorías
+- Integración con Beds24 para disponibilidad
+- Sistema de contexto temporal optimizado
+- Sistema de escalamiento a humanos
+- Buffer de mensajes con concurrencia
+- Persistencia de threads y memoria de usuarios
+- Dashboard de monitoreo en tiempo real
+
+### 🔄 **Funcionalidades en Desarrollo**
+- Sistema de etiquetas inteligente
+- Buffer basado en typing
+- Optimizaciones de memoria adicionales
+
+### 📋 **Funcionalidades Planificadas**
+- **4 nuevas funcionalidades de medios** (prioridad alta)
+- Sistema de etiquetas inteligente (prioridad media)
+- Optimizaciones de escalabilidad (prioridad baja)
+
+---
+
+## ⚙️ **CONFIGURACIÓN REQUERIDA**
+
+### 🔧 **Variables de Entorno Nuevas**
+```env
+# === NUEVAS FUNCIONALIDADES MEDIA ===
+# Toggles principales (todas inician deshabilitadas para pruebas)
+ENABLE_REPLY_DETECTION=false
+ENABLE_IMAGE_PROCESSING=false
+ENABLE_VOICE_TRANSCRIPTION=false
+ENABLE_VOICE_RESPONSES=false
+
+# Configuración de voz
+TTS_VOICE=alloy                    # Opciones: alloy, echo, fable, onyx, nova, shimmer
+VOICE_THRESHOLD=150                # Caracteres mínimos para considerar respuesta de voz
+VOICE_RANDOM_PROBABILITY=0.1       # 10% de probabilidad de respuesta aleatoria en voz
+
+# Límites de seguridad
+MAX_IMAGE_SIZE=20971520           # 20MB máximo para imágenes
+MAX_AUDIO_SIZE=26214400          # 25MB máximo para audio (límite Whisper)
+MAX_AUDIO_DURATION=300           # 5 minutos máximo de duración
+
+# Configuración de procesamiento
+IMAGE_ANALYSIS_MODEL=gpt-4o-mini  # Modelo para análisis de imágenes
+WHISPER_LANGUAGE=es               # Idioma principal para transcripción
 ```
 
-### **Casos de Prueba Validados**:
-1. ✅ Inyección selectiva para threads nuevos
-2. ✅ Skip inyección para threads existentes
-3. ✅ Compresión de historial largo
-4. ✅ Cache de inyección (evita duplicados)
-5. ✅ Manejo de errores robusto
-6. ✅ Estadísticas de cache
-7. ✅ Cleanup automático
-8. ✅ Inyección condicional de contexto
-
-### **Resultados de Pruebas**:
-- ✅ Todas las pruebas pasaron exitosamente
-- ✅ Sistema de cache funcionando correctamente
-- ✅ Compresión automática activa
-- ✅ Logging detallado operativo
+### 📦 **Dependencias Requeridas**
+- OpenAI SDK v4+ (ya instalado)
+- node-fetch@3 (instalar si no está)
+- Node.js 18+ (ya cumplido)
 
 ---
 
-## 🎯 Funcionalidades Clave
+## 📈 **MÉTRICAS Y MONITOREO**
 
-### **1. Función `inject_history` para OpenAI**
-- **Categoría**: `context`
-- **Descripción**: Inyección inteligente de historial de conversación
-- **Estado**: ✅ Registrada y lista para uso
-- **Configuración**: Manual en interfaz de OpenAI
+### 🎯 **KPIs de Media**
+- **Adopción**: % usuarios usando voz, imágenes procesadas/día
+- **Performance**: Tiempo promedio transcripción < 3s, análisis imagen < 2s
+- **Costos**: Costo/usuario activo, tokens consumidos en Vision
+- **Calidad**: Tasa de fallback a texto < 5%
 
-### **2. Sistema de Cache Inteligente**
-- **Cache de inyección**: TTL de 5 minutos (evita duplicados)
-- **Cache de historial**: TTL de 1 hora (optimiza fetches)
-- **Cache de contexto**: TTL de 1 minuto (contexto relevante)
-- **Cleanup automático**: Cada 10 minutos
+### 🔍 **Monitoreo**
+- Endpoint `/metrics/media` para estadísticas
+- Logs con emojis específicos: 🎤🖼️🔊📱
+- Alertas automáticas para errores críticos
 
-### **3. Compresión Automática**
-- **Umbral**: 50 líneas activa compresión
-- **Máximo**: 100 líneas para optimizar tokens
-- **Logging**: Detallado de compresión para monitoreo
-
-### **4. Inyección Selectiva**
-- **Threads nuevos**: Siempre inyectar
-- **Threads existentes + actividad reciente**: Saltar inyección
-- **Threads existentes + ya inyectado**: Usar cache
-- **Threads existentes + necesita contexto**: Inyectar condicional
+### 💰 **Costos Estimados**
+- **Desarrollo**: $0
+- **Producción**: $15-50/mes (depende de volumen)
+- **Optimización**: Toggles permiten control granular
 
 ---
 
-## 📈 Monitoreo y Métricas
+## 🎯 **PLAN DE IMPLEMENTACIÓN**
 
-### **Logs Clave para Monitorear**:
-```typescript
-// Logs de inyección
-'HISTORY_INJECTION_COMPLETED' // Inyección exitosa
-'HISTORY_INJECTION_SKIP' // Inyección saltada
-'HISTORY_INJECTION_FAILED' // Error en inyección
+### 📋 **Etapas del Plan**
+1. **Etapa 0**: Preparación y validación (30 min)
+2. **Etapa 1**: Detección de respuestas citadas (30 min)
+3. **Etapa 2**: Procesamiento de imágenes (45 min)
+4. **Etapa 3**: Transcripción de voz (60 min)
+5. **Etapa 4**: Respuestas de voz (45 min)
+6. **Etapa 5**: Optimización y limpieza (30 min)
+7. **Etapa 6**: Pruebas integrales y deploy (45 min)
 
-// Logs de cache
-'HISTORY_CACHE_HIT' // Cache hit
-'HISTORY_CACHE_CLEANUP' // Cleanup ejecutado
-'CACHE_INIT' // Estadísticas al inicio
-
-// Logs de compresión
-'HISTORY_COMPRESSED' // Historial comprimido
-'INJECTION_CHECK_*' // Decisiones de inyección
-```
-
-### **Métricas de Cache**:
-```typescript
-const stats = getCacheStats();
-// {
-//   historyCache: { size: 15, ttlMinutes: 60 },
-//   contextCache: { size: 8, ttlMinutes: 1 },
-//   injectionCache: { size: 25, ttlMinutes: 5 }
-// }
-```
+### ✅ **Checklists Detallados**
+- Cada etapa incluye checklist completo
+- Comandos bash para automatización
+- Pruebas específicas para validar funcionalidad
 
 ---
 
-## 🚀 Beneficios Implementados
+## 🚨 **CONSIDERACIONES TÉCNICAS**
 
-### **1. Performance**:
-- **Reducción de tokens**: 30-50% menos tokens por conversación
-- **Mejora de latencia**: 20-40% menos tiempo de respuesta
-- **Eliminación de runs prematuros**: 100% de runs innecesarios eliminados
+### ⚠️ **Riesgos y Mitigaciones**
+- **Alto consumo de tokens**: Fallbacks y límites configurables
+- **Latencia en media**: Procesamiento asíncrono
+- **Errores de API**: Manejo robusto de errores con fallbacks
 
-### **2. Coherencia**:
-- **Contexto más relevante**: Solo información necesaria
-- **Historial actualizado**: Compresión automática
-- **Sin duplicados**: Cache inteligente
-
-### **3. Mantenibilidad**:
-- **Código modularizado**: Función centralizada
-- **Logging detallado**: Facilita depuración
-- **Métricas claras**: Estadísticas de cache
-
-### **4. Robustez**:
-- **Manejo de errores**: Fallbacks seguros
-- **Cleanup automático**: Prevención de memory leaks
-- **Validaciones**: Verificaciones múltiples
+### 🔧 **Optimizaciones**
+- **Toggles configurables** para activar/desactivar features
+- **Procesamiento asíncrono** para evitar bloqueos
+- **Fallbacks automáticos** para garantizar estabilidad
+- **Límites de seguridad** para controlar costos
 
 ---
 
-## 🔄 Flujo Mejorado
+## 🎉 **BENEFICIOS ESPERADOS**
 
-### **Flujo Antes**:
-```
-Mensaje → Thread → Inyectar siempre → OpenAI → Respuesta
-```
+### 👥 **Experiencia de Usuario**
+- **30-50% mejora** en engagement
+- **Mejor accesibilidad** para usuarios con preferencias de voz
+- **Contexto visual** para consultas hoteleras
+- **Respuestas más naturales** y contextuales
 
-### **Flujo Después**:
-```
-Mensaje → Thread → checkNeedsInjection() → 
-├─ Si necesita: injectHistory() → OpenAI → Respuesta
-└─ Si no necesita: Saltar inyección → OpenAI → Respuesta
-```
-
-### **Decisiones de Inyección**:
-1. **Thread nuevo**: ✅ Siempre inyectar
-2. **Thread existente + actividad reciente (< 1h)**: ❌ Saltar
-3. **Thread existente + ya inyectado (< 5min)**: ❌ Saltar
-4. **Thread existente + necesita contexto**: ✅ Inyectar condicional
+### 🏢 **Operacionales**
+- **Reducción de escalamientos** por mejor comprensión
+- **Mejor captura** de intenciones del usuario
+- **Optimización de recursos** con toggles configurables
 
 ---
 
-## ✅ Estado de Implementación
+## 📚 **DOCUMENTACIÓN ACTUALIZADA**
 
-### **Completado**:
-- ✅ Sistema de cache inteligente
-- ✅ Inyección selectiva y condicional
-- ✅ Compresión automática de historial
-- ✅ Logging detallado
-- ✅ Integración modularizada
-- ✅ Script de pruebas
-- ✅ Cleanup automático
-- ✅ Manejo de errores robusto
-- ✅ Función registrada para OpenAI
+### 📖 **Documentos Principales**
+- [FUNCTION_INVENTORY.md](../features/FUNCTION_INVENTORY.md) - Inventario actualizado con funcionalidades media
+- [SIGUIENTE_IMPLEMENTACION.md](../features/SIGUIENTE_IMPLEMENTACION.md) - Roadmap actualizado
+- [NAVIGATION_GUIDE.md](../NAVIGATION_GUIDE.md) - Guía de navegación actualizada
+- [INDEX.md](../INDEX.md) - Índice principal actualizado
 
-### **En Producción**:
-- 🟢 Funcionando en Cloud Run
-- 🟢 Logs detallados activos
-- 🟢 Métricas de cache monitoreadas
-- 🟢 Cleanup automático configurado
-
-### **Próximos Pasos**:
-- 📊 Monitorear métricas de performance en producción
-- 🔍 Analizar logs para optimizaciones adicionales
-- 📈 Ajustar umbrales según uso real
-- 🔧 Configurar función manualmente en OpenAI
+### 🔧 **Configuración**
+- [env.example](../../env.example) - Variables de entorno actualizadas
+- [PLAN NUEVAS FUNCIONALIDADES.md](../features/PLAN%20NUEVAS%20FUNCIONALIDADES.md) - Plan completo de implementación
 
 ---
 
-## 🎯 Conclusión
+## 🎯 **PRÓXIMOS PASOS**
 
-Las mejoras implementadas en Julio 2025 resuelven completamente los errores lógicos identificados en el sistema de inyección de historial:
+### 🚀 **Implementación Inmediata**
+1. **Revisar** el plan completo en [PLAN NUEVAS FUNCIONALIDADES.md](../features/PLAN%20NUEVAS%20FUNCIONALIDADES.md)
+2. **Configurar** variables de entorno en `env.example`
+3. **Seguir** las etapas del plan secuencialmente
+4. **Probar** cada funcionalidad antes de continuar
 
-1. **✅ Inyección prematura eliminada**: Sistema selectivo que solo inyecta cuando es necesario
-2. **✅ Modularidad lograda**: Función centralizada que encapsula toda la lógica
-3. **✅ Compresión implementada**: Historial largo se comprime automáticamente
-4. **✅ Cache robusto**: Evita duplicados y optimiza fetches
-5. **✅ Logging detallado**: Facilita depuración y monitoreo
+### 📊 **Monitoreo Post-Implementación**
+- Verificar logs con emojis: 🎤🖼️🔊📱
+- Acceder a `/metrics/media` para estadísticas
+- Monitorear costos y performance
 
-El sistema ahora es significativamente más eficiente, coherente y mantenible, proporcionando una experiencia conversacional mejorada para los usuarios del bot de WhatsApp.
+---
 
-**Impacto Total**: Mejora sustancial en performance, coherencia y mantenibilidad del sistema de conversación del bot. 
+## 📈 **ESTADÍSTICAS DEL PROYECTO**
+
+### 📊 **Métricas Actuales**
+- **Funciones implementadas**: 4
+- **Funciones planificadas**: 4 (media)
+- **Documentos de arquitectura**: 15+
+- **Scripts de automatización**: 20+
+- **Tests implementados**: 10+
+
+### 🎯 **Objetivos Julio 2025**
+- ✅ **Completado**: Sistema de logging optimizado
+- ✅ **Completado**: Integración Beds24
+- ✅ **Completado**: Reorganización del código
+- 📋 **En progreso**: Funcionalidades media
+- 🔄 **Pendiente**: Sistema de etiquetas
+
+---
+
+*Última actualización: Julio 2025 - Plan de funcionalidades media agregado* 

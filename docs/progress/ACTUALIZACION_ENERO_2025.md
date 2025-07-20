@@ -15,9 +15,149 @@ El proyecto ha sido **completamente unificado** y **optimizado para Cloud Run** 
 - ✅ **ETAPA 2**: Cache de historial inteligente ✅ IMPLEMENTADA
 - ✅ **ETAPA 3**: Sistema de tracing y retry automático ✅ IMPLEMENTADA
 - ✅ **Sistema Híbrido**: Patrones simples, flujo híbrido, inyección condicional ✅ IMPLEMENTADO
+- ✅ **Contexto Temporal Optimizado**: Formato AM/PM, cache 1 hora, detección de reinicio ✅ IMPLEMENTADO
+- ✅ **División Inteligente de Mensajes**: Párrafos separados, typing diferenciado ✅ IMPLEMENTADO
 - ✅ **Detección de Entorno**: Automática entre local y Cloud Run
 - ✅ **Reorganización Completa**: Archivos históricos archivados
 - ✅ **Resolución de Problemas**: Dockerfile y PATH de Git
+
+---
+
+## 🕐 CONTEXTO TEMPORAL OPTIMIZADO ✅ IMPLEMENTADO JULIO 2025
+
+### **✅ PROBLEMA RESUELTO**
+El contexto temporal enviado a OpenAI era confuso y no incluía información clara sobre fecha, hora y nombres del cliente.
+
+### **✅ SOLUCIÓN IMPLEMENTADA**
+
+#### **1. Formato de Hora Mejorado**
+```typescript
+// ANTES: "20/07/2025, 01:08" (no claro AM/PM)
+// DESPUÉS: "20/07/2025 | Hora: 1:28 AM (Colombia)"
+const currentDate = new Date().toLocaleDateString('es-ES', { 
+    timeZone: 'America/Bogota',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+});
+
+const currentTime = new Date().toLocaleTimeString('en-US', { 
+    timeZone: 'America/Bogota',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+});
+```
+
+#### **2. Nombres Diferenciados y Claros**
+```typescript
+// ANTES: "Nombre Perfil Cliente: Pa'Cartagena | Contacto: Pa'Cartagena"
+// DESPUÉS: "Cliente: Pa'Cartagena | Contacto WhatsApp: Pa'Cartagena"
+context += `Cliente: ${clientName} | Contacto WhatsApp: ${contactName}`;
+```
+
+#### **3. Cache TTL Optimizado**
+```typescript
+// ANTES: 5 minutos (muy corto)
+// DESPUÉS: 1 hora (balance perfecto)
+const CONTEXT_CACHE_TTL = 60 * 60 * 1000; // 1 hora
+```
+
+#### **4. Detección de Reinicio del Bot**
+```typescript
+// NUEVO: Siempre genera contexto fresco después del reinicio
+const isFirstMessageAfterRestart = !cached || (now - cached.timestamp) > CONTEXT_CACHE_TTL;
+if (isFirstMessageAfterRestart) {
+    // Generar contexto fresco, ignorar cache
+}
+```
+
+#### **5. Formato Optimizado para IA**
+```
+Fecha: 20/07/2025 | Hora: 1:28 AM (Colombia)
+Cliente: Pa'Cartagena | Contacto WhatsApp: Pa'Cartagena | Status: nuevo
+---
+Mensaje del cliente:
+```
+
+### **✅ BENEFICIOS LOGRADOS**
+- **IA entiende la hora**: Formato AM/PM claro
+- **IA reconoce nombres**: Estructura diferenciada cliente/contacto
+- **Menos tokens**: Sin emojis innecesarios
+- **Cache eficiente**: 1 hora TTL balanceado
+- **Contexto fresco**: Después de reinicios del bot
+
+---
+
+## 📄 DIVISIÓN INTELIGENTE DE MENSAJES ✅ IMPLEMENTADO JULIO 2025
+
+### **✅ PROBLEMA RESUELTO**
+Los mensajes largos de OpenAI se enviaban como un solo bloque, causando mala experiencia de usuario.
+
+### **✅ SOLUCIÓN IMPLEMENTADA**
+
+#### **1. División por Párrafos Inteligente**
+```typescript
+// Detecta dobles saltos de línea automáticamente
+const paragraphs = message.split(/\n\n+/).map(chunk => chunk.trim()).filter(chunk => chunk.length > 0);
+
+// Si hay párrafos claramente separados, los usa
+if (paragraphs.length > 1) {
+    chunks = paragraphs;
+}
+```
+
+#### **2. Agrupación de Listas con Bullets**
+```typescript
+// Mantiene bullets juntos con su título
+if (line.endsWith(':') && nextLine && nextLine.trim().match(/^[•\-\*]/)) {
+    // Agrupa título con bullets
+}
+```
+
+#### **3. Typing Indicators Diferenciados**
+```typescript
+// Primer mensaje: 3 segundos de typing
+// Mensajes siguientes: 2 segundos de typing
+typing_time: i === 0 ? 3 : 2
+```
+
+#### **4. Pausa Entre Mensajes**
+```typescript
+// Pausa natural de 500ms entre chunks
+if (!isLastChunk) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+}
+```
+
+### **✅ EJEMPLO DE FUNCIONAMIENTO**
+
+**Entrada de OpenAI:**
+```
+¡Hola! Me alegra poder ayudarte con tu reserva.
+
+Tenemos varias opciones disponibles:
+
+**Opción 1 - Apartaestudio Vista Mar**:
+• Capacidad: 2-4 personas
+• Precio: $170.000/noche
+• Vista directa al mar
+
+¿Cuál te gustaría reservar?
+```
+
+**Salida en WhatsApp:**
+1. **Mensaje 1** (typing 3s): "¡Hola! Me alegra poder ayudarte con tu reserva."
+2. **Mensaje 2** (typing 2s): "Tenemos varias opciones disponibles:"
+3. **Mensaje 3** (typing 2s): "**Opción 1 - Apartaestudio Vista Mar**:\n• Capacidad: 2-4 personas\n• Precio: $170.000/noche\n• Vista directa al mar"
+4. **Mensaje 4** (typing 2s): "¿Cuál te gustaría reservar?"
+
+### **✅ BENEFICIOS LOGRADOS**
+- **Experiencia natural**: Simula escritura humana
+- **Mejor legibilidad**: Mensajes más cortos y digeribles
+- **Typing indicators**: Muestra "escribiendo..." entre mensajes
+- **Agrupación inteligente**: Mantiene listas y bullets juntos
+- **Performance optimizada**: Solo divide cuando es necesario
 
 ---
 

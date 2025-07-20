@@ -1,206 +1,147 @@
-# 🗺️ **GUÍA DE NAVEGACIÓN - TeAlquilamos Bot**
+# 🧭 GUÍA DE NAVEGACIÓN - BOT WHATSAPP
 
-> **Mapa completo para navegar y entender el proyecto en 5inutos**
+## 📚 DOCUMENTACIÓN PRINCIPAL
 
-## 🎯 **RUTA DE NAVEGACIÓN RÁPIDA (5 MINUTOS)**
+### 🚀 **Inicio Rápido**
+- [QUICK_START.md](./QUICK_START.md) - Configuración inicial en 5 minutos
+- [README.md](./README.md) - Documentación principal del proyecto
+- [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md) - Estructura de archivos y carpetas
 
-### **1 PRIMER CONTACTO (30segundos)**
-- **📄 README.md** - Visión general del proyecto
-- **📄 package.json** - Tecnologías y dependencias
-- **📄 src/app-unified.ts** - Punto de entrada principal
-
-### **2RQUITECTURA (1nuto)**
-- **📁 src/** - Código fuente organizado por capas
-- **📁 docs/ARCHITECTURE.md** - Diseño del sistema
-- **📁 docs/API_ENDPOINTS.md** - Endpoints disponibles
-
-### **3 FUNCIONALIDADES (2 minutos)**
-- **📁 docs/features/** - Características específicas
-- **📁 src/functions/** - Funciones de OpenAI
-- **📁 src/services/** - Servicios de negocio
-
-### **4. CONFIGURACIÓN (1o)**
-- **📁 config/** - Configuraciones del sistema
-- **📄 env.example** - Variables de entorno
-- **📁 docs/deployment/** - Guías de despliegue
-
-### **5. DESARROLLO (30segundos)**
-- **📁 docs/development/** - Guías de desarrollo
-- **📁 tests/** - Tests y validaciones
-- **📁 scripts/** - Herramientas de automatización
+### 🏗️ **Arquitectura**
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitectura general del sistema
+- [GOOGLE_CLOUD_ARCHITECTURE.md](./GOOGLE_CLOUD_ARCHITECTURE.md) - Infraestructura en Google Cloud
+- [docs/architecture/](./architecture/) - Documentación detallada de arquitectura
 
 ---
 
-## 🏗️ **ARQUITECTURA DEL SISTEMA**
+## 🎯 **FUNCIONALIDADES**
 
-### **CAPA DE PRESENTACIÓN**
-```
-src/
-├── app-unified.ts              # 🚀 PUNTO DE ENTRADA
-├── routes/                     # Endpoints de la API
-└── providers/                  # Proveedores externos
-```
+### 🤖 **Funciones Actuales**
+- [docs/features/FUNCTION_INVENTORY.md](./features/FUNCTION_INVENTORY.md) - Inventario completo de funciones
+- [docs/features/ASSISTANT_CONFIG.md](./features/ASSISTANT_CONFIG.md) - Configuración del asistente
+- [docs/features/BEDS24_INTEGRATION_COMPLETE.md](./features/BEDS24_INTEGRATION_COMPLETE.md) - Integración con Beds24
 
-### **CAPA DE LÓGICA DE NEGOCIO**
-```
-src/
-├── handlers/                   # Manejadores de eventos
-├── services/                   # Servicios de negocio
-└── functions/                  # Funciones de OpenAI
-```
+### 📱 **NUEVAS FUNCIONALIDADES MEDIA** ⭐
+- [docs/features/PLAN NUEVAS FUNCIONALIDADES.md](./features/PLAN%20NUEVAS%20FUNCIONALIDADES.md) - **Plan completo de implementación**
+- [docs/features/SIGUIENTE_IMPLEMENTACION.md](./features/SIGUIENTE_IMPLEMENTACION.md) - Roadmap actualizado
 
-### **CAPA DE DATOS**
-```
-src/
-├── utils/persistence/          # Persistencia de datos
-├── utils/context/              # Gestión de contexto
-└── config/                     # Configuraciones
-```
+#### 🎯 **Funcionalidades Planificadas:**
+1. **📱 Detección de Respuestas Citadas** - Contexto mejorado
+2. **🖼️ Procesamiento de Imágenes** - Análisis con OpenAI Vision
+3. **🎤 Transcripción de Voz** - Conversión audio-texto con Whisper
+4. **🔊 Respuestas de Voz** - Generación de audio con TTS
 
-### **CAPA DE UTILIDADES**
-```
-src/
-├── utils/logging/              # Sistema de logs
-├── utils/monitoring/           # Monitoreo y métricas
-└── utils/whapi/                # Utilidades de WhatsApp
-```
+### 🔧 **Características Avanzadas**
+- [docs/features/CONTEXTO_TEMPORAL_OPTIMIZADO.md](./features/CONTEXTO_TEMPORAL_OPTIMIZADO.md) - Sistema de contexto temporal
+- [docs/features/SISTEMA_LOCK_COMPLETO.md](./features/SISTEMA_LOCK_COMPLETO.md) - Sistema de bloqueo y recuperación
+- [docs/features/TYPING_SYSTEM_IMPLEMENTATION_SUMMARY.md](./features/TYPING_SYSTEM_IMPLEMENTATION_SUMMARY.md) - Sistema de typing
 
 ---
 
-## 📚 **DOCUMENTACIÓN JERÁRQUICA**
+## 🔌 **INTEGRACIONES**
 
-### **NIVEL1 VISIÓN GENERAL**
-- **README.md** - Propósito y características
-- **QUICK_START.md** - Inicio rápido
-- **PROJECT_STRUCTURE.md** - Estructura completa
+### 💬 **WhatsApp Business API**
+- [docs/integrations/WHAPI_COMPLETE_API_REFERENCE.md](./integrations/WHAPI_COMPLETE_API_REFERENCE.md) - Referencia completa de WHAPI
 
-### **NIVEL 2: ARQUITECTURA**
-- **docs/ARCHITECTURE.md** - Diseño del sistema
-- **docs/API_ENDPOINTS.md** - API reference
-- **docs/SECURITY_AND_DEPLOYMENT.md** - Seguridad
-
-### **NIVEL 3FUNCIONALIDADES**
-- **docs/features/** - Características específicas
-- **docs/integrations/** - Integraciones externas
-- **docs/functions/** - Funciones de OpenAI
-
-### **NIVEL4 DESARROLLO**
-- **docs/development/** - Guías de desarrollo
-- **docs/guides/** - Tutoriales y troubleshooting
-- **docs/logging/** - Sistema de logging
-
-### **NIVEL 5: MANTENIMIENTO**
-- **docs/progress/** - Estado del proyecto
-- **docs/legacy/** - Documentación histórica
-- **docs/archive/** - Archivos obsoletos
+### 🏨 **Beds24**
+- [docs/integrations/beds24/](./integrations/beds24/) - Documentación de integración con Beds24
+- [docs/features/BEDS24_PRIORITY_LOGIC.md](./features/BEDS24_PRIORITY_LOGIC.md) - Lógica de prioridades
 
 ---
 
-## 🔍 **BÚSQUEDA RÁPIDA POR FUNCIONALIDAD**
+## 🛠️ **DESARROLLO**
 
-### **🤖 IA y OpenAI**
-- **src/handlers/openai_handler.ts** - Manejador principal
-- **src/functions/** - Funciones de OpenAI
-- **docs/features/OPENAI_CONTEXT_MESSAGES.md** - Contexto
+### 📖 **Guías de Desarrollo**
+- [docs/development/](./development/) - Guías de desarrollo
+- [docs/development/local-setup.md](./development/local-setup.md) - Configuración local
+- [docs/development/GIT_WORKFLOW_MANUAL.md](./development/GIT_WORKFLOW_MANUAL.md) - Flujo de trabajo con Git
 
-### **💬 WhatsApp**
-- **src/providers/whapi.provider.ts** - Proveedor WhatsApp
-- **src/utils/whapi/** - Utilidades WhatsApp
-- **docs/integrations/WHAPI_COMPLETE_API_REFERENCE.md** - API
+### 🧪 **Testing**
+- [tests/README.md](../tests/README.md) - Guía de testing
+- [tests/beds24/](../tests/beds24/) - Tests de integración Beds24
+- [tests/escalation/](../tests/escalation/) - Tests de escalamiento
 
-### **🏨 Beds24**
-- **src/services/beds24** - Servicio Beds24
-- **src/functions/availability/** - Consultas disponibilidad
-- **docs/features/BEDS24_INTEGRATION_COMPLETE.md** - Integración
-
-### **📊 Monitoreo**
-- **src/utils/monitoring/dashboard.ts** - Dashboard
-- **src/routes/metrics.ts** - Endpoints métricas
-- **docs/DASHBOARD_GUIDE.md** - Guía dashboard
-
-### **🔧 Configuración**
-- **src/config/** - Configuraciones
-- **config/** - Archivos de configuración
-- **docs/deployment/** - Guías despliegue
+### 📊 **Monitoreo y Logs**
+- [docs/logging/LOGGING_SYSTEM_COMPLETE.md](./logging/LOGGING_SYSTEM_COMPLETE.md) - Sistema de logging
+- [tools/log-tools/](../tools/log-tools/) - Herramientas de análisis de logs
 
 ---
 
-## 🚀 **RUTAS DE ACCESO RÁPIDO**
+## 🚀 **DEPLOYMENT**
 
-### **PARA DESARROLLADORES NUEVOS**1 README.md → QUICK_START.md → docs/development/local-setup.md
-2src/app-unified.ts → docs/ARCHITECTURE.md → docs/API_ENDPOINTS.md
+### ☁️ **Google Cloud Run**
+- [docs/deployment/](./deployment/) - Guías de deployment
+- [docs/deployment/README.md](./deployment/README.md) - Guía principal de deployment
+- [docs/deployment/HISTORIAL_SOLUCION_CLOUD_RUN.md](./deployment/HISTORIAL_SOLUCION_CLOUD_RUN.md) - Historial de soluciones
 
-### **PARA DEBUGGING**
-1 docs/guides/TROUBLESHOOTING_AND_FAQ.md
-2. src/utils/logging/ → logs/
-3 docs/logging/LOGGING_SYSTEM_COMPLETE.md
-
-### **PARA DESPLIEGUE**
-1. docs/deployment/RAILWAY_DEPLOYMENT_GUIDE.md2 docs/SECURITY_AND_DEPLOYMENT.md
-3. scripts/windows/ → scripts/assistant-management/
-
-### **PARA MANTENIMIENTO**1 docs/progress/ESTADO_FINAL_PROYECTO.md
-2. docs/development/ → docs/features/
-3. tests/ → scripts/
+### 🔧 **Scripts de Deployment**
+- [scripts/pre-deploy.ps1](../scripts/pre-deploy.ps1) - Script de pre-deployment
+- [scripts/predeploy-checklist.js](../scripts/predeploy-checklist.js) - Checklist de deployment
+- [scripts/verify-build.js](../scripts/verify-build.js) - Verificación de build
 
 ---
 
-## 📋 **CHECKLIST DE NAVEGACIÓN**
+## 📈 **MÉTRICAS Y MONITOREO**
 
-### **✅ COMPRENSIÓN BÁSICA**
-- README.md completo
-- [ ] Revisar package.json y dependencias
-- [ ] Entender estructura de carpetas
-- [ ] Identificar punto de entrada (app-unified.ts)
+### 📊 **Dashboard y Métricas**
+- [docs/DASHBOARD_GUIDE.md](./DASHBOARD_GUIDE.md) - Guía del dashboard
+- [docs/development/DASHBOARD_WEB_DESARROLLO.md](./development/DASHBOARD_WEB_DESARROLLO.md) - Dashboard de desarrollo
 
-### **✅ ARQUITECTURA**
-- Revisar docs/ARCHITECTURE.md
--  Entender flujo de datos
-- [ ] Identificar componentes principales
--apear dependencias entre módulos
-
-### **✅ FUNCIONALIDADES**
-- orar docs/features/
-- [ ] Entender funciones de OpenAI
--isar integraciones externas
-- [ ] Comprender sistema de contexto
-
-### **✅ DESARROLLO**
-- [ ] Configurar entorno local
-- Ejecutar tests básicos
-- [ ] Revisar scripts disponibles
-- [ ] Entender sistema de logging
-
-### **✅ PRODUCCIÓN**
--] Revisar guías de despliegue
-- [ ] Entender variables de entorno
-- omprender monitoreo
-- [ ] Conocer troubleshooting
+### 🔍 **Análisis y Optimización**
+- [docs/development/OPTIMIZACION_CLOUD_RUN.md](./development/OPTIMIZACION_CLOUD_RUN.md) - Optimizaciones de Cloud Run
+- [docs/development/OPTIMIZACION_MEMORIA_COMPLETADA.md](./development/OPTIMIZACION_MEMORIA_COMPLETADA.md) - Optimizaciones de memoria
 
 ---
 
-## 🎯 **PRINCIPIOS DE ORGANIZACIÓN**
+## 🆘 **SOPORTE Y TROUBLESHOOTING**
 
-### **1JERARQUÍA CLARA**
-- Documentación organizada por niveles de detalle
-- Navegación intuitiva de general a específico
-- Separación clara entre documentación y código
+### ❓ **FAQ y Problemas Comunes**
+- [docs/guides/TROUBLESHOOTING_AND_FAQ.md](./guides/TROUBLESHOOTING_AND_FAQ.md) - Preguntas frecuentes y solución de problemas
+- [docs/guides/HERRAMIENTAS_BOT.md](./guides/HERRAMIENTAS_BOT.md) - Herramientas del bot
 
-### **2. CONSISTENCIA**
-- Nomenclatura uniforme en archivos y carpetas
-- Estructura similar en todos los módulos
-- Patrones de documentación consistentes
-
-### **3. ACCESIBILIDAD**
-- Información crítica visible desde la raíz
-- Enlaces cruzados entre documentos relacionados
-- Búsqueda rápida por funcionalidad
-
-### **4. MANTENIBILIDAD**
-- Documentación actualizada automáticamente
-- Separación entre estado actual e histórico
-- Archivos obsoletos claramente marcados
+### 🔧 **Mantenimiento**
+- [docs/ASSISTANT_MANAGEMENT.md](./ASSISTANT_MANAGEMENT.md) - Gestión del asistente
+- [scripts/assistant-management/](../scripts/assistant-management/) - Scripts de gestión
 
 ---
 
-*Esta guía debe ser el primer documento que cualquier IA o desarrollador lea para entender el proyecto completo.* 
+## 📋 **ESTADO DEL PROYECTO**
+
+### 📈 **Progreso Actual**
+- [docs/progress/](./progress/) - Documentación de progreso
+- [docs/progress/ESTADO_FINAL_PROYECTO.md](./progress/ESTADO_FINAL_PROYECTO.md) - Estado actual del proyecto
+- [docs/progress/TAREAS_PENDIENTES.md](./progress/TAREAS_PENDIENTES.md) - Tareas pendientes
+
+### 🔄 **Actualizaciones Recientes**
+- [docs/progress/ACTUALIZACION_JULIO_2025.md](./progress/ACTUALIZACION_JULIO_2025.md) - Actualización Julio 2025
+- [docs/progress/OPTIMIZACIONES_RECIENTES_JULIO_2025.md](./progress/OPTIMIZACIONES_RECIENTES_JULIO_2025.md) - Optimizaciones recientes
+
+---
+
+## 🎯 **PRÓXIMOS PASOS**
+
+### 🚀 **Implementación Inmediata**
+1. **Revisar** [PLAN NUEVAS FUNCIONALIDADES.md](./features/PLAN%20NUEVAS%20FUNCIONALIDADES.md)
+2. **Configurar** variables de entorno en `env.example`
+3. **Seguir** las etapas del plan secuencialmente
+4. **Probar** cada funcionalidad antes de continuar
+
+### 📊 **Monitoreo Post-Implementación**
+- Verificar logs con emojis: 🎤🖼️🔊📱
+- Acceder a `/metrics/media` para estadísticas
+- Monitorear costos y performance
+
+---
+
+## 🔗 **ENLACES RÁPIDOS**
+
+| Documento | Descripción | Estado |
+|-----------|-------------|--------|
+| [QUICK_START.md](./QUICK_START.md) | Inicio rápido | ✅ |
+| [PLAN NUEVAS FUNCIONALIDADES.md](./features/PLAN%20NUEVAS%20FUNCIONALIDADES.md) | **Plan de implementación** | 📋 |
+| [FUNCTION_INVENTORY.md](./features/FUNCTION_INVENTORY.md) | Inventario de funciones | ✅ |
+| [TROUBLESHOOTING_AND_FAQ.md](./guides/TROUBLESHOOTING_AND_FAQ.md) | Problemas comunes | ✅ |
+
+---
+
+*Última actualización: Julio 2025 - Funcionalidades media agregadas al roadmap* 
