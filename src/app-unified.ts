@@ -1126,6 +1126,96 @@ function setupWebhooks() {
     async function sendWhatsAppMessage(chatId: string, message: string) {
         const shortUserId = getShortUserId(chatId);
         
+        // NUEVO: Decisión inteligente de usar voz
+        const userState = globalUserStates.get(chatId) || {};
+        const messageLength = message.length;
+        const voiceThreshold = parseInt(process.env.VOICE_THRESHOLD || '150');
+        const randomProbability = parseFloat(process.env.VOICE_RANDOM_PROBABILITY || '0.1');
+        
+        // Criterios para usar voz
+        const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && (
+            userState.lastInputVoice ||                    // Usuario envió voz
+            messageLength > voiceThreshold ||              // Mensaje largo
+            message.includes('🎤') ||                      // Respuesta a transcripción
+            Math.random() < randomProbability              // Factor aleatorio
+        );
+        
+        if (shouldUseVoice) {
+            try {
+                console.log(`${getTimestamp()} 🔊 [${shortUserId}] Generando respuesta de voz (${messageLength} chars)...`);
+                
+                // Limpiar emojis y caracteres especiales para TTS
+                const cleanMessage = message
+                    .replace(/[\u{1F600}-\u{1F6FF}]/gu, '') // Emojis
+                    .replace(/\*/g, '')                      // Asteriscos
+                    .substring(0, 4096);                     // Límite TTS
+                
+                // Generar audio con TTS
+                const ttsResponse = await openaiClient.audio.speech.create({
+                    model: 'tts-1',
+                    voice: process.env.TTS_VOICE as any || 'alloy',
+                    input: cleanMessage,
+                    speed: 1.0
+                });
+                
+                // Convertir respuesta a buffer
+                const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+                
+                // Enviar como nota de voz via WHAPI
+                const voiceEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/voice`;
+                const voicePayload = {
+                    to: chatId,
+                    media: audioBuffer.toString('base64'),
+                    caption: "🔊" // Indicador opcional
+                };
+                
+                const whapiResponse = await fetch(voiceEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(voicePayload)
+                });
+                
+                if (whapiResponse.ok) {
+                    const responseData = await whapiResponse.json() as any;
+                    
+                    // Guardar ID del mensaje
+                    if (responseData.message?.id) {
+                        botSentMessages.add(responseData.message.id);
+                        setTimeout(() => {
+                            botSentMessages.delete(responseData.message.id);
+                        }, 10 * 60 * 1000);
+                    }
+                    
+                    console.log(`${getTimestamp()} 🔊 [${shortUserId}] ✓ Respuesta de voz enviada`);
+                    
+                    logSuccess('VOICE_RESPONSE_SENT', 'Respuesta de voz enviada', {
+                        userId: shortUserId,
+                        messageLength,
+                        voice: process.env.TTS_VOICE || 'alloy'
+                    });
+                    
+                    // Limpiar flag de voz después de responder
+                    userState.lastInputVoice = false;
+                    globalUserStates.set(chatId, userState);
+                    
+                    return true; // Éxito, no enviar texto
+                } else {
+                    throw new Error(`WHAPI error: ${whapiResponse.status}`);
+                }
+                
+            } catch (voiceError: any) {
+                logError('VOICE_SEND_ERROR', 'Error enviando voz, fallback a texto', {
+                    userId: shortUserId,
+                    error: voiceError.message
+                });
+                console.log(`${getTimestamp()} ⚠️ [${shortUserId}] Error en voz, enviando como texto`);
+                // Continuar con envío de texto
+            }
+        }
+        
         // 🔧 NUEVO: No enviar mensajes vacíos
         if (!message || message.trim() === '') {
             logInfo('WHATSAPP_SKIP_EMPTY', `Saltando envío de mensaje vacío para ${shortUserId}`, {
@@ -2491,6 +2581,55 @@ function setupWebhooks() {
                         await subscribeToPresence(shortUserId);
                         
                         console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → Buffer global`);
+                    }
+                    // NUEVO: Procesar mensajes de imagen
+                    else if (message.type === 'image' && !message.from_me) {
+                        const userJid = message.from;
+                        const chatId = message.chat_id;
+                        const userName = cleanContactName(message.from_name);
+                        const shortUserId = getShortUserId(userJid);
+                        
+                        if (process.env.ENABLE_IMAGE_PROCESSING === 'true') {
+                            try {
+                                const imageUrl = message.image?.url || message.image?.link;
+                                
+                                if (!imageUrl) {
+                                    logWarning('IMAGE_NO_URL', 'Imagen sin URL', { userId: shortUserId });
+                                    addToGlobalBuffer(userJid, '[Cliente envió una imagen]', chatId, userName);
+                                    continue;
+                                }
+                                
+                                console.log(`${getTimestamp()} 🖼️ [${shortUserId}] Procesando imagen...`);
+                                
+                                // Analizar imagen de forma asíncrona
+                                analyzeImage(imageUrl, userJid).then(description => {
+                                    // Agregar descripción al buffer
+                                    const imageMessage = `[IMAGEN: ${description}]`;
+                                    addToGlobalBuffer(userJid, imageMessage, chatId, userName);
+                                    
+                                    console.log(`${getTimestamp()} 🖼️ [${shortUserId}] Imagen analizada: ${description.substring(0, 50)}...`);
+                                    
+                                    // Log para métricas
+                                    logSuccess('IMAGE_PROCESSED', 'Imagen procesada exitosamente', {
+                                        userId: shortUserId,
+                                        descriptionLength: description.length
+                                    });
+                                }).catch(error => {
+                                    // Fallback en caso de error
+                                    addToGlobalBuffer(userJid, '[Cliente envió una imagen]', chatId, userName);
+                                });
+                                
+                            } catch (error) {
+                                logError('IMAGE_PROCESSING_ERROR', 'Error procesando imagen', {
+                                    userId: shortUserId,
+                                    error: error.message
+                                });
+                                addToGlobalBuffer(userJid, '[Cliente envió una imagen]', chatId, userName);
+                            }
+                        } else {
+                            // Si está deshabilitado, solo registrar
+                            addToGlobalBuffer(userJid, '[Cliente envió una imagen]', chatId, userName);
+                        }
                     }
                     // NUEVO: Procesar mensajes de voz
                     else if ((message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') && !message.from_me) {

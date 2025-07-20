@@ -218,4 +218,135 @@ Ideal para:
 - [x] Etapa 1: Detección de Respuestas Citadas
 - [x] Etapa 2: Procesamiento de Imágenes
 - [x] Etapa 3: Transcripción de Voz
-- [ ] Etapa 4: Respuestas de Voz
+- [x] Etapa 4: Respuestas de Voz
+
+---
+
+## 🎯 Etapa 4: Respuestas de Voz Automáticas ✅
+
+### Descripción
+Esta funcionalidad genera automáticamente respuestas en voz usando OpenAI TTS (Text-to-Speech), decidiendo inteligentemente cuándo usar voz basándose en el contexto de la conversación.
+
+### Implementación Completada
+
+#### 1. Cambios en el Código
+
+**Archivo: `src/app-unified.ts`**
+- Modificada función `sendWhatsAppMessage()` para incluir lógica de decisión de voz
+- Implementada generación de audio con OpenAI TTS
+- Conversión y envío de audio como nota de voz via WHAPI
+- Fallback automático a texto si falla el envío de voz
+
+#### 2. Cómo Funciona
+
+El bot decide usar voz cuando:
+1. **Usuario envió voz** - Si `lastInputVoice = true`
+2. **Mensaje largo** - Si supera `VOICE_THRESHOLD` caracteres
+3. **Respuesta a transcripción** - Si el mensaje contiene emoji 🎤
+4. **Factor aleatorio** - Probabilidad configurable para variedad
+
+Proceso:
+1. Evalúa criterios de decisión
+2. Limpia el texto (emojis, caracteres especiales)
+3. Genera audio con OpenAI TTS
+4. Convierte a base64
+5. Envía como nota de voz via WHAPI
+6. Fallback a texto si hay error
+
+### Configuración
+
+Variables de entorno relevantes:
+```env
+ENABLE_VOICE_RESPONSES=false       # Toggle principal
+TTS_VOICE=alloy                   # Voz a usar
+VOICE_THRESHOLD=150               # Caracteres mínimos
+VOICE_RANDOM_PROBABILITY=0.1      # 10% probabilidad aleatoria
+```
+
+Voces disponibles:
+- **alloy** - Neutral, balanceada
+- **echo** - Masculina, profunda
+- **fable** - Británica, expresiva
+- **onyx** - Masculina, grave
+- **nova** - Femenina, cálida
+- **shimmer** - Femenina, suave
+
+### Activación
+
+1. En tu archivo `.env`:
+   ```env
+   ENABLE_VOICE_RESPONSES=true
+   TTS_VOICE=nova  # O tu preferida
+   ```
+
+2. Reinicia el bot
+
+### Pruebas
+
+#### Prueba Manual
+1. **Test voz→voz**: Envía una nota de voz, deberías recibir respuesta en voz
+2. **Test mensaje largo**: Envía mensaje > 150 caracteres
+3. **Test mensaje corto**: Envía mensaje < 150 caracteres (respuesta en texto)
+
+#### Script de Prueba
+```bash
+node scripts/test-voice-responses.js
+```
+
+Este script prueba:
+- Entrada de voz → Respuesta de voz
+- Mensaje largo → Respuesta de voz
+- Mensaje corto → Respuesta de texto
+
+### Logs y Monitoreo
+
+Logs generados:
+- `VOICE_RESPONSE_SENT` - Respuesta de voz enviada exitosamente
+- `VOICE_SEND_ERROR` - Error enviando voz (fallback a texto)
+- Console logs con emoji 🔊 para identificación visual
+
+### Optimizaciones
+
+- Limpieza automática de emojis y caracteres especiales
+- Límite de 4096 caracteres para TTS
+- Fallback robusto a texto si falla
+- Flag `lastInputVoice` se limpia después de responder
+
+### Criterios de Decisión
+
+1. **Prioridad alta**: Usuario envió voz
+2. **Prioridad media**: Mensaje largo o contiene 🎤
+3. **Prioridad baja**: Factor aleatorio
+
+### Casos de Uso
+
+Ideal para:
+- Respuestas a consultas por voz
+- Mensajes largos o explicaciones detalladas
+- Crear experiencia más conversacional
+- Accesibilidad para usuarios con dificultades visuales
+
+### Costos
+
+- TTS-1: $0.015 por 1K caracteres
+- Aproximadamente $0.05-0.15 por respuesta de voz típica
+- Controlable via thresholds y probabilidad
+
+### Troubleshooting
+
+**Problema**: No se generan respuestas de voz
+- Verifica `ENABLE_VOICE_RESPONSES=true`
+- Confirma que OpenAI API key tenga acceso a TTS
+- Revisa el threshold configurado
+
+**Problema**: Voz suena robótica o poco natural
+- Prueba diferentes voces (nova, alloy, echo)
+- Ajusta la velocidad si es necesario
+
+**Problema**: Demasiadas respuestas de voz
+- Aumenta `VOICE_THRESHOLD` (ej: 200-300)
+- Reduce `VOICE_RANDOM_PROBABILITY` (ej: 0.05)
+
+**Problema**: Error al enviar audio
+- Verifica límites de WHAPI para audio
+- Revisa que el formato base64 sea correcto
