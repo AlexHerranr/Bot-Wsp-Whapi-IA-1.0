@@ -1127,14 +1127,14 @@ function setupWebhooks() {
         const shortUserId = getShortUserId(chatId);
         
         // NUEVO: Decisión inteligente de usar voz
-        const userState = globalUserStates.get(chatId) || {};
+        const userState = globalUserStates.get(chatId);
         const messageLength = message.length;
         const voiceThreshold = parseInt(process.env.VOICE_THRESHOLD || '150');
         const randomProbability = parseFloat(process.env.VOICE_RANDOM_PROBABILITY || '0.1');
         
         // Criterios para usar voz
         const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && (
-            userState.lastInputVoice ||                    // Usuario envió voz
+            userState?.lastInputVoice ||                    // Usuario envió voz
             messageLength > voiceThreshold ||              // Mensaje largo
             message.includes('🎤') ||                      // Respuesta a transcripción
             Math.random() < randomProbability              // Factor aleatorio
@@ -1198,8 +1198,10 @@ function setupWebhooks() {
                     });
                     
                     // Limpiar flag de voz después de responder
-                    userState.lastInputVoice = false;
-                    globalUserStates.set(chatId, userState);
+                    if (userState) {
+                        userState.lastInputVoice = false;
+                        globalUserStates.set(chatId, userState);
+                    }
                     
                     return true; // Éxito, no enviar texto
                 } else {
@@ -2551,9 +2553,26 @@ function setupWebhooks() {
                             });
                             
                             // Actualizar estadísticas
-                            const userState = globalUserStates.get(userJid) || {} as UserState;
-                            userState.quotedMessagesCount = (userState.quotedMessagesCount || 0) + 1;
-                            userState.lastMessageTimestamp = Date.now();
+                            let userState = globalUserStates.get(userJid);
+                            if (!userState) {
+                                // Crear un UserState mínimo si no existe
+                                userState = {
+                                    userId: userJid,
+                                    isTyping: false,
+                                    lastTypingTimestamp: 0,
+                                    lastMessageTimestamp: Date.now(),
+                                    messages: [],
+                                    chatId: chatId,
+                                    userName: userName,
+                                    typingEventsCount: 0,
+                                    averageTypingDuration: 0,
+                                    quotedMessagesCount: 1,
+                                    lastInputVoice: false
+                                };
+                            } else {
+                                userState.quotedMessagesCount = (userState.quotedMessagesCount || 0) + 1;
+                                userState.lastMessageTimestamp = Date.now();
+                            }
                             globalUserStates.set(userJid, userState);
                             
                             // Usar el texto enriquecido en lugar del original
@@ -2654,9 +2673,26 @@ function setupWebhooks() {
                                 console.log(`${getTimestamp()} 🎤 [${shortUserIdVoice}] Procesando nota de voz...`);
                                 
                                 // Marcar que el input fue voz para respuesta automática
-                                const userState = globalUserStates.get(userJid) || {} as UserState;
-                                userState.lastInputVoice = true;
-                                userState.lastMessageTimestamp = Date.now();
+                                let userState = globalUserStates.get(userJid);
+                                if (!userState) {
+                                    // Crear un UserState mínimo si no existe
+                                    userState = {
+                                        userId: userJid,
+                                        isTyping: false,
+                                        lastTypingTimestamp: 0,
+                                        lastMessageTimestamp: Date.now(),
+                                        messages: [],
+                                        chatId: chatId,
+                                        userName: userName,
+                                        typingEventsCount: 0,
+                                        averageTypingDuration: 0,
+                                        quotedMessagesCount: 0,
+                                        lastInputVoice: true
+                                    };
+                                } else {
+                                    userState.lastInputVoice = true;
+                                    userState.lastMessageTimestamp = Date.now();
+                                }
                                 globalUserStates.set(userJid, userState);
                                 
                                 // Transcribir de forma asíncrona
