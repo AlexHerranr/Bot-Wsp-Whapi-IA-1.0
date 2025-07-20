@@ -771,6 +771,101 @@ function setupWebhooks() {
         }
     }
     
+    // NUEVO: Función auxiliar para transcribir audio
+    async function transcribeAudio(audioUrl: string, userId: string): Promise<string> {
+        try {
+            // Descargar audio
+            const audioResponse = await fetch(audioUrl);
+            if (!audioResponse.ok) {
+                throw new Error(`Error descargando audio: ${audioResponse.status}`);
+            }
+            
+            const audioBuffer = await audioResponse.arrayBuffer();
+            
+            // Validar tamaño
+            const maxSize = parseInt(process.env.MAX_AUDIO_SIZE || '26214400');
+            if (audioBuffer.byteLength > maxSize) {
+                throw new Error(`Audio muy grande: ${audioBuffer.byteLength} bytes`);
+            }
+            
+            console.log(`${getTimestamp()} 🎵 Transcribiendo audio de ${audioBuffer.byteLength} bytes...`);
+            
+            // Crear File object para Whisper
+            const audioFile = new File(
+                [audioBuffer], 
+                'audio.ogg', 
+                { type: 'audio/ogg' }
+            );
+            
+            // Transcribir con Whisper
+            const transcription = await openaiClient.audio.transcriptions.create({
+                file: audioFile,
+                model: 'whisper-1',
+                language: process.env.WHISPER_LANGUAGE || 'es',
+                prompt: 'Transcripción de mensaje de voz de WhatsApp en contexto hotelero.',
+                temperature: 0.2 // Más preciso
+            });
+            
+            return transcription.text || 'Audio sin contenido reconocible';
+            
+        } catch (error) {
+            logError('AUDIO_TRANSCRIPTION_ERROR', 'Error transcribiendo audio', {
+                userId,
+                error: error.message
+            });
+            
+            if (error.message.includes('muy grande')) {
+                return 'Nota de voz muy larga (máximo 5 minutos)';
+            }
+            
+            return 'Nota de voz recibida (no se pudo transcribir)';
+        }
+    }
+    
+    // NUEVO: Función auxiliar para analizar imágenes
+    async function analyzeImage(imageUrl: string, userId: string): Promise<string> {
+        try {
+            const maxSize = parseInt(process.env.MAX_IMAGE_SIZE || '20971520');
+            
+            // Validar URL
+            if (!imageUrl || !imageUrl.startsWith('http')) {
+                throw new Error('URL de imagen inválida');
+            }
+            
+            // Analizar con OpenAI Vision
+            const visionResponse = await openaiClient.chat.completions.create({
+                model: process.env.IMAGE_ANALYSIS_MODEL || 'gpt-4o-mini',
+                messages: [{
+                    role: 'user',
+                    content: [
+                        { 
+                            type: 'text', 
+                            text: 'Analiza esta imagen en el contexto de un hotel. Describe brevemente qué ves, enfocándote en: habitaciones, instalaciones, documentos, o cualquier elemento relevante para consultas hoteleras. Máximo 100 palabras.' 
+                        },
+                        { 
+                            type: 'image_url', 
+                            image_url: { 
+                                url: imageUrl,
+                                detail: 'low' // Optimización de costos
+                            } 
+                        }
+                    ]
+                }],
+                max_tokens: 150,
+                temperature: 0.3 // Respuestas más consistentes
+            });
+            
+            return visionResponse.choices[0].message.content || 'Imagen recibida';
+            
+        } catch (error) {
+            logError('IMAGE_ANALYSIS_ERROR', 'Error analizando imagen', {
+                userId,
+                error: error.message
+            });
+            return 'Imagen recibida (no se pudo analizar)';
+        }
+    }
+    
     async function subscribeToPresence(userId: string): Promise<void> {
         if (subscribedPresences.has(userId)) {
             logDebug('PRESENCE_ALREADY_SUBSCRIBED', `Ya suscrito a presencia de ${userId}`, {
@@ -2365,7 +2460,7 @@ function setupWebhooks() {
                             // Actualizar estadísticas
                             const userState = globalUserStates.get(userJid) || {} as UserState;
                             userState.quotedMessagesCount = (userState.quotedMessagesCount || 0) + 1;
-                            userState.lastMessageTime = Date.now();
+                            userState.lastMessageTimestamp = Date.now();
                             globalUserStates.set(userJid, userState);
                             
                             // Usar el texto enriquecido en lugar del original
@@ -2390,10 +2485,68 @@ function setupWebhooks() {
                         addToGlobalBuffer(userJid, messageText, chatId, userName);
                         
                         // 🔧 NUEVO: Suscribirse a presencia del usuario (solo una vez)
-                        const shortUserId = getShortUserId(userJid);
                         await subscribeToPresence(shortUserId);
                         
                         console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → Buffer global`);
+                    }
+                    // NUEVO: Procesar mensajes de voz
+                    else if ((message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') && !message.from_me) {
+                        const userJid = message.from;
+                        const chatId = message.chat_id;
+                        const userName = cleanContactName(message.from_name);
+                        const shortUserIdVoice = getShortUserId(userJid);
+                        
+                        if (process.env.ENABLE_VOICE_TRANSCRIPTION === 'true') {
+                            try {
+                                const audioUrl = message.voice?.url || 
+                                               message.audio?.url || 
+                                               message.ptt?.url ||
+                                               message.media?.url;
+                                
+                                if (!audioUrl) {
+                                    logWarning('AUDIO_NO_URL', 'Audio sin URL', { userId: shortUserIdVoice });
+                                    addToGlobalBuffer(userJid, '[Nota de voz recibida]', chatId, userName);
+                                    continue;
+                                }
+                                
+                                console.log(`${getTimestamp()} 🎤 [${shortUserIdVoice}] Procesando nota de voz...`);
+                                
+                                // Marcar que el input fue voz para respuesta automática
+                                const userState = globalUserStates.get(userJid) || {} as UserState;
+                                userState.lastInputVoice = true;
+                                userState.lastMessageTimestamp = Date.now();
+                                globalUserStates.set(userJid, userState);
+                                
+                                // Transcribir de forma asíncrona
+                                transcribeAudio(audioUrl, userJid).then(transcription => {
+                                    // Agregar transcripción al buffer con emoji indicador
+                                    const voiceMessage = `🎤 ${transcription}`;
+                                    addToGlobalBuffer(userJid, voiceMessage, chatId, userName);
+                                    
+                                    console.log(`${getTimestamp()} 🎤 [${shortUserIdVoice}] Transcripción: "${transcription.substring(0, 50)}..."`);
+                                    
+                                    // Log para métricas
+                                    logSuccess('VOICE_TRANSCRIBED', 'Voz transcrita exitosamente', {
+                                        userId: shortUserIdVoice,
+                                        transcriptionLength: transcription.length,
+                                        words: transcription.split(' ').length
+                                    });
+                                }).catch(error => {
+                                    // Fallback en caso de error
+                                    addToGlobalBuffer(userJid, '[Nota de voz recibida]', chatId, userName);
+                                });
+                                
+                            } catch (error) {
+                                logError('VOICE_PROCESSING_ERROR', 'Error procesando voz', {
+                                    userId: shortUserIdVoice,
+                                    error: error.message
+                                });
+                                addToGlobalBuffer(userJid, '[Nota de voz recibida]', chatId, userName);
+                            }
+                        } else {
+                            // Si está deshabilitado, solo registrar
+                            addToGlobalBuffer(userJid, '[Nota de voz recibida]', chatId, userName);
+                        }
                     }
             }
             
