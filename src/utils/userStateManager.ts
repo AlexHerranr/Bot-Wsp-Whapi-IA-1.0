@@ -15,6 +15,9 @@ export interface UserState {
     // Métricas para análisis
     typingEventsCount: number;
     averageTypingDuration: number;
+    // NUEVO: Campos para funcionalidades media
+    lastInputVoice?: boolean;
+    quotedMessagesCount?: number;
 }
 
 export class UserStateManager {
