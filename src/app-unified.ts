@@ -134,6 +134,31 @@ const MAX_MESSAGE_LENGTH = 5000;
 // NUEVO: Función helper para timestamps
 const getTimestamp = () => new Date().toISOString();
 
+// NUEVO: Tipos para respuestas de WHAPI
+interface WHAPIMediaLink {
+    link?: string;
+    id?: string;
+    mime_type?: string;
+    file_size?: number;
+}
+
+interface WHAPIMessage {
+    id: string;
+    type: string;
+    audio?: WHAPIMediaLink;
+    voice?: WHAPIMediaLink;
+    ptt?: WHAPIMediaLink;
+    image?: WHAPIMediaLink;
+}
+
+interface WHAPIError {
+    error?: {
+        code: number;
+        message: string;
+        details?: string;
+    };
+}
+
 // 🔧 NUEVO: Sistema de typing dinámico
 // Configuración de timeouts optimizada para mejor UX
 // 🔧 CONSTANTES OBSOLETAS COMENTADAS PARA REGISTRO
@@ -785,18 +810,33 @@ function setupWebhooks() {
             // Si no hay URL, intentar obtenerla desde WHAPI
             if (!finalAudioUrl && messageId) {
                 try {
-                    const mediaResponse = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/media/${messageId}`, {
+                    const messageResponse = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/${messageId}`, {
                         headers: {
                             'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`
                         }
                     });
                     
-                    if (mediaResponse.ok) {
-                        const mediaData = await mediaResponse.json() as { url?: string; link?: string };
-                        finalAudioUrl = mediaData.url || mediaData.link;
-                        logSuccess('AUDIO_URL_FETCHED', 'URL de audio obtenida desde WHAPI', {
+                    if (messageResponse.ok) {
+                        const messageData = await messageResponse.json() as WHAPIMessage;
+                        // Buscar el link en audio, voice o ptt según el tipo
+                        finalAudioUrl = messageData.audio?.link || 
+                                       messageData.voice?.link || 
+                                       messageData.ptt?.link;
+                        
+                        if (finalAudioUrl) {
+                            logSuccess('AUDIO_URL_FETCHED', 'URL de audio obtenida desde WHAPI', {
+                                userId: getShortUserId(userId),
+                                messageId,
+                                type: messageData.type
+                            });
+                        }
+                    } else {
+                        const errorData = await messageResponse.json() as WHAPIError;
+                        logError('AUDIO_MESSAGE_FETCH_ERROR', 'Error obteniendo mensaje desde WHAPI', {
                             userId: getShortUserId(userId),
-                            messageId
+                            messageId,
+                            status: messageResponse.status,
+                            error: errorData.error?.message
                         });
                     }
                 } catch (fetchError) {
@@ -873,18 +913,31 @@ function setupWebhooks() {
             // Si no hay URL, intentar obtenerla desde WHAPI
             if (!finalImageUrl && messageId) {
                 try {
-                    const mediaResponse = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/media/${messageId}`, {
+                    const messageResponse = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/${messageId}`, {
                         headers: {
                             'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`
                         }
                     });
                     
-                    if (mediaResponse.ok) {
-                        const mediaData = await mediaResponse.json() as { url?: string; link?: string };
-                        finalImageUrl = mediaData.url || mediaData.link;
-                        logSuccess('IMAGE_URL_FETCHED', 'URL de imagen obtenida desde WHAPI', {
+                    if (messageResponse.ok) {
+                        const messageData = await messageResponse.json() as WHAPIMessage;
+                        // Obtener el link de la imagen
+                        finalImageUrl = messageData.image?.link;
+                        
+                        if (finalImageUrl) {
+                            logSuccess('IMAGE_URL_FETCHED', 'URL de imagen obtenida desde WHAPI', {
+                                userId: getShortUserId(userId),
+                                messageId,
+                                type: messageData.type
+                            });
+                        }
+                    } else {
+                        const errorData = await messageResponse.json() as WHAPIError;
+                        logError('IMAGE_MESSAGE_FETCH_ERROR', 'Error obteniendo mensaje desde WHAPI', {
                             userId: getShortUserId(userId),
-                            messageId
+                            messageId,
+                            status: messageResponse.status,
+                            error: errorData.error?.message
                         });
                     }
                 } catch (fetchError) {
