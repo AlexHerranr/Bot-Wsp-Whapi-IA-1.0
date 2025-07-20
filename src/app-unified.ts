@@ -2904,9 +2904,18 @@ async function initializeBot() {
     console.log('✅ Bot completamente inicializado');
     
     // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (del comentario externo)
-    logInfo('ORPHANED_RUNS_RECOVERY_START', 'Iniciando recuperación de runs huérfanos');
-    await recoverOrphanedRuns();
-    logSuccess('ORPHANED_RUNS_RECOVERY_COMPLETE', 'Recuperación de runs huérfanos completada');
+    // Ejecutar en background para no bloquear el healthcheck
+    setTimeout(async () => {
+        try {
+            logInfo('ORPHANED_RUNS_RECOVERY_START', 'Iniciando recuperación de runs huérfanos');
+            await recoverOrphanedRuns();
+            logSuccess('ORPHANED_RUNS_RECOVERY_COMPLETE', 'Recuperación de runs huérfanos completada');
+        } catch (error) {
+            logError('ORPHANED_RUNS_RECOVERY_ERROR', 'Error recuperando runs huérfanos', {
+                error: error.message
+            });
+        }
+    }, 5000); // Esperar 5 segundos antes de iniciar la recuperación
     
 
     

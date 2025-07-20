@@ -80,8 +80,8 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     // Puerto dinámico
     const port = parseInt(process.env.PORT || (isLocal ? '3008' : '8080'), 10);
     
-    // Host dinámico
-    const host = isCloudRun ? '0.0.0.0' : 'localhost';
+    // Host dinámico - Railway necesita 0.0.0.0
+    const host = isLocal ? 'localhost' : '0.0.0.0';
     
     // Webhook URL dinámica
     const webhookUrl = process.env.WEBHOOK_URL || (
