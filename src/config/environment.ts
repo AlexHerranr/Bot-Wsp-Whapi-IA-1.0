@@ -55,6 +55,11 @@ let appConfig: AppConfig | null = null;
  * Detecta automáticamente el entorno de ejecución
  */
 const detectEnvironment = (): EnvironmentConfig['environment'] => {
+    // Railway tiene variables específicas
+    if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID) {
+        return 'cloud-run'; // Usamos cloud-run para Railway también (configuración similar)
+    }
+    
     // Cloud Run tiene la variable K_SERVICE
     if (process.env.K_SERVICE) {
         return 'cloud-run';
@@ -86,7 +91,9 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     // Webhook URL dinámica
     const webhookUrl = process.env.WEBHOOK_URL || (
         isCloudRun 
-            ? `${process.env.RAILWAY_URL || 'https://bot-wsp-whapi-ia-10-production.up.railway.app'}/hook`
+            ? (process.env.RAILWAY_PUBLIC_DOMAIN 
+                ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/hook`
+                : 'https://bot-wsp-whapi-ia-10-production.up.railway.app/hook')
             : 'https://actual-bobcat-handy.ngrok-free.app/hook'
     );
     
