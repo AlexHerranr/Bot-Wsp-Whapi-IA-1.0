@@ -1282,23 +1282,20 @@ function setupWebhooks() {
                 // Convertir respuesta a buffer
                 const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
                 
-                // Enviar como audio via WHAPI
-                const audioEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/audio`;
-                const audioPayload = {
+                // Enviar como nota de voz via WHAPI
+                const voiceEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/voice`;
+                const voicePayload = {
                     to: chatId,
-                    media: audioBuffer.toString('base64'),
-                    mime_type: 'audio/mpeg', // OpenAI TTS genera MP3
-                    seconds: Math.ceil(cleanMessage.length / 150 * 60), // Estimación aproximada de duración
-                    no_cache: true // Evitar cache para respuestas dinámicas
+                    media: audioBuffer.toString('base64')
                 };
                 
-                const whapiResponse = await fetch(audioEndpoint, {
+                const whapiResponse = await fetch(voiceEndpoint, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(audioPayload)
+                    body: JSON.stringify(voicePayload)
                 });
                 
                 if (whapiResponse.ok) {
@@ -1312,13 +1309,12 @@ function setupWebhooks() {
                         }, 10 * 60 * 1000);
                     }
                     
-                    console.log(`${getTimestamp()} 🔊 [${shortUserId}] ✓ Respuesta de audio enviada`);
+                    console.log(`${getTimestamp()} 🔊 [${shortUserId}] ✓ Nota de voz enviada`);
                     
-                    logSuccess('AUDIO_RESPONSE_SENT', 'Respuesta de audio enviada', {
+                    logSuccess('VOICE_RESPONSE_SENT', 'Nota de voz enviada exitosamente', {
                         userId: shortUserId,
                         messageLength,
-                        voice: process.env.TTS_VOICE || 'alloy',
-                        estimatedSeconds: audioPayload.seconds
+                        voice: process.env.TTS_VOICE || 'alloy'
                     });
                     
                     // Limpiar flag de voz después de responder
@@ -1334,11 +1330,11 @@ function setupWebhooks() {
                 }
                 
             } catch (voiceError: any) {
-                logError('AUDIO_SEND_ERROR', 'Error enviando audio, fallback a texto', {
+                logError('VOICE_SEND_ERROR', 'Error enviando nota de voz, fallback a texto', {
                     userId: shortUserId,
                     error: voiceError.message
                 });
-                console.log(`${getTimestamp()} ⚠️ [${shortUserId}] Error en audio, enviando como texto`);
+                console.log(`${getTimestamp()} ⚠️ [${shortUserId}] Error en nota de voz, enviando como texto`);
                 // Continuar con envío de texto
             }
         }
