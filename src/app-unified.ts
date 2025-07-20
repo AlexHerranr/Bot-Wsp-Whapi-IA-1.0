@@ -2667,14 +2667,31 @@ function setupWebhooks() {
                                               message.context.quoted_content.caption || 
                                               '[mensaje anterior sin texto]';
                             
+                            // Verificar si el mensaje citado es del bot
+                            const quotedId = message.context.quoted_id;
+                            const isReplyToBot = quotedId && botSentMessages.has(quotedId);
+                            
                             // Enriquecer el mensaje con contexto
-                            const enhancedText = `[Usuario responde a: "${quotedText.substring(0, 50)}${quotedText.length > 50 ? '...' : ''}"] ${messageText}`;
+                            let enhancedText: string;
+                            if (isReplyToBot) {
+                                enhancedText = `[Usuario responde a TU mensaje: "${quotedText.substring(0, 50)}${quotedText.length > 50 ? '...' : ''}"] ${messageText}`;
+                                
+                                logInfo('REPLY_TO_BOT_DETECTED', 'Usuario respondió a mensaje del bot', {
+                                    userId: shortUserId,
+                                    quotedId,
+                                    quotedText: quotedText.substring(0, 100),
+                                    currentText: messageText.substring(0, 100)
+                                });
+                            } else {
+                                enhancedText = `[Usuario responde a: "${quotedText.substring(0, 50)}${quotedText.length > 50 ? '...' : ''}"] ${messageText}`;
+                            }
                             
                             // Log para debugging
                             logInfo('QUOTED_MESSAGE_DETECTED', 'Respuesta a mensaje detectada', {
                                 userId: shortUserId,
                                 quotedText: quotedText.substring(0, 100),
-                                currentText: messageText.substring(0, 100)
+                                currentText: messageText.substring(0, 100),
+                                isReplyToBot
                             });
                             
                             // Actualizar estadísticas
