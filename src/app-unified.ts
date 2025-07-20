@@ -189,8 +189,13 @@ app.use('/metrics', metricsRouter);
 const main = async () => {
     try {
         console.log('\n🚀 Iniciando TeAlquilamos Bot...');
+        console.log(`📍 Environment: ${process.env.NODE_ENV || 'not set'}`);
+        console.log(`📍 PORT: ${process.env.PORT || 'not set'}`);
+        console.log(`📍 Working directory: ${process.cwd()}`);
+        
         appConfig = await loadAndValidateConfig();
         console.log('✅ Configuración y secretos cargados.');
+        console.log(`📍 Config - Host: ${appConfig.host}, Port: ${appConfig.port}`);
         
         logEnvironmentConfig();
         

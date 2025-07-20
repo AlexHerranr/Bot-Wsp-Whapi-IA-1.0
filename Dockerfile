@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile optimizado para Cloud Run
+# Multi-stage Dockerfile optimizado para Railway/Cloud Run
 FROM node:18-alpine AS deps
 WORKDIR /app
 
@@ -36,9 +36,8 @@ RUN pnpm run build
 FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Variables de entorno para Cloud Run
+# Variables de entorno para producción (Railway setea PORT dinámicamente)
 ENV NODE_ENV=production \
-    PORT=8080 \
     NODE_OPTIONS="--max-old-space-size=768"
 
 # Crear usuario no-root
@@ -48,6 +47,7 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copiar solo lo necesario
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/config ./config
 COPY --chown=nodejs:nodejs package.json ./
 
 # Crear directorios necesarios
@@ -57,12 +57,12 @@ RUN mkdir -p /app/logs /app/tmp && \
 # Cambiar a usuario no-root
 USER nodejs
 
-# Exponer puerto
+# Exponer puerto (Railway usa el puerto de la variable PORT)
 EXPOSE 8080
 
-# Health check simplificado
+# Health check usando variable PORT
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:8080/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+    CMD node -e "const port = process.env.PORT || 8080; require('http').get('http://localhost:' + port + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
 
 # Comando de inicio directo
 CMD ["node", "--max-old-space-size=768", "dist/app-unified.js"]
