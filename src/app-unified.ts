@@ -727,12 +727,22 @@ function updateTypingStatus(userId: string, isTyping: boolean): void {
     const buffer = globalMessageBuffers.get(userId);
     if (!buffer) return;
     
+    // 🔧 NUEVO: NO reiniciar timer si hay procesamiento activo
+    if (activeProcessing.has(userId)) {
+        logInfo('GLOBAL_BUFFER_TYPING_SKIPPED', `Typing ignorado - procesamiento activo`, {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            environment: appConfig?.environment
+        });
+        return;
+    }
+    
     // 🔧 UNIFICADO: Reiniciar timer de ${BUFFER_WINDOW_MS/1000} segundos cuando llega typing
     if (buffer.timer) {
         clearTimeout(buffer.timer);
     }
     
-    // CRÍTICO: Mismo timer de 4 segundos que para mensajes
+    // CRÍTICO: Mismo timer de 5 segundos que para mensajes
     buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
     
     // 🔧 ACTUALIZADO: Log visual de typing siempre (rate-limit 10 s)
