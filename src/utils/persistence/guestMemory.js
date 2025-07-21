@@ -3,6 +3,7 @@ import * as path from 'path';
 import { enhancedLog } from '../core/index.js';
 import { whapiLabels } from '../whapi/index.js';
 import { threadPersistence } from './threadPersistence.js';
+import { getCachedChatInfo } from '../../app-unified.js';
 import { 
     incrementLabelCacheHits, 
     incrementLabelCacheMisses, 

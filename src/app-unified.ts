@@ -166,7 +166,7 @@ function getOrCreateUserState(userId: string, chatId?: string, userName?: string
 }
 
 // 🔧 NUEVO: Función helper para obtener información de chat con cache
-async function getCachedChatInfo(userId: string): Promise<any> {
+export async function getCachedChatInfo(userId: string): Promise<any> {
     const now = Date.now();
     const cached = chatInfoCache.get(userId);
     
