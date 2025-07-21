@@ -87,7 +87,8 @@ export class SimpleLockManager {
                 activeLocks: this.userLocks.size
             });
         } else {
-            logDebug('LOCK_ALREADY_RELEASED', 'Lock ya liberado para usuario', {
+            // 🔧 NUEVO: Cambiar de debug a trace para reducir ruido
+            logTrace('LOCK_ALREADY_RELEASED', 'Lock ya liberado para usuario', {
                 userId,
                 activeLocks: this.userLocks.size
             });
@@ -177,11 +178,11 @@ export class SimpleLockManager {
                     errorCount,
                     remainingInQueue: queue.length
                 });
-            } finally {
-                // Liberar el lock al terminar cada mensaje
-                this.releaseUserLock(userId);
             }
         }
+        
+        // 🔧 NUEVO: Liberar el lock una sola vez al terminar toda la cola
+        this.releaseUserLock(userId);
         
         const processingDuration = Date.now() - startTime;
         

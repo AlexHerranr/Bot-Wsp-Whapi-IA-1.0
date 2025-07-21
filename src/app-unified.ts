@@ -105,6 +105,9 @@ let openaiClient: OpenAI;
 let server: http.Server;
 let isServerInitialized = false;
 
+// 🔧 NUEVO: Control de procesamiento activo para evitar duplicados
+const activeProcessing = new Set<string>();
+
 // 🔧 SIMPLIFICADO: UN SOLO BUFFER UNIFICADO - 5 SEGUNDOS PARA TODO
 const globalMessageBuffers = new Map<string, {
     messages: string[],
@@ -430,41 +433,40 @@ function setupEndpoints() {
     
     // Webhook endpoint - siempre disponible
     app.post('/hook', async (req: Request, res: Response) => {
-        console.log(`📨 Webhook recibido en /hook - ${new Date().toISOString()}`);
+        // 🔧 NUEVO: Responder inmediatamente para evitar timeouts
+        res.status(200).json({ 
+            received: true, 
+            timestamp: new Date().toISOString(),
+            environment: appConfig?.environment || 'unknown'
+        });
         
         try {
-            // Si el servidor no está inicializado, responder pero no procesar
+            // Si el servidor no está inicializado, no procesar
             if (!isServerInitialized || !appConfig) {
-                console.log('⚠️ Webhook recibido pero servidor no inicializado');
-                res.status(200).json({ 
-                    received: true, 
-                    processed: false,
-                    reason: 'server_initializing',
-                    timestamp: new Date().toISOString()
-                });
+                logDebug('WEBHOOK_SKIP', 'Webhook recibido pero servidor no inicializado');
+                return;
+            }
+            
+            // 🔧 NUEVO: Filtrado temprano de webhooks
+            const { messages, presences, event } = req.body;
+            
+            // Solo loguear si hay mensajes o presencias relevantes
+            if (messages && Array.isArray(messages) && messages.length > 0) {
+                console.log(`📨 Webhook: ${messages.length} mensajes recibidos`);
+            } else if (presences && event?.type === 'presences') {
+                // Las presencias se manejan en processWebhook
+            } else {
+                // Otros tipos de webhook - no loguear para reducir ruido
                 return;
             }
             
             // Procesar webhook
             await processWebhook(req.body);
             
-            // Responder después del procesamiento exitoso
-            res.status(200).json({ 
-                received: true, 
-                processed: true,
-                timestamp: new Date().toISOString(),
-                environment: appConfig?.environment || 'unknown'
-            });
-            
-            console.log(`✅ Webhook procesado y respuesta 200 enviada`);
-            
         } catch (error) {
-            console.error('❌ Error procesando webhook:', error);
-            res.status(500).json({ 
-                received: true, 
-                processed: false,
-                error: 'processing_error',
-                timestamp: new Date().toISOString()
+            logError('WEBHOOK_ERROR', 'Error procesando webhook', { 
+                error: error instanceof Error ? error.message : String(error),
+                environment: appConfig?.environment
             });
         }
     });
@@ -630,6 +632,19 @@ async function processGlobalBuffer(userId: string): Promise<void> {
         return;
     }
     
+    // 🔧 NUEVO: Verificar si ya hay un procesamiento activo para este usuario
+    if (activeProcessing.has(userId)) {
+        logWarning('BUFFER_PROCESS_SKIPPED', 'Procesamiento ya activo para usuario', {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            messageCount: buffer.messages.length
+        });
+        return;
+    }
+    
+    // Marcar como procesamiento activo
+    activeProcessing.add(userId);
+    
     // 🚀 SIMPLIFICADO: Sin filtros - todos los mensajes van a OpenAI
     const combinedText = buffer.messages
         .join(' ')
@@ -638,9 +653,7 @@ async function processGlobalBuffer(userId: string): Promise<void> {
     
     const messageCount = buffer.messages.length;
     
-    // 🔧 SIMPLIFICADO: Procesar inmediatamente después de 5 segundos
-    console.log(`🔄 [BUFFER_PROCESS] ${buffer.userName}: ${messageCount} mensajes → "${combinedText.substring(0, 40)}..."`);
-    
+    // 🔧 SIMPLIFICADO: Un solo log de procesamiento
     logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global después de 5 segundos`, {
         userJid: getShortUserId(userId),
         userName: buffer.userName,
@@ -652,9 +665,14 @@ async function processGlobalBuffer(userId: string): Promise<void> {
     // Limpiar buffer
     globalMessageBuffers.delete(userId);
     
-    // Procesar mensaje combinado
-    if (processCombinedMessage) {
-        await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
+    try {
+        // Procesar mensaje combinado
+        if (processCombinedMessage) {
+            await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
+        }
+    } finally {
+        // 🔧 NUEVO: Siempre limpiar el flag de procesamiento activo
+        activeProcessing.delete(userId);
     }
 }
 
@@ -671,7 +689,10 @@ function updateTypingStatus(userId: string, isTyping: boolean): void {
     // CRÍTICO: Mismo timer de 5 segundos que para mensajes
     buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
     
-    console.log(`✍️ [TYPING] ${buffer.userName}: Escribiendo... → ⏳ 5s...`);
+    // 🔧 NUEVO: Solo loguear en debug mode
+    if (process.env.DEBUG_LOGS === 'true') {
+        console.log(`✍️ [TYPING] ${buffer.userName}: Escribiendo... → ⏳ 5s...`);
+    }
     
     logInfo('GLOBAL_BUFFER_TYPING', `Timer reiniciado por typing`, {
         userJid: getShortUserId(userId),
@@ -1543,15 +1564,25 @@ function setupWebhooks() {
             const response = await processWithOpenAI(combinedMessage, userId, buffer.chatId, buffer.userName, requestId);
             const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
             
-            // Log mejorado con preview completo y duración real
-            // Detectar si habrá división en párrafos
-            const willSplit = response.includes('\n\n') || response.split('\n').some(line => line.trim().match(/^[•\-\*]/));
-            if (willSplit) {
-                const paragraphCount = response.split(/\n\n+/).filter(p => p.trim()).length;
-                console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 ${paragraphCount} párrafos`);
+            // 🔧 NUEVO: Validar respuesta antes de loguear
+            if (response && response.trim()) {
+                // Log mejorado con preview completo y duración real
+                // Detectar si habrá división en párrafos
+                const willSplit = response.includes('\n\n') || response.split('\n').some(line => line.trim().match(/^[•\-\*]/));
+                if (willSplit) {
+                    const paragraphCount = response.split(/\n\n+/).filter(p => p.trim()).length;
+                    console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 ${paragraphCount} párrafos`);
+                } else {
+                    const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
+                    console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 "${preview}"`);
+                }
             } else {
-                const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
-                console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 "${preview}"`);
+                console.log(`❌ [BOT] Completado (${aiDuration}s) → Sin respuesta`);
+                logWarning('EMPTY_RESPONSE', 'OpenAI devolvió respuesta vacía', {
+                    userId: shortUserId,
+                    requestId,
+                    duration: aiDuration
+                });
             }
             
             // 🔧 ETAPA 2: Incrementar métrica de mensajes procesados
@@ -1989,15 +2020,15 @@ function setupWebhooks() {
                     // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
                     // En lugar de enviar un mensaje automático, simplemente logear el error
                     // y permitir que el flujo continúe naturalmente
-                    logWarning('NO_ASSISTANT_RESPONSE', 'OpenAI no generó respuesta, permitiendo flujo natural', {
+                    logWarning('NO_ASSISTANT_RESPONSE', 'OpenAI no generó respuesta, enviando fallback', {
                         shortUserId,
                         runId: run.id,
                         threadId,
                         requestId
                     });
                     
-                    // Retornar string vacío para que el sistema maneje el flujo naturalmente
-                    return '';
+                    // 🔧 NUEVO: Retornar mensaje fallback en lugar de string vacío
+                    return 'Disculpa, estoy procesando tu mensaje. ¿Podrías repetirlo por favor?';
                 }
                 
                 // Corregir el type guard para content:
@@ -2688,14 +2719,20 @@ async function processWebhook(body: any) {
                     // Usuario está escribiendo - actualizar estado global
                     updateTypingStatus(userId, true);
                     
-                    console.log(`✍️ ${shortUserId} está escribiendo... (extendiendo buffer)`);
+                    // 🔧 NUEVO: Solo loguear en debug mode
+                    if (process.env.DEBUG_LOGS === 'true') {
+                        console.log(`✍️ ${shortUserId} está escribiendo... (extendiendo buffer)`);
+                    }
                     
                 } else if (status === 'online' || status === 'offline' || status === 'pending') {
                     // Usuario dejó de escribir - actualizar estado global
                     if (globalMessageBuffers.has(userId)) {
                         updateTypingStatus(userId, false);
                         
-                        console.log(`⏸️ ${shortUserId} dejó de escribir`);
+                        // 🔧 NUEVO: Solo loguear en debug mode
+                        if (process.env.DEBUG_LOGS === 'true') {
+                            console.log(`⏸️ ${shortUserId} dejó de escribir`);
+                        }
                     }
                 }
             });
