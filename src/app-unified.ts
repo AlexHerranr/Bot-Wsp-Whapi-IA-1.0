@@ -349,25 +349,41 @@ function setupEndpoints() {
     app.post('/hook', async (req: Request, res: Response) => {
         console.log(`📨 Webhook recibido en /hook - ${new Date().toISOString()}`);
         
-        // Responder inmediatamente para evitar timeouts
-        res.status(200).json({ 
-            received: true, 
-            timestamp: new Date().toISOString(),
-            environment: appConfig?.environment || 'unknown'
-        });
-        
-        console.log(`✅ Respuesta 200 enviada`);
-        
-        // Si el servidor no está inicializado, no procesar
-        if (!isServerInitialized || !appConfig) {
-            console.log('⚠️ Webhook recibido pero servidor no inicializado');
-            return;
-        }
-        
-        // Procesar webhook en background
-        processWebhook(req.body).catch(error => {
+        try {
+            // Si el servidor no está inicializado, responder pero no procesar
+            if (!isServerInitialized || !appConfig) {
+                console.log('⚠️ Webhook recibido pero servidor no inicializado');
+                res.status(200).json({ 
+                    received: true, 
+                    processed: false,
+                    reason: 'server_initializing',
+                    timestamp: new Date().toISOString()
+                });
+                return;
+            }
+            
+            // Procesar webhook
+            await processWebhook(req.body);
+            
+            // Responder después del procesamiento exitoso
+            res.status(200).json({ 
+                received: true, 
+                processed: true,
+                timestamp: new Date().toISOString(),
+                environment: appConfig?.environment || 'unknown'
+            });
+            
+            console.log(`✅ Webhook procesado y respuesta 200 enviada`);
+            
+        } catch (error) {
             console.error('❌ Error procesando webhook:', error);
-        });
+            res.status(500).json({ 
+                received: true, 
+                processed: false,
+                error: 'processing_error',
+                timestamp: new Date().toISOString()
+            });
+        }
     });
 
     app.get('/', (req, res) => {
