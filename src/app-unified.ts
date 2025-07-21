@@ -116,7 +116,7 @@ const globalMessageBuffers = new Map<string, {
     lastActivity: number,
     timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para mensajes, typing, hooks, entrada manual
+const BUFFER_WINDOW_MS = 4000; // 4 segundos fijos para mensajes, typing, hooks, entrada manual
 
 // 🔧 ELIMINADOS: Buffers obsoletos y redundantes
 // const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
@@ -686,12 +686,15 @@ function updateTypingStatus(userId: string, isTyping: boolean): void {
         clearTimeout(buffer.timer);
     }
     
-    // CRÍTICO: Mismo timer de 5 segundos que para mensajes
+    // CRÍTICO: Mismo timer de 4 segundos que para mensajes
     buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
     
-    // 🔧 NUEVO: Solo loguear en debug mode
-    if (process.env.DEBUG_LOGS === 'true') {
-        console.log(`✍️ [TYPING] ${buffer.userName}: Escribiendo... → ⏳ 5s...`);
+    // 🔧 ACTUALIZADO: Log visual de typing siempre (rate-limit 10 s)
+    const now = Date.now();
+    const lastLog = typingLogTimestamps.get(userId) || 0;
+    if (now - lastLog > 10000) {
+        typingLogTimestamps.set(userId, now);
+        console.log(`✍️ [TYPING] ${buffer.userName} está escribiendo...`);
     }
     
     logInfo('GLOBAL_BUFFER_TYPING', `Timer reiniciado por typing`, {
@@ -728,11 +731,11 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
         globalUserStates.set(userId, userState);
     }
     
-    // 🔧 OPTIMIZADO: Usar delay más corto para media (2s) vs texto normal (5s)
+    // 🔧 SIMPLIFICADO: Delay unificado de 4 s para todo tipo de mensaje
     const isMediaMessage = messageText.includes('🎤') || 
                           messageText.includes('El usuario envió una imagen:') ||
                           isVoice;
-    const bufferDelay = isMediaMessage ? 2000 : BUFFER_WINDOW_MS;
+    const bufferDelay = BUFFER_WINDOW_MS;
     
     // Reiniciar timer con el delay apropiado
     if (buffer.timer) {
@@ -1910,7 +1913,7 @@ function setupWebhooks() {
                 run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
                 attempts++;
                 
-                if (attempts % 10 === 0) {
+                if (attempts === 1) { // Solo log al inicio del polling para reducir ruido
                     logInfo('OPENAI_POLLING', `Esperando...`, { 
                         shortUserId, 
                         runId: run.id, 
