@@ -639,23 +639,30 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
                 speed: 1.0
             });
             
-            // Convertir respuesta a buffer
-            const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+            // NOTA: WHAPI requiere una URL, no base64
+            // Por ahora, vamos a loggear que esta funcionalidad necesita implementación completa
+            logWarning('VOICE_UPLOAD_PENDING', 'Subida de audio a WHAPI pendiente de implementar', {
+                userId: shortUserId,
+                note: 'WHAPI requiere URL del audio, no base64'
+            });
             
-            // Enviar como nota de voz via WHAPI
-            const voiceEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/voice`;
-            const voicePayload = {
+            // Temporalmente, enviar mensaje de texto indicando que debería ser voz
+            const fallbackMessage = `🔊 [Este mensaje debería ser una nota de voz]\n\n${message}`;
+            
+            // Usar el endpoint de texto como fallback temporal
+            const textEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/text`;
+            const textPayload = {
                 to: chatId,
-                media: audioBuffer.toString('base64')
+                body: fallbackMessage
             };
             
-            const whapiResponse = await fetch(voiceEndpoint, {
+            const whapiResponse = await fetch(textEndpoint, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(voicePayload)
+                body: JSON.stringify(textPayload)
             });
             
             if (whapiResponse.ok) {
@@ -2856,15 +2863,64 @@ async function processWebhook(body: any) {
                     environment: appConfig.environment
                 });
                 
-                // Solo procesar mensajes de texto que no sean del bot
-                if (message.type === 'text' && !message.from_me && message.text?.body) {
+                // Procesar mensajes de texto y voz que no sean del bot
+                if (!message.from_me) {
                     const userId = message.from;
-                    const text = message.text.body.trim();
                     const chatId = message.chat_id;
                     const userName = cleanContactName(message.from_name);
                     
-                    // Agregar al buffer global
-                    addToGlobalBuffer(userId, text, chatId, userName);
+                    // Procesar mensajes de voz/audio
+                    if (message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') {
+                        console.log(`🎤 [${getShortUserId(userId)}] Procesando nota de voz...`);
+                        
+                        // Marcar que el usuario envió voz
+                        const userState = globalUserStates.get(userId) || { lastInputVoice: false };
+                        userState.lastInputVoice = true;
+                        globalUserStates.set(userId, userState);
+                        
+                        // Verificar si la transcripción está habilitada
+                        if (process.env.ENABLE_VOICE_TRANSCRIPTION === 'true') {
+                            try {
+                                // Obtener URL del audio
+                                const audioUrl = message.voice?.url || message.audio?.url || message.ptt?.url;
+                                
+                                if (audioUrl) {
+                                    // Transcribir el audio
+                                    const transcription = await transcribeAudio(audioUrl, userId, message.id);
+                                    const audioText = `🎤 ${transcription}`;
+                                    
+                                    console.log(`🎤 [${getShortUserId(userId)}] Transcripción: "${transcription.substring(0, 50)}..."`);
+                                    
+                                    // Agregar transcripción al buffer
+                                    addToGlobalBuffer(userId, audioText, chatId, userName);
+                                } else {
+                                    // Si no hay URL, usar mensaje por defecto
+                                    console.log(`⚠️ [${getShortUserId(userId)}] Nota de voz sin URL`);
+                                    addToGlobalBuffer(userId, '[Nota de voz recibida]', chatId, userName);
+                                }
+                            } catch (error) {
+                                console.error(`❌ Error transcribiendo audio:`, error);
+                                logError('VOICE_TRANSCRIPTION_ERROR', 'Error transcribiendo audio', {
+                                    userId: getShortUserId(userId),
+                                    error: error.message
+                                });
+                                
+                                // Fallback si falla la transcripción
+                                addToGlobalBuffer(userId, '[Nota de voz - Error en transcripción]', chatId, userName);
+                            }
+                        } else {
+                            // Si la transcripción no está habilitada
+                            console.log(`ℹ️ [${getShortUserId(userId)}] Transcripción deshabilitada`);
+                            addToGlobalBuffer(userId, '[Nota de voz recibida]', chatId, userName);
+                        }
+                    }
+                    // Procesar mensajes de texto normales
+                    else if (message.type === 'text' && message.text?.body) {
+                        const text = message.text.body.trim();
+                        
+                        // Agregar al buffer global
+                        addToGlobalBuffer(userId, text, chatId, userName);
+                    }
                 }
             } catch (error) {
                 console.error('❌ Error procesando mensaje individual:', error);
