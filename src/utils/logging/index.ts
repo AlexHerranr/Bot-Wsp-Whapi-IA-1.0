@@ -295,7 +295,7 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
     
     // === PROCESAMIENTO IA ===
     if (category === 'OPENAI_REQUEST') {
-        return `🤖 [BOT] Procesando con IA...`;
+        return `🤖 ${userName}: Procesando mensaje con OpenAI...`;
     }
     
     if (category === 'OPENAI_RESPONSE') {

@@ -100,6 +100,9 @@ import { simpleLockManager } from './utils/simpleLockManager.js';
 const webhookCounts = new Map<string, { lastLog: number; count: number }>();
 // 🔧 NUEVO: Rate limiting para logs de typing (10 s)
 const typingLogTimestamps = new Map<string, number>();
+// 🔧 NUEVO: Cache para información de chat (evitar llamadas redundantes)
+const chatInfoCache = new Map<string, { data: any; timestamp: number }>();
+const CHAT_INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 // --- Variables Globales ---
 let appConfig: AppConfig;
@@ -160,6 +163,27 @@ function getOrCreateUserState(userId: string, chatId?: string, userName?: string
         globalUserStates.set(userId, userState);
     }
     return userState;
+}
+
+// 🔧 NUEVO: Función helper para obtener información de chat con cache
+async function getCachedChatInfo(userId: string): Promise<any> {
+    const now = Date.now();
+    const cached = chatInfoCache.get(userId);
+    
+    if (cached && (now - cached.timestamp) < CHAT_INFO_CACHE_TTL) {
+        return cached.data;
+    }
+    
+    try {
+        const chatInfo = await whapiLabels.getChatInfo(userId);
+        chatInfoCache.set(userId, { data: chatInfo, timestamp: now });
+        return chatInfo;
+    } catch (error) {
+        logWarning('CHAT_INFO_CACHE_ERROR', `Error obteniendo info de chat para ${userId}`, {
+            error: error.message
+        });
+        return null;
+    }
 }
 
 // NUEVO: Tipos para respuestas de WHAPI
@@ -475,7 +499,7 @@ function setupEndpoints() {
             
             // Solo loguear si hay mensajes o presencias relevantes
             if (messages && Array.isArray(messages) && messages.length > 0) {
-                console.log(`📨 Webhook: ${messages.length} mensajes recibidos`);
+                console.log(`📨 ${messages.length} mensaje${messages.length > 1 ? 's' : ''} recibido${messages.length > 1 ? 's' : ''}`);
             } else if (presences && event?.type === 'presences') {
                 // Las presencias se manejan en processWebhook
             } else {
@@ -717,7 +741,7 @@ function updateTypingStatus(userId: string, isTyping: boolean): void {
     const lastLog = typingLogTimestamps.get(userId) || 0;
     if (now - lastLog > 10000) {
         typingLogTimestamps.set(userId, now);
-        console.log(`✍️ [TYPING] ${buffer.userName} está escribiendo...`);
+                    console.log(`✍️ ${buffer.userName} está escribiendo...`);
     }
     
     logInfo('GLOBAL_BUFFER_TYPING', `Timer reiniciado por typing`, {
@@ -1476,8 +1500,8 @@ function setupWebhooks() {
             
             // Obtener perfil del usuario (incluye etiquetas)
             const profile = await guestMemory.getOrCreateProfile(userId);
-            // Obtener información del chat desde Whapi
-            const chatInfo = await whapiLabels.getChatInfo(userId);
+            // Obtener información del chat desde Whapi (con cache)
+            const chatInfo = await getCachedChatInfo(userId);
             
             // 🔧 MEJORADO: Extracción de nombre más robusta
             const clientName = profile?.name || 'Cliente';
@@ -1582,7 +1606,7 @@ function setupWebhooks() {
             updateRequestStage(requestId, 'processing');
 
             // Log compacto - Inicio
-            console.log(`🤖 [BOT] ${buffer.messages.length} msgs → OpenAI`);
+            console.log(`🤖 Procesando: ${buffer.userName} → OpenAI...`);
             
             // Enviar a OpenAI con el userId original y la información completa del cliente
             const startTime = Date.now();
@@ -1596,13 +1620,13 @@ function setupWebhooks() {
                 const willSplit = response.includes('\n\n') || response.split('\n').some(line => line.trim().match(/^[•\-\*]/));
                 if (willSplit) {
                     const paragraphCount = response.split(/\n\n+/).filter(p => p.trim()).length;
-                    console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 ${paragraphCount} párrafos`);
+                    console.log(`✅ Respuesta enviada (${aiDuration}s) → ${paragraphCount} párrafos`);
                 } else {
                     const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
-                    console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 "${preview}"`);
+                    console.log(`✅ Respuesta enviada (${aiDuration}s) → "${preview}"`);
                 }
             } else {
-                console.log(`❌ [BOT] Completado (${aiDuration}s) → Sin respuesta`);
+                console.log(`❌ Error: Sin respuesta (${aiDuration}s)`);
                 logWarning('EMPTY_RESPONSE', 'OpenAI devolvió respuesta vacía', {
                     userId: shortUserId,
                     requestId,
@@ -2506,7 +2530,7 @@ async function initializeBot() {
     isServerInitialized = true;
     console.log('✅ Bot completamente inicializado');
     
-    // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (del comentario externo)
+    // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (UNA SOLA VEZ)
     // Ejecutar en background para no bloquear el healthcheck
     setTimeout(async () => {
         try {
@@ -2746,7 +2770,7 @@ async function processWebhook(body: any) {
                     
                     // 🔧 NUEVO: Solo loguear en debug mode
                     if (process.env.DEBUG_LOGS === 'true') {
-                        console.log(`✍️ ${shortUserId} está escribiendo... (extendiendo buffer)`);
+                        console.log(`✍️ ${shortUserId} está escribiendo...`);
                     }
                     
                 } else if (status === 'online' || status === 'offline' || status === 'pending') {
@@ -2851,11 +2875,11 @@ async function processWebhook(body: any) {
                         continue;
                     }
                     
-                    // 🎯 Log compacto - Solo primer mensaje del grupo
-                    if (!globalMessageBuffers.has(chatId)) {
-                        const clientName = threadRecord.userName || 'Cliente';
-                        console.log(`🔧 [AGENT] ${fromName} → ${clientName}: "${text.substring(0, 25)}${text.length > 25 ? '...' : ''}"`);
-                    }
+                                // 🎯 Log compacto - Solo primer mensaje del grupo
+            if (!globalMessageBuffers.has(chatId)) {
+                const clientName = threadRecord.userName || 'Cliente';
+                console.log(`🔧 ${fromName} → ${clientName}: "${text.substring(0, 25)}${text.length > 25 ? '...' : ''}"`);
+            }
                     
                     // Solo log técnico detallado
                     logInfo('MANUAL_DETECTED', `Mensaje manual del agente detectado`, {
@@ -2940,7 +2964,7 @@ async function processWebhook(body: any) {
                                 
                                 // 🎯 Log compacto final
                                 const msgCount = finalBuffer.messages.length > 1 ? `${finalBuffer.messages.length} msgs` : '1 msg';
-                                console.log(`✅ [BOT] Enviado a 🤖 OpenAI → Contexto actualizado (${msgCount})`);
+                                console.log(`✅ Contexto actualizado (${msgCount})`);
                                 
                                 // Solo log técnico
                                 logSuccess('MANUAL_SYNC_SUCCESS', `Mensajes manuales sincronizados exitosamente`, {
@@ -2954,7 +2978,7 @@ async function processWebhook(body: any) {
                                 });
                                 
                             } catch (error) {
-                                console.log(`❌ [AGENT] Error sincronizando con OpenAI: ${error.message}`);
+                                console.log(`❌ Error sincronizando: ${error.message}`);
                                 logError('MANUAL_SYNC_ERROR', `Error sincronizando mensajes manuales`, {
                                     error: error.message,
                                     threadId: threadRecord.threadId,
@@ -3012,13 +3036,13 @@ async function processWebhook(body: any) {
                                     const transcription = await transcribeAudio(audioUrl, userId, message.id);
                                     const audioText = `🎤 [NOTA DE VOZ]: ${transcription}`;
                                     
-                                    console.log(`🎤 [${getShortUserId(userId)}] Transcripción: "${transcription.substring(0, 50)}..."`);
+                                    console.log(`🎤 ${getShortUserId(userId)}: "${transcription.substring(0, 50)}..."`);
                                     
                                     // Agregar transcripción al buffer con metadata especial
                                     addToGlobalBuffer(userId, audioText, chatId, userName, true); // true = es voz
                                 } else {
                                     // Si no hay URL, usar mensaje por defecto
-                                    console.log(`⚠️ [${getShortUserId(userId)}] Nota de voz sin URL`);
+                                    console.log(`⚠️ ${getShortUserId(userId)}: Nota de voz sin URL`);
                                     addToGlobalBuffer(userId, '🎤 [NOTA DE VOZ]: Sin transcripción disponible', chatId, userName, true);
                                 }
                             } catch (error) {
