@@ -344,6 +344,31 @@ function setupEndpoints() {
             });
         }
     });
+    
+    // Webhook endpoint - siempre disponible
+    app.post('/hook', async (req: Request, res: Response) => {
+        console.log(`📨 Webhook recibido en /hook - ${new Date().toISOString()}`);
+        
+        // Responder inmediatamente para evitar timeouts
+        res.status(200).json({ 
+            received: true, 
+            timestamp: new Date().toISOString(),
+            environment: appConfig?.environment || 'unknown'
+        });
+        
+        console.log(`✅ Respuesta 200 enviada`);
+        
+        // Si el servidor no está inicializado, no procesar
+        if (!isServerInitialized || !appConfig) {
+            console.log('⚠️ Webhook recibido pero servidor no inicializado');
+            return;
+        }
+        
+        // Procesar webhook en background
+        processWebhook(req.body).catch(error => {
+            console.error('❌ Error procesando webhook:', error);
+        });
+    });
 
     app.get('/', (req, res) => {
         const stats = threadPersistence.getStats();
@@ -2362,17 +2387,21 @@ function setupWebhooks() {
 
     // Webhook Principal
     app.post('/hook', async (req: Request, res: Response) => {
+        console.log(`📨 Webhook recibido en /hook - ${new Date().toISOString()}`);
+        
         // Responder inmediatamente para evitar timeouts
         res.status(200).json({ 
             received: true, 
             timestamp: new Date().toISOString(),
-            environment: appConfig.environment
+            environment: appConfig?.environment || 'unknown'
         });
+        
+        console.log(`✅ Respuesta 200 enviada`);
         
         // Procesar de forma asíncrona
         if (!isServerInitialized) {
             logWarning('WEBHOOK_NOT_READY', 'Webhook recibido pero bot no inicializado', {
-                environment: appConfig.environment
+                environment: appConfig?.environment || 'unknown'
             });
             return;
         }
@@ -3096,6 +3125,36 @@ async function recoverOrphanedRuns() {
         logError('ORPHANED_RUNS_RECOVERY_ERROR', 'Error durante recuperación de runs huérfanos', {
             error: error.message
         });
+    }
+}
+
+// Función para procesar webhooks
+async function processWebhook(body: any) {
+    try {
+        console.log('🔄 Procesando webhook:', JSON.stringify(body).substring(0, 200));
+        
+        // Validar que hay datos
+        if (!body || !body.messages || !Array.isArray(body.messages)) {
+            console.log('⚠️ Webhook sin mensajes válidos');
+            return;
+        }
+        
+        // Procesar cada mensaje
+        for (const message of body.messages) {
+            try {
+                // Solo procesar mensajes de texto entrantes
+                if (message.type === 'text' && !message.from_me && message.text?.body) {
+                    console.log(`📥 Mensaje de ${message.from}: ${message.text.body}`);
+                    
+                    // Aquí iría la lógica de procesamiento del mensaje
+                    // Por ahora solo logueamos
+                }
+            } catch (error) {
+                console.error('❌ Error procesando mensaje individual:', error);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error en processWebhook:', error);
     }
 }
 
