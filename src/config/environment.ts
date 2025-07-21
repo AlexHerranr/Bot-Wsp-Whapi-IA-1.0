@@ -93,8 +93,10 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     const isCloudRun = environment === 'cloud-run';
     const isLocal = environment === 'local';
     
-    // Puerto dinámico
+    // Puerto dinámico - SIEMPRE usar PORT de environment si está disponible
     const port = parseInt(process.env.PORT || (isLocal ? '3008' : '8080'), 10);
+    
+    console.log(`🔧 Puerto detectado: ${port} (process.env.PORT: ${process.env.PORT || 'not set'})`);
     
     // Host dinámico - Railway necesita 0.0.0.0
     const host = isLocal ? 'localhost' : '0.0.0.0';
@@ -115,15 +117,16 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
             : `http://localhost:${port}`
     );
     
-    // Configuración de logs
-    const logLevel = (process.env.LOG_LEVEL as 'development' | 'production') || 
-                    (isCloudRun ? 'production' : 'development');
+    // Configuración del logger según el entorno
+    const logLevel = environment === 'local' ? 'development' : 'production';
+    const enableDetailedLogs = environment === 'local';
     
-    // 🔧 MEJORADO: Habilitar logs detallados en Cloud Run también (van a Google Cloud Console)
-    const enableDetailedLogs = process.env.ENABLE_DETAILED_LOGS === 'true' || 
-                              (!isCloudRun && logLevel === 'development') ||
-                              isCloudRun; // ← Siempre true en Cloud Run
-
+    // Forzar NODE_ENV correcto para Railway
+    if (environment === 'cloud-run' && (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID)) {
+        process.env.NODE_ENV = 'production';
+        console.log('🔧 Forzando NODE_ENV=production para Railway');
+    }
+    
     // 🔧 NUEVO: Configuración adicional de logs
     const enableVerboseLogs = process.env.ENABLE_VERBOSE_LOGS === 'true';
     const enableBufferLogs = process.env.ENABLE_BUFFER_LOGS === 'true';
