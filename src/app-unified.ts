@@ -1718,6 +1718,7 @@ function setupWebhooks() {
                 updateRequestStage(requestId, 'openai_start');
             }
             
+            // Log de inicio de procesamiento (solo una vez)
             logOpenAIRequest('starting_process', { 
                 shortUserId,
                 requestId 
@@ -1896,13 +1897,7 @@ function setupWebhooks() {
                         content: messageWithContext
                     });
                      
-                     logOpenAIRequest('message_added_with_context', { 
-                         shortUserId,
-                         originalLength: userMsg.length,
-                         contextLength: temporalContext.length,
-                         totalLength: messageWithContext.length,
-                         requestId 
-                     });
+                     // Log de mensaje agregado con contexto (eliminado para reducir ruido)
                      
                      break; // Salir del loop
                      
@@ -1933,19 +1928,12 @@ function setupWebhooks() {
                  }
              }
              
-             // Crear y ejecutar run
-             logOpenAIRequest('creating_run', { 
-                 shortUserId,
-                 requestId 
-             });
+             // Crear y ejecutar run (log eliminado para reducir ruido)
              let run = await openaiClient.beta.threads.runs.create(threadId, {
                  assistant_id: secrets.ASSISTANT_ID
              });
              
-             logOpenAIRequest('run_started', { 
-                 shortUserId,
-                 requestId 
-             });
+             // Run iniciado (log eliminado para reducir ruido)
              
              // 🔧 ELIMINADO: Mensaje interino duplicado - ya se envía específicamente en function calling
             

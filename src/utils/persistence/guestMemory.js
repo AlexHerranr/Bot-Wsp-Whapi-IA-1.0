@@ -109,9 +109,11 @@ class GuestMemory {
                 lastInteraction: new Date().toISOString()
             };
             
-            // Intentar obtener información desde Whapi
+            // Intentar obtener información desde Whapi (con cache)
             try {
-                const chatInfo = await whapiLabels.getChatInfo(userId);
+                // Importar la función cacheada desde app-unified.ts
+                const { getCachedChatInfo } = require('../../app-unified');
+                const chatInfo = await getCachedChatInfo(userId);
                 if (chatInfo) {
                     // Sincronizar con datos de Whapi
                     if (chatInfo.name) {
@@ -214,7 +216,9 @@ class GuestMemory {
             const profile = this.profiles.get(userId);
             if (!profile) return null;
             
-            const chatInfo = await whapiLabels.getChatInfo(userId);
+            // Importar la función cacheada desde app-unified.ts
+            const { getCachedChatInfo } = require('../../app-unified');
+            const chatInfo = await getCachedChatInfo(userId);
             if (chatInfo && chatInfo.labels) {
                 profile.whapiLabels = chatInfo.labels;
                 
