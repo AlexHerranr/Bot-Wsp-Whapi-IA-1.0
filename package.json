@@ -28,6 +28,7 @@
     "build:check": "node scripts/verify-build.js",
     "test:functions": "node scripts/test/test-function-registry.js",
     "test:imports": "node scripts/test/test-imports.js",
+    "check:voice": "node scripts/check-voice-config.js",
     "test:dashboard": "node test-dashboard.js",
     "pre-deploy:check": "npm run build:check && npm run test:functions && npm run build",
     "pre-deploy:full": "npm run predeploy-checklist && npm run pre-deploy:check"

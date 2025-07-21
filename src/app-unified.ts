@@ -169,6 +169,87 @@ interface WHAPIError {
 // const MAX_BUFFER_SIZE = 10; // Límite máximo de mensajes por buffer (anti-spam)  // ❌ No se usa - comentado para registro
 // const MAX_BOT_MESSAGES = 1000;  // ❌ No se usa - comentado para registro
 
+// 🔧 FUNCIÓN GLOBAL: Transcribir audio - Movida aquí para acceso global
+async function transcribeAudio(audioUrl: string | undefined, userId: string, messageId?: string): Promise<string> {
+    try {
+        // Verificar que appConfig esté cargado
+        if (!appConfig) {
+            throw new Error('Configuración no cargada');
+        }
+
+        let finalAudioUrl = audioUrl;
+        
+        // Si no hay URL, intentar obtenerla desde WHAPI
+        if (!finalAudioUrl && messageId) {
+            try {
+                const messageResponse = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/${messageId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`
+                    }
+                });
+                
+                if (messageResponse.ok) {
+                    const messageData = await messageResponse.json() as WHAPIMessage;
+                    // Buscar el link en audio, voice o ptt según el tipo
+                    finalAudioUrl = messageData.audio?.link || 
+                                   messageData.voice?.link || 
+                                   messageData.ptt?.link;
+                    
+                    if (finalAudioUrl) {
+                        logSuccess('AUDIO_URL_FETCHED', 'URL de audio obtenida desde WHAPI', {
+                            userId: getShortUserId(userId),
+                            messageId,
+                            type: messageData.type
+                        });
+                    }
+                }
+            } catch (error) {
+                logError('AUDIO_URL_FETCH_ERROR', 'Error obteniendo URL de audio', {
+                    userId: getShortUserId(userId),
+                    messageId,
+                    error: error.message
+                });
+            }
+        }
+        
+        if (!finalAudioUrl) {
+            throw new Error('No se pudo obtener la URL del audio');
+        }
+        
+        // Descargar el audio
+        const audioResponse = await fetch(finalAudioUrl);
+        if (!audioResponse.ok) {
+            throw new Error(`Error descargando audio: ${audioResponse.status}`);
+        }
+        
+        const audioBuffer = await audioResponse.arrayBuffer();
+        const audioFile = new File([audioBuffer], 'audio.ogg', { type: 'audio/ogg' });
+        
+        // Transcribir con Whisper
+        const openai = new OpenAI({ apiKey: appConfig.secrets.OPENAI_API_KEY });
+        const transcription = await openai.audio.transcriptions.create({
+            file: audioFile,
+            model: 'whisper-1',
+            language: 'es'
+        });
+        
+        logSuccess('AUDIO_TRANSCRIBED', 'Audio transcrito exitosamente', {
+            userId: getShortUserId(userId),
+            transcriptionLength: transcription.text.length,
+            preview: transcription.text.substring(0, 100)
+        });
+        
+        return transcription.text || 'No se pudo transcribir el audio';
+        
+    } catch (error) {
+        logError('TRANSCRIPTION_ERROR', 'Error en transcripción de audio', {
+            userId: getShortUserId(userId),
+            error: error.message
+        });
+        throw error;
+    }
+}
+
 // 🔧 NUEVO: Sistema de locks simplificado con colas
 async function acquireThreadLock(userId: string): Promise<boolean> {
     return await simpleLockManager.acquireUserLock(userId);
@@ -1169,109 +1250,6 @@ function setupWebhooks() {
         // 🔧 NUEVO: Procesar la cola si no hay lock activo
         if (!simpleLockManager.hasActiveLock(shortUserId)) {
             await simpleLockManager.processQueue(shortUserId);
-        }
-    }
-    
-    // NUEVO: Función auxiliar para transcribir audio
-    async function transcribeAudio(audioUrl: string | undefined, userId: string, messageId?: string): Promise<string> {
-        try {
-            let finalAudioUrl = audioUrl;
-            
-            // Si no hay URL, intentar obtenerla desde WHAPI
-            if (!finalAudioUrl && messageId) {
-                try {
-                    const messageResponse = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/${messageId}`, {
-                        headers: {
-                            'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`
-                        }
-                    });
-                    
-                    if (messageResponse.ok) {
-                        const messageData = await messageResponse.json() as WHAPIMessage;
-                        // Buscar el link en audio, voice o ptt según el tipo
-                        finalAudioUrl = messageData.audio?.link || 
-                                       messageData.voice?.link || 
-                                       messageData.ptt?.link;
-                        
-                        if (finalAudioUrl) {
-                            logSuccess('AUDIO_URL_FETCHED', 'URL de audio obtenida desde WHAPI', {
-                                userId: getShortUserId(userId),
-                                messageId,
-                                type: messageData.type
-                            });
-                        }
-                    } else {
-                        const errorData = await messageResponse.json() as WHAPIError;
-                        logError('AUDIO_MESSAGE_FETCH_ERROR', 'Error obteniendo mensaje desde WHAPI', {
-                            userId: getShortUserId(userId),
-                            messageId,
-                            status: messageResponse.status,
-                            error: errorData.error?.message
-                        });
-                    }
-                } catch (fetchError) {
-                    logError('AUDIO_URL_FETCH_ERROR', 'Error obteniendo URL de audio desde WHAPI', {
-                        userId: getShortUserId(userId),
-                        messageId,
-                        error: fetchError.message
-                    });
-                }
-            }
-            
-            // Si aún no hay URL, no podemos procesar
-            if (!finalAudioUrl) {
-                throw new Error('No se pudo obtener URL del audio');
-            }
-            
-            // Descargar audio
-            const audioResponse = await fetch(finalAudioUrl);
-            if (!audioResponse.ok) {
-                throw new Error(`Error descargando audio: ${audioResponse.status}`);
-            }
-            
-            const audioBuffer = await audioResponse.arrayBuffer();
-            
-            // Validar tamaño
-            const maxSize = parseInt(process.env.MAX_AUDIO_SIZE || '26214400');
-            if (audioBuffer.byteLength > maxSize) {
-                throw new Error(`Audio muy grande: ${audioBuffer.byteLength} bytes`);
-            }
-            
-            console.log(`${getTimestamp()} 🎵 Transcribiendo audio de ${audioBuffer.byteLength} bytes...`);
-            
-            // Convertir ArrayBuffer a Blob primero
-            const audioBlob = new Blob([audioBuffer], { type: 'audio/ogg' });
-            
-            // Crear File object para Whisper
-            const audioFile = new File(
-                [audioBlob], 
-                'audio.ogg', 
-                { type: 'audio/ogg' }
-            );
-            
-            // Transcribir con Whisper
-            const transcription = await openaiClient.audio.transcriptions.create({
-                file: audioFile,
-                model: 'whisper-1',
-                language: process.env.WHISPER_LANGUAGE || 'es',
-                prompt: 'Transcripción de mensaje de voz de WhatsApp en contexto hotelero.',
-                temperature: 0.2 // Más preciso
-            });
-            
-            return transcription.text || 'Audio sin contenido reconocible';
-            
-        } catch (error) {
-            logError('AUDIO_TRANSCRIPTION_ERROR', 'Error transcribiendo audio', {
-                userId,
-                error: error.message
-            });
-            
-            if (error.message.includes('muy grande')) {
-                return 'Nota de voz muy larga (máximo 5 minutos)';
-            }
-            
-            // No retornar fallback genérico, mejor throw para que el caller decida
-            throw error;
         }
     }
     
@@ -2969,11 +2947,8 @@ async function processWebhook(body: any) {
                                 const audioUrl = message.voice?.url || message.audio?.url || message.ptt?.url;
                                 
                                 if (audioUrl) {
-                                    // Transcribir el audio (función definida más abajo)
-                                    const transcriptionFunction = async (audioUrl: string, userId: string, messageId?: string): Promise<string> => {
-                                        return transcribeAudio(audioUrl, userId, messageId);
-                                    };
-                                    const transcription = await transcriptionFunction(audioUrl, userId, message.id);
+                                    // Transcribir el audio usando la función global
+                                    const transcription = await transcribeAudio(audioUrl, userId, message.id);
                                     const audioText = `🎤 [NOTA DE VOZ]: ${transcription}`;
                                     
                                     console.log(`🎤 [${getShortUserId(userId)}] Transcripción: "${transcription.substring(0, 50)}..."`);
