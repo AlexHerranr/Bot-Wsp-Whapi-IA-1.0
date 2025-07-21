@@ -121,7 +121,7 @@ const globalMessageBuffers = new Map<string, {
     lastActivity: number,
     timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 30000; // 30 segundos fijos para mensajes, typing, hooks, entrada manual
+const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para TODOS los tipos de entrada (mensajes, typing, voz, etc.)
 
 // 🔧 ELIMINADOS: Buffers obsoletos y redundantes
 // const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
@@ -777,27 +777,21 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
         userState.lastInputVoice = true;
     }
     
-    // 🔧 SIMPLIFICADO: Delay unificado de 4 s para todo tipo de mensaje
-    const isMediaMessage = messageText.includes('🎤') || 
-                          messageText.includes('El usuario envió una imagen:') ||
-                          isVoice;
-    const bufferDelay = BUFFER_WINDOW_MS;
-    
-    // Reiniciar timer con el delay apropiado
+    // 🔧 UNIFICADO: 5 segundos para TODOS los tipos de entrada
     if (buffer.timer) {
         clearTimeout(buffer.timer);
     }
-    buffer.timer = setTimeout(() => processGlobalBuffer(userId), bufferDelay);
+    buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
     
-    console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${bufferDelay/1000}s...`);
+    console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${BUFFER_WINDOW_MS/1000}s...`);
     
     logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
         userJid: getShortUserId(userId),
         userName,
         messageText: messageText.substring(0, 50) + '...',
         bufferSize: buffer.messages.length,
-        delay: bufferDelay,
-        isMedia: isMediaMessage,
+        delay: BUFFER_WINDOW_MS,
+        isMedia: isVoice,
         environment: appConfig?.environment
     });
 }
