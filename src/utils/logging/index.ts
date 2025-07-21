@@ -295,7 +295,11 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
     
     // === PROCESAMIENTO IA ===
     if (category === 'OPENAI_REQUEST') {
-        return `🤖 [BOT] Procesando con IA...`;
+        // Solo mostrar una vez al inicio
+        if (message === 'starting_process') {
+            return `🤖 [BOT] Procesando con IA...`;
+        }
+        return ''; // suprimir mensajes intermedios para evitar spam
     }
     
     if (category === 'OPENAI_RESPONSE') {
@@ -356,6 +360,12 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
     if (category === 'WHAPI_LABELS') {
         const count = details?.labelsCount || 0;
         return `🏷️ ${count} etiquetas sincronizadas`;
+    }
+    
+    // === SYNC LABELS ===
+    if (category.includes('LABELS') || category.includes('GUEST_MEMORY')) {
+        const count = details?.labelsCount || details?.count || 0;
+        if (count === 0) return ''; // no mostrar si no hay etiquetas
     }
     
     // === ERRORES ===
