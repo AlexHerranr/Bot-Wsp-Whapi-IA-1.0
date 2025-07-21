@@ -98,6 +98,8 @@ import { simpleLockManager } from './utils/simpleLockManager.js';
 // Agregar al inicio del archivo (después de los imports)
 // 🔧 NUEVO: Rate limiting para logs spam
 const webhookCounts = new Map<string, { lastLog: number; count: number }>();
+// 🔧 NUEVO: Rate limiting para logs de typing (10 s)
+const typingLogTimestamps = new Map<string, number>();
 
 // --- Variables Globales ---
 let appConfig: AppConfig;
@@ -116,7 +118,7 @@ const globalMessageBuffers = new Map<string, {
     lastActivity: number,
     timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para mensajes, typing, hooks, entrada manual
+const BUFFER_WINDOW_MS = 4000; // 4 segundos fijos para mensajes, typing, hooks, entrada manual
 
 // 🔧 ELIMINADOS: Buffers obsoletos y redundantes
 // const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
@@ -138,6 +140,27 @@ const MAX_MESSAGE_LENGTH = 5000;
 
 // NUEVO: Función helper para timestamps
 const getTimestamp = () => new Date().toISOString();
+
+// 🔧 NUEVO: Función helper para crear/obtener UserState
+function getOrCreateUserState(userId: string, chatId?: string, userName?: string): UserState {
+    let userState = globalUserStates.get(userId);
+    if (!userState) {
+        userState = {
+            userId,
+            isTyping: false,
+            lastTypingTimestamp: 0,
+            lastMessageTimestamp: 0,
+            messages: [],
+            chatId: chatId || `${userId}@s.whatsapp.net`,
+            userName: userName || 'Usuario',
+            typingEventsCount: 0,
+            averageTypingDuration: 0,
+            lastInputVoice: false
+        };
+        globalUserStates.set(userId, userState);
+    }
+    return userState;
+}
 
 // NUEVO: Tipos para respuestas de WHAPI
 interface WHAPIMediaLink {
@@ -522,7 +545,7 @@ function setupEndpoints() {
     });
     
     // 🔊 NUEVO: Endpoint para servir archivos de audio temporales
-    app.get('/audio/:filename', async (req: Request, res: Response) => {
+    app.get('/audio/:filename', async (req: any, res: any) => {
         try {
             const { filename } = req.params;
             
@@ -686,12 +709,15 @@ function updateTypingStatus(userId: string, isTyping: boolean): void {
         clearTimeout(buffer.timer);
     }
     
-    // CRÍTICO: Mismo timer de 5 segundos que para mensajes
+    // CRÍTICO: Mismo timer de 4 segundos que para mensajes
     buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
     
-    // 🔧 NUEVO: Solo loguear en debug mode
-    if (process.env.DEBUG_LOGS === 'true') {
-        console.log(`✍️ [TYPING] ${buffer.userName}: Escribiendo... → ⏳ 5s...`);
+    // 🔧 ACTUALIZADO: Log visual de typing siempre (rate-limit 10 s)
+    const now = Date.now();
+    const lastLog = typingLogTimestamps.get(userId) || 0;
+    if (now - lastLog > 10000) {
+        typingLogTimestamps.set(userId, now);
+        console.log(`✍️ [TYPING] ${buffer.userName} está escribiendo...`);
     }
     
     logInfo('GLOBAL_BUFFER_TYPING', `Timer reiniciado por typing`, {
@@ -723,16 +749,15 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
     
     // 🔧 NUEVO: Marcar que el usuario envió voz
     if (isVoice) {
-        const userState = globalUserStates.get(userId) || { lastInputVoice: false };
+        const userState = getOrCreateUserState(userId, chatId, userName);
         userState.lastInputVoice = true;
-        globalUserStates.set(userId, userState);
     }
     
-    // 🔧 OPTIMIZADO: Usar delay más corto para media (2s) vs texto normal (5s)
+    // 🔧 SIMPLIFICADO: Delay unificado de 4 s para todo tipo de mensaje
     const isMediaMessage = messageText.includes('🎤') || 
                           messageText.includes('El usuario envió una imagen:') ||
                           isVoice;
-    const bufferDelay = isMediaMessage ? 2000 : BUFFER_WINDOW_MS;
+    const bufferDelay = BUFFER_WINDOW_MS;
     
     // Reiniciar timer con el delay apropiado
     if (buffer.timer) {
@@ -1910,7 +1935,7 @@ function setupWebhooks() {
                 run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
                 attempts++;
                 
-                if (attempts % 10 === 0) {
+                if (attempts === 1) { // Solo log al inicio del polling para reducir ruido
                     logInfo('OPENAI_POLLING', `Esperando...`, { 
                         shortUserId, 
                         runId: run.id, 
@@ -2973,9 +2998,8 @@ async function processWebhook(body: any) {
                         console.log(`🎤 [${getShortUserId(userId)}] Procesando nota de voz...`);
                         
                         // Marcar que el usuario envió voz
-                        const userState = globalUserStates.get(userId) || { lastInputVoice: false };
+                        const userState = getOrCreateUserState(userId, chatId, userName);
                         userState.lastInputVoice = true;
-                        globalUserStates.set(userId, userState);
                         
                         // Verificar si la transcripción está habilitada
                         if (process.env.ENABLE_VOICE_TRANSCRIPTION === 'true') {
