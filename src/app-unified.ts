@@ -2989,21 +2989,25 @@ async function processWebhook(body: any) {
                     continue;
                 }
                 
-                logMessageReceived('Mensaje recibido', {
-                    userId: message.from,
-                    chatId: message.chat_id,
-                    from: message.from,
-                    type: message.type,
-                    timestamp: message.timestamp,
-                    body: message.text?.body?.substring(0, 100) + '...',
-                    environment: appConfig.environment
-                });
+                // Log ya se hace arriba con el nombre del usuario
                 
                 // Procesar mensajes de texto y voz que no sean del bot
                 if (!message.from_me) {
                     const userId = message.from;
                     const chatId = message.chat_id;
                     const userName = cleanContactName(message.from_name);
+                    
+                    // Log del mensaje recibido con el nombre del usuario
+                    logMessageReceived('Mensaje recibido', {
+                        userId: message.from,
+                        chatId: message.chat_id,
+                        from: message.from,
+                        userName: userName,
+                        type: message.type,
+                        timestamp: message.timestamp,
+                        body: message.text?.body?.substring(0, 100) + '...',
+                        environment: appConfig.environment
+                    });
                     
                     // Procesar mensajes de voz/audio
                     if (message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') {
