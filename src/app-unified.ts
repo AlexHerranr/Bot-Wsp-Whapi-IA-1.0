@@ -226,7 +226,7 @@ async function transcribeAudio(audioUrl: string | undefined, userId: string, mes
         }
         
         const audioBuffer = await audioResponse.arrayBuffer();
-        const audioFile = new File([audioBuffer], 'audio.ogg', { type: 'audio/ogg' });
+        const audioFile = new File([new Uint8Array(audioBuffer)], 'audio.ogg', { type: 'audio/ogg' });
         
         // Transcribir con Whisper
         const openai = new OpenAI({ apiKey: appConfig.secrets.OPENAI_API_KEY });
