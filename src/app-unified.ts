@@ -13,6 +13,8 @@ import express, { Request, Response } from 'express';
 import http from 'http';
 import OpenAI from 'openai';
 import levenshtein from 'fast-levenshtein';
+import path from 'path';
+import fs from 'fs/promises';
 
 // Importar sistema de configuración unificada
 import { 
@@ -436,6 +438,44 @@ function setupEndpoints() {
         });
     });
     
+    // 🔊 NUEVO: Endpoint para servir archivos de audio temporales
+    app.get('/audio/:filename', async (req: Request, res: Response) => {
+        try {
+            const { filename } = req.params;
+            
+            // Validar nombre de archivo
+            if (!filename || !filename.match(/^voice_\d+_\d+\.ogg$/)) {
+                return res.status(400).json({ error: 'Invalid filename' });
+            }
+            
+            const audioPath = path.join('tmp', 'audio', filename);
+            
+            // Verificar si el archivo existe
+            try {
+                await fs.access(audioPath);
+            } catch {
+                return res.status(404).json({ error: 'Audio file not found' });
+            }
+            
+            // Configurar headers para audio
+            res.setHeader('Content-Type', 'audio/ogg');
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            
+            // Leer y enviar el archivo
+            const audioBuffer = await fs.readFile(audioPath);
+            res.send(audioBuffer);
+            
+            logDebug('AUDIO_SERVED', 'Archivo de audio servido', { filename });
+            
+        } catch (error) {
+            logError('AUDIO_SERVE_ERROR', 'Error sirviendo archivo de audio', {
+                filename: req.params.filename,
+                error: error.message
+            });
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+    
     // Agrega más endpoints aquí si es necesario
 }
 
@@ -639,30 +679,52 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
                 speed: 1.0
             });
             
-            // NOTA: WHAPI requiere una URL, no base64
-            // Por ahora, vamos a loggear que esta funcionalidad necesita implementación completa
-            logWarning('VOICE_UPLOAD_PENDING', 'Subida de audio a WHAPI pendiente de implementar', {
+            // Convertir respuesta a buffer
+            const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+            
+            // Generar nombre único para el archivo
+            const fileName = `voice_${shortUserId}_${Date.now()}.ogg`;
+            const audioPath = path.join('tmp', 'audio', fileName);
+            
+            // Crear directorio si no existe
+            await fs.mkdir(path.dirname(audioPath), { recursive: true });
+            
+            // Guardar archivo temporalmente
+            await fs.writeFile(audioPath, audioBuffer);
+            
+            // Generar URL pública para el archivo
+            const audioUrl = `${appConfig.webhookUrl}/audio/${fileName}`;
+            
+            logInfo('VOICE_FILE_CREATED', 'Archivo de audio creado temporalmente', {
                 userId: shortUserId,
-                note: 'WHAPI requiere URL del audio, no base64'
+                fileName,
+                url: audioUrl
             });
             
-            // Temporalmente, enviar mensaje de texto indicando que debería ser voz
-            const fallbackMessage = `🔊 [Este mensaje debería ser una nota de voz]\n\n${message}`;
+            // Programar eliminación del archivo después de 5 minutos
+            setTimeout(async () => {
+                try {
+                    await fs.unlink(audioPath);
+                    logDebug('VOICE_FILE_DELETED', 'Archivo de audio temporal eliminado', { fileName });
+                } catch (error) {
+                    // Ignorar si ya fue eliminado
+                }
+            }, 5 * 60 * 1000);
             
-            // Usar el endpoint de texto como fallback temporal
-            const textEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/text`;
-            const textPayload = {
+            // Enviar como nota de voz via WHAPI con URL
+            const voiceEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/voice`;
+            const voicePayload = {
                 to: chatId,
-                body: fallbackMessage
+                media: audioUrl
             };
             
-            const whapiResponse = await fetch(textEndpoint, {
+            const whapiResponse = await fetch(voiceEndpoint, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(textPayload)
+                body: JSON.stringify(voicePayload)
             });
             
             if (whapiResponse.ok) {

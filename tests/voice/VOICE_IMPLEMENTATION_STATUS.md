@@ -8,13 +8,15 @@
 3. **Marcado de estado de voz** - Se marca cuando un usuario envía voz para responder con voz
 4. **Generación de TTS** - OpenAI genera correctamente el audio de la respuesta
 5. **Lógica de decisión** - El bot decide cuándo responder con voz según los criterios configurados
+6. **Guardado temporal de archivos** - Los archivos de audio se guardan temporalmente en el servidor
+7. **Endpoint para servir audio** - Endpoint `/audio/:filename` sirve los archivos de voz
+8. **Envío de notas de voz** - WHAPI recibe la URL y envía la nota de voz correctamente
 
-### Lo que NO funciona aún ❌:
-1. **Envío de notas de voz** - WHAPI requiere una URL del archivo de audio, no base64
-2. **Subida de archivos a WHAPI** - No está implementado el upload de archivos para obtener URLs
+### Implementación Completa ✅
 
-## Problema Principal
+## Solución Implementada ✅
 
+### Problema Original
 WHAPI requiere que el audio se envíe como una URL:
 ```json
 {
@@ -23,35 +25,28 @@ WHAPI requiere que el audio se envíe como una URL:
 }
 ```
 
-Pero actualmente estamos generando el audio como un buffer/base64.
+### Solución Adoptada: Servir archivos localmente
+1. ✅ El audio generado por TTS se guarda temporalmente en `tmp/audio/`
+2. ✅ Se expone a través del endpoint `/audio/:filename`
+3. ✅ WHAPI recibe la URL pública y descarga el archivo
+4. ✅ Los archivos se eliminan automáticamente después de 5 minutos
 
-## Soluciones Posibles
+### Flujo Completo Implementado
+1. Usuario envía nota de voz → Webhook recibe tipo "voice"
+2. Bot transcribe con Whisper → "🎤 [transcripción]"
+3. OpenAI procesa y genera respuesta
+4. TTS convierte a audio OGG
+5. Se guarda en `tmp/audio/voice_{userId}_{timestamp}.ogg`
+6. Se genera URL: `https://webhook.url/audio/voice_123_456.ogg`
+7. WHAPI recibe la URL y envía la nota de voz
+8. Archivo se elimina después de 5 minutos
 
-### Opción 1: Subir a WHAPI Media (Recomendado)
-1. Buscar si WHAPI tiene un endpoint para subir archivos
-2. Subir el audio generado y obtener una URL
-3. Usar esa URL para enviar la nota de voz
+## Mejoras Futuras (Opcionales)
 
-### Opción 2: Usar un servicio externo
-1. Subir el audio a un servicio como S3, Cloudinary, etc.
-2. Obtener la URL pública
-3. Usar esa URL con WHAPI
-
-### Opción 3: Servir archivos localmente
-1. Guardar el audio temporalmente en el servidor
-2. Exponerlo a través de un endpoint público
-3. Usar esa URL con WHAPI
-
-## Implementación Temporal
-
-Por ahora, el bot envía un mensaje de texto con el prefijo `🔊 [Este mensaje debería ser una nota de voz]` para indicar que la respuesta debería haber sido de voz.
-
-## Próximos Pasos
-
-1. **Investigar API de WHAPI** para subida de archivos
-2. **Implementar subida de archivos** si existe el endpoint
-3. **Actualizar el código** para usar URLs en lugar de base64
-4. **Probar end-to-end** con notas de voz reales
+1. **Implementar caché de audio** para respuestas frecuentes
+2. **Usar CDN o S3** para servir archivos en producción
+3. **Agregar diferentes voces** según el contexto o preferencias
+4. **Optimizar formato de audio** (comprimir, ajustar bitrate)
 
 ## Configuración Necesaria
 
@@ -75,7 +70,7 @@ AUDIO_STORAGE_SERVICE=whapi  # whapi, s3, local, etc.
 El test `test-voice-to-voice.js` está preparado para:
 1. ✅ Simular correctamente un mensaje de voz entrante
 2. ✅ Verificar que el bot procese la voz
-3. ⚠️ Verificar el envío (actualmente envía texto como fallback)
+3. ✅ Verificar el envío de nota de voz real vía WHAPI
 
 ## Referencias
 

@@ -194,10 +194,10 @@ WHISPER_LANGUAGE=es
         } else {
             log.warning('⚠️ El test se ejecutó pero no se pudo confirmar la respuesta de voz');
             log.info('Posibles causas:');
-            console.log('  1. El webhook handler no está procesando mensajes de tipo "voice"');
-            console.log('  2. La transcripción de audio falló');
-            console.log('  3. La generación de TTS falló');
-            console.log('  4. El envío vía WHAPI falló');
+            console.log('  1. El audio de prueba no pudo ser descargado/transcrito');
+            console.log('  2. OpenAI no generó una respuesta adecuada');
+            console.log('  3. El archivo de audio no se guardó correctamente');
+            console.log('  4. WHAPI no pudo descargar el archivo desde la URL generada');
         }
         
     } catch (error) {

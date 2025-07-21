@@ -72,6 +72,11 @@ debug.log
 *.tar.gz
 *.rar
 
+# Archivos de audio temporales
+tmp/audio/
+tmp/audio/*.ogg
+tmp/audio/*.mp3
+
 # Mantener estructura de directorios pero ignorar contenido temporal
 examples/*.txt
 !examples/ejemplo_archivo_consolidado.txt
