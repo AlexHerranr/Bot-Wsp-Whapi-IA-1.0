@@ -121,7 +121,7 @@ const globalMessageBuffers = new Map<string, {
     lastActivity: number,
     timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 4000; // 4 segundos fijos para mensajes, typing, hooks, entrada manual
+const BUFFER_WINDOW_MS = 30000; // 30 segundos fijos para mensajes, typing, hooks, entrada manual
 
 // 🔧 ELIMINADOS: Buffers obsoletos y redundantes
 // const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
