@@ -457,40 +457,508 @@ function setupSignalHandlers() {
 
 // --- El resto del código de la aplicación (lógica de webhook, etc.) ---
 // Esta es una versión abreviada, el código completo se aplicará.
-// Por ejemplo, `setupWebhooks` y sus funciones anidadas:
+// --- Funciones auxiliares globales ---
 
+// Función para obtener ID corto de usuario
+const getShortUserId = (jid: string): string => {
+    if (typeof jid === 'string') {
+        const cleaned = jid.split('@')[0] || jid;
+        return cleaned;
+    }
+    return 'unknown';
+};
+
+// Función para limpiar nombre de contacto
+const cleanContactName = (rawName: any): string => {
+    if (!rawName || typeof rawName !== 'string') return 'Usuario';
+    
+    let cleaned = rawName
+        .trim()
+        .replace(/[^\w\s\u00C0-\u024F\u1E00-\u1EFF]/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    
+    return cleaned.substring(0, 50) || 'Usuario';
+};
+
+
+
+// Declaración adelantada de processCombinedMessage
+let processCombinedMessage: (userId: string, combinedText: string, chatId: string, userName: string, messageCount: number) => Promise<void>;
+
+// Función para procesar el buffer global
+async function processGlobalBuffer(userId: string): Promise<void> {
+    const buffer = globalMessageBuffers.get(userId);
+    if (!buffer || buffer.messages.length === 0) {
+        return;
+    }
+    
+    // 🚀 SIMPLIFICADO: Sin filtros - todos los mensajes van a OpenAI
+    const combinedText = buffer.messages
+        .join(' ')
+        .replace(/\s+/g, ' ') // Reemplazar múltiples espacios con uno solo
+        .trim();
+    
+    const messageCount = buffer.messages.length;
+    
+    // 🔧 SIMPLIFICADO: Procesar inmediatamente después de 5 segundos
+    console.log(`🔄 [BUFFER_PROCESS] ${buffer.userName}: ${messageCount} mensajes → "${combinedText.substring(0, 40)}..."`);
+    
+    logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global después de 5 segundos`, {
+        userJid: getShortUserId(userId),
+        userName: buffer.userName,
+        messageCount,
+        combinedText: combinedText.substring(0, 100) + '...',
+        environment: appConfig?.environment
+    });
+    
+    // Limpiar buffer
+    globalMessageBuffers.delete(userId);
+    
+    // Procesar mensaje combinado
+    if (processCombinedMessage) {
+        await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
+    }
+}
+
+// 🔧 NUEVO: Función unificada para typing (mismo timer que mensajes)
+function updateTypingStatus(userId: string, isTyping: boolean): void {
+    const buffer = globalMessageBuffers.get(userId);
+    if (!buffer) return;
+    
+    // 🔧 UNIFICADO: Reiniciar timer de 5 segundos cuando llega typing
+    if (buffer.timer) {
+        clearTimeout(buffer.timer);
+    }
+    
+    // CRÍTICO: Mismo timer de 5 segundos que para mensajes
+    buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
+    
+    console.log(`✍️ [TYPING] ${buffer.userName}: Escribiendo... → ⏳ 5s...`);
+    
+    logInfo('GLOBAL_BUFFER_TYPING', `Timer reiniciado por typing`, {
+        userJid: getShortUserId(userId),
+        userName: buffer.userName,
+        delay: BUFFER_WINDOW_MS,
+        environment: appConfig?.environment
+    });
+}
+
+// 🔧 NUEVO: Funciones para buffering proactivo global
+function addToGlobalBuffer(userId: string, messageText: string, chatId: string, userName: string): void {
+    let buffer = globalMessageBuffers.get(userId);
+    
+    if (!buffer) {
+        buffer = {
+            messages: [],
+            chatId,
+            userName,
+            lastActivity: Date.now(),
+            timer: null
+        };
+        globalMessageBuffers.set(userId, buffer);
+    }
+    
+    // Agregar mensaje al buffer
+    buffer.messages.push(messageText);
+    buffer.lastActivity = Date.now();
+    
+    // 🔧 OPTIMIZADO: Usar delay más corto para media (2s) vs texto normal (5s)
+    const isMediaMessage = messageText.includes('🎤 Transcripción:') || 
+                          messageText.includes('El usuario envió una imagen:');
+    const bufferDelay = isMediaMessage ? 2000 : BUFFER_WINDOW_MS;
+    
+    // Reiniciar timer con el delay apropiado
+    if (buffer.timer) {
+        clearTimeout(buffer.timer);
+    }
+    buffer.timer = setTimeout(() => processGlobalBuffer(userId), bufferDelay);
+    
+    console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${bufferDelay/1000}s...`);
+    
+    logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
+        userJid: getShortUserId(userId),
+        userName,
+        messageText: messageText.substring(0, 50) + '...',
+        bufferSize: buffer.messages.length,
+        delay: bufferDelay,
+        isMedia: isMediaMessage,
+        environment: appConfig?.environment
+    });
+}
+
+// Función para envío de mensajes a WhatsApp con división inteligente en párrafos
+async function sendWhatsAppMessage(chatId: string, message: string) {
+    const shortUserId = getShortUserId(chatId);
+    
+    // NUEVO: Decisión inteligente de usar voz
+    const userState = globalUserStates.get(chatId);
+    const messageLength = message.length;
+    const voiceThreshold = parseInt(process.env.VOICE_THRESHOLD || '150');
+    const randomProbability = parseFloat(process.env.VOICE_RANDOM_PROBABILITY || '0.1');
+    
+    // Criterios para usar voz
+    const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && (
+        userState?.lastInputVoice ||                    // Usuario envió voz
+        messageLength > voiceThreshold ||              // Mensaje largo
+        message.includes('🎤') ||                      // Respuesta a transcripción
+        Math.random() < randomProbability              // Factor aleatorio
+    );
+    
+    if (shouldUseVoice) {
+        try {
+            console.log(`${getTimestamp()} 🔊 [${shortUserId}] Generando respuesta de voz (${messageLength} chars)...`);
+            
+            // Limpiar emojis y caracteres especiales para TTS
+            const cleanMessage = message
+                .replace(/[\u{1F600}-\u{1F6FF}]/gu, '') // Emojis
+                .replace(/\*/g, '')                      // Asteriscos
+                .substring(0, 4096);                     // Límite TTS
+            
+            // Generar audio con TTS
+            const ttsResponse = await openaiClient.audio.speech.create({
+                model: 'tts-1',
+                voice: process.env.TTS_VOICE as any || 'alloy',
+                input: cleanMessage,
+                speed: 1.0
+            });
+            
+            // Convertir respuesta a buffer
+            const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+            
+            // Enviar como nota de voz via WHAPI
+            const voiceEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/voice`;
+            const voicePayload = {
+                to: chatId,
+                media: audioBuffer.toString('base64')
+            };
+            
+            const whapiResponse = await fetch(voiceEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(voicePayload)
+            });
+            
+            if (whapiResponse.ok) {
+                const responseData = await whapiResponse.json() as any;
+                
+                // Guardar ID del mensaje
+                if (responseData.message?.id) {
+                    botSentMessages.add(responseData.message.id);
+                    setTimeout(() => {
+                        botSentMessages.delete(responseData.message.id);
+                    }, 10 * 60 * 1000);
+                }
+                
+                console.log(`${getTimestamp()} 🔊 [${shortUserId}] ✓ Nota de voz enviada`);
+                
+                logSuccess('VOICE_RESPONSE_SENT', 'Nota de voz enviada exitosamente', {
+                    userId: shortUserId,
+                    messageLength,
+                    voice: process.env.TTS_VOICE || 'alloy'
+                });
+                
+                // Limpiar flag de voz después de responder
+                if (userState) {
+                    userState.lastInputVoice = false;
+                    globalUserStates.set(chatId, userState);
+                }
+                
+                return true; // Éxito, no enviar texto
+            } else {
+                const errorData = await whapiResponse.json() as WHAPIError;
+                throw new Error(`WHAPI error ${whapiResponse.status}: ${errorData.error?.message || 'Unknown error'}`);
+            }
+            
+        } catch (voiceError: any) {
+            logError('VOICE_SEND_ERROR', 'Error enviando nota de voz, fallback a texto', {
+                userId: shortUserId,
+                error: voiceError.message
+            });
+            console.log(`${getTimestamp()} ⚠️ [${shortUserId}] Error en nota de voz, enviando como texto`);
+            // Continuar con envío de texto
+        }
+    }
+    
+    // 🔧 NUEVO: No enviar mensajes vacíos
+    if (!message || message.trim() === '') {
+        logInfo('WHATSAPP_SKIP_EMPTY', `Saltando envío de mensaje vacío para ${shortUserId}`, {
+            chatId,
+            messageLength: message?.length || 0,
+            environment: appConfig?.environment
+        });
+        return true;
+    }
+    
+    try {
+        // 🎯 NUEVO: División inteligente de mensajes en párrafos
+        let chunks: string[] = [];
+        
+        // Primero intentar dividir por doble salto de línea
+        const paragraphs = message.split(/\n\n+/).map(chunk => chunk.trim()).filter(chunk => chunk.length > 0);
+        
+        // Si hay párrafos claramente separados, usarlos
+        if (paragraphs.length > 1) {
+            chunks = paragraphs;
+        } else {
+            // Si no hay párrafos, buscar listas con bullets
+            const lines = message.split('\n');
+            let currentChunk = '';
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const nextLine = lines[i + 1];
+                
+                // Si la línea actual termina con ":" y la siguiente empieza con bullet
+                if (line.endsWith(':') && nextLine && nextLine.trim().match(/^[•\-\*]/)) {
+                    // Agregar la línea de título al chunk actual
+                    if (currentChunk) {
+                        chunks.push(currentChunk.trim());
+                    }
+                    currentChunk = line;
+                } 
+                // Si es una línea de bullet
+                else if (line.trim().match(/^[•\-\*]/)) {
+                    currentChunk += '\n' + line;
+                    
+                    // Si la siguiente línea NO es un bullet, cerrar el chunk
+                    if (!nextLine || !nextLine.trim().match(/^[•\-\*]/)) {
+                        chunks.push(currentChunk.trim());
+                        currentChunk = '';
+                    }
+                }
+                // Línea normal
+                else {
+                    if (currentChunk) {
+                        currentChunk += '\n' + line;
+                    } else {
+                        currentChunk = line;
+                    }
+                }
+            }
+            
+            // Agregar cualquier chunk restante
+            if (currentChunk) {
+                chunks.push(currentChunk.trim());
+            }
+        }
+        
+        // Filtrar chunks vacíos
+        chunks = chunks.filter(chunk => chunk.length > 0);
+        
+        // Si no se pudo dividir bien, usar el mensaje original
+        if (chunks.length === 0) {
+            chunks = [message];
+        }
+        
+        // 🎯 IMPLEMENTACIÓN DE ENVÍO
+        if (chunks.length === 1) {
+            // Mensaje único - enviar normalmente
+            logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
+                chatId,
+                messageLength: message.length,
+                preview: message.substring(0, 100) + '...',
+                environment: appConfig?.environment
+            });
+            
+            const response = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/text`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    to: chatId,
+                    body: message
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json() as WHAPIError;
+                throw new Error(`WHAPI error ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
+            }
+            
+            const responseData = await response.json() as any;
+            
+            // Guardar ID del mensaje enviado
+            if (responseData.message?.id) {
+                botSentMessages.add(responseData.message.id);
+                setTimeout(() => {
+                    botSentMessages.delete(responseData.message.id);
+                }, 10 * 60 * 1000); // Limpiar después de 10 minutos
+            }
+            
+            console.log(`${getTimestamp()} ✅ [${shortUserId}] Mensaje enviado`);
+            return true;
+        } else {
+            // Múltiples chunks - enviar con delays
+            logInfo('WHATSAPP_SEND_CHUNKS', `Enviando mensaje en ${chunks.length} partes a ${shortUserId}`, {
+                chatId,
+                totalLength: message.length,
+                chunks: chunks.length,
+                environment: appConfig?.environment
+            });
+            
+            for (let i = 0; i < chunks.length; i++) {
+                const chunk = chunks[i];
+                
+                const response = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/text`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: chatId,
+                        body: chunk
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json() as WHAPIError;
+                    throw new Error(`WHAPI error ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
+                }
+                
+                const responseData = await response.json() as any;
+                
+                // Guardar ID del mensaje enviado
+                if (responseData.message?.id) {
+                    botSentMessages.add(responseData.message.id);
+                    setTimeout(() => {
+                        botSentMessages.delete(responseData.message.id);
+                    }, 10 * 60 * 1000);
+                }
+                
+                console.log(`${getTimestamp()} ✅ [${shortUserId}] Parte ${i + 1}/${chunks.length} enviada`);
+                
+                // Delay entre chunks (excepto el último)
+                if (i < chunks.length - 1) {
+                    const delay = Math.min(1000, chunk.length * 2); // 2ms por carácter, máx 1s
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            
+            return true;
+        }
+    } catch (error) {
+        logError('WHATSAPP_SEND_ERROR', `Error enviando mensaje a ${shortUserId}`, {
+            chatId,
+            error: error.message,
+            environment: appConfig?.environment
+        });
+        return false;
+    }
+}
+
+// 🔧 ETAPA 1: Función para limpiar runs huérfanos automáticamente
+async function cleanupOldRuns(threadId: string, userId: string): Promise<number> {
+    try {
+        const runs = await openaiClient.beta.threads.runs.list(threadId, { limit: 10 });
+        let cancelledCount = 0;
+        
+        for (const run of runs.data) {
+            // Cancelar runs que están en estado activo por más de 10 minutos
+            if (['queued', 'in_progress', 'requires_action'].includes(run.status)) {
+                // 🔧 ETAPA 3: Corregir timestamp - OpenAI usa Unix timestamp en segundos
+                const runCreatedAt = typeof run.created_at === 'number' 
+                    ? run.created_at * 1000  // OpenAI usa Unix timestamp en segundos
+                    : new Date(run.created_at).getTime();
+                
+                const runAge = Date.now() - runCreatedAt;
+                const ageMinutes = Math.floor(runAge / 60000);
+                
+                // Solo cancelar si realmente es viejo (más de 10 minutos)
+                if (ageMinutes > 10) {
+                    try {
+                        await openaiClient.beta.threads.runs.cancel(threadId, run.id);
+                        cancelledCount++;
+                        
+                        logWarning('OLD_RUN_CANCELLED', `Run huérfano cancelado automáticamente`, {
+                            userId: getShortUserId(userId),
+                            threadId,
+                            runId: run.id,
+                            status: run.status,
+                            ageMinutes
+                        });
+                    } catch (cancelError) {
+                        logError('OLD_RUN_CANCEL_ERROR', `Error cancelando run huérfano`, {
+                            userId: getShortUserId(userId),
+                            threadId,
+                            runId: run.id,
+                            error: cancelError.message
+                        });
+                    }
+                }
+            }
+        }
+        
+        if (cancelledCount > 0) {
+            logInfo('OLD_RUNS_CLEANUP', `Cleanup automático completado`, {
+                userId: getShortUserId(userId),
+                threadId,
+                runsCancelled: cancelledCount
+            });
+        }
+        
+        return cancelledCount;
+    } catch (error) {
+        logError('OLD_RUNS_CLEANUP_ERROR', `Error en cleanup de runs huérfanos`, {
+            userId: getShortUserId(userId),
+            threadId,
+            error: error.message
+        });
+        return 0;
+    }
+}
+
+// 🔧 NUEVA FUNCIÓN: Verificar si hay runs activos para un usuario
+async function isRunActive(userId: string): Promise<boolean> {
+    try {
+        const shortUserId = getShortUserId(userId);
+        const threadRecord = threadPersistence.getThread(shortUserId);
+        
+        if (!threadRecord) {
+            return false; // No hay thread, no hay runs activos
+        }
+        
+        // 🔧 ETAPA 1: Limpiar runs huérfanos antes de verificar
+        await cleanupOldRuns(threadRecord.threadId, shortUserId);
+        
+        const runs = await openaiClient.beta.threads.runs.list(threadRecord.threadId, { limit: 5 });
+        const activeRuns = runs.data.filter(r => 
+            ['queued', 'in_progress', 'requires_action'].includes(r.status)
+        );
+        
+        if (activeRuns.length > 0) {
+            logWarning('ACTIVE_RUN_DETECTED', `Run activo detectado para ${shortUserId}`, {
+                shortUserId,
+                threadId: threadRecord.threadId,
+                activeRuns: activeRuns.map(r => ({ id: r.id, status: r.status })),
+                environment: appConfig?.environment
+            });
+            return true;
+        }
+        
+        return false;
+    } catch (error) {
+        logError('RUN_CHECK_ERROR', `Error verificando runs activos para ${userId}`, {
+            userId: getShortUserId(userId),
+            error: error.message,
+            environment: appConfig?.environment
+        });
+        return false; // En caso de error, asumir que no hay runs activos
+    }
+}
+
+// Por ejemplo, `setupWebhooks` y sus funciones anidadas:
 function setupWebhooks() {
     // El código de setupWebhooks va aquí.
     // Puede acceder a 'appConfig' y 'openaiClient' porque son variables globales
     // y esta función se llama DESPUÉS de que se inicializan en 'main'.
     const { secrets } = appConfig;
-
-    // Función para obtener ID corto de usuario
-    const getShortUserId = (jid: string): string => {
-        if (typeof jid === 'string') {
-            const cleaned = jid.split('@')[0] || jid;
-            return cleaned;
-        }
-        return 'unknown';
-    };
-
-    // Función para limpiar nombre de contacto
-    const cleanContactName = (rawName: any): string => {
-        if (!rawName || typeof rawName !== 'string') return 'Usuario';
-        
-        let cleaned = rawName
-            .trim()
-            .replace(/\s*-\s*$/, '')
-            .replace(/\s+/g, ' ')
-            .replace(/[^\w\s\u00C0-\u017F]/g, '')
-            .trim();
-        
-        if (!cleaned) return 'Usuario';
-        
-        cleaned = cleaned.replace(/\b\w/g, l => l.toUpperCase());
-        
-        return cleaned;
-    };
     
     // 🔧 NUEVO: Función para suscribirse a presencia de usuario
     const subscribedPresences = new Set<string>();
@@ -499,208 +967,8 @@ function setupWebhooks() {
     const contextCache = new Map<string, { context: string, timestamp: number }>();
     const CONTEXT_CACHE_TTL = 60 * 60 * 1000; // 1 hora // Rastrea usuarios suscritos
     
-    // 🔧 NUEVO: Funciones para buffering proactivo global
-    function addToGlobalBuffer(userId: string, messageText: string, chatId: string, userName: string): void {
-        let buffer = globalMessageBuffers.get(userId);
-        
-        if (!buffer) {
-            buffer = {
-                messages: [],
-                chatId,
-                userName,
-                lastActivity: Date.now(),
-                timer: null
-            };
-            globalMessageBuffers.set(userId, buffer);
-        }
-        
-        // Agregar mensaje al buffer
-        buffer.messages.push(messageText);
-        buffer.lastActivity = Date.now();
-        
-        // 🔧 OPTIMIZADO: Usar delay más corto para media (2s) vs texto normal (5s)
-        const isMediaMessage = messageText.includes('🎤 Transcripción:') || 
-                              messageText.includes('El usuario envió una imagen:');
-        const bufferDelay = isMediaMessage ? 2000 : BUFFER_WINDOW_MS;
-        
-        // Reiniciar timer con el delay apropiado
-        if (buffer.timer) {
-            clearTimeout(buffer.timer);
-        }
-        buffer.timer = setTimeout(() => processGlobalBuffer(userId), bufferDelay);
-        
-        console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${bufferDelay/1000}s...`);
-        
-        logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
-            userJid: getShortUserId(userId),
-            userName,
-            messageText: messageText.substring(0, 50) + '...',
-            bufferSize: buffer.messages.length,
-            delay: bufferDelay,
-            isMedia: isMediaMessage,
-            environment: appConfig.environment
-        });
-    }
-    
-    // 🔧 NUEVO: Función unificada para typing (mismo timer que mensajes)
-    function updateTypingStatus(userId: string, isTyping: boolean): void {
-        const buffer = globalMessageBuffers.get(userId);
-        if (!buffer) return;
-        
-        // 🔧 UNIFICADO: Reiniciar timer de 5 segundos cuando llega typing
-        if (buffer.timer) {
-            clearTimeout(buffer.timer);
-        }
-        
-        // CRÍTICO: Mismo timer de 5 segundos que para mensajes
-        buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
-        
-        console.log(`✍️ [TYPING] ${buffer.userName}: Escribiendo... → ⏳ 5s...`);
-        
-        logInfo('GLOBAL_BUFFER_TYPING', `Timer reiniciado por typing`, {
-            userJid: getShortUserId(userId),
-            userName: buffer.userName,
-            delay: BUFFER_WINDOW_MS,
-            environment: appConfig.environment
-        });
-    }
-    
-    async function processGlobalBuffer(userId: string): Promise<void> {
-        const buffer = globalMessageBuffers.get(userId);
-        if (!buffer || buffer.messages.length === 0) {
-            globalMessageBuffers.delete(userId);
-            return;
-        }
-        
-        // 🚀 SIMPLIFICADO: Sin filtros - todos los mensajes van a OpenAI
-        const combinedText = buffer.messages
-            .join(' ')
-            .replace(/\s+/g, ' ') // Reemplazar múltiples espacios con uno solo
-            .trim();
-        
-        const messageCount = buffer.messages.length;
-        
-        // 🔧 SIMPLIFICADO: Procesar inmediatamente después de 5 segundos
-        console.log(`🔄 [BUFFER_PROCESS] ${buffer.userName}: ${messageCount} mensajes → "${combinedText.substring(0, 40)}..."`);
-        
-        logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global después de 5 segundos`, {
-            userJid: getShortUserId(userId),
-            userName: buffer.userName,
-            messageCount,
-            combinedText: combinedText.substring(0, 100) + '...',
-            environment: appConfig.environment
-        });
-        
-        // Limpiar buffer
-        globalMessageBuffers.delete(userId);
-        
-        // Procesar mensaje combinado
-        await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
-    }
-    
-    // 🔧 ETAPA 1: Función para limpiar runs huérfanos automáticamente
-    async function cleanupOldRuns(threadId: string, userId: string): Promise<number> {
-        try {
-            const runs = await openaiClient.beta.threads.runs.list(threadId, { limit: 10 });
-            let cancelledCount = 0;
-            
-            for (const run of runs.data) {
-                // Cancelar runs que están en estado activo por más de 10 minutos
-                if (['queued', 'in_progress', 'requires_action'].includes(run.status)) {
-                    // 🔧 ETAPA 3: Corregir timestamp - OpenAI usa Unix timestamp en segundos
-                    const runCreatedAt = typeof run.created_at === 'number' 
-                        ? run.created_at * 1000  // OpenAI usa Unix timestamp en segundos
-                        : new Date(run.created_at).getTime();
-                    
-                    const runAge = Date.now() - runCreatedAt;
-                    const ageMinutes = Math.floor(runAge / 60000);
-                    
-                    // Solo cancelar si realmente es viejo (más de 10 minutos)
-                    if (ageMinutes > 10) {
-                        try {
-                            await openaiClient.beta.threads.runs.cancel(threadId, run.id);
-                            cancelledCount++;
-                            
-                            logWarning('OLD_RUN_CANCELLED', `Run huérfano cancelado automáticamente`, {
-                                userId: getShortUserId(userId),
-                                threadId,
-                                runId: run.id,
-                                status: run.status,
-                                ageMinutes
-                            });
-                        } catch (cancelError) {
-                            logError('OLD_RUN_CANCEL_ERROR', `Error cancelando run huérfano`, {
-                                userId: getShortUserId(userId),
-                                threadId,
-                                runId: run.id,
-                                error: cancelError.message
-                            });
-                        }
-                    }
-                }
-            }
-            
-            if (cancelledCount > 0) {
-                logInfo('OLD_RUNS_CLEANUP', `Cleanup automático completado`, {
-                    userId: getShortUserId(userId),
-                    threadId,
-                    runsCancelled: cancelledCount
-                });
-            }
-            
-            return cancelledCount;
-        } catch (error) {
-            logError('OLD_RUNS_CLEANUP_ERROR', `Error en cleanup de runs huérfanos`, {
-                userId: getShortUserId(userId),
-                threadId,
-                error: error.message
-            });
-            return 0;
-        }
-    }
-
-    // 🔧 NUEVA FUNCIÓN: Verificar si hay runs activos para un usuario
-    async function isRunActive(userId: string): Promise<boolean> {
-        try {
-            const shortUserId = getShortUserId(userId);
-            const threadRecord = threadPersistence.getThread(shortUserId);
-            
-            if (!threadRecord) {
-                return false; // No hay thread, no hay runs activos
-            }
-            
-            // 🔧 ETAPA 1: Limpiar runs huérfanos antes de verificar
-            await cleanupOldRuns(threadRecord.threadId, shortUserId);
-            
-            const runs = await openaiClient.beta.threads.runs.list(threadRecord.threadId, { limit: 5 });
-            const activeRuns = runs.data.filter(r => 
-                ['queued', 'in_progress', 'requires_action'].includes(r.status)
-            );
-            
-            if (activeRuns.length > 0) {
-                logWarning('ACTIVE_RUN_DETECTED', `Run activo detectado para ${shortUserId}`, {
-                    shortUserId,
-                    threadId: threadRecord.threadId,
-                    activeRuns: activeRuns.map(r => ({ id: r.id, status: r.status })),
-                    environment: appConfig.environment
-                });
-                return true;
-            }
-            
-            return false;
-        } catch (error) {
-            logError('RUN_CHECK_ERROR', `Error verificando runs activos para ${userId}`, {
-                userId: getShortUserId(userId),
-                error: error.message,
-                environment: appConfig.environment
-            });
-            return false; // En caso de error, asumir que no hay runs activos
-        }
-    }
-
-    async function processCombinedMessage(userId: string, combinedText: string, chatId: string, userName: string, messageCount: number): Promise<void> {
-        
-        
+    // Función para procesar mensajes combinados
+    processCombinedMessage = async function(userId: string, combinedText: string, chatId: string, userName: string, messageCount: number): Promise<void> {
         // 🔧 NUEVO: Usar sistema de colas en lugar de procesamiento directo
         const shortUserId = getShortUserId(userId);
         
@@ -722,7 +990,7 @@ function setupWebhooks() {
                             logInfo('RUN_REQUIRES_ACTION', `Procesando run en requires_action para ${userName}`, {
                                 userJid: shortUserId,
                                 runId: requiresActionRun.id,
-                                environment: appConfig.environment
+                                environment: appConfig?.environment
                             });
                             
                             // Intentar procesar el run que requiere acción
@@ -733,14 +1001,14 @@ function setupWebhooks() {
                                 logInfo('RUN_CANCELLED', `Run cancelado para permitir nuevo procesamiento`, {
                                     userJid: shortUserId,
                                     runId: requiresActionRun.id,
-                                    environment: appConfig.environment
+                                    environment: appConfig?.environment
                                 });
                             } catch (cancelError) {
                                 logWarning('RUN_CANCEL_ERROR', `Error cancelando run`, {
                                     userJid: shortUserId,
                                     runId: requiresActionRun.id,
                                     error: cancelError.message,
-                                    environment: appConfig.environment
+                                    environment: appConfig?.environment
                                 });
                             }
                         } else {
@@ -749,7 +1017,7 @@ function setupWebhooks() {
                                 userJid: shortUserId,
                                 messageCount,
                                 combinedText: combinedText.substring(0, 50) + '...',
-                                environment: appConfig.environment
+                                environment: appConfig?.environment
                             });
                             console.log(`⏸️ [BUFFER_SKIP] ${userName}: Run activo → Saltando procesamiento`);
                             return;
@@ -759,7 +1027,7 @@ function setupWebhooks() {
                     logError('RUN_CHECK_ERROR', `Error verificando runs para ${userName}`, {
                         userJid: shortUserId,
                         error: error.message,
-                        environment: appConfig.environment
+                        environment: appConfig?.environment
                     });
                 }
             }
@@ -781,7 +1049,7 @@ function setupWebhooks() {
                         userJid: shortUserId,
                         userName,
                         attempt: retryCount + 1,
-                        environment: appConfig.environment
+                        environment: appConfig?.environment
                     });
                     
                     // Esperar 1s y retry
@@ -796,7 +1064,7 @@ function setupWebhooks() {
                 logError('RUN_CHECK_ERROR', `Error verificando runs para ${userName}`, {
                     userJid: shortUserId,
                     error: error.message,
-                    environment: appConfig.environment
+                    environment: appConfig?.environment
                 });
                 break; // Continuar sin verificación si falla
             }
@@ -1250,301 +1518,6 @@ function setupWebhooks() {
         // 🔧 NUEVO: Procesar la cola si no hay lock activo
         if (!simpleLockManager.hasActiveLock(shortUserId)) {
             await simpleLockManager.processQueue(shortUserId);
-        }
-    }
-
-    // Función para envío de mensajes a WhatsApp con división inteligente en párrafos
-    async function sendWhatsAppMessage(chatId: string, message: string) {
-        const shortUserId = getShortUserId(chatId);
-        
-        // NUEVO: Decisión inteligente de usar voz
-        const userState = globalUserStates.get(chatId);
-        const messageLength = message.length;
-        const voiceThreshold = parseInt(process.env.VOICE_THRESHOLD || '150');
-        const randomProbability = parseFloat(process.env.VOICE_RANDOM_PROBABILITY || '0.1');
-        
-        // Criterios para usar voz
-        const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && (
-            userState?.lastInputVoice ||                    // Usuario envió voz
-            messageLength > voiceThreshold ||              // Mensaje largo
-            message.includes('🎤') ||                      // Respuesta a transcripción
-            Math.random() < randomProbability              // Factor aleatorio
-        );
-        
-        if (shouldUseVoice) {
-            try {
-                console.log(`${getTimestamp()} 🔊 [${shortUserId}] Generando respuesta de voz (${messageLength} chars)...`);
-                
-                // Limpiar emojis y caracteres especiales para TTS
-                const cleanMessage = message
-                    .replace(/[\u{1F600}-\u{1F6FF}]/gu, '') // Emojis
-                    .replace(/\*/g, '')                      // Asteriscos
-                    .substring(0, 4096);                     // Límite TTS
-                
-                // Generar audio con TTS
-                const ttsResponse = await openaiClient.audio.speech.create({
-                    model: 'tts-1',
-                    voice: process.env.TTS_VOICE as any || 'alloy',
-                    input: cleanMessage,
-                    speed: 1.0
-                });
-                
-                // Convertir respuesta a buffer
-                const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-                
-                // Enviar como nota de voz via WHAPI
-                const voiceEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/voice`;
-                const voicePayload = {
-                    to: chatId,
-                    media: audioBuffer.toString('base64')
-                };
-                
-                const whapiResponse = await fetch(voiceEndpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(voicePayload)
-                });
-                
-                if (whapiResponse.ok) {
-                    const responseData = await whapiResponse.json() as any;
-                    
-                    // Guardar ID del mensaje
-                    if (responseData.message?.id) {
-                        botSentMessages.add(responseData.message.id);
-                        setTimeout(() => {
-                            botSentMessages.delete(responseData.message.id);
-                        }, 10 * 60 * 1000);
-                    }
-                    
-                    console.log(`${getTimestamp()} 🔊 [${shortUserId}] ✓ Nota de voz enviada`);
-                    
-                    logSuccess('VOICE_RESPONSE_SENT', 'Nota de voz enviada exitosamente', {
-                        userId: shortUserId,
-                        messageLength,
-                        voice: process.env.TTS_VOICE || 'alloy'
-                    });
-                    
-                    // Limpiar flag de voz después de responder
-                    if (userState) {
-                        userState.lastInputVoice = false;
-                        globalUserStates.set(chatId, userState);
-                    }
-                    
-                    return true; // Éxito, no enviar texto
-                } else {
-                    const errorData = await whapiResponse.json() as WHAPIError;
-                    throw new Error(`WHAPI error ${whapiResponse.status}: ${errorData.error?.message || 'Unknown error'}`);
-                }
-                
-            } catch (voiceError: any) {
-                logError('VOICE_SEND_ERROR', 'Error enviando nota de voz, fallback a texto', {
-                    userId: shortUserId,
-                    error: voiceError.message
-                });
-                console.log(`${getTimestamp()} ⚠️ [${shortUserId}] Error en nota de voz, enviando como texto`);
-                // Continuar con envío de texto
-            }
-        }
-        
-        // 🔧 NUEVO: No enviar mensajes vacíos
-        if (!message || message.trim() === '') {
-            logInfo('WHATSAPP_SKIP_EMPTY', `Saltando envío de mensaje vacío para ${shortUserId}`, {
-                chatId,
-                messageLength: message?.length || 0,
-                environment: appConfig.environment
-            });
-            return true;
-        }
-        
-        try {
-            // 🎯 NUEVO: División inteligente de mensajes en párrafos
-            let chunks: string[] = [];
-            
-            // Primero intentar dividir por doble salto de línea
-            const paragraphs = message.split(/\n\n+/).map(chunk => chunk.trim()).filter(chunk => chunk.length > 0);
-            
-            // Si hay párrafos claramente separados, usarlos
-            if (paragraphs.length > 1) {
-                chunks = paragraphs;
-            } else {
-                // Si no hay párrafos, buscar listas con bullets
-                const lines = message.split('\n');
-                let currentChunk = '';
-                
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i];
-                    const nextLine = lines[i + 1];
-                    
-                    // Si la línea actual termina con ":" y la siguiente empieza con bullet
-                    if (line.endsWith(':') && nextLine && nextLine.trim().match(/^[•\-\*]/)) {
-                        // Agregar la línea de título al chunk actual
-                        if (currentChunk) {
-                            chunks.push(currentChunk.trim());
-                        }
-                        currentChunk = line;
-                    } 
-                    // Si es una línea de bullet
-                    else if (line.trim().match(/^[•\-\*]/)) {
-                        currentChunk += '\n' + line;
-                        
-                        // Si la siguiente línea NO es un bullet, cerrar el chunk
-                        if (!nextLine || !nextLine.trim().match(/^[•\-\*]/)) {
-                            chunks.push(currentChunk.trim());
-                            currentChunk = '';
-                        }
-                    }
-                    // Línea normal
-                    else {
-                        if (currentChunk) {
-                            currentChunk += '\n' + line;
-                        } else {
-                            currentChunk = line;
-                        }
-                    }
-                }
-                
-                // Agregar cualquier chunk restante
-                if (currentChunk) {
-                    chunks.push(currentChunk.trim());
-                }
-            }
-            
-            // Filtrar chunks vacíos
-            chunks = chunks.filter(chunk => chunk.length > 0);
-            
-            // Si no se pudo dividir bien, usar el mensaje original
-            if (chunks.length === 0) {
-                chunks = [message];
-            }
-            
-            // 🎯 IMPLEMENTACIÓN DE ENVÍO
-            if (chunks.length === 1) {
-                // Mensaje único - enviar normalmente
-                logInfo('WHATSAPP_SEND', `Enviando mensaje a ${shortUserId}`, { 
-                    chatId,
-                    messageLength: message.length,
-                    preview: message.substring(0, 100) + '...',
-                    environment: appConfig.environment
-                });
-                
-                const response = await fetch(`${secrets.WHAPI_API_URL}/messages/text`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${secrets.WHAPI_TOKEN}`
-                    },
-                    body: JSON.stringify({
-                        to: chatId,
-                        body: message,
-                        typing_time: message.includes('🔄') || message.includes('📊') ? 5 : 3
-                    })
-                });
-                
-                if (response.ok) {
-                    const result = await response.json() as any;
-                    
-                    // Tracking del mensaje del bot
-                    if (result.sent && result.message?.id) {
-                        botSentMessages.add(result.message.id);
-                        setTimeout(() => {
-                            botSentMessages.delete(result.message.id);
-                        }, 10 * 60 * 1000);
-                    }
-                    
-                    logSuccess('WHATSAPP_SEND', `Mensaje enviado exitosamente`, {
-                        shortUserId: shortUserId,
-                        messageLength: message.length,
-                        messageId: result.message?.id,
-                        environment: appConfig.environment
-                    });
-                    return true;
-                } else {
-                    const errorText = await response.text();
-                    logError('WHATSAPP_SEND', `Error enviando mensaje a ${shortUserId}`, { 
-                        status: response.status,
-                        statusText: response.statusText,
-                        error: errorText,
-                        environment: appConfig.environment
-                    });
-                    return false;
-                }
-            } else {
-                // 🎯 NUEVO: Múltiples párrafos - enviar como mensajes separados
-                logInfo('WHATSAPP_CHUNKS', `Dividiendo mensaje largo en ${chunks.length} párrafos`, { 
-                    chatId: chatId,
-                    shortUserId: shortUserId,
-                    totalChunks: chunks.length,
-                    originalLength: message.length,
-                    environment: appConfig.environment
-                });
-                
-                // Agregar indicador visual en consola
-                console.log(`📄 [BOT] Enviando ${chunks.length} párrafos...`);
-                
-                // Enviar cada chunk como mensaje independiente
-                for (let i = 0; i < chunks.length; i++) {
-                    const chunk = chunks[i];
-                    const isLastChunk = i === chunks.length - 1;
-                    
-                    const response = await fetch(`${secrets.WHAPI_API_URL}/messages/text`, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${secrets.WHAPI_TOKEN}`
-                        },
-                        body: JSON.stringify({
-                            to: chatId,
-                            body: chunk,
-                            typing_time: i === 0 ? 3 : 2 // 3s primer mensaje, 2s siguientes
-                        })
-                    });
-                    
-                    if (response.ok) {
-                        const result = await response.json() as any;
-                        
-                        // Tracking del mensaje del bot
-                        if (result.sent && result.message?.id) {
-                            botSentMessages.add(result.message.id);
-                            setTimeout(() => {
-                                botSentMessages.delete(result.message.id);
-                            }, 10 * 60 * 1000);
-                        }
-                        
-                        // Pequeña pausa entre mensajes para mejor UX
-                        if (!isLastChunk) {
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                        }
-                    } else {
-                        const errorText = await response.text();
-                        logError('WHATSAPP_CHUNK_ERROR', `Error enviando párrafo ${i + 1}/${chunks.length}`, { 
-                            shortUserId: shortUserId,
-                            status: response.status,
-                            statusText: response.statusText,
-                            error: errorText,
-                            environment: appConfig.environment
-                        });
-                        return false;
-                    }
-                }
-                
-                logSuccess('WHATSAPP_CHUNKS_COMPLETE', `Todos los párrafos enviados exitosamente`, {
-                    shortUserId: shortUserId,
-                    totalChunks: chunks.length,
-                    originalLength: message.length,
-                    environment: appConfig.environment
-                });
-                
-                return true;
-            }
-        } catch (error) {
-            logError('WHATSAPP_SEND', `Error de red enviando a ${shortUserId}`, { 
-                error: error.message,
-                environment: appConfig.environment
-            });
-            return false;
         }
     }
 
@@ -2384,532 +2357,7 @@ function setupWebhooks() {
             return '';
         }
     };
-
-    // Webhook Principal
-    app.post('/hook', async (req: Request, res: Response) => {
-        console.log(`📨 Webhook recibido en /hook - ${new Date().toISOString()}`);
-        
-        // Responder inmediatamente para evitar timeouts
-        res.status(200).json({ 
-            received: true, 
-            timestamp: new Date().toISOString(),
-            environment: appConfig?.environment || 'unknown'
-        });
-        
-        console.log(`✅ Respuesta 200 enviada`);
-        
-        // Procesar de forma asíncrona
-        if (!isServerInitialized) {
-            logWarning('WEBHOOK_NOT_READY', 'Webhook recibido pero bot no inicializado', {
-                environment: appConfig?.environment || 'unknown'
-            });
-            return;
-        }
-        
-        try {
-            const { messages, presences, event } = req.body;
-            
-            // 🔧 NUEVO: Procesar eventos de presencia (typing)
-            if (presences && event?.type === 'presences' && event?.event === 'post') {
-                logInfo('PRESENCE_EVENT', `Procesando ${presences.length} eventos de presencia`, {
-                    environment: appConfig.environment,
-                    presenceCount: presences.length
-                });
-                
-                presences.forEach((presence: { contact_id: string, status: string }) => {
-                    const userId = presence.contact_id;
-                    const status = presence.status.toLowerCase();
-                    const shortUserId = getShortUserId(userId);
-                    
-                    logInfo('PRESENCE_RECEIVED', `Presencia para ${shortUserId}: ${status}`, {
-                        userId: shortUserId,
-                        status,
-                        environment: appConfig.environment
-                    });
-
-                    if (status === 'typing' || status === 'recording') {
-                        // Usuario está escribiendo - actualizar estado global
-                        updateTypingStatus(userId, true);
-                        
-                        console.log(`✍️ ${shortUserId} está escribiendo... (extendiendo buffer)`);
-                        
-                    } else if (status === 'online' || status === 'offline' || status === 'pending') {
-                        // Usuario dejó de escribir - actualizar estado global
-                        if (globalMessageBuffers.has(userId)) {
-                            updateTypingStatus(userId, false);
-                            
-                            console.log(`⏸️ ${shortUserId} dejó de escribir`);
-                        }
-                    }
-                });
-                
-                return; // Salir después de manejar presences
-            }
-            
-            // Procesar mensajes normales
-            
-            if (!messages || !Array.isArray(messages)) {
-                // 🔧 MEJORADO: Reconocer TODOS los tipos de webhooks válidos de WHAPI
-                const hasValidWebhookData = 
-                    (req.body.statuses && Array.isArray(req.body.statuses)) ||
-                    (req.body.chats && Array.isArray(req.body.chats)) ||
-                    (req.body.contacts && Array.isArray(req.body.contacts)) ||
-                    (req.body.groups && Array.isArray(req.body.groups)) ||
-                    (req.body.presences && Array.isArray(req.body.presences)) ||
-                    (req.body.labels && Array.isArray(req.body.labels)) ||
-                    (req.body.calls && Array.isArray(req.body.calls)) ||
-                    (req.body.channel && typeof req.body.channel === 'object') ||
-                    (req.body.users && Array.isArray(req.body.users));
-                
-                if (!hasValidWebhookData) {
-                    // 🔧 NUEVO: Rate limiting para webhooks realmente inválidos
-                    const webhookKey = 'invalid_webhook';
-                    const now = Date.now();
-                    
-                    if (!webhookCounts.has(webhookKey) || (now - webhookCounts.get(webhookKey).lastLog) > 60000) {
-                        // Solo loggear una vez por minuto máximo
-                        logWarning('WEBHOOK', 'Webhook recibido sin datos válidos', { 
-                            body: req.body,
-                            environment: appConfig.environment,
-                            note: 'Rate limited - solo se loggea una vez por minuto'
-                        });
-                        
-                        webhookCounts.set(webhookKey, { lastLog: now, count: (webhookCounts.get(webhookKey)?.count || 0) + 1 });
-                    }
-                } else {
-                    // 🔧 MEJORADO: Log DEBUG para webhooks válidos sin mensajes
-                    const webhookType = req.body.statuses ? 'statuses' :
-                                       req.body.chats ? 'chats' :
-                                       req.body.contacts ? 'contacts' :
-                                       req.body.groups ? 'groups' :
-                                       req.body.presences ? 'presences' :
-                                       req.body.labels ? 'labels' :
-                                       req.body.calls ? 'calls' :
-                                       req.body.channel ? 'channel' :
-                                       req.body.users ? 'users' : 'unknown';
-                    
-                    logDebug('WEBHOOK_VALID', `Webhook válido recibido (${webhookType})`, {
-                        webhookType,
-                        dataCount: req.body[webhookType]?.length || 0,
-                        environment: appConfig.environment
-                    });
-                }
-                return;
-            }
-            
-            logInfo('WEBHOOK', `Procesando ${messages.length} mensajes del webhook`, {
-                environment: appConfig.environment,
-                messageCount: messages.length
-            });
-            
-            // Procesar cada mensaje
-            for (const message of messages) {
-                // 🔧 PROCESAR MENSAJES MANUALES DEL AGENTE (from_me: true)
-                if (message.from_me && message.type === 'text' && message.text?.body) {
-                    
-                    // 🚫 FILTRAR: Verificar si es un mensaje del bot (no manual)
-                    if (botSentMessages.has(message.id)) {
-                        logDebug('BOT_MESSAGE_FILTERED', `Mensaje del bot ignorado: ${message.id}`);
-                        continue; // Saltar, no es un mensaje manual real
-                    }
-                    
-                    // ✅ Es un mensaje manual real del agente
-                    const chatId = message.chat_id;
-                    const text = message.text.body.trim();
-                    const fromName = message.from_name || 'Agente';
-                    const shortClientId = getShortUserId(chatId);
-                    
-                    // Verificar si hay thread activo
-                    const threadRecord = threadPersistence.getThread(shortClientId);
-                    if (!threadRecord) {
-                        console.log(`⚠️  [AGENT] Sin conversación activa con ${shortClientId}`);
-                        logWarning('MANUAL_NO_THREAD', `No hay conversación activa`, { 
-                            shortClientId: shortClientId,
-                            agentName: fromName,
-                            reason: 'cliente_debe_escribir_primero'
-                        });
-                        continue;
-                    }
-                    
-                    // 🎯 Log compacto - Solo primer mensaje del grupo
-                    if (!globalMessageBuffers.has(chatId)) {
-                        const clientName = threadRecord.userName || 'Cliente';
-                        console.log(`🔧 [AGENT] ${fromName} → ${clientName}: "${text.substring(0, 25)}${text.length > 25 ? '...' : ''}"`);
-                    }
-                    
-                    // Solo log técnico detallado
-                    logInfo('MANUAL_DETECTED', `Mensaje manual del agente detectado`, {
-                        shortClientId: shortClientId,
-                        agentName: fromName,
-                        messageText: text.substring(0, 100),
-                        messageLength: text.length,
-                        timestamp: new Date().toISOString(),
-                        chatId: chatId
-                    });
-                    
-                    // 📦 AGRUPAR MENSAJES MANUALES (usando buffer global)
-                    if (!globalMessageBuffers.has(chatId)) {
-                        globalMessageBuffers.set(chatId, {
-                            messages: [],
-                            chatId: chatId,
-                            userName: fromName,
-                            lastActivity: Date.now(),
-                            timer: null
-                        });
-                        logInfo('MANUAL_BUFFER_CREATE', `Buffer manual creado`, { 
-                            shortClientId: shortClientId, 
-                            agentName: fromName 
-                        });
-                    }
-                    
-                    const buffer = globalMessageBuffers.get(chatId)!;
-                    buffer.messages.push(text);
-                    buffer.lastActivity = Date.now();
-                    
-                    // Solo log técnico
-                    logInfo('MANUAL_BUFFERING', `Mensaje manual agregado al buffer`, {
-                        shortClientId: shortClientId,
-                        bufferCount: buffer.messages.length,
-                        agentName: fromName,
-                        timeoutSeconds: BUFFER_WINDOW_MS / 1000
-                    });
-                    
-                    // Cancelar timer anterior si existe
-                    if (buffer.timer) {
-                        clearTimeout(buffer.timer);
-                    }
-                    
-                    // Establecer nuevo timer de 5 segundos (igual que mensajes normales)
-                    buffer.timer = setTimeout(async () => {
-                        const finalBuffer = globalMessageBuffers.get(chatId);
-                        if (finalBuffer && finalBuffer.messages.length > 0) {
-                            const combinedMessage = finalBuffer.messages.join(' ');
-                            
-                            try {
-                                // Solo logs técnicos
-                                logInfo('MANUAL_PROCESSING', `Procesando mensajes manuales agrupados`, {
-                                    shortClientId: shortClientId,
-                                    messageCount: finalBuffer.messages.length,
-                                    agentName: finalBuffer.userName,
-                                    combinedLength: combinedMessage.length,
-                                    preview: combinedMessage.substring(0, 100),
-                                    threadId: threadRecord.threadId
-                                });
-                                
-                                logInfo('MANUAL_SYNC_START', `Iniciando sincronización con OpenAI`, {
-                                    shortClientId: shortClientId,
-                                    threadId: threadRecord.threadId,
-                                    messagePreview: combinedMessage.substring(0, 50),
-                                    agentName: finalBuffer.userName
-                                });
-                                
-                                // 1. Agregar contexto del sistema - INSTRUCCIÓN SIMPLE
-                                await openaiClient.beta.threads.messages.create(threadRecord.threadId, {
-                                    role: 'user',
-                                    content: `[Mensaje manual escrito por agente ${finalBuffer.userName} - NO RESPONDER]`
-                                });
-                                
-                                // 2. Agregar el mensaje manual agrupado
-                                await openaiClient.beta.threads.messages.create(threadRecord.threadId, {
-                                    role: 'assistant',
-                                    content: combinedMessage
-                                });
-                                
-                                // 3. Actualizar thread
-                                threadPersistence.setThread(shortClientId, threadRecord.threadId, chatId, finalBuffer.userName);
-                                
-                                // 🎯 Log compacto final
-                                const msgCount = finalBuffer.messages.length > 1 ? `${finalBuffer.messages.length} msgs` : '1 msg';
-                                console.log(`✅ [BOT] Enviado a 🤖 OpenAI → Contexto actualizado (${msgCount})`);
-                                
-                                // Solo log técnico
-                                logSuccess('MANUAL_SYNC_SUCCESS', `Mensajes manuales sincronizados exitosamente`, {
-                                    shortClientId: shortClientId,
-                                    agentName: finalBuffer.userName,
-                                    messageCount: finalBuffer.messages.length,
-                                    totalLength: combinedMessage.length,
-                                    preview: combinedMessage.substring(0, 100),
-                                    threadId: threadRecord.threadId,
-                                    timestamp: new Date().toISOString()
-                                });
-                                
-                            } catch (error) {
-                                console.log(`❌ [AGENT] Error sincronizando con OpenAI: ${error.message}`);
-                                logError('MANUAL_SYNC_ERROR', `Error sincronizando mensajes manuales`, {
-                                    error: error.message,
-                                    threadId: threadRecord.threadId,
-                                    chatId: shortClientId,
-                                    messageCount: finalBuffer.messages.length
-                                });
-                            }
-                        }
-                        
-                        // Limpiar buffer
-                        globalMessageBuffers.delete(chatId);
-                    }, BUFFER_WINDOW_MS);
-                    
-                    continue; // Procesar siguiente mensaje
-                }
-                
-                // Skip mensajes del bot para evitar self-loops
-                if (message.from_me) {
-                    logDebug('MESSAGE_SKIP', `Skipped bot message`, { id: message.id, from: message.from });
-                    continue;
-                }
-                
-                logMessageReceived('Mensaje recibido', {
-                    userId: message.from,
-                    chatId: message.chat_id,
-                    from: message.from,
-                    type: message.type,
-                    timestamp: message.timestamp,
-                    body: message.text?.body?.substring(0, 100) + '...',
-                    environment: appConfig.environment
-                });
-                
-                                    // Solo procesar mensajes de texto que no sean del bot
-                    if (message.type === 'text' && !message.from_me && message.text?.body) {
-                        const userJid = message.from;
-                        const chatId = message.chat_id;
-                        const userName = cleanContactName(message.from_name);
-                        let messageText = message.text.body;
-                        const shortUserId = getShortUserId(userJid);
-                        
-                        // NUEVO: Manejo de respuestas citadas
-                        if (process.env.ENABLE_REPLY_DETECTION === 'true' && message.context?.quoted_content) {
-                            const quotedText = message.context.quoted_content.body || 
-                                              message.context.quoted_content.caption || 
-                                              '[mensaje anterior sin texto]';
-                            
-                            // Verificar si el mensaje citado es del bot
-                            const quotedId = message.context.quoted_id;
-                            const isReplyToBot = quotedId && botSentMessages.has(quotedId);
-                            
-                            // Enriquecer el mensaje con contexto
-                            let enhancedText: string;
-                            if (isReplyToBot) {
-                                enhancedText = `[Usuario responde a TU mensaje: "${quotedText.substring(0, 50)}${quotedText.length > 50 ? '...' : ''}"] ${messageText}`;
-                                
-                                logInfo('REPLY_TO_BOT_DETECTED', 'Usuario respondió a mensaje del bot', {
-                                    userId: shortUserId,
-                                    quotedId,
-                                    quotedText: quotedText.substring(0, 100),
-                                    currentText: messageText.substring(0, 100)
-                                });
-                            } else {
-                                enhancedText = `[Usuario responde a: "${quotedText.substring(0, 50)}${quotedText.length > 50 ? '...' : ''}"] ${messageText}`;
-                            }
-                            
-                            // Log para debugging
-                            logInfo('QUOTED_MESSAGE_DETECTED', 'Respuesta a mensaje detectada', {
-                                userId: shortUserId,
-                                quotedText: quotedText.substring(0, 100),
-                                currentText: messageText.substring(0, 100),
-                                isReplyToBot
-                            });
-                            
-                            // Actualizar estadísticas
-                            let userState = globalUserStates.get(userJid);
-                            if (!userState) {
-                                // Crear un UserState mínimo si no existe
-                                userState = {
-                                    userId: userJid,
-                                    isTyping: false,
-                                    lastTypingTimestamp: 0,
-                                    lastMessageTimestamp: Date.now(),
-                                    messages: [],
-                                    chatId: chatId,
-                                    userName: userName,
-                                    typingEventsCount: 0,
-                                    averageTypingDuration: 0,
-                                    quotedMessagesCount: 1,
-                                    lastInputVoice: false
-                                };
-                            } else {
-                                userState.quotedMessagesCount = (userState.quotedMessagesCount || 0) + 1;
-                                userState.lastMessageTimestamp = Date.now();
-                            }
-                            globalUserStates.set(userJid, userState);
-                            
-                            // Usar el texto enriquecido en lugar del original
-                            messageText = enhancedText;
-                            
-                            console.log(`${getTimestamp()} 📱 [${shortUserId}] Respuesta detectada a: "${quotedText.substring(0, 30)}..."`);
-                        }
-                        
-                        // Validación de tamaño de mensaje
-                        if (messageText.length > MAX_MESSAGE_LENGTH) {
-                            logWarning('MESSAGE_TOO_LONG', 'Mensaje excede límite, truncando', {
-                                userJid: getShortUserId(userJid),
-                                originalLength: messageText.length,
-                                maxLength: MAX_MESSAGE_LENGTH,
-                                environment: appConfig.environment
-                            });
-                            
-                            messageText = messageText.substring(0, MAX_MESSAGE_LENGTH) + '... [mensaje truncado por límite de tamaño]';
-                        }
-                        
-                        // 🔧 NUEVO: Usar buffering global proactivo para TODOS los mensajes
-                        addToGlobalBuffer(userJid, messageText, chatId, userName);
-                        
-                        // 🔧 NUEVO: Suscribirse a presencia del usuario (solo una vez)
-                        // await subscribeToPresence(shortUserId);
-                        
-                        console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → Buffer global`);
-                    }
-                    // NUEVO: Procesar mensajes de imagen
-                    else if (message.type === 'image' && !message.from_me) {
-                        const userJid = message.from;
-                        const chatId = message.chat_id;
-                        const userName = cleanContactName(message.from_name);
-                        const shortUserId = getShortUserId(userJid);
-                        
-                        if (process.env.ENABLE_IMAGE_PROCESSING === 'true') {
-                            try {
-                                const imageUrl = message.image?.url || message.image?.link;
-                                
-                                if (!imageUrl) {
-                                    logWarning('IMAGE_NO_URL', 'Imagen sin URL en webhook, intentando fetch desde WHAPI', { 
-                                        userId: shortUserId,
-                                        messageId: message.id 
-                                    });
-                                }
-                                
-                                console.log(`${getTimestamp()} 🖼️ [${shortUserId}] Procesando imagen...`);
-                                
-                                // Analizar imagen de forma asíncrona
-                                analyzeImage(imageUrl, userJid, message.id).then(description => {
-                                    // Agregar descripción al buffer con formato mejorado
-                                    const imageMessage = `El usuario envió una imagen: ${description}`;
-                                    addToGlobalBuffer(userJid, imageMessage, chatId, userName);
-                                    
-                                    console.log(`${getTimestamp()} 🖼️ [${shortUserId}] Imagen analizada: ${description.substring(0, 50)}...`);
-                                    
-                                    // Log para métricas
-                                    logSuccess('IMAGE_PROCESSED', 'Imagen procesada exitosamente', {
-                                        userId: shortUserId,
-                                        descriptionLength: description.length
-                                    });
-                                }).catch(error => {
-                                    // No agregar fallback genérico al buffer si falla
-                                    logError('IMAGE_PROCESSING_FAILED', 'No se pudo procesar la imagen', {
-                                        userId: shortUserId,
-                                        error: error.message
-                                    });
-                                    // No agregamos nada al buffer para evitar ruido en OpenAI
-                                });
-                                
-                            } catch (error) {
-                                logError('IMAGE_PROCESSING_ERROR', 'Error procesando imagen', {
-                                    userId: shortUserId,
-                                    error: error.message
-                                });
-                                // No agregar fallback al buffer
-                            }
-                        } else {
-                            // Si está deshabilitado, no registrar nada en el buffer
-                            logInfo('IMAGE_PROCESSING_DISABLED', 'Procesamiento de imagen deshabilitado', {
-                                userId: shortUserId
-                            });
-                        }
-                    }
-                    // NUEVO: Procesar mensajes de voz
-                    else if ((message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') && !message.from_me) {
-                        const userJid = message.from;
-                        const chatId = message.chat_id;
-                        const userName = cleanContactName(message.from_name);
-                        const shortUserIdVoice = getShortUserId(userJid);
-                        
-                        if (process.env.ENABLE_VOICE_TRANSCRIPTION === 'true') {
-                            try {
-                                const audioUrl = message.voice?.url || 
-                                               message.audio?.url || 
-                                               message.ptt?.url ||
-                                               message.media?.url;
-                                
-                                if (!audioUrl) {
-                                    logWarning('AUDIO_NO_URL', 'Audio sin URL en webhook, intentando fetch desde WHAPI', { 
-                                        userId: shortUserIdVoice,
-                                        messageId: message.id 
-                                    });
-                                }
-                                
-                                console.log(`${getTimestamp()} 🎤 [${shortUserIdVoice}] Procesando nota de voz...`);
-                                
-                                // Marcar que el input fue voz para respuesta automática
-                                let userState = globalUserStates.get(userJid);
-                                if (!userState) {
-                                    // Crear un UserState mínimo si no existe
-                                    userState = {
-                                        userId: userJid,
-                                        isTyping: false,
-                                        lastTypingTimestamp: 0,
-                                        lastMessageTimestamp: Date.now(),
-                                        messages: [],
-                                        chatId: chatId,
-                                        userName: userName,
-                                        typingEventsCount: 0,
-                                        averageTypingDuration: 0,
-                                        quotedMessagesCount: 0,
-                                        lastInputVoice: true
-                                    };
-                                } else {
-                                    userState.lastInputVoice = true;
-                                    userState.lastMessageTimestamp = Date.now();
-                                }
-                                globalUserStates.set(userJid, userState);
-                                
-                                // Transcribir de forma asíncrona
-                                transcribeAudio(audioUrl, userJid, message.id).then(transcription => {
-                                    // Agregar transcripción al buffer con emoji indicador
-                                    const voiceMessage = `🎤 Transcripción: ${transcription}`;
-                                    addToGlobalBuffer(userJid, voiceMessage, chatId, userName);
-                                    
-                                    console.log(`${getTimestamp()} 🎤 [${shortUserIdVoice}] Transcripción: "${transcription.substring(0, 50)}..."`);
-                                    
-                                    // Log para métricas
-                                    logSuccess('VOICE_TRANSCRIBED', 'Voz transcrita exitosamente', {
-                                        userId: shortUserIdVoice,
-                                        transcriptionLength: transcription.length,
-                                        words: transcription.split(' ').length
-                                    });
-                                }).catch(error => {
-                                    // No agregar fallback genérico al buffer si falla
-                                    logError('VOICE_PROCESSING_FAILED', 'No se pudo procesar la nota de voz', {
-                                        userId: shortUserIdVoice,
-                                        error: error.message
-                                    });
-                                    // No agregamos nada al buffer para evitar ruido en OpenAI
-                                });
-                                
-                            } catch (error) {
-                                logError('VOICE_PROCESSING_ERROR', 'Error procesando voz', {
-                                    userId: shortUserIdVoice,
-                                    error: error.message
-                                });
-                                // No agregar fallback al buffer
-                            }
-                        } else {
-                            // Si está deshabilitado, no registrar nada en el buffer
-                            logInfo('VOICE_PROCESSING_DISABLED', 'Procesamiento de voz deshabilitado', {
-                                userId: shortUserIdVoice
-                            });
-                        }
-                    }
-            }
-            
-        } catch (error) {
-            logError('WEBHOOK_ERROR', 'Error procesando webhook', { 
-                error: error.message, 
-                stack: error.stack,
-                environment: appConfig.environment
-            });
-        }
-    });
-
 }
-
-
 
 // Función de inicialización del bot
 async function initializeBot() {
@@ -3131,23 +2579,276 @@ async function recoverOrphanedRuns() {
 // Función para procesar webhooks
 async function processWebhook(body: any) {
     try {
-        console.log('🔄 Procesando webhook:', JSON.stringify(body).substring(0, 200));
+        const { messages, presences, event } = body;
         
-        // Validar que hay datos
-        if (!body || !body.messages || !Array.isArray(body.messages)) {
-            console.log('⚠️ Webhook sin mensajes válidos');
+        // 🔧 NUEVO: Procesar eventos de presencia (typing)
+        if (presences && event?.type === 'presences' && event?.event === 'post') {
+            logInfo('PRESENCE_EVENT', `Procesando ${presences.length} eventos de presencia`, {
+                environment: appConfig.environment,
+                presenceCount: presences.length
+            });
+            
+            presences.forEach((presence: { contact_id: string, status: string }) => {
+                const userId = presence.contact_id;
+                const status = presence.status.toLowerCase();
+                const shortUserId = getShortUserId(userId);
+                
+                logInfo('PRESENCE_RECEIVED', `Presencia para ${shortUserId}: ${status}`, {
+                    userId: shortUserId,
+                    status,
+                    environment: appConfig.environment
+                });
+
+                if (status === 'typing' || status === 'recording') {
+                    // Usuario está escribiendo - actualizar estado global
+                    updateTypingStatus(userId, true);
+                    
+                    console.log(`✍️ ${shortUserId} está escribiendo... (extendiendo buffer)`);
+                    
+                } else if (status === 'online' || status === 'offline' || status === 'pending') {
+                    // Usuario dejó de escribir - actualizar estado global
+                    if (globalMessageBuffers.has(userId)) {
+                        updateTypingStatus(userId, false);
+                        
+                        console.log(`⏸️ ${shortUserId} dejó de escribir`);
+                    }
+                }
+            });
+            
+            return; // Salir después de manejar presences
+        }
+        
+        // Procesar mensajes normales
+        
+        if (!messages || !Array.isArray(messages)) {
+            // 🔧 MEJORADO: Reconocer TODOS los tipos de webhooks válidos de WHAPI
+            const hasValidWebhookData = 
+                (body.statuses && Array.isArray(body.statuses)) ||
+                (body.chats && Array.isArray(body.chats)) ||
+                (body.contacts && Array.isArray(body.contacts)) ||
+                (body.groups && Array.isArray(body.groups)) ||
+                (body.presences && Array.isArray(body.presences)) ||
+                (body.labels && Array.isArray(body.labels)) ||
+                (body.calls && Array.isArray(body.calls)) ||
+                (body.channel && typeof body.channel === 'object') ||
+                (body.users && Array.isArray(body.users));
+            
+            if (!hasValidWebhookData) {
+                // 🔧 NUEVO: Rate limiting para webhooks realmente inválidos
+                const webhookKey = 'invalid_webhook';
+                const now = Date.now();
+                
+                if (!webhookCounts.has(webhookKey) || (now - webhookCounts.get(webhookKey).lastLog) > 60000) {
+                    // Solo loggear una vez por minuto máximo
+                    logWarning('WEBHOOK', 'Webhook recibido sin datos válidos', { 
+                        body: body,
+                        environment: appConfig.environment,
+                        note: 'Rate limited - solo se loggea una vez por minuto'
+                    });
+                    
+                    webhookCounts.set(webhookKey, { lastLog: now, count: (webhookCounts.get(webhookKey)?.count || 0) + 1 });
+                }
+            } else {
+                // 🔧 MEJORADO: Log DEBUG para webhooks válidos sin mensajes
+                const webhookType = body.statuses ? 'statuses' :
+                                   body.chats ? 'chats' :
+                                   body.contacts ? 'contacts' :
+                                   body.groups ? 'groups' :
+                                   body.presences ? 'presences' :
+                                   body.labels ? 'labels' :
+                                   body.calls ? 'calls' :
+                                   body.channel ? 'channel' :
+                                   body.users ? 'users' : 'unknown';
+                
+                logDebug('WEBHOOK_VALID', `Webhook válido recibido (${webhookType})`, {
+                    webhookType,
+                    dataCount: body[webhookType]?.length || 0,
+                    environment: appConfig.environment
+                });
+            }
             return;
         }
         
+        logInfo('WEBHOOK', `Procesando ${messages.length} mensajes del webhook`, {
+            environment: appConfig.environment,
+            messageCount: messages.length
+        });
+        
         // Procesar cada mensaje
-        for (const message of body.messages) {
+        for (const message of messages) {
             try {
-                // Solo procesar mensajes de texto entrantes
-                if (message.type === 'text' && !message.from_me && message.text?.body) {
-                    console.log(`📥 Mensaje de ${message.from}: ${message.text.body}`);
+                // 🔧 PROCESAR MENSAJES MANUALES DEL AGENTE (from_me: true)
+                if (message.from_me && message.type === 'text' && message.text?.body) {
                     
-                    // Aquí iría la lógica de procesamiento del mensaje
-                    // Por ahora solo logueamos
+                    // 🚫 FILTRAR: Verificar si es un mensaje del bot (no manual)
+                    if (botSentMessages.has(message.id)) {
+                        logDebug('BOT_MESSAGE_FILTERED', `Mensaje del bot ignorado: ${message.id}`);
+                        continue; // Saltar, no es un mensaje manual real
+                    }
+                    
+                    // ✅ Es un mensaje manual real del agente
+                    const chatId = message.chat_id;
+                    const text = message.text.body.trim();
+                    const fromName = message.from_name || 'Agente';
+                    const shortClientId = getShortUserId(chatId);
+                    
+                    // Verificar si hay thread activo
+                    const threadRecord = threadPersistence.getThread(shortClientId);
+                    if (!threadRecord) {
+                        console.log(`⚠️  [AGENT] Sin conversación activa con ${shortClientId}`);
+                        logWarning('MANUAL_NO_THREAD', `No hay conversación activa`, { 
+                            shortClientId: shortClientId,
+                            agentName: fromName,
+                            reason: 'cliente_debe_escribir_primero'
+                        });
+                        continue;
+                    }
+                    
+                    // 🎯 Log compacto - Solo primer mensaje del grupo
+                    if (!globalMessageBuffers.has(chatId)) {
+                        const clientName = threadRecord.userName || 'Cliente';
+                        console.log(`🔧 [AGENT] ${fromName} → ${clientName}: "${text.substring(0, 25)}${text.length > 25 ? '...' : ''}"`);
+                    }
+                    
+                    // Solo log técnico detallado
+                    logInfo('MANUAL_DETECTED', `Mensaje manual del agente detectado`, {
+                        shortClientId: shortClientId,
+                        agentName: fromName,
+                        messageText: text.substring(0, 100),
+                        messageLength: text.length,
+                        timestamp: new Date().toISOString(),
+                        chatId: chatId
+                    });
+                    
+                    // 📦 AGRUPAR MENSAJES MANUALES (usando buffer global)
+                    if (!globalMessageBuffers.has(chatId)) {
+                        globalMessageBuffers.set(chatId, {
+                            messages: [],
+                            chatId: chatId,
+                            userName: fromName,
+                            lastActivity: Date.now(),
+                            timer: null
+                        });
+                        logInfo('MANUAL_BUFFER_CREATE', `Buffer manual creado`, { 
+                            shortClientId: shortClientId, 
+                            agentName: fromName 
+                        });
+                    }
+                    
+                    const buffer = globalMessageBuffers.get(chatId)!;
+                    buffer.messages.push(text);
+                    buffer.lastActivity = Date.now();
+                    
+                    // Solo log técnico
+                    logInfo('MANUAL_BUFFERING', `Mensaje manual agregado al buffer`, {
+                        shortClientId: shortClientId,
+                        bufferCount: buffer.messages.length,
+                        agentName: fromName,
+                        timeoutSeconds: BUFFER_WINDOW_MS / 1000
+                    });
+                    
+                    // Cancelar timer anterior si existe
+                    if (buffer.timer) {
+                        clearTimeout(buffer.timer);
+                    }
+                    
+                    // Establecer nuevo timer de 5 segundos (igual que mensajes normales)
+                    buffer.timer = setTimeout(async () => {
+                        const finalBuffer = globalMessageBuffers.get(chatId);
+                        if (finalBuffer && finalBuffer.messages.length > 0) {
+                            const combinedMessage = finalBuffer.messages.join(' ');
+                            
+                            try {
+                                // Solo logs técnicos
+                                logInfo('MANUAL_PROCESSING', `Procesando mensajes manuales agrupados`, {
+                                    shortClientId: shortClientId,
+                                    messageCount: finalBuffer.messages.length,
+                                    agentName: finalBuffer.userName,
+                                    combinedLength: combinedMessage.length,
+                                    preview: combinedMessage.substring(0, 100),
+                                    threadId: threadRecord.threadId
+                                });
+                                
+                                logInfo('MANUAL_SYNC_START', `Iniciando sincronización con OpenAI`, {
+                                    shortClientId: shortClientId,
+                                    threadId: threadRecord.threadId,
+                                    messagePreview: combinedMessage.substring(0, 50),
+                                    agentName: finalBuffer.userName
+                                });
+                                
+                                // 1. Agregar contexto del sistema - INSTRUCCIÓN SIMPLE
+                                await openaiClient.beta.threads.messages.create(threadRecord.threadId, {
+                                    role: 'user',
+                                    content: `[Mensaje manual escrito por agente ${finalBuffer.userName} - NO RESPONDER]`
+                                });
+                                
+                                // 2. Agregar el mensaje manual agrupado
+                                await openaiClient.beta.threads.messages.create(threadRecord.threadId, {
+                                    role: 'assistant',
+                                    content: combinedMessage
+                                });
+                                
+                                // 3. Actualizar thread
+                                threadPersistence.setThread(shortClientId, threadRecord.threadId, chatId, finalBuffer.userName);
+                                
+                                // 🎯 Log compacto final
+                                const msgCount = finalBuffer.messages.length > 1 ? `${finalBuffer.messages.length} msgs` : '1 msg';
+                                console.log(`✅ [BOT] Enviado a 🤖 OpenAI → Contexto actualizado (${msgCount})`);
+                                
+                                // Solo log técnico
+                                logSuccess('MANUAL_SYNC_SUCCESS', `Mensajes manuales sincronizados exitosamente`, {
+                                    shortClientId: shortClientId,
+                                    agentName: finalBuffer.userName,
+                                    messageCount: finalBuffer.messages.length,
+                                    totalLength: combinedMessage.length,
+                                    preview: combinedMessage.substring(0, 100),
+                                    threadId: threadRecord.threadId,
+                                    timestamp: new Date().toISOString()
+                                });
+                                
+                            } catch (error) {
+                                console.log(`❌ [AGENT] Error sincronizando con OpenAI: ${error.message}`);
+                                logError('MANUAL_SYNC_ERROR', `Error sincronizando mensajes manuales`, {
+                                    error: error.message,
+                                    threadId: threadRecord.threadId,
+                                    chatId: shortClientId,
+                                    messageCount: finalBuffer.messages.length
+                                });
+                            }
+                        }
+                        
+                        // Limpiar buffer
+                        globalMessageBuffers.delete(chatId);
+                    }, BUFFER_WINDOW_MS);
+                    
+                    continue; // Procesar siguiente mensaje
+                }
+                
+                // Skip mensajes del bot para evitar self-loops
+                if (message.from_me) {
+                    logDebug('MESSAGE_SKIP', `Skipped bot message`, { id: message.id, from: message.from });
+                    continue;
+                }
+                
+                logMessageReceived('Mensaje recibido', {
+                    userId: message.from,
+                    chatId: message.chat_id,
+                    from: message.from,
+                    type: message.type,
+                    timestamp: message.timestamp,
+                    body: message.text?.body?.substring(0, 100) + '...',
+                    environment: appConfig.environment
+                });
+                
+                // Solo procesar mensajes de texto que no sean del bot
+                if (message.type === 'text' && !message.from_me && message.text?.body) {
+                    const userId = message.from;
+                    const text = message.text.body.trim();
+                    const chatId = message.chat_id;
+                    const userName = cleanContactName(message.from_name);
+                    
+                    // Agregar al buffer global
+                    addToGlobalBuffer(userId, text, chatId, userName);
                 }
             } catch (error) {
                 console.error('❌ Error procesando mensaje individual:', error);
