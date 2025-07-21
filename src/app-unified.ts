@@ -601,7 +601,7 @@ function updateTypingStatus(userId: string, isTyping: boolean): void {
 }
 
 // 🔧 NUEVO: Funciones para buffering proactivo global
-function addToGlobalBuffer(userId: string, messageText: string, chatId: string, userName: string): void {
+function addToGlobalBuffer(userId: string, messageText: string, chatId: string, userName: string, isVoice: boolean = false): void {
     let buffer = globalMessageBuffers.get(userId);
     
     if (!buffer) {
@@ -619,9 +619,17 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
     buffer.messages.push(messageText);
     buffer.lastActivity = Date.now();
     
+    // 🔧 NUEVO: Marcar que el usuario envió voz
+    if (isVoice) {
+        const userState = globalUserStates.get(userId) || { lastInputVoice: false };
+        userState.lastInputVoice = true;
+        globalUserStates.set(userId, userState);
+    }
+    
     // 🔧 OPTIMIZADO: Usar delay más corto para media (2s) vs texto normal (5s)
-    const isMediaMessage = messageText.includes('🎤 Transcripción:') || 
-                          messageText.includes('El usuario envió una imagen:');
+    const isMediaMessage = messageText.includes('🎤') || 
+                          messageText.includes('El usuario envió una imagen:') ||
+                          isVoice;
     const bufferDelay = isMediaMessage ? 2000 : BUFFER_WINDOW_MS;
     
     // Reiniciar timer con el delay apropiado
@@ -653,12 +661,9 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
     const voiceThreshold = parseInt(process.env.VOICE_THRESHOLD || '150');
     const randomProbability = parseFloat(process.env.VOICE_RANDOM_PROBABILITY || '0.1');
     
-    // Criterios para usar voz
+    // 🔧 MODIFICADO: Si el usuario envió voz, SIEMPRE responder con voz
     const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && (
-        userState?.lastInputVoice ||                    // Usuario envió voz
-        messageLength > voiceThreshold ||              // Mensaje largo
-        message.includes('🎤') ||                      // Respuesta a transcripción
-        Math.random() < randomProbability              // Factor aleatorio
+        userState?.lastInputVoice                      // Usuario envió voz - SIEMPRE responder con voz
     );
     
     if (shouldUseVoice) {
@@ -693,7 +698,9 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
             await fs.writeFile(audioPath, audioBuffer);
             
             // Generar URL pública para el archivo
-            const audioUrl = `${appConfig.webhookUrl}/audio/${fileName}`;
+            // Quitar '/hook' del final de la URL si existe
+            const baseUrl = appConfig.webhookUrl.replace(/\/hook$/, '');
+            const audioUrl = `${baseUrl}/audio/${fileName}`;
             
             logInfo('VOICE_FILE_CREATED', 'Archivo de audio creado temporalmente', {
                 userId: shortUserId,
@@ -1797,24 +1804,39 @@ function setupWebhooks() {
                          continue;
                      }
                      
-                     // No hay runs activos, agregar mensaje con contexto temporal
-                     // 🔧 NUEVO: Obtener contexto temporal para cada mensaje
-                     const temporalContext = await getRelevantContext(userJid, requestId);
-                     const messageWithContext = temporalContext + userMsg;
-                     
-                     // 🔧 DEBUG: Log del contexto que se envía a OpenAI
-                     logInfo('CONTEXT_DEBUG', 'Contexto enviado a OpenAI', {
-                         shortUserId,
-                         contextPreview: temporalContext.substring(0, 200),
-                         messagePreview: userMsg.substring(0, 100),
-                         totalLength: messageWithContext.length,
-                         requestId
-                     });
-                     
-                     await openaiClient.beta.threads.messages.create(threadId, {
-                         role: 'user',
-                         content: messageWithContext
-                     });
+                                         // No hay runs activos, agregar mensaje con contexto temporal
+                    // 🔧 NUEVO: Obtener contexto temporal para cada mensaje
+                    const temporalContext = await getRelevantContext(userJid, requestId);
+                    
+                    // 🔧 NUEVO: Detectar si es nota de voz y agregar instrucciones especiales
+                    const isVoiceMessage = userMsg.includes('🎤 [NOTA DE VOZ]');
+                    let messageWithContext = temporalContext + userMsg;
+                    
+                    if (isVoiceMessage) {
+                        // Agregar instrucciones especiales para respuestas de voz
+                        const voiceInstructions = `\n\n[INSTRUCCIÓN DEL SISTEMA: El usuario envió una NOTA DE VOZ. Por favor responde de forma CONCISA y NATURAL, como si estuvieras hablando. Usa un tono conversacional, evita listas largas o información muy detallada. Máximo 2-3 oraciones cortas.]`;
+                        messageWithContext = temporalContext + userMsg + voiceInstructions;
+                        
+                        logInfo('VOICE_MESSAGE_DETECTED', 'Mensaje de voz detectado, agregando instrucciones especiales', {
+                            shortUserId,
+                            requestId
+                        });
+                    }
+                    
+                    // 🔧 DEBUG: Log del contexto que se envía a OpenAI
+                    logInfo('CONTEXT_DEBUG', 'Contexto enviado a OpenAI', {
+                        shortUserId,
+                        contextPreview: temporalContext.substring(0, 200),
+                        messagePreview: userMsg.substring(0, 100),
+                        totalLength: messageWithContext.length,
+                        isVoiceMessage,
+                        requestId
+                    });
+                    
+                    await openaiClient.beta.threads.messages.create(threadId, {
+                        role: 'user',
+                        content: messageWithContext
+                    });
                      
                      logOpenAIRequest('message_added_with_context', { 
                          shortUserId,
@@ -2947,18 +2969,21 @@ async function processWebhook(body: any) {
                                 const audioUrl = message.voice?.url || message.audio?.url || message.ptt?.url;
                                 
                                 if (audioUrl) {
-                                    // Transcribir el audio
-                                    const transcription = await transcribeAudio(audioUrl, userId, message.id);
-                                    const audioText = `🎤 ${transcription}`;
+                                    // Transcribir el audio (función definida más abajo)
+                                    const transcriptionFunction = async (audioUrl: string, userId: string, messageId?: string): Promise<string> => {
+                                        return transcribeAudio(audioUrl, userId, messageId);
+                                    };
+                                    const transcription = await transcriptionFunction(audioUrl, userId, message.id);
+                                    const audioText = `🎤 [NOTA DE VOZ]: ${transcription}`;
                                     
                                     console.log(`🎤 [${getShortUserId(userId)}] Transcripción: "${transcription.substring(0, 50)}..."`);
                                     
-                                    // Agregar transcripción al buffer
-                                    addToGlobalBuffer(userId, audioText, chatId, userName);
+                                    // Agregar transcripción al buffer con metadata especial
+                                    addToGlobalBuffer(userId, audioText, chatId, userName, true); // true = es voz
                                 } else {
                                     // Si no hay URL, usar mensaje por defecto
                                     console.log(`⚠️ [${getShortUserId(userId)}] Nota de voz sin URL`);
-                                    addToGlobalBuffer(userId, '[Nota de voz recibida]', chatId, userName);
+                                    addToGlobalBuffer(userId, '🎤 [NOTA DE VOZ]: Sin transcripción disponible', chatId, userName, true);
                                 }
                             } catch (error) {
                                 console.error(`❌ Error transcribiendo audio:`, error);
@@ -2968,12 +2993,12 @@ async function processWebhook(body: any) {
                                 });
                                 
                                 // Fallback si falla la transcripción
-                                addToGlobalBuffer(userId, '[Nota de voz - Error en transcripción]', chatId, userName);
+                                addToGlobalBuffer(userId, '🎤 [NOTA DE VOZ]: Error en transcripción', chatId, userName, true);
                             }
                         } else {
                             // Si la transcripción no está habilitada
                             console.log(`ℹ️ [${getShortUserId(userId)}] Transcripción deshabilitada`);
-                            addToGlobalBuffer(userId, '[Nota de voz recibida]', chatId, userName);
+                            addToGlobalBuffer(userId, '🎤 [NOTA DE VOZ]: Transcripción deshabilitada', chatId, userName, true);
                         }
                     }
                     // Procesar mensajes de texto normales
