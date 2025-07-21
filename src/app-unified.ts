@@ -709,15 +709,14 @@ async function processGlobalBuffer(userId: string): Promise<void> {
         environment: appConfig?.environment
     });
     
-    // Limpiar buffer
-    globalMessageBuffers.delete(userId);
-    
     try {
         // Procesar mensaje combinado
         if (processCombinedMessage) {
             await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
         }
     } finally {
+        // 🔧 NUEVO: Limpiar buffer SOLO después de completar el procesamiento
+        globalMessageBuffers.delete(userId);
         // 🔧 NUEVO: Siempre limpiar el flag de procesamiento activo
         activeProcessing.delete(userId);
     }
