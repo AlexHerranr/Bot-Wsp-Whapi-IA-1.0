@@ -55,22 +55,33 @@ let appConfig: AppConfig | null = null;
  * Detecta automáticamente el entorno de ejecución
  */
 const detectEnvironment = (): EnvironmentConfig['environment'] => {
+    // Log para debug
+    console.log('🔍 Detectando entorno...');
+    console.log(`   RAILWAY_ENVIRONMENT: ${process.env.RAILWAY_ENVIRONMENT || 'not set'}`);
+    console.log(`   RAILWAY_PROJECT_ID: ${process.env.RAILWAY_PROJECT_ID || 'not set'}`);
+    console.log(`   K_SERVICE: ${process.env.K_SERVICE || 'not set'}`);
+    console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+    
     // Railway tiene variables específicas
     if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID) {
+        console.log('✅ Detectado: Railway');
         return 'cloud-run'; // Usamos cloud-run para Railway también (configuración similar)
     }
     
     // Cloud Run tiene la variable K_SERVICE
     if (process.env.K_SERVICE) {
+        console.log('✅ Detectado: Cloud Run');
         return 'cloud-run';
     }
     
     // Si NODE_ENV está definido, usarlo
     if (process.env.NODE_ENV === 'production') {
+        console.log('✅ Detectado: Production (NODE_ENV)');
         return 'cloud-run';
     }
     
     // Por defecto, desarrollo local
+    console.log('✅ Detectado: Local (default)');
     return 'local';
 };
 
