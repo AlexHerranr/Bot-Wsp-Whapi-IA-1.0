@@ -1,5 +1,10 @@
 # Bot Logs Parser - .gitignore
 
+# Variables de entorno y secretos
+.env
+.env.local
+.env.*.local
+
 # Archivos de logs generados
 bot_sessions_*.txt
 *.log
