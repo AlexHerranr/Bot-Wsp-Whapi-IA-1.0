@@ -701,7 +701,7 @@ async function processGlobalBuffer(userId: string): Promise<void> {
     const messageCount = buffer.messages.length;
     
     // 🔧 SIMPLIFICADO: Un solo log de procesamiento
-    logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global después de 5 segundos`, {
+    logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global después de ${BUFFER_WINDOW_MS/1000} segundos`, {
         userJid: getShortUserId(userId),
         userName: buffer.userName,
         messageCount,
@@ -728,7 +728,7 @@ function updateTypingStatus(userId: string, isTyping: boolean): void {
     const buffer = globalMessageBuffers.get(userId);
     if (!buffer) return;
     
-    // 🔧 UNIFICADO: Reiniciar timer de 5 segundos cuando llega typing
+    // 🔧 UNIFICADO: Reiniciar timer de ${BUFFER_WINDOW_MS/1000} segundos cuando llega typing
     if (buffer.timer) {
         clearTimeout(buffer.timer);
     }
