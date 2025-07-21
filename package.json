@@ -41,12 +41,14 @@
     "typescript"
   ],
   "dependencies": {
+    "@esbuild/linux-x64": "^0.25.8",
     "@google-cloud/secret-manager": "^6.1.0",
     "@google/generative-ai": "^0.21.0",
     "axios": "^1.7.9",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
+    "esbuild": "^0.25.8",
     "express": "^4.21.2",
     "fast-levenshtein": "^3.0.0",
     "node-fetch": "^3.3.2",
