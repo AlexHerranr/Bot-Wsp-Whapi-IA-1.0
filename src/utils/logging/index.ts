@@ -295,12 +295,11 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
     
     // === PROCESAMIENTO IA ===
     if (category === 'OPENAI_REQUEST') {
-        return `🤖 ${userName}: Procesando mensaje con OpenAI...`;
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
     }
     
     if (category === 'OPENAI_RESPONSE') {
-        const duration = details?.duration ? `${(details.duration/1000).toFixed(1)}s` : '';
-        return `✅ [BOT] Completado (${duration}) → 💬 "${messagePreview.substring(0, 50)}${messagePreview.length > 50 ? '...' : ''}"`;
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
     }
     
     if (category === 'OPENAI_ERROR') {
@@ -310,12 +309,13 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
     // === FUNCIONES ===
     if (category === 'FUNCTION_CALLING_START') {
         const functionName = details?.functionName || 'función';
-        return `⚙️ Ejecutando función: ${functionName}`;
+        return `⚙️ ${functionName}`;
     }
     
     if (category === 'FUNCTION_HANDLER') {
         const functionName = details?.functionName || 'función';
-        return `✅ ${functionName} → ${details?.result || 'completado'}`;
+        const result = details?.result || 'completado';
+        return `✅ ${functionName} → ${result}`;
     }
     
     // === BEDS24 ===
@@ -330,32 +330,49 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
     
     // === WHATSAPP ===
     if (category === 'WHATSAPP_SEND') {
-        return `📤 Enviando respuesta a ${userName}...`;
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
     }
     
     if (category === 'WHATSAPP_SEND' && level === 'SUCCESS') {
-        return `✅ Mensaje enviado exitosamente`;
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
     }
     
     // === THREADS ===
     if (category === 'THREAD_CREATED') {
-        return `🧵 Nuevo thread creado`;
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
     }
     
     if (category === 'THREAD_REUSE') {
-        return `🧵 Thread existente reutilizado`;
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
     }
     
     // === BUFFER ===
     if (category === 'BUFFER_GROUPED') {
-        const count = details?.messageCount || 1;
-        return `📦 Agrupados ${count} msgs`;
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
     }
     
     // === ETIQUETAS ===
     if (category === 'WHAPI_LABELS') {
-        const count = details?.labelsCount || 0;
-        return `🏷️ ${count} etiquetas sincronizadas`;
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
+    }
+    
+    // === TYPING ===
+    if (category === 'TYPING_AUTO_TIMEOUT_CHECK') {
+        return `⏰ ${message}`; // 🔧 RESTAURADO: Mostrar mensaje de timeout de typing
+    }
+    
+    // === BUFFER ===
+    if (category === 'BUFFER_PROCESS_SKIPPED') {
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
+    }
+    
+    // === OPENAI ===
+    if (category === 'OPENAI_RUN_COMPLETED') {
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
+    }
+    
+    if (category === 'OPENAI_RESPONSE') {
+        return ''; // 🔧 ELIMINADO: No mostrar en terminal
     }
     
     // === ERRORES ===

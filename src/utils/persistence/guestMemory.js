@@ -24,13 +24,15 @@ class GuestMemory {
         this.labelCache = new Map(); // userId → { labels: [], timestamp: Date }
         this.LABEL_CACHE_TTL = 300000; // 5 minutos en milisegundos
         
+        //  NUEVO: Cargar perfiles al inicializar
+        this.loadProfiles();
+        
         // 🔧 ETAPA 2: Limpieza automática del cache cada 10 minutos
         setInterval(() => {
             this.cleanExpiredCache();
         }, 600000); // 10 minutos
         
-        enhancedLog('info', 'GUEST_MEMORY', 
-            `Sistema de cache de labels inicializado (TTL: ${this.LABEL_CACHE_TTL/1000}s, limpieza: 10min)`);
+        // 🔧 NUEVO:
     }
     
     // Asegurar que el directorio existe
@@ -99,15 +101,22 @@ class GuestMemory {
     async getOrCreateProfile(userId, forceSync = false) {
         const existing = this.profiles.get(userId);
         if (!existing) {
-            // Crear perfil básico
+            // Crear perfil básico con SOLO datos reales
             const newProfile = {
-                id: userId,
-                name: null,
-                phone: userId,
-                label: 'nuevo',
-                whapiLabels: [], // Etiquetas desde Whapi
-                firstInteraction: new Date().toISOString(),
-                lastInteraction: new Date().toISOString()
+                id: userId,                    // Webhook message.from
+                name: null,                    // Webhook message.chat_name
+                phone: userId,                 // Webhook message.from
+                chatId: `${userId}@s.whatsapp.net`, // Chat ID completo para endpoints
+                label: 'nuevo',                // WHAPI labels[0].name
+                whapiLabels: [],               // WHAPI labels
+                firstInteraction: new Date().toISOString(), // Timestamp creación
+                lastInteraction: new Date().toISOString(),  // Timestamp último mensaje
+                whatsappName: null,            // WHAPI name
+                lastMessage: null,             // WHAPI last_message
+                lastThread: null,              // Thread ID de OpenAI
+                lastThreadUpdate: null,        // Última actualización del thread
+                lastAssistant: null,           // Último assistant usado
+                threadMessageCount: 0          // Contador de mensajes en el thread
             };
             
             // Intentar obtener información desde Whapi (con cache)
@@ -116,19 +125,27 @@ class GuestMemory {
                 const { getCachedChatInfo } = require('../../app-unified');
                 const chatInfo = await getCachedChatInfo(userId);
                 if (chatInfo) {
-                    // Sincronizar con datos de Whapi
+                    // Sincronizar con datos REALES de Whapi
                     if (chatInfo.name) {
-                        newProfile.name = chatInfo.name;
+                        newProfile.whatsappName = chatInfo.name; // WHAPI name
+                        newProfile.name = chatInfo.name; // También en name para compatibilidad
                     }
                     
                     if (chatInfo.labels && chatInfo.labels.length > 0) {
-                        newProfile.whapiLabels = chatInfo.labels;
-                        // Usar la primera etiqueta como label principal
-                        newProfile.label = chatInfo.labels[0].name;
+                        newProfile.whapiLabels = chatInfo.labels; // WHAPI labels
+                        newProfile.label = chatInfo.labels[0].name; // WHAPI labels[0].name
                         
                         enhancedLog('info', 'GUEST_MEMORY', 
                             `Sincronizado con Whapi: ${chatInfo.labels.length} etiquetas para ${userId}`);
                     }
+                    
+                    // Guardar último mensaje REAL desde WHAPI
+                    if (chatInfo.lastMessage) {
+                        newProfile.lastMessage = chatInfo.lastMessage; // WHAPI last_message
+                    }
+                    
+                    enhancedLog('info', 'GUEST_MEMORY', 
+                        `Perfil sincronizado para ${userId}: ${chatInfo.name || 'Sin nombre'}`);
                 }
             } catch (error) {
                 enhancedLog('warning', 'GUEST_MEMORY', 
@@ -220,23 +237,42 @@ class GuestMemory {
             // Importar la función cacheada desde app-unified.ts
             const { getCachedChatInfo } = require('../../app-unified');
             const chatInfo = await getCachedChatInfo(userId);
-            if (chatInfo && chatInfo.labels) {
-                profile.whapiLabels = chatInfo.labels;
+            if (chatInfo) {
+                // Actualizar SOLO datos REALES de WHAPI
+                if (chatInfo.name) {
+                    profile.whatsappName = chatInfo.name; // WHAPI name
+                    profile.name = chatInfo.name; // Mantener compatibilidad
+                }
                 
-                // Actualizar label principal si hay etiquetas
-                if (chatInfo.labels.length > 0) {
-                    profile.label = chatInfo.labels[0].name;
+                if (chatInfo.labels) {
+                    profile.whapiLabels = chatInfo.labels; // WHAPI labels
+                    
+                    // Actualizar label principal si hay etiquetas
+                    if (chatInfo.labels.length > 0) {
+                        profile.label = chatInfo.labels[0].name; // WHAPI labels[0].name
+                    }
+                }
+                
+                // Actualizar último mensaje REAL
+                if (chatInfo.lastMessage) {
+                    profile.lastMessage = chatInfo.lastMessage; // WHAPI last_message
+                }
+                
+                // 🔧 NUEVO: Asegurar que chatId esté presente
+                if (!profile.chatId) {
+                    profile.chatId = `${userId}@s.whatsapp.net`;
                 }
                 
                 this.profiles.set(userId, profile);
                 this.markAsChanged(); // Usar debounce para sincronización
                 
                 enhancedLog('success', 'GUEST_MEMORY', 
-                    `Etiquetas sincronizadas para ${userId}: ${chatInfo.labels.length} etiquetas`, {
+                    `Perfil sincronizado para ${userId}: ${chatInfo.name || 'Sin nombre'}`, {
                         userId,
                         isThreadOld,
-                        labelsCount: chatInfo.labels.length,
-                        labels: chatInfo.labels.map(l => l.name)
+                        labelsCount: chatInfo.labels?.length || 0,
+                        labels: chatInfo.labels?.map(l => l.name) || [],
+                        hasLastMessage: !!chatInfo.lastMessage
                     });
                 
                 return profile;
@@ -244,7 +280,7 @@ class GuestMemory {
             
         } catch (error) {
             enhancedLog('error', 'GUEST_MEMORY', 
-                `Error sincronizando etiquetas para ${userId}: ${error.message}`, {
+                `Error sincronizando perfil para ${userId}: ${error.message}`, {
                     userId,
                     isThreadOld
                 });
@@ -478,6 +514,89 @@ class GuestMemory {
         }
         
         return result;
+    }
+
+    // 🔧 NUEVO: Actualizar información completa del thread
+    updateThreadInfo(userId, threadInfo) {
+        const profile = this.profiles.get(userId);
+        if (profile) {
+            profile.lastThread = threadInfo.threadId || profile.lastThread;
+            profile.lastThreadUpdate = new Date().toISOString();
+            profile.lastAssistant = threadInfo.assistantId || profile.lastAssistant;
+            profile.threadMessageCount = threadInfo.messageCount || profile.threadMessageCount;
+            
+            this.markAsChanged();
+            
+            enhancedLog('info', 'GUEST_MEMORY', 
+                `Thread actualizado para ${userId}: ${threadInfo.threadId}`, {
+                    threadId: threadInfo.threadId,
+                    assistantId: threadInfo.assistantId,
+                    messageCount: threadInfo.messageCount
+                });
+        }
+    }
+    
+    // 🔧 NUEVO: Actualizar solo el thread ID
+    updateLastThread(userId, threadId) {
+        const profile = this.profiles.get(userId);
+        if (profile) {
+            profile.lastThread = threadId;
+            profile.lastThreadUpdate = new Date().toISOString();
+            this.markAsChanged();
+            
+            enhancedLog('info', 'GUEST_MEMORY', 
+                `Thread ID actualizado para ${userId}: ${threadId}`);
+        }
+    }
+    
+    // 🔧 NUEVO: Actualizar assistant usado
+    updateLastAssistant(userId, assistantId) {
+        const profile = this.profiles.get(userId);
+        if (profile) {
+            profile.lastAssistant = assistantId;
+            this.markAsChanged();
+            
+            enhancedLog('info', 'GUEST_MEMORY', 
+                `Assistant actualizado para ${userId}: ${assistantId}`);
+        }
+    }
+    
+    // 🔧 NUEVO: Incrementar contador de mensajes
+    incrementThreadMessageCount(userId) {
+        const profile = this.profiles.get(userId);
+        if (profile) {
+            profile.threadMessageCount = (profile.threadMessageCount || 0) + 1;
+            profile.lastThreadUpdate = new Date().toISOString();
+            this.markAsChanged();
+        }
+    }
+    
+    // 🔧 NUEVO: Obtener información completa del thread
+    getThreadInfo(userId) {
+        const profile = this.profiles.get(userId);
+        if (!profile) return null;
+        
+        return {
+            threadId: profile.lastThread,
+            assistantId: profile.lastAssistant,
+            messageCount: profile.threadMessageCount || 0,
+            lastUpdate: profile.lastThreadUpdate,
+            daysSinceUpdate: profile.lastThreadUpdate ? 
+                Math.floor((Date.now() - new Date(profile.lastThreadUpdate).getTime()) / (1000 * 60 * 60 * 24)) : 
+                null
+        };
+    }
+    
+    // 🔧 NUEVO: Obtener último thread del usuario
+    getLastThread(userId) {
+        const profile = this.profiles.get(userId);
+        return profile ? profile.lastThread : null;
+    }
+    
+    // 🔧 NUEVO: Obtener último assistant usado
+    getLastAssistant(userId) {
+        const profile = this.profiles.get(userId);
+        return profile ? profile.lastAssistant : null;
     }
 }
 

@@ -71,8 +71,8 @@ import {
 import { threadPersistence } from './utils/persistence/index.js';
 // 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
 // import { getChatHistory } from './utils/whapi/index';  // ❌ No se usa - comentado para registro
-import { guestMemory } from './utils/persistence/index';
-import { whapiLabels } from './utils/whapi/index';
+import { guestMemory } from './utils/persistence/index.js';
+import { whapiLabels } from './utils/whapi/index.js';
 import { getConfig } from './config/environment';
 
 // NUEVO: Importar tipo UserState para funcionalidades media
@@ -96,6 +96,69 @@ import { injectHistory, cleanupExpiredCaches, getCacheStats } from './utils/cont
 import { simpleLockManager } from './utils/simpleLockManager.js';
 
 // Agregar al inicio del archivo (después de los imports)
+// 🔧 NUEVO: Sistema de logs limpios para terminal
+const terminalLog = {
+    // Logs principales con formato limpio
+    message: (user: string, text: string) => {
+        console.log(`👤 ${user}: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`);
+    },
+    
+    typing: (user: string) => {
+        console.log(`✍️ ${user} está escribiendo...`);
+    },
+    
+    processing: (user: string) => {
+        // 🔧 ELIMINADO: No mostrar en terminal
+    },
+    
+    response: (user: string, text: string, duration: number) => {
+        console.log(`🤖 OpenAI → ${user}: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}" (${duration}s)`);
+    },
+    
+    error: (message: string) => {
+        console.log(`❌ Error: ${message}`);
+    },
+    
+    openaiError: (user: string, error: string) => {
+        console.log(`❌ Error enviar a OpenAI → ${user}: ${error}`);
+    },
+    
+    imageError: (user: string, error: string) => {
+        console.log(`❌ Error al procesar imagen → ${user}: ${error}`);
+    },
+    
+    voiceError: (user: string, error: string) => {
+        console.log(`❌ Error al procesar audio → ${user}: ${error}`);
+    },
+    
+    functionError: (functionName: string, error: string) => {
+        console.log(`❌ Error en función ${functionName}: ${error}`);
+    },
+    
+    whapiError: (operation: string, error: string) => {
+        console.log(`❌ Error WHAPI (${operation}): ${error}`);
+    },
+    
+    startup: () => {
+        console.log('\n=== Bot TeAlquilamos Iniciado ===');
+        console.log(`🚀 Servidor: ${appConfig?.host || 'localhost'}:${appConfig?.port || 3008}`);
+        console.log(`🔗 Webhook: ${appConfig?.webhookUrl || 'configurando...'}`);
+        console.log('✅ Sistema listo\n');
+    },
+    
+    newConversation: (user: string) => {
+        console.log(`\n📨 Nueva conversación con ${user}`);
+    },
+    
+    image: (user: string) => {
+        console.log(`📷 ${user}: [Imagen recibida]`);
+    },
+    
+    voice: (user: string) => {
+        console.log(`🎤 ${user}: [Nota de voz recibida]`);
+    }
+};
+
 // 🔧 NUEVO: Rate limiting para logs spam
 const webhookCounts = new Map<string, { lastLog: number; count: number }>();
 // 🔧 NUEVO: Rate limiting para logs de typing (10 s)
@@ -122,6 +185,20 @@ const globalMessageBuffers = new Map<string, {
     timer: NodeJS.Timeout | null
 }>();
 const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para TODOS los tipos de entrada (mensajes, typing, voz, etc.)
+
+// 🔧 NUEVO: Sistema para rastrear typing activo
+const activeTypingUsers = new Set<string>();
+const TYPING_TIMEOUT_MS = 10000; // 10 segundos sin typing = usuario dejó de escribir
+
+// 🔧 NUEVO: Sistema para cancelar procesamiento cuando llega typing
+const cancelProcessingOnTyping = new Set<string>();
+
+// 🔧 NUEVO: Sistema para rastrear el último evento de typing por usuario
+const lastTypingEvent = new Map<string, number>();
+const TYPING_AUTO_TIMEOUT_MS = 15000; // 15 segundos sin typing = auto-considerar que dejó de escribir
+
+// 🔧 NUEVO: Timer periódico para verificar auto-timeout de typing
+let typingTimeoutCheckInterval: NodeJS.Timeout | null = null;
 
 // 🔧 ELIMINADOS: Buffers obsoletos y redundantes
 // const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
@@ -220,7 +297,7 @@ interface WHAPIError {
 // const MAX_BOT_MESSAGES = 1000;  // ❌ No se usa - comentado para registro
 
 // 🔧 FUNCIÓN GLOBAL: Transcribir audio - Movida aquí para acceso global
-async function transcribeAudio(audioUrl: string | undefined, userId: string, messageId?: string): Promise<string> {
+async function transcribeAudio(audioUrl: string | undefined, userId: string, userName?: string, messageId?: string): Promise<string> {
     try {
         // Verificar que appConfig esté cargado
         if (!appConfig) {
@@ -292,6 +369,10 @@ async function transcribeAudio(audioUrl: string | undefined, userId: string, mes
         return transcription.text || 'No se pudo transcribir el audio';
         
     } catch (error) {
+        // 🔧 NUEVO: Log de error de audio en terminal
+        const displayName = userName || getShortUserId(userId);
+        terminalLog.voiceError(displayName, error.message);
+        
         logError('TRANSCRIPTION_ERROR', 'Error en transcripción de audio', {
             userId: getShortUserId(userId),
             error: error.message
@@ -321,14 +402,7 @@ app.use('/metrics', metricsRouter);
 // --- Función Principal Asíncrona ---
 const main = async () => {
     try {
-        console.log('\n🚀 Iniciando TeAlquilamos Bot...');
-        console.log(`📍 Environment: ${process.env.NODE_ENV || 'not set'}`);
-        console.log(`📍 PORT: ${process.env.PORT || 'not set'}`);
-        console.log(`📍 Working directory: ${process.cwd()}`);
-        
         appConfig = await loadAndValidateConfig();
-        console.log('✅ Configuración y secretos cargados.');
-        console.log(`📍 Config - Host: ${appConfig.host}, Port: ${appConfig.port}`);
         
         logEnvironmentConfig();
         
@@ -342,8 +416,6 @@ const main = async () => {
             timeout: appConfig.openaiTimeout,
             maxRetries: appConfig.openaiRetries
         });
-        
-        console.log(`🤖 OpenAI configurado (timeout: ${appConfig.openaiTimeout}ms, retries: ${appConfig.openaiRetries})`);
 
         // Configurar endpoints y lógica del bot
         setupEndpoints();
@@ -352,9 +424,6 @@ const main = async () => {
         // Crear e iniciar servidor
         server = http.createServer(app);
         server.listen(appConfig.port, appConfig.host, () => {
-            console.log(`🚀 Servidor HTTP iniciado en ${appConfig.host}:${appConfig.port}`);
-            console.log(`🔗 Webhook URL: ${appConfig.webhookUrl}`);
-            
             logServerStart('Servidor HTTP iniciado', { 
                 host: appConfig.host,
                 port: appConfig.port,
@@ -369,7 +438,7 @@ const main = async () => {
         
     } catch (error) {
         console.error('❌ Error durante inicialización:', error);
-        console.log('🚨 Iniciando servidor mínimo para healthcheck...');
+        // 🔧 ELIMINADO: Logs de error de configuración - no mostrar en terminal
         
         // Servidor mínimo para que Railway no falle el healthcheck
         const minimalApp = express();
@@ -385,8 +454,7 @@ const main = async () => {
         });
         
         minimalApp.listen(port, '0.0.0.0', () => {
-            console.log(`🚨 Servidor mínimo escuchando en 0.0.0.0:${port}`);
-            console.log(`❌ Error de configuración: ${error.message}`);
+            // 🔧 ELIMINADO: Logs de servidor mínimo - no mostrar en terminal
         });
     }
 };
@@ -497,13 +565,13 @@ function setupEndpoints() {
             // 🔧 NUEVO: Filtrado temprano de webhooks
             const { messages, presences, event } = req.body;
             
-            // Solo loguear si hay mensajes o presencias relevantes
+            // Solo procesar si hay mensajes o presencias relevantes
             if (messages && Array.isArray(messages) && messages.length > 0) {
-                console.log(`📨 ${messages.length} mensaje${messages.length > 1 ? 's' : ''} recibido${messages.length > 1 ? 's' : ''}`);
+                // Los mensajes individuales se mostrarán con terminalLog.message()
             } else if (presences && event?.type === 'presences') {
                 // Las presencias se manejan en processWebhook
             } else {
-                // Otros tipos de webhook - no loguear para reducir ruido
+                // Otros tipos de webhook - no procesar para reducir ruido
                 return;
             }
             
@@ -611,14 +679,20 @@ function setupEndpoints() {
 
 function setupSignalHandlers() {
     const shutdown = (signal: string) => {
-        console.log(`\n⏹️  Señal ${signal} recibida, cerrando servidor...`);
+        // 🔧 ELIMINADO: Log de shutdown - no mostrar en terminal
         if (appConfig) {
             logInfo('SHUTDOWN', `Señal ${signal} recibida`, { environment: appConfig.environment });
         }
         
+        // 🔧 NUEVO: Limpiar timer de verificación de typing
+        if (typingTimeoutCheckInterval) {
+            clearInterval(typingTimeoutCheckInterval);
+            logInfo('SHUTDOWN', 'Timer de verificación de typing limpiado');
+        }
+        
         if (server) {
             server.close(() => {
-                console.log('👋 Servidor cerrado correctamente');
+                // 🔧 ELIMINADO: Log de servidor cerrado - no mostrar en terminal
                 if (appConfig) {
                     logSuccess('SHUTDOWN', 'Servidor cerrado exitosamente', { environment: appConfig.environment });
                 }
@@ -672,6 +746,41 @@ const cleanContactName = (rawName: any): string => {
 // Declaración adelantada de processCombinedMessage
 let processCombinedMessage: (userId: string, combinedText: string, chatId: string, userName: string, messageCount: number) => Promise<void>;
 
+// 🔧 NUEVO: Función para verificar auto-timeout de typing periódicamente
+function checkTypingTimeouts(): void {
+    const now = Date.now();
+    
+    for (const [userId, lastTyping] of lastTypingEvent.entries()) {
+        const timeSinceLastTyping = now - lastTyping;
+        
+        if (timeSinceLastTyping >= TYPING_AUTO_TIMEOUT_MS) {
+            // 🔧 MEJORADO: Obtener nombre del usuario para el mensaje
+            const buffer = globalMessageBuffers.get(userId);
+            const userName = buffer?.userName || getShortUserId(userId);
+            
+            // 🔧 NUEVO: Usar terminalLog directamente para mostrar en terminal
+            console.log(`⏰ ${userName} dejó de escribir ⏰`);
+            
+            // 🔧 MANTENIDO: Log técnico para archivos
+            logWarning('TYPING_AUTO_TIMEOUT_CHECK', `${userName} dejó de escribir ⏰`, {
+                userJid: getShortUserId(userId),
+                userName,
+                timeSinceLastTyping: Math.round(timeSinceLastTyping / 1000) + 's',
+                timeout: TYPING_AUTO_TIMEOUT_MS / 1000 + 's',
+                environment: appConfig?.environment
+            });
+            
+            // Limpiar flags de typing
+            activeTypingUsers.delete(userId);
+            lastTypingEvent.delete(userId);
+            cancelProcessingOnTyping.delete(userId);
+            
+            // Procesar mensajes acumulados
+            processGlobalBuffer(userId);
+        }
+    }
+}
+
 // Función para procesar el buffer global
 async function processGlobalBuffer(userId: string): Promise<void> {
     const buffer = globalMessageBuffers.get(userId);
@@ -686,6 +795,51 @@ async function processGlobalBuffer(userId: string): Promise<void> {
             userName: buffer.userName,
             messageCount: buffer.messages.length
         });
+        return;
+    }
+    
+    // 🔧 NUEVO: Verificar si el usuario está escribiendo activamente
+    if (activeTypingUsers.has(userId)) {
+        // 🔧 NUEVO: Verificar si ha pasado mucho tiempo sin eventos de typing
+        const lastTyping = lastTypingEvent.get(userId);
+        const timeSinceLastTyping = lastTyping ? Date.now() - lastTyping : 0;
+        
+        if (timeSinceLastTyping < TYPING_AUTO_TIMEOUT_MS) {
+            logInfo('BUFFER_PROCESS_TYPING_SKIPPED', 'Procesamiento saltado - usuario escribiendo activamente', {
+                userJid: getShortUserId(userId),
+                userName: buffer.userName,
+                messageCount: buffer.messages.length,
+                timeSinceLastTyping: Math.round(timeSinceLastTyping / 1000) + 's',
+                environment: appConfig?.environment
+            });
+            return;
+        } else {
+            // 🔧 NUEVO: Auto-considerar que dejó de escribir después de mucho tiempo
+            logWarning('BUFFER_PROCESS_TYPING_AUTO_END', 'Auto-considerando que usuario dejó de escribir por timeout', {
+                userJid: getShortUserId(userId),
+                userName: buffer.userName,
+                messageCount: buffer.messages.length,
+                timeSinceLastTyping: Math.round(timeSinceLastTyping / 1000) + 's',
+                timeout: TYPING_AUTO_TIMEOUT_MS / 1000 + 's',
+                environment: appConfig?.environment
+            });
+            
+            // Limpiar flags de typing
+            activeTypingUsers.delete(userId);
+            lastTypingEvent.delete(userId);
+            cancelProcessingOnTyping.delete(userId);
+        }
+    }
+    
+    // 🔧 NUEVO: Verificar si se marcó para cancelación por typing
+    if (cancelProcessingOnTyping.has(userId)) {
+        logWarning('BUFFER_PROCESS_TYPING_CANCELLED', 'Procesamiento cancelado - usuario escribiendo', {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            messageCount: buffer.messages.length,
+            environment: appConfig?.environment
+        });
+        cancelProcessingOnTyping.delete(userId);
         return;
     }
     
@@ -737,28 +891,62 @@ function updateTypingStatus(userId: string, isTyping: boolean): void {
         return;
     }
     
-    // 🔧 UNIFICADO: Reiniciar timer de ${BUFFER_WINDOW_MS/1000} segundos cuando llega typing
-    if (buffer.timer) {
-        clearTimeout(buffer.timer);
+    if (isTyping) {
+        // 🔧 NUEVO: Marcar usuario como escribiendo activamente
+        activeTypingUsers.add(userId);
+        
+        // 🔧 NUEVO: Rastrear el último evento de typing
+        lastTypingEvent.set(userId, Date.now());
+        
+        // 🔧 CRÍTICO: CANCELAR cualquier timer cuando el usuario está escribiendo
+        if (buffer.timer) {
+            clearTimeout(buffer.timer);
+            buffer.timer = null; // 🔧 NUEVO: Limpiar el timer completamente
+        }
+        
+        // 🔧 CRÍTICO: Si hay procesamiento activo, marcarlo para cancelación
+        if (activeProcessing.has(userId)) {
+            logWarning('GLOBAL_BUFFER_TYPING_CANCEL_PROCESSING', `Marcando para cancelación - usuario escribiendo`, {
+                userJid: getShortUserId(userId),
+                userName: buffer.userName,
+                environment: appConfig?.environment
+            });
+            // 🔧 NUEVO: Marcar para cancelación en el próximo check
+            cancelProcessingOnTyping.add(userId);
+        }
+        
+        logInfo('GLOBAL_BUFFER_TYPING', `Timer cancelado - usuario escribiendo activamente`, {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            environment: appConfig?.environment
+        });
+    } else {
+        // 🔧 NUEVO: Usuario dejó de escribir - configurar timer de procesamiento
+        setTimeout(() => {
+            activeTypingUsers.delete(userId);
+            // 🔧 NUEVO: Limpiar flag de cancelación
+            cancelProcessingOnTyping.delete(userId);
+            // 🔧 NUEVO: Limpiar último evento de typing
+            lastTypingEvent.delete(userId);
+            logInfo('GLOBAL_BUFFER_TYPING_ENDED', `Usuario dejó de escribir`, {
+                userJid: getShortUserId(userId),
+                userName: buffer.userName,
+                environment: appConfig?.environment
+            });
+            
+            // 🔧 CRÍTICO: Configurar timer de 5 segundos para procesar mensajes
+            if (buffer.messages.length > 0 && !buffer.timer) {
+                buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
+                logInfo('GLOBAL_BUFFER_TIMER_SET', `Timer configurado después de typing`, {
+                    userJid: getShortUserId(userId),
+                    userName: buffer.userName,
+                    messageCount: buffer.messages.length,
+                    delay: BUFFER_WINDOW_MS,
+                    environment: appConfig?.environment
+                });
+            }
+        }, TYPING_TIMEOUT_MS);
     }
-    
-    // CRÍTICO: Mismo timer de 5 segundos que para mensajes
-    buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
-    
-    // 🔧 ACTUALIZADO: Log visual de typing siempre (rate-limit 10 s)
-    const now = Date.now();
-    const lastLog = typingLogTimestamps.get(userId) || 0;
-    if (now - lastLog > 10000) {
-        typingLogTimestamps.set(userId, now);
-                    console.log(`✍️ ${buffer.userName} está escribiendo...`);
-    }
-    
-    logInfo('GLOBAL_BUFFER_TYPING', `Timer reiniciado por typing`, {
-        userJid: getShortUserId(userId),
-        userName: buffer.userName,
-        delay: BUFFER_WINDOW_MS,
-        environment: appConfig?.environment
-    });
 }
 
 // 🔧 NUEVO: Funciones para buffering proactivo global
@@ -787,12 +975,26 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
     }
     
     // 🔧 UNIFICADO: 5 segundos para TODOS los tipos de entrada
-    if (buffer.timer) {
-        clearTimeout(buffer.timer);
+    // 🔧 CRÍTICO: NO configurar timer si el usuario está escribiendo activamente
+    if (!activeTypingUsers.has(userId)) {
+        if (buffer.timer) {
+            clearTimeout(buffer.timer);
+        }
+        buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
+    } else {
+        // 🔧 NUEVO: Si está escribiendo, cancelar cualquier timer existente
+        if (buffer.timer) {
+            clearTimeout(buffer.timer);
+            buffer.timer = null;
+        }
+        logInfo('GLOBAL_BUFFER_ADD_TYPING', `Mensaje agregado pero timer cancelado - usuario escribiendo`, {
+            userJid: getShortUserId(userId),
+            userName,
+            messageText: messageText.substring(0, 50) + '...',
+            bufferSize: buffer.messages.length,
+            environment: appConfig?.environment
+        });
     }
-    buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
-    
-    console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${BUFFER_WINDOW_MS/1000}s...`);
     
     logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
         userJid: getShortUserId(userId),
@@ -822,7 +1024,6 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
     
     if (shouldUseVoice) {
         try {
-            console.log(`${getTimestamp()} 🔊 [${shortUserId}] Generando respuesta de voz (${messageLength} chars)...`);
             
             // Limpiar emojis y caracteres especiales para TTS
             const cleanMessage = message
@@ -899,7 +1100,7 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
                     }, 10 * 60 * 1000);
                 }
                 
-                console.log(`${getTimestamp()} 🔊 [${shortUserId}] ✓ Nota de voz enviada`);
+                // 🔧 ELIMINADO: Log duplicado - ya se maneja con logInfo
                 
                 logSuccess('VOICE_RESPONSE_SENT', 'Nota de voz enviada exitosamente', {
                     userId: shortUserId,
@@ -920,11 +1121,14 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
             }
             
         } catch (voiceError: any) {
+            // 🔧 NUEVO: Log de error de WHAPI en terminal
+            terminalLog.whapiError('enviar voz', voiceError.message);
+            
             logError('VOICE_SEND_ERROR', 'Error enviando nota de voz, fallback a texto', {
                 userId: shortUserId,
                 error: voiceError.message
             });
-            console.log(`${getTimestamp()} ⚠️ [${shortUserId}] Error en nota de voz, enviando como texto`);
+            // 🔧 ELIMINADO: Log duplicado - ya se maneja con logWarning
             // Continuar con envío de texto
         }
     }
@@ -1037,7 +1241,7 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
                 }, 10 * 60 * 1000); // Limpiar después de 10 minutos
             }
             
-            console.log(`${getTimestamp()} ✅ [${shortUserId}] Mensaje enviado`);
+            // 🔧 ELIMINADO: Log duplicado - ya se maneja con terminalLog.response()
             return true;
         } else {
             // Múltiples chunks - enviar con delays
@@ -1078,7 +1282,7 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
                     }, 10 * 60 * 1000);
                 }
                 
-                console.log(`${getTimestamp()} ✅ [${shortUserId}] Parte ${i + 1}/${chunks.length} enviada`);
+                // 🔧 ELIMINADO: Log duplicado - ya se maneja con terminalLog.response()
                 
                 // Delay entre chunks (excepto el último)
                 if (i < chunks.length - 1) {
@@ -1090,6 +1294,9 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
             return true;
         }
     } catch (error) {
+        // 🔧 NUEVO: Log de error de WHAPI en terminal
+        terminalLog.whapiError('enviar mensaje', error.message);
+        
         logError('WHATSAPP_SEND_ERROR', `Error enviando mensaje a ${shortUserId}`, {
             chatId,
             error: error.message,
@@ -1265,7 +1472,7 @@ function setupWebhooks() {
                                 combinedText: combinedText.substring(0, 50) + '...',
                                 environment: appConfig?.environment
                             });
-                            console.log(`⏸️ [BUFFER_SKIP] ${userName}: Run activo → Saltando procesamiento`);
+                            // 🔧 ELIMINADO: Log duplicado - ya se maneja con logInfo
                             return;
                         }
                     }
@@ -1279,8 +1486,23 @@ function setupWebhooks() {
             }
 
             // Todo mensaje relevante va directo a OpenAI
-            const response = await processWithOpenAI(combinedText, userId, chatId, userName);
-            await sendWhatsAppMessage(chatId, response);
+            try {
+                const response = await processWithOpenAI(combinedText, userId, chatId, userName);
+                await sendWhatsAppMessage(chatId, response);
+            } catch (error) {
+                // 🔧 NUEVO: Manejar cancelación por typing
+                if (error.message === 'PROCESSING_CANCELLED_TYPING_ACTIVE' || 
+                    error.message === 'PROCESSING_CANCELLED_TYPING_MARKED') {
+                    logInfo('PROCESSING_CANCELLED_BY_TYPING', 'Procesamiento cancelado por typing activo', {
+                        userJid: shortUserId,
+                        userName,
+                        error: error.message,
+                        environment: appConfig?.environment
+                    });
+                    return; // Salir sin error, el procesamiento se reintentará cuando termine el typing
+                }
+                throw error; // Re-lanzar otros errores
+            }
         };
         
         // 🔧 ETAPA 2.2: Chequeo de run activo antes de agregar a cola
@@ -1327,7 +1549,7 @@ function setupWebhooks() {
     }
     
     // NUEVO: Función auxiliar para analizar imágenes
-    async function analyzeImage(imageUrl: string | undefined, userId: string, messageId?: string): Promise<string> {
+    async function analyzeImage(imageUrl: string | undefined, userId: string, userName?: string, messageId?: string): Promise<string> {
         try {
             let finalImageUrl = imageUrl;
             
@@ -1401,6 +1623,10 @@ function setupWebhooks() {
             return visionResponse.choices[0].message.content || 'Imagen recibida';
             
         } catch (error) {
+            // 🔧 NUEVO: Log de error de imagen en terminal
+            const displayName = userName || getShortUserId(userId);
+            terminalLog.imageError(displayName, error.message);
+            
             logError('IMAGE_ANALYSIS_ERROR', 'Error analizando imagen', {
                 userId,
                 error: error.message
@@ -1412,15 +1638,21 @@ function setupWebhooks() {
     
     async function subscribeToPresence(userId: string): Promise<void> {
         if (subscribedPresences.has(userId)) {
-            // Comentado para reducir spam en logs
-            // logDebug('PRESENCE_ALREADY_SUBSCRIBED', `Ya suscrito a presencia de ${userId}`, {
-            //     userId,
-            //     environment: appConfig.environment
-            // });
+            // 🔧 MEJORADO: Log informativo para debug
+            logDebug('PRESENCE_ALREADY_SUBSCRIBED', `Ya suscrito a presencia de ${userId}`, {
+                userId,
+                environment: appConfig.environment
+            });
             return; // Ya suscrito
         }
         
         try {
+            // 🔧 MEJORADO: Log de intento de suscripción
+            logInfo('PRESENCE_SUBSCRIBE_ATTEMPT', `Intentando suscribirse a presencia de ${userId}`, {
+                userId,
+                environment: appConfig.environment
+            });
+            
             // Suscribirse a presencia del usuario (sin body)
             const response = await fetch(`${appConfig.secrets.WHAPI_API_URL}/presences/${userId}`, {
                 method: 'POST',
@@ -1436,6 +1668,8 @@ function setupWebhooks() {
                     userId,
                     environment: appConfig.environment
                 });
+                // 🔧 MEJORADO: Log visual de confirmación
+                // 🔧 ELIMINADO: Log duplicado - ya se maneja en processWebhook
             } else if (response.status === 409) {
                 // Ya suscrito - agregar al set para evitar futuros intentos
                 subscribedPresences.add(userId);
@@ -1444,6 +1678,8 @@ function setupWebhooks() {
                     status: response.status,
                     environment: appConfig.environment
                 });
+                // 🔧 MEJORADO: Log visual de confirmación
+                // 🔧 ELIMINADO: Log duplicado - ya se maneja en processWebhook
             } else {
                 const errorText = await response.text();
                 logError('PRESENCE_SUBSCRIBE_ERROR', `Error suscribiendo a ${userId}`, { 
@@ -1452,6 +1688,7 @@ function setupWebhooks() {
                     error: errorText,
                     environment: appConfig.environment
                 });
+                // 🔧 ELIMINADO: Log de presence - no mostrar en terminal
             }
         } catch (error: any) {
             logError('PRESENCE_SUBSCRIBE_FAIL', `Fallo de red suscribiendo a ${userId}`, { 
@@ -1459,6 +1696,7 @@ function setupWebhooks() {
                 error: error.message,
                 environment: appConfig.environment
             });
+                            // 🔧 ELIMINADO: Log de presence - no mostrar en terminal
         }
     }
 
@@ -1608,8 +1846,7 @@ function setupWebhooks() {
             // 🔧 ETAPA 3: Actualizar etapa del flujo
             updateRequestStage(requestId, 'processing');
 
-            // Log compacto - Inicio
-            console.log(`🤖 Procesando: ${buffer.userName} → OpenAI...`);
+
             
             // Enviar a OpenAI con el userId original y la información completa del cliente
             const startTime = Date.now();
@@ -1617,19 +1854,8 @@ function setupWebhooks() {
             const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
             
             // 🔧 NUEVO: Validar respuesta antes de loguear
-            if (response && response.trim()) {
-                // Log mejorado con preview completo y duración real
-                // Detectar si habrá división en párrafos
-                const willSplit = response.includes('\n\n') || response.split('\n').some(line => line.trim().match(/^[•\-\*]/));
-                if (willSplit) {
-                    const paragraphCount = response.split(/\n\n+/).filter(p => p.trim()).length;
-                    console.log(`✅ Respuesta enviada (${aiDuration}s) → ${paragraphCount} párrafos`);
-                } else {
-                    const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
-                    console.log(`✅ Respuesta enviada (${aiDuration}s) → "${preview}"`);
-                }
-            } else {
-                console.log(`❌ Error: Sin respuesta (${aiDuration}s)`);
+            if (!response || !response.trim()) {
+                terminalLog.error(`Sin respuesta (${aiDuration}s)`);
                 logWarning('EMPTY_RESPONSE', 'OpenAI devolvió respuesta vacía', {
                     userId: shortUserId,
                     requestId,
@@ -1709,6 +1935,27 @@ function setupWebhooks() {
     const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string = null, userName: string = null, requestId?: string): Promise<string> => {
         const shortUserId = getShortUserId(userJid);
         
+        // 🔧 CRÍTICO: Verificar si el usuario está escribiendo activamente
+        if (activeTypingUsers.has(userJid)) {
+            logWarning('OPENAI_PROCESS_TYPING_CANCELLED', 'Procesamiento OpenAI cancelado - usuario escribiendo activamente', {
+                userJid: shortUserId,
+                userName,
+                environment: appConfig?.environment
+            });
+            throw new Error('PROCESSING_CANCELLED_TYPING_ACTIVE');
+        }
+        
+        // 🔧 CRÍTICO: Verificar si se marcó para cancelación por typing
+        if (cancelProcessingOnTyping.has(userJid)) {
+            logWarning('OPENAI_PROCESS_TYPING_CANCELLED', 'Procesamiento OpenAI cancelado - marcado para cancelación', {
+                userJid: shortUserId,
+                userName,
+                environment: appConfig?.environment
+            });
+            cancelProcessingOnTyping.delete(userJid);
+            throw new Error('PROCESSING_CANCELLED_TYPING_MARKED');
+        }
+        
         // 🔧 ETAPA 1: Tracking de métricas de performance
         const startTime = Date.now();
         let contextTokens = 0;
@@ -1721,11 +1968,7 @@ function setupWebhooks() {
                 updateRequestStage(requestId, 'openai_start');
             }
             
-            // Log de inicio de procesamiento (solo una vez)
-            logOpenAIRequest('starting_process', { 
-                shortUserId,
-                requestId 
-            });
+            // 🔧 ELIMINADO: Log de OpenAI - ya no se muestra en terminal
              
             const config = getConfig();
              
@@ -1738,8 +1981,8 @@ function setupWebhooks() {
                 threadId = thread.id;
                 threadPersistence.setThread(shortUserId, threadId, chatId, userName);
                 
-                // Suscribirse a presencia solo cuando se crea un thread nuevo
-                await subscribeToPresence(shortUserId);
+                // 🔧 NUEVO: Log de nueva conversación
+                terminalLog.newConversation(userName);
                 
                 logThreadCreated('Thread creado', { 
                     shortUserId,
@@ -1747,9 +1990,9 @@ function setupWebhooks() {
                     chatId, 
                     userName,
                     environment: appConfig.environment,
-                                requestId
-                            });
-                        } else {
+                    requestId
+                });
+            } else {
                 logInfo('THREAD_REUSE', `Thread reutilizado para ${shortUserId}`, {
                     shortUserId,
                     threadId,
@@ -1765,6 +2008,16 @@ function setupWebhooks() {
                     requestId
                 });
             }
+            
+            // 🔧 MANTENIDO: Log solo en archivos JSON para debug
+            logInfo('OPENAI_PROCESSING_START', `Procesando mensaje de ${userName}`, {
+                shortUserId,
+                userName,
+                requestId
+            });
+            
+            // 🔧 CORREGIDO: Suscribirse a presencia SIEMPRE, no solo en threads nuevos
+            await subscribeToPresence(shortUserId);
             
             // 🔧 ETAPA 4: Cleanup simplificado - solo si es thread nuevo
             if (threadId && isNewThread) {
@@ -1967,10 +2220,11 @@ function setupWebhooks() {
                     updateRequestStage(requestId, 'completed');
                 }
                 
-                logSuccess('OPENAI_RUN_COMPLETED', `Run completado para ${shortUserId}`, { 
-                    threadId,
-                    requestId 
-                });
+                // 🔧 ELIMINADO: Log de terminal para OPENAI_RUN_COMPLETED
+                // logSuccess('OPENAI_RUN_COMPLETED', `Run completado para ${shortUserId}`, { 
+                //     threadId,
+                //     requestId 
+                // });
                 
                 // 🔧 ETAPA 1: Loggear métricas de tokens y latencia
                 const durationMs = Date.now() - startTime;
@@ -2001,27 +2255,29 @@ function setupWebhooks() {
                     });
                 }
                 
-                logOpenAIUsage('Run completado con métricas', {
-                    shortUserId,
-                    threadId,
-                    runId: run.id,
-                    totalTokens,
-                    promptTokens: run.usage?.prompt_tokens || 0,
-                    completionTokens: run.usage?.completion_tokens || 0,
-                    contextTokens,
-                    durationMs,
-                    tokensPerSecond: totalTokens > 0 ? Math.round(totalTokens / (durationMs / 1000)) : 0,
-                    requestId
-                });
+                // 🔧 ELIMINADO: Log de métricas de OpenAI para evitar spam
+                // logOpenAIUsage('Run completado con métricas', {
+                //     shortUserId,
+                //     threadId,
+                //     runId: run.id,
+                //     totalTokens,
+                //     promptTokens: run.usage?.prompt_tokens || 0,
+                //     completionTokens: run.usage?.completion_tokens || 0,
+                //     contextTokens,
+                //     durationMs,
+                //     tokensPerSecond: totalTokens > 0 ? Math.round(totalTokens / (durationMs / 1000)) : 0,
+                //     requestId
+                // });
                 
-                logOpenAILatency('Latencia del procesamiento', {
-                    shortUserId,
-                    threadId,
-                    totalDurationMs: durationMs,
-                    durationSeconds: (durationMs / 1000).toFixed(2),
-                    isHighLatency: durationMs > 30000, // >30s es alta latencia
-                    requestId
-                });
+                // 🔧 ELIMINADO: Log de latencia de OpenAI para evitar spam
+                // logOpenAILatency('Latencia del procesamiento', {
+                //     shortUserId,
+                //     threadId,
+                //     totalDurationMs: durationMs,
+                //     durationSeconds: (durationMs / 1000).toFixed(2),
+                //     isHighLatency: durationMs > 30000, // >30s es alta latencia
+                //     requestId
+                // });
                 
                 // Forzar limit: 1 para obtener solo el último mensaje
                 const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
@@ -2134,13 +2390,14 @@ function setupWebhooks() {
                     });
                 }
                 
-                logOpenAIResponse('response_received', {
-                    shortUserId,
-                    threadId,
-                    responseLength: responseText.length,
-                    environment: appConfig.environment,
-                    requestId
-                });
+                // 🔧 ELIMINADO: Log de terminal para response_received
+                // logOpenAIResponse('response_received', {
+                //     shortUserId,
+                //     threadId,
+                //     responseLength: responseText.length,
+                //     environment: appConfig.environment,
+                //     requestId
+                // });
                 
                 // 🔧 ELIMINADO: Timer interino duplicado
                 
@@ -2164,6 +2421,10 @@ function setupWebhooks() {
                     },
                     requestId
                 });
+                
+                // 🔧 NUEVO: Log de respuesta limpio
+                const duration = (finalDurationMs / 1000).toFixed(1);
+                terminalLog.response(userName, responseText, parseFloat(duration));
                 
                 return responseText;
             } else if (run.status === 'requires_action' && run.required_action?.type === 'submit_tool_outputs') {
@@ -2265,6 +2526,9 @@ function setupWebhooks() {
                         if (requestId) {
                             updateToolCallStatus(requestId, toolCall.id, 'error');
                         }
+                        
+                        // 🔧 NUEVO: Log de error de función en terminal
+                        terminalLog.functionError(functionName, error.message);
                         
                         logError('FUNCTION_ERROR', `Error ejecutando función ${functionName}`, {
                             shortUserId,
@@ -2373,8 +2637,9 @@ function setupWebhooks() {
                                 requestId
                             });
                             
-                            // Log bonito para terminal
-                            console.log(`✅ [TOOL_SUCCESS] Respuesta recibida después de ${toolCalls.length} tool calls`);
+                            // 🔧 NUEVO: Log de respuesta limpio después de tool calls
+                            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+                            terminalLog.response(userName, responseText, parseFloat(duration));
                             
                             return responseText;
                         }
@@ -2411,8 +2676,7 @@ function setupWebhooks() {
                     requestId
                 });
                 
-                // Log bonito para terminal con información clara
-                console.log(`⚠️ [TOOL_TIMEOUT] Run no completado (status: ${run.status}) después de tools - Intentos: ${postAttempts}`);
+                // 🔧 ELIMINADO: Log duplicado - ya se maneja con logWarning
                 
                 // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
                 logWarning('FUNCTION_CALLING_TIMEOUT', 'Run no completado después de tool outputs, permitiendo flujo natural', {
@@ -2486,6 +2750,9 @@ function setupWebhooks() {
                 }
             }
             
+            // 🔧 NUEVO: Log de error de OpenAI en terminal
+            terminalLog.openaiError(userName, error.message);
+            
             // 🔧 ETAPA 1: Loggear error general
             const durationMs = Date.now() - startTime;
             
@@ -2519,7 +2786,9 @@ function setupWebhooks() {
 async function initializeBot() {
     // ... lógica de inicialización
     isServerInitialized = true;
-    console.log('✅ Bot completamente inicializado');
+    
+    // 🔧 NUEVO: Log de startup limpio
+    terminalLog.startup();
     
     // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (UNA SOLA VEZ)
     // Ejecutar en background para no bloquear el healthcheck
@@ -2562,6 +2831,17 @@ async function initializeBot() {
         } catch (error) {
         logWarning('CACHE_STATS_ERROR', 'Error obteniendo estadísticas de cache', { error: error.message });
         }
+    
+    // 🔧 NUEVO: Timer periódico para verificar auto-timeout de typing
+    typingTimeoutCheckInterval = setInterval(() => {
+        try {
+            checkTypingTimeouts();
+        } catch (error) {
+            logError('TYPING_TIMEOUT_CHECK_ERROR', 'Error verificando timeouts de typing', { error: error.message });
+        }
+    }, 5000); // Verificar cada 5 segundos
+    
+    logInfo('TYPING_TIMEOUT_CHECK_INIT', 'Timer periódico de verificación de typing configurado');
     
 
     
@@ -2759,20 +3039,19 @@ async function processWebhook(body: any) {
                     // Usuario está escribiendo - actualizar estado global
                     updateTypingStatus(userId, true);
                     
-                    // 🔧 NUEVO: Solo loguear en debug mode
-                    if (process.env.DEBUG_LOGS === 'true') {
-                        console.log(`✍️ ${shortUserId} está escribiendo...`);
+                    // 🔧 SIMPLIFICADO: Log de typing - solo usar buffer
+                    const buffer = globalMessageBuffers.get(userId);
+                    if (buffer && buffer.userName) {
+                        terminalLog.typing(buffer.userName);
+                    } else {
+                        // Si no hay buffer, usar ID corto directamente
+                        terminalLog.typing(getShortUserId(userId));
                     }
                     
                 } else if (status === 'online' || status === 'offline' || status === 'pending') {
                     // Usuario dejó de escribir - actualizar estado global
                     if (globalMessageBuffers.has(userId)) {
                         updateTypingStatus(userId, false);
-                        
-                        // 🔧 NUEVO: Solo loguear en debug mode
-                        if (process.env.DEBUG_LOGS === 'true') {
-                            console.log(`⏸️ ${shortUserId} dejó de escribir`);
-                        }
                     }
                 }
             });
@@ -2831,10 +3110,7 @@ async function processWebhook(body: any) {
             return;
         }
         
-        logInfo('WEBHOOK', `Procesando ${messages.length} mensajes del webhook`, {
-            environment: appConfig.environment,
-            messageCount: messages.length
-        });
+
         
         // Procesar cada mensaje
         for (const message of messages) {
@@ -2857,7 +3133,7 @@ async function processWebhook(body: any) {
                     // Verificar si hay thread activo
                     const threadRecord = threadPersistence.getThread(shortClientId);
                     if (!threadRecord) {
-                        console.log(`⚠️  [AGENT] Sin conversación activa con ${shortClientId}`);
+                        // 🔧 ELIMINADO: Log duplicado - ya se maneja con logWarning
                         logWarning('MANUAL_NO_THREAD', `No hay conversación activa`, { 
                             shortClientId: shortClientId,
                             agentName: fromName,
@@ -2866,11 +3142,7 @@ async function processWebhook(body: any) {
                         continue;
                     }
                     
-                                // 🎯 Log compacto - Solo primer mensaje del grupo
-            if (!globalMessageBuffers.has(chatId)) {
-                const clientName = threadRecord.userName || 'Cliente';
-                console.log(`🔧 ${fromName} → ${clientName}: "${text.substring(0, 25)}${text.length > 25 ? '...' : ''}"`);
-            }
+                                // 🔧 ELIMINADO: Log duplicado - ya se maneja con logInfo
                     
                     // Solo log técnico detallado
                     logInfo('MANUAL_DETECTED', `Mensaje manual del agente detectado`, {
@@ -2955,7 +3227,7 @@ async function processWebhook(body: any) {
                                 
                                 // 🎯 Log compacto final
                                 const msgCount = finalBuffer.messages.length > 1 ? `${finalBuffer.messages.length} msgs` : '1 msg';
-                                console.log(`✅ Contexto actualizado (${msgCount})`);
+                                // 🔧 ELIMINADO: Log duplicado - ya se maneja con logInfo
                                 
                                 // Solo log técnico
                                 logSuccess('MANUAL_SYNC_SUCCESS', `Mensajes manuales sincronizados exitosamente`, {
@@ -2969,7 +3241,7 @@ async function processWebhook(body: any) {
                                 });
                                 
                             } catch (error) {
-                                console.log(`❌ Error sincronizando: ${error.message}`);
+                                // 🔧 ELIMINADO: Log duplicado - ya se maneja con logError
                                 logError('MANUAL_SYNC_ERROR', `Error sincronizando mensajes manuales`, {
                                     error: error.message,
                                     threadId: threadRecord.threadId,
@@ -2998,23 +3270,32 @@ async function processWebhook(body: any) {
                 if (!message.from_me) {
                     const userId = message.from;
                     const chatId = message.chat_id;
-                    const userName = cleanContactName(message.from_name);
                     
-                    // Log del mensaje recibido con el nombre del usuario
-                    logMessageReceived('Mensaje recibido', {
-                        userId: message.from,
-                        chatId: message.chat_id,
-                        from: message.from,
-                        userName: userName,
-                        type: message.type,
-                        timestamp: message.timestamp,
-                        body: message.text?.body?.substring(0, 100) + '...',
-                        environment: appConfig.environment
-                    });
+                    // 🔧 NUEVO: Usar chat_name del webhook directamente
+                    let userName = message.chat_name || cleanContactName(message.from_name);
                     
+                    // 🔧 NUEVO: Si no hay chat_name, usar from_name limpio
+                    if (!userName || userName === 'Usuario') {
+                        userName = cleanContactName(message.from_name) || getShortUserId(userId);
+                    }
+                    
+                    // 🔧 ELIMINADO: Log de debug - no mostrar en terminal
+                    
+                    // 🔧 ELIMINADO: Log duplicado - ya se maneja con terminalLog.message()
+                    
+                    // Procesar mensajes de imagen
+                    if (message.type === 'image') {
+                        // 🔧 NUEVO: Log de imagen limpio
+                        terminalLog.image(userName);
+                        
+                        // Agregar al buffer global con metadata especial
+                        addToGlobalBuffer(userId, '📷 [IMAGEN]: Imagen recibida', chatId, userName);
+                    }
                     // Procesar mensajes de voz/audio
-                    if (message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') {
-                        console.log(`🎤 [${getShortUserId(userId)}] Procesando nota de voz...`);
+                    else if (message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') {
+                        
+                        // 🔧 NUEVO: Log de nota de voz limpio
+                        terminalLog.voice(userName);
                         
                         // Marcar que el usuario envió voz
                         const userState = getOrCreateUserState(userId, chatId, userName);
@@ -3028,16 +3309,16 @@ async function processWebhook(body: any) {
                                 
                                 if (audioUrl) {
                                     // Transcribir el audio usando la función global
-                                    const transcription = await transcribeAudio(audioUrl, userId, message.id);
+                                    const transcription = await transcribeAudio(audioUrl, userId, userName, message.id);
                                     const audioText = `🎤 [NOTA DE VOZ]: ${transcription}`;
                                     
-                                    console.log(`🎤 ${getShortUserId(userId)}: "${transcription.substring(0, 50)}..."`);
+                                    // 🔧 NUEVO: Log de transcripción limpio
+                                    terminalLog.message(userName, transcription);
                                     
                                     // Agregar transcripción al buffer con metadata especial
                                     addToGlobalBuffer(userId, audioText, chatId, userName, true); // true = es voz
                                 } else {
                                     // Si no hay URL, usar mensaje por defecto
-                                    console.log(`⚠️ ${getShortUserId(userId)}: Nota de voz sin URL`);
                                     addToGlobalBuffer(userId, '🎤 [NOTA DE VOZ]: Sin transcripción disponible', chatId, userName, true);
                                 }
                             } catch (error) {
@@ -3052,13 +3333,15 @@ async function processWebhook(body: any) {
                             }
                         } else {
                             // Si la transcripción no está habilitada
-                            console.log(`ℹ️ [${getShortUserId(userId)}] Transcripción deshabilitada`);
                             addToGlobalBuffer(userId, '🎤 [NOTA DE VOZ]: Transcripción deshabilitada', chatId, userName, true);
                         }
                     }
                     // Procesar mensajes de texto normales
                     else if (message.type === 'text' && message.text?.body) {
                         const text = message.text.body.trim();
+                        
+                        // 🔧 NUEVO: Log de mensaje limpio
+                        terminalLog.message(userName, text);
                         
                         // Agregar al buffer global
                         addToGlobalBuffer(userId, text, chatId, userName);

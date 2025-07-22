@@ -7,12 +7,8 @@
  * node scripts/setup-typing-webhook.js
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const fs = require('fs');
+const path = require('path');
 
 // Cargar configuración
 function loadConfig() {
@@ -50,7 +46,7 @@ async function setupTypingWebhook() {
         process.exit(1);
     }
     
-    const webhookUrl = config.WEBHOOK_URL || 'https://tu-dominio.com/hook';
+    const webhookUrl = config.WEBHOOK_URL || 'https://actual-bobcat-handy.ngrok-free.app/hook';
     
     console.log('📋 Configuración actual:');
     console.log(`   API URL: ${config.WHAPI_API_URL}`);
@@ -126,8 +122,8 @@ async function setupTypingWebhook() {
 }
 
 // Ejecutar si es llamado directamente
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
     setupTypingWebhook().catch(console.error);
 }
 
-export { setupTypingWebhook }; 
+module.exports = { setupTypingWebhook }; 

@@ -22,6 +22,7 @@ Un asistente virtual avanzado que utiliza **OpenAI GPT-4** y **WhatsApp Business
 - **Typing indicators diferenciados** (3s primer mensaje, 2s siguientes)
 - **Sistema de etiquetas** automático
 - **Buffer basado en typing** para respuestas naturales
+- **🆕 Sistema inteligente de nombres** - Extrae nombres reales de webhooks y los mantiene en buffer
 
 ### **🏨 Gestión de Reservas**
 - **Integración Beds24** para consultas de disponibilidad
@@ -38,6 +39,63 @@ Un asistente virtual avanzado que utiliza **OpenAI GPT-4** y **WhatsApp Business
 
 ---
 
+## 🆕 **Sistema Inteligente de Nombres y Typing**
+
+### **🎯 Objetivo**
+El bot extrae automáticamente los nombres reales de los usuarios desde los webhooks de WhatsApp y los mantiene disponibles para todos los eventos (mensajes, typing, etc.).
+
+### **🔄 Flujo de Funcionamiento**
+
+#### **1. Recepción de Mensaje**
+```json
+{
+    "messages": [{
+        "from": "573003913251",
+        "chat_name": "Sr Alex",        // ← Nombre real del usuario
+        "from_name": "573003913251",   // ← ID numérico (no usado)
+        "text": { "body": "hola" }
+    }]
+}
+```
+
+#### **2. Almacenamiento en Buffer**
+```typescript
+// Se guarda en globalMessageBuffers
+userId: "573003913251" → userName: "Sr Alex"
+```
+
+#### **3. Evento de Typing**
+```json
+{
+    "presences": [{
+        "contact_id": "573003913251",  // ← Solo ID, sin nombre
+        "status": "typing"
+    }]
+}
+```
+
+#### **4. Búsqueda Inteligente**
+```typescript
+// Busca en el buffer y encuentra el nombre
+const buffer = globalMessageBuffers.get(userId);
+if (buffer) {
+    terminalLog.typing(buffer.userName);  // "✍️ Sr Alex está escribiendo..."
+} else {
+    terminalLog.typing(getShortUserId(userId));  // Fallback: "✍️ 573003913251 está escribiendo..."
+}
+```
+
+### **📊 Resultado en Terminal**
+
+### **🔧 Ventajas del Sistema**
+- **Nombres reales** en lugar de IDs numéricos
+- **Consistencia** entre mensajes y typing
+- **Fallback inteligente** cuando no hay buffer
+- **Sin llamadas adicionales** a APIs externas
+- **Performance optimizada** usando datos del webhook
+
+---
+
 ## 🚀 **Plataforma de Despliegue**
 
 ### **Railway - Plataforma Definitiva**
@@ -47,7 +105,7 @@ Un asistente virtual avanzado que utiliza **OpenAI GPT-4** y **WhatsApp Business
 - **Monitoreo Integrado**: Logs y métricas en Railway Console
 
 ### **Configuración Railway**
-- **Puerto**: 880onfiguración automática)
+- **Puerto**: 8080 (configuración automática)
 - **Variables de Entorno**: Configuradas en Railway Dashboard
 - **Logs**: Integrados en Railway Console
 - **Monitoreo**: Métricas en tiempo real
