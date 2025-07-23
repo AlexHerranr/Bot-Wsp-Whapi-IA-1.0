@@ -1,71 +1,60 @@
-# 📚 Documentación - Bot Logs Parser
+# 📚 Documentación - TeAlquilamos Bot WhatsApp IA
 
-Esta carpeta contiene la documentación detallada del analizador de logs.
+Bienvenido a la documentación completa del Bot de WhatsApp con IA para TeAlquilamos.
 
-## 📋 **Índice de Documentación**
+## 🎯 Guías de Inicio Rápido
 
-### **📖 Manuales de Usuario**
-- **[MANUAL_USO.md](MANUAL_USO.md)** - Manual completo de uso
-- **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Instrucciones de instalación
-- **[README_BOT_LOGS.md](README_BOT_LOGS.md)** - Documentación técnica detallada
+- **[INDEX.md](./INDEX.md)** - 📋 Índice completo de toda la documentación
+- **[../README.md](../README.md)** - 🏠 README principal del proyecto
+- **[../QUICK_START.md](../QUICK_START.md)** - 🚀 Guía de inicio rápido (5 minutos)
 
-### **🚀 Guías Rápidas** (En directorio principal)
-- **[../COMANDOS_INDIVIDUALES.md](../COMANDOS_INDIVIDUALES.md)** - Guía de archivos individuales
-- **[../COMANDOS_RAPIDOS.md](../COMANDOS_RAPIDOS.md)** - Comandos básicos
-- **[../QUICK_START.md](../QUICK_START.md)** - Inicio rápido
-
-## 🎯 **Por Dónde Empezar**
-
-### **👨‍💻 Si eres desarrollador:**
-1. Leer **[../README.md](../README.md)** - Visión general
-2. Seguir **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Instalación
-3. Usar **[../COMANDOS_INDIVIDUALES.md](../COMANDOS_INDIVIDUALES.md)** - Comandos diarios
-
-### **🔧 Si necesitas configuración avanzada:**
-1. **[MANUAL_USO.md](MANUAL_USO.md)** - Configuración completa
-2. **[README_BOT_LOGS.md](README_BOT_LOGS.md)** - Detalles técnicos
-
-### **⚡ Si solo quieres usar rápido:**
-1. **[../QUICK_START.md](../QUICK_START.md)** - 5 minutos
-2. **[../COMANDOS_RAPIDOS.md](../COMANDOS_RAPIDOS.md)** - Comandos esenciales
-
-## 🎯 **Estructura Recomendada de Lectura**
+## 📁 Estructura de Documentación
 
 ```
-📚 Documentación
-├── 🚀 Inicio Rápido
-│   ├── ../README.md (Visión general)
-│   ├── ../QUICK_START.md (5 minutos)
-│   └── ../COMANDOS_RAPIDOS.md (Comandos básicos)
+docs/
+├── 📄 INDEX.md                      # Índice maestro de documentación
+├── 📄 README.md                     # Este archivo
 │
-├── 👨‍💻 Uso Diario
-│   ├── ../COMANDOS_INDIVIDUALES.md (Guía principal)
-│   └── SETUP_INSTRUCTIONS.md (Instalación)
-│
-└── 🔧 Avanzado
-    ├── MANUAL_USO.md (Configuración completa)
-    └── README_BOT_LOGS.md (Detalles técnicos)
+├── 📁 architecture/                 # Diseño y arquitectura del sistema
+├── 📁 deployment/                   # Guías de despliegue (Railway, GCP)
+├── 📁 development/                  # Guías de desarrollo y contribución
+├── 📁 features/                     # Documentación de funcionalidades
+├── 📁 functions/                    # Sistema de funciones y handlers
+├── 📁 guides/                       # Guías generales de uso
+├── 📁 integrations/                 # APIs externas (WhatsApp, OpenAI, Beds24)
+├── 📁 logging/                      # Sistema de logging y monitoreo
+├── 📁 progress/                     # Estado actual y tareas pendientes
+├── 📁 rag/                         # Sistema RAG y gestión de conocimiento
+└── 📁 security/                    # Seguridad y gestión de secretos
 ```
 
-## 📝 **Resumen de Funcionalidades**
+## 🔍 Documentos Principales
 
-### **🎯 Lo que hace el parser:**
-- ✅ Convierte logs de Cloud Run en formato local
-- ✅ Elimina 90% de metadatos HTTP inútiles
-- ✅ Crea archivos individuales por sesión
-- ✅ Limpieza automática (máximo 10 archivos)
-- ✅ Análisis avanzado con 8 tipos de métricas
+### Estado del Proyecto
+- **[ESTADO_ACTUAL_PROYECTO.md](./ESTADO_ACTUAL_PROYECTO.md)** - Estado actual y cambios recientes
+- **[HISTORIAL_CONSOLIDADO_2025.md](./HISTORIAL_CONSOLIDADO_2025.md)** - Historial completo de cambios
 
-### **📁 Archivos que genera:**
-- **Individuales**: `/logsGoogleCloud/session_*.txt`
-- **Consolidado**: Solo con `--save-consolidated`
-- **Limpieza**: Automática cada 10 archivos
+### Arquitectura
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Arquitectura general del sistema
+- **[GOOGLE_CLOUD_ARCHITECTURE.md](./GOOGLE_CLOUD_ARCHITECTURE.md)** - Arquitectura específica de GCP
+- **[API_ENDPOINTS.md](./API_ENDPOINTS.md)** - Documentación de endpoints HTTP
 
-### **🚀 Comando principal:**
-```bash
-python parse_bot_logs.py --hours 2
-```
+### Funcionalidades
+- **[MEDIA_FEATURES.md](./MEDIA_FEATURES.md)** - Manejo de voz e imágenes
+- **[ASSISTANT_MANAGEMENT.md](./ASSISTANT_MANAGEMENT.md)** - Gestión del asistente OpenAI
+- **[DASHBOARD_GUIDE.md](./DASHBOARD_GUIDE.md)** - Guía del dashboard web
+
+### Despliegue y Seguridad
+- **[SECURITY_AND_DEPLOYMENT.md](./SECURITY_AND_DEPLOYMENT.md)** - Seguridad y despliegue
+- **[security/SECRETS_MANAGEMENT_GUIDE.md](./security/SECRETS_MANAGEMENT_GUIDE.md)** - Gestión de secretos
+
+## 💡 Tips de Navegación
+
+1. **Nuevo en el proyecto?** → Empieza por [INDEX.md](./INDEX.md)
+2. **Desarrollador?** → Ve a [development/](./development/)
+3. **DevOps?** → Revisa [deployment/](./deployment/)
+4. **Buscas una función?** → Mira [functions/](./functions/)
 
 ---
 
-**💡 Tip**: Empieza por el **[README principal](../README.md)** para una visión completa del proyecto.
+📝 **Nota**: Los documentos obsoletos o de tareas completadas han sido archivados en `/archive` para mantener la documentación limpia y actualizada.

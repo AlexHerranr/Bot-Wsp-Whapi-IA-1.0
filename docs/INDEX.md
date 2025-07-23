@@ -9,6 +9,7 @@
 
 ### 🏗️ Arquitectura y Diseño
 - [**Arquitectura del Sistema**](./ARCHITECTURE.md) - Diseño técnico y componentes
+- [**Estructura del Proyecto**](./architecture/PROJECT_STRUCTURE.md) - Mapa de navegación completo
 - [**API Endpoints**](./API_ENDPOINTS.md) - Documentación de endpoints HTTP
 - [**Sistema de Actualización RAG**](./SISTEMA_ACTUALIZACION_RAG.md) - Sistema de gestión de conocimiento
 
