@@ -170,9 +170,7 @@ function invalidateUserCaches(userId: string) {
     chatInfoCache.delete(shortUserId);
     
     // Invalidar cache de contexto
-    if (typeof contextCache !== 'undefined') {
-        contextCache.delete(shortUserId);
-    }
+    contextCache.delete(shortUserId);
     
     logInfo('CACHE_INVALIDATED', 'Caches de usuario invalidados', {
         userId: shortUserId,
@@ -238,6 +236,9 @@ const globalMessageBuffers = new Map<string, {
 }>();
 const BUFFER_WINDOW_MS = 5000; // 5 segundos para agrupar mensajes normales
 const TYPING_EXTENDED_MS = 10000; // 10 segundos cuando usuario está escribiendo
+
+// 🔴 CRÍTICO: Cache de contexto global para invalidación
+const contextCache = new Map<string, { context: string, timestamp: number }>();
 
 // 🔧 ELIMINADOS: Buffers obsoletos y redundantes
 // const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
@@ -1395,7 +1396,6 @@ function setupWebhooks() {
     const PRESENCE_DEBOUNCE_MS = 2000; // 2 segundos
     
     // 🔧 NUEVO: Cache para contexto temporal (evitar envío repetitivo)
-    const contextCache = new Map<string, { context: string, timestamp: number }>();
     const CONTEXT_CACHE_TTL = 60 * 60 * 1000; // 1 hora // Rastrea usuarios suscritos
     
     // Función para procesar mensajes combinados
@@ -2943,7 +2943,7 @@ async function initializeBot() {
                                 cleanupExpiredCaches(); // Limpiar caches del sistema de historial
                                 
                                 // 2. Limpiar threads huérfanos
-                                threadPersistence.cleanupAllThreads();
+                                threadPersistence.clearAllThreads();
                                 
                                 // 3. Forzar garbage collection si está disponible
                                 if (global.gc) {
