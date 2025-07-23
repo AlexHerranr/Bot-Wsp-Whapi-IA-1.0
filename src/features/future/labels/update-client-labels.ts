@@ -62,6 +62,11 @@ export async function updateClientLabels(args: UpdateLabelsArgs): Promise<Update
 
     // Actualizar etiquetas en Whapi
     const result = await whapiLabels.updateChatLabels(userId, removeIds, addIds);
+    
+    // 🔴 CRÍTICO: Invalidar caches cuando cambian las etiquetas
+    // Importar la función de invalidación del módulo principal
+    const { invalidateUserCaches } = await import('../../../app-unified.js');
+    invalidateUserCaches(userId);
 
     // Sincronizar etiquetas en el sistema de persistencia de threads
     try {

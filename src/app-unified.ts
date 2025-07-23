@@ -32,36 +32,21 @@ import {
     logDebug,
     logFatal,
     logAlert,
-    // 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
-    // logTrace,                    // ❌ No se usa - comentado para registro
     logMessageReceived,
-    // logMessageProcess,           // ❌ No se usa - comentado para registro
-    // logWhatsAppSend,            // ❌ No se usa - comentado para registro
-    // logWhatsAppChunksComplete,  // ❌ No se usa - comentado para registro
     logOpenAIRequest,
     logOpenAIResponse,
     logFunctionCallingStart,
     logFunctionExecuting,
     logFunctionHandler,
-    // logBeds24Request,           // ❌ No se usa - comentado para registro
-    // logBeds24ApiCall,           // ❌ No se usa - comentado para registro
-    // logBeds24ResponseDetail,    // ❌ No se usa - comentado para registro
-    // logBeds24Processing,        // ❌ No se usa - comentado para registro
     logThreadCreated,
-    // logThreadPersist,           // ❌ No se usa - comentado para registro
-    // logThreadCleanup,           // ❌ No se usa - comentado para registro
     logServerStart,
-    // logBotReady,                // ❌ No se usa - comentado para registro
-    // logContextTokens,           // ❌ No se usa - comentado para registro
     logOpenAIUsage,
     logOpenAILatency,
     logFallbackTriggered,
     logPerformanceMetrics,
-    // 🔧 ETAPA 3: Nuevas funciones de tracing
     logRequestTracing,
     logToolOutputsSubmitted,
     logAssistantNoResponse,
-    // logFlowStageUpdate,         // ❌ No se usa - comentado para registro
     startRequestTracing,
     updateRequestStage,
     registerToolCall,
@@ -69,8 +54,6 @@ import {
     endRequestTracing
 } from './utils/logging/index.js';
 import { threadPersistence } from './utils/persistence/index.js';
-// 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
-// import { getChatHistory } from './utils/whapi/index';  // ❌ No se usa - comentado para registro
 import { guestMemory } from './utils/persistence/index.js';
 import { whapiLabels } from './utils/whapi/index.js';
 import { getConfig } from './config/environment';
@@ -85,8 +68,6 @@ import metricsRouter, {
     setTokensUsed, 
     setLatency, 
     incrementMessages
-    // 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
-    // updateActiveThreads  // ❌ No se usa - comentado para registro
 } from './routes/metrics.js';
 
 // Importar nuevo módulo modularizado de inyección de historial/contexto
@@ -180,8 +161,64 @@ const typingLogTimestamps = new Map<string, number>();
 const chatInfoCache = new Map<string, { data: any; timestamp: number }>();
 const CHAT_INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
+// 🔴 CRÍTICO: Función para invalidar caches cuando cambia el estado del usuario
+function invalidateUserCaches(userId: string) {
+    const shortUserId = getShortUserId(userId);
+    
+    // Invalidar cache de chat info
+    chatInfoCache.delete(userId);
+    chatInfoCache.delete(shortUserId);
+    
+    // Invalidar cache de contexto
+    if (typeof contextCache !== 'undefined') {
+        contextCache.delete(shortUserId);
+    }
+    
+    logInfo('CACHE_INVALIDATED', 'Caches de usuario invalidados', {
+        userId: shortUserId,
+        caches: ['chatInfo', 'context']
+    });
+}
+
 // 🔧 NUEVO: Control de logs de function calling en terminal
 const SHOW_FUNCTION_LOGS = process.env.TERMINAL_LOGS_FUNCTIONS !== 'false'; // true por defecto
+
+// 🟡 OPTIMIZACIÓN: Cache pre-computado para contexto base
+let precomputedContextBase: { date: string; time: string; timestamp: number } | null = null;
+const CONTEXT_BASE_CACHE_TTL = 60 * 1000; // 1 minuto
+
+function getPrecomputedContextBase(): { date: string; time: string } {
+    const now = Date.now();
+    
+    // Si el cache es válido, usarlo
+    if (precomputedContextBase && (now - precomputedContextBase.timestamp) < CONTEXT_BASE_CACHE_TTL) {
+        return { date: precomputedContextBase.date, time: precomputedContextBase.time };
+    }
+    
+    // Generar nuevo contexto base
+    const currentDate = new Date().toLocaleDateString('es-ES', { 
+        timeZone: 'America/Bogota',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+
+    const currentTime = new Date().toLocaleTimeString('en-US', { 
+        timeZone: 'America/Bogota',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+    
+    // Actualizar cache
+    precomputedContextBase = {
+        date: currentDate,
+        time: currentTime,
+        timestamp: now
+    };
+    
+    return { date: currentDate, time: currentTime };
+}
 
 // --- Variables Globales ---
 let appConfig: AppConfig;
@@ -189,8 +226,7 @@ let openaiClient: OpenAI;
 let server: http.Server;
 let isServerInitialized = false;
 
-// 🔧 NUEVO: Control de procesamiento activo para evitar duplicados
-const activeProcessing = new Set<string>();
+
 
 // 🔧 SIMPLIFICADO: UN SOLO BUFFER UNIFICADO - 5 SEGUNDOS PARA TODO
 const globalMessageBuffers = new Map<string, {
@@ -806,18 +842,16 @@ async function processGlobalBuffer(userId: string): Promise<void> {
         return;  // No procesar ni agregar a cola todavía; el timer se encargará más tarde
     }
     
-    // 🔧 SIMPLIFICADO: Verificar si ya hay un procesamiento activo para este usuario
-    if (activeProcessing.has(userId)) {
-        logWarning('BUFFER_PROCESS_SKIPPED', 'Procesamiento ya activo para usuario', {
+    // 🔧 MEJORADO: Usar sistema de locks distribuidos
+    const lockAcquired = await simpleLockManager.acquireUserLock(userId);
+    if (!lockAcquired) {
+        logWarning('BUFFER_PROCESS_SKIPPED', 'Procesamiento ya activo para usuario (lock distribuido)', {
             userJid: getShortUserId(userId),
             userName: buffer.userName,
             messageCount: buffer.messages.length
         });
         return;
     }
-    
-    // Marcar como procesamiento activo
-    activeProcessing.add(userId);
     
     // 🔧 NUEVO: Log simple antes de procesar/enviar
     const displayUser = buffer.userName || getShortUserId(userId);
@@ -847,8 +881,8 @@ async function processGlobalBuffer(userId: string): Promise<void> {
         }
     } finally {
         // 🔧 CRÍTICO: Limpiar en orden correcto para evitar race condition
-        activeProcessing.delete(userId);      // PRIMERO limpiar el flag
-        globalMessageBuffers.delete(userId);  // DESPUÉS borrar el buffer
+        await simpleLockManager.releaseUserLock(userId);  // PRIMERO liberar el lock distribuido
+        globalMessageBuffers.delete(userId);              // DESPUÉS borrar el buffer
     }
 }
 
@@ -860,6 +894,29 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
     let buffer = globalMessageBuffers.get(userId);
     
     if (!buffer) {
+        // 🔴 CRÍTICO: Verificar límite global antes de crear nuevo buffer
+        if (globalMessageBuffers.size >= 1000) {
+            // Limpiar buffers más antiguos
+            const sortedBuffers = Array.from(globalMessageBuffers.entries())
+                .sort(([,a], [,b]) => a.lastActivity - b.lastActivity);
+            
+            // Eliminar el 10% más antiguo (100 buffers)
+            const toRemove = sortedBuffers.slice(0, 100);
+            toRemove.forEach(([key, buf]) => {
+                // Cancelar timer si existe
+                if (buf.timer) {
+                    clearTimeout(buf.timer);
+                }
+                globalMessageBuffers.delete(key);
+            });
+            
+            logWarning('GLOBAL_BUFFER_CLEANUP', 'Limpieza automática de buffers antiguos', {
+                totalBefore: globalMessageBuffers.size + toRemove.length,
+                removed: toRemove.length,
+                totalAfter: globalMessageBuffers.size
+            });
+        }
+        
         buffer = {
             messages: [],
             chatId,
@@ -1333,6 +1390,10 @@ function setupWebhooks() {
     // 🔧 NUEVO: Función para suscribirse a presencia de usuario
     const subscribedPresences = new Set<string>();
     
+    // 🟡 OPTIMIZACIÓN: Debounce para suscripciones de presencia
+    const presenceSubscriptionQueue = new Map<string, NodeJS.Timeout>();
+    const PRESENCE_DEBOUNCE_MS = 2000; // 2 segundos
+    
     // 🔧 NUEVO: Cache para contexto temporal (evitar envío repetitivo)
     const contextCache = new Map<string, { context: string, timestamp: number }>();
     const CONTEXT_CACHE_TTL = 60 * 60 * 1000; // 1 hora // Rastrea usuarios suscritos
@@ -1533,7 +1594,7 @@ function setupWebhooks() {
                             type: 'image_url', 
                             image_url: { 
                                 url: finalImageUrl,
-                                detail: 'low' // Optimización de costos
+                                detail: 'auto' // 🔴 CRÍTICO: Cambiar a 'auto' para mejor análisis de documentos
                             } 
                         }
                     ]
@@ -1566,6 +1627,27 @@ function setupWebhooks() {
                 environment: appConfig.environment
             });
             return; // Ya suscrito
+        }
+        
+        // 🟡 OPTIMIZACIÓN: Debounce para evitar múltiples suscripciones rápidas
+        const existingTimeout = presenceSubscriptionQueue.get(userId);
+        if (existingTimeout) {
+            clearTimeout(existingTimeout);
+        }
+        
+        // Programar suscripción con debounce
+        const timeout = setTimeout(async () => {
+            presenceSubscriptionQueue.delete(userId);
+            await subscribeToPresenceInternal(userId);
+        }, PRESENCE_DEBOUNCE_MS);
+        
+        presenceSubscriptionQueue.set(userId, timeout);
+    }
+    
+    async function subscribeToPresenceInternal(userId: string): Promise<void> {
+        // Verificar nuevamente por si se suscribió mientras esperaba
+        if (subscribedPresences.has(userId)) {
+            return;
         }
         
         try {
@@ -1670,20 +1752,8 @@ function setupWebhooks() {
             const clientName = profile?.name || 'Cliente';
             const contactName = chatInfo?.name || clientName;
             
-            // 🔧 MEJORADO: Formato de fecha y hora más claro con AM/PM
-            const currentDate = new Date().toLocaleDateString('es-ES', { 
-                timeZone: 'America/Bogota',
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
-
-            const currentTime = new Date().toLocaleTimeString('en-US', { 
-                timeZone: 'America/Bogota',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
+            // 🟡 OPTIMIZACIÓN: Usar contexto base pre-computado
+            const { date: currentDate, time: currentTime } = getPrecomputedContextBase();
             
             // Etiquetas del perfil y Whapi (solo las primeras 2)
             const profileLabels = profile?.whapiLabels?.map((l: any) => l.name) || [];
@@ -2852,12 +2922,71 @@ async function initializeBot() {
                         }
                         
                         if (isMemoryLeak) {
-                            logFatal('MEMORY_LEAK_DETECTED', 'Posible memory leak crítico detectado', {
+                            logFatal('MEMORY_LEAK_DETECTED', 'Posible memory leak crítico detectado - iniciando limpieza', {
                                 heapUsedMB: Math.round(heapUsedMB),
                                 heapUsagePercent: Math.round(heapUsagePercentage) + '%',
                                 threshold: 95,
-                                recommendation: 'Uso de memoria crítico - considerar optimización o restart inmediato'
+                                action: 'cleanup_and_restart'
                             });
+                            
+                            // 🔴 CRÍTICO: Acción automática en memory leak
+                            try {
+                                // 1. Limpiar todos los buffers y caches
+                                logWarning('MEMORY_CLEANUP_START', 'Iniciando limpieza de memoria', {
+                                    buffersSize: globalMessageBuffers.size,
+                                    cacheSize: chatInfoCache.size + contextCache.size
+                                });
+                                
+                                globalMessageBuffers.clear();
+                                chatInfoCache.clear();
+                                contextCache.clear();
+                                cleanupExpiredCaches(); // Limpiar caches del sistema de historial
+                                
+                                // 2. Limpiar threads huérfanos
+                                threadPersistence.cleanupAllThreads();
+                                
+                                // 3. Forzar garbage collection si está disponible
+                                if (global.gc) {
+                                    global.gc();
+                                    logInfo('MEMORY_GC_FORCED', 'Garbage collection forzado');
+                                }
+                                
+                                // 4. Dar tiempo para que se libere memoria (2s)
+                                setTimeout(() => {
+                                    const newHeapUsed = process.memoryUsage().heapUsed / 1024 / 1024;
+                                    
+                                    // Si sigue crítico después de limpieza, restart
+                                    if (newHeapUsed > 300 || (newHeapUsed / heapTotalMB) * 100 > 90) {
+                                        logFatal('MEMORY_RESTART_REQUIRED', 'Reiniciando proceso por memoria crítica', {
+                                            heapBefore: Math.round(heapUsedMB),
+                                            heapAfter: Math.round(newHeapUsed),
+                                            action: 'process_exit'
+                                        });
+                                        
+                                        // Cerrar servidor gracefully
+                                        if (server) {
+                                            server.close(() => {
+                                                process.exit(1); // PM2 o supervisor reiniciará el proceso
+                                            });
+                                        } else {
+                                            process.exit(1);
+                                        }
+                                    } else {
+                                        logSuccess('MEMORY_CLEANUP_SUCCESS', 'Limpieza de memoria exitosa', {
+                                            heapBefore: Math.round(heapUsedMB),
+                                            heapAfter: Math.round(newHeapUsed),
+                                            recovered: Math.round(heapUsedMB - newHeapUsed) + 'MB'
+                                        });
+                                    }
+                                }, 2000);
+                                
+                            } catch (cleanupError) {
+                                logError('MEMORY_CLEANUP_ERROR', 'Error durante limpieza de memoria', {
+                                    error: cleanupError.message
+                                });
+                                // En caso de error, restart directo
+                                process.exit(1);
+                            }
                         }
                         
                     } catch (error) {
@@ -2866,9 +2995,7 @@ async function initializeBot() {
                 }, 5 * 60 * 1000); // Mantener intervalo de 5 minutos para detección rápida de problemas
 }
 
-// 🔧 ELIMINADO: Funciones de resumen automático obsoletas
-// El sistema ahora usa get_conversation_context para contexto histórico
-// OpenAI puede solicitar el contexto que necesite usando la función registrada
+
 
 // 🔧 ETAPA 1: Recuperación mejorada de runs huérfanos al inicio del bot
 async function recoverOrphanedRuns() {
@@ -2963,6 +3090,29 @@ async function processWebhook(body: any) {
                     
                     // Si no hay buffer, crear uno vacío
                     if (!buffer) {
+                        // 🔴 CRÍTICO: Verificar límite global antes de crear nuevo buffer
+                        if (globalMessageBuffers.size >= 1000) {
+                            // Limpiar buffers más antiguos
+                            const sortedBuffers = Array.from(globalMessageBuffers.entries())
+                                .sort(([,a], [,b]) => a.lastActivity - b.lastActivity);
+                            
+                            // Eliminar el 10% más antiguo (100 buffers)
+                            const toRemove = sortedBuffers.slice(0, 100);
+                            toRemove.forEach(([key, buf]) => {
+                                // Cancelar timer si existe
+                                if (buf.timer) {
+                                    clearTimeout(buf.timer);
+                                }
+                                globalMessageBuffers.delete(key);
+                            });
+                            
+                            logWarning('GLOBAL_BUFFER_CLEANUP', 'Limpieza automática de buffers antiguos (presence)', {
+                                totalBefore: globalMessageBuffers.size + toRemove.length,
+                                removed: toRemove.length,
+                                totalAfter: globalMessageBuffers.size
+                            });
+                        }
+                        
                         buffer = {
                             messages: [],
                             chatId: `${userId}@s.whatsapp.net`,
@@ -3098,6 +3248,29 @@ async function processWebhook(body: any) {
                     
                     // 📦 AGRUPAR MENSAJES MANUALES (usando buffer global)
                     if (!globalMessageBuffers.has(chatId)) {
+                        // 🔴 CRÍTICO: Verificar límite global antes de crear nuevo buffer
+                        if (globalMessageBuffers.size >= 1000) {
+                            // Limpiar buffers más antiguos
+                            const sortedBuffers = Array.from(globalMessageBuffers.entries())
+                                .sort(([,a], [,b]) => a.lastActivity - b.lastActivity);
+                            
+                            // Eliminar el 10% más antiguo (100 buffers)
+                            const toRemove = sortedBuffers.slice(0, 100);
+                            toRemove.forEach(([key, buf]) => {
+                                // Cancelar timer si existe
+                                if (buf.timer) {
+                                    clearTimeout(buf.timer);
+                                }
+                                globalMessageBuffers.delete(key);
+                            });
+                            
+                            logWarning('GLOBAL_BUFFER_CLEANUP', 'Limpieza automática de buffers antiguos (manual)', {
+                                totalBefore: globalMessageBuffers.size + toRemove.length,
+                                removed: toRemove.length,
+                                totalAfter: globalMessageBuffers.size
+                            });
+                        }
+                        
                         globalMessageBuffers.set(chatId, {
                             messages: [],
                             chatId: chatId,
@@ -3301,4 +3474,5 @@ async function processWebhook(body: any) {
 // --- Ejecución ---
 main();
 
-// Exportar para testing
+// Exportar funciones necesarias
+export { invalidateUserCaches };
