@@ -1,6 +1,7 @@
 // --- Sistema Híbrido de Estados de Usuario ---
 import { logDebug, logInfo, logWarning } from './logger.js';
-import { isLikelyFinalMessage, getRecommendedTimeout } from './messageBuffering.js';
+// 🔧 DESACTIVADO: messageBuffering.js - conflicta con sistema simplificado de app-unified.ts
+// import { isLikelyFinalMessage, getRecommendedTimeout } from './messageBuffering.js';
 
 export interface UserState {
     userId: string;
@@ -18,6 +19,7 @@ export interface UserState {
     // NUEVO: Campos para funcionalidades media
     lastInputVoice?: boolean;
     quotedMessagesCount?: number;
+    lastTyping?: number;  // 🔧 NUEVO: Timestamp del último typing detectado
 }
 
 export class UserStateManager {
@@ -130,25 +132,25 @@ export class UserStateManager {
             messagePreview: message.substring(0, 30)
         });
         
-        // Calcular timeout basado en el mensaje y estado
-        const baseTimeout = getRecommendedTimeout(state.messages, message);
-        let finalTimeout = baseTimeout;
+        // 🔧 DESACTIVADO: Lógica de messageBuffering - usar sistema simplificado de app-unified.ts
+        // const baseTimeout = getRecommendedTimeout(state.messages, message);
+        // let finalTimeout = baseTimeout;
+        
+        // Timeout fijo simplificado (5 segundos)
+        let finalTimeout = 5000;
         
         if (state.isTyping) {
             // Si está escribiendo, dar más tiempo
-            finalTimeout = Math.max(baseTimeout, this.TYPING_EXTENSION);
+            finalTimeout = Math.max(5000, this.TYPING_EXTENSION);
             logDebug('TIMEOUT_EXTENDED', `Timeout extendido por typing`, {
-                base: baseTimeout,
+                base: 5000,
                 extended: finalTimeout
             });
-        } else if (isLikelyFinalMessage(message)) {
-            // Si parece mensaje final, procesar rápido
-            finalTimeout = this.MIN_PROCESS_DELAY;
-            logDebug('FINAL_MESSAGE', `Mensaje final detectado, procesamiento rápido`, {
-                message,
-                timeout: finalTimeout
-            });
         }
+        // 🔧 DESACTIVADO: isLikelyFinalMessage - usar sistema simplificado
+        // } else if (isLikelyFinalMessage(message)) {
+        //     finalTimeout = this.MIN_PROCESS_DELAY;
+        // }
         
         // Programar procesamiento
         this.scheduleProcessing(state, finalTimeout);

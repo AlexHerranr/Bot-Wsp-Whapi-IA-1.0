@@ -15,33 +15,24 @@ const MESSAGE_ENDINGS: MessageEndingPatterns = {
     emojis: ['👍', '😊', '🙏', '✅', '👌', '💯', '🤝', '😄', '😁']
 };
 
+// 🔧 DESACTIVADO: Sistema de buffering inteligente - conflicta con app-unified.ts
 // Calcular timeout dinámico basado en la longitud del mensaje
 export const calculateDynamicTimeout = (messageLength: number, hasTypingSupport: boolean = false): number => {
-    // 🔧 PAUSAR BUFFERING INTELIGENTE: Si está desactivado, retornar 0
-    if (process.env.DISABLE_MESSAGE_BUFFER === 'true') {
-        return 0; // Sin timeout - procesamiento inmediato
-    }
+    // 🔧 DESACTIVADO: Usar sistema simplificado de app-unified.ts
+    return 0; // Sin timeout - procesamiento inmediato
     
-    // Si tiene soporte de typing, usar timeouts más agresivos
-    if (hasTypingSupport) {
-        if (messageLength <= 5) return 1000;   // 1 segundo
-        if (messageLength <= 20) return 1500;  // 1.5 segundos
-        if (messageLength <= 50) return 2000;  // 2 segundos
-        return 3000; // 3 segundos máximo
-    }
-    
-    // Sin typing support, usar timeouts más conservadores
-    // Mensajes muy cortos (1-5 chars) probablemente vienen en grupo
-    if (messageLength <= 5) return 3000;   // 3 segundos
-    
-    // Mensajes cortos (6-20 chars)
-    if (messageLength <= 20) return 4000;  // 4 segundos
-    
-    // Mensajes medianos (21-50 chars)  
-    if (messageLength <= 50) return 5000;  // 5 segundos
-    
-    // Mensajes largos (50+ chars) suelen ser finales
-    return 6000; // 6 segundos máximo
+    // 🔧 DESACTIVADO: Lógica compleja - usar sistema simplificado de app-unified.ts
+    // if (hasTypingSupport) {
+    //     if (messageLength <= 5) return 1000;
+    //     if (messageLength <= 20) return 1500;
+    //     if (messageLength <= 50) return 2000;
+    //     return 3000;
+    // }
+    // 
+    // if (messageLength <= 5) return 3000;
+    // if (messageLength <= 20) return 4000;
+    // if (messageLength <= 50) return 5000;
+    // return 6000;
 };
 
 // Detectar si un mensaje parece ser el final de una secuencia

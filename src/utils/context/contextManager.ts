@@ -57,10 +57,10 @@ export class ContextManager {
             // Obtener información del cliente y sus etiquetas
             const profile = await guestMemory.getOrCreateProfile(userId);
             
-            // Obtener información del chat desde Whapi (con cache)
-            // Importar la función cacheada desde app-unified.ts
-            const { getCachedChatInfo } = require('../../app-unified');
-            const chatInfo = await getCachedChatInfo(userId);
+            // 🔧 DESACTIVADO: Require dinámico - usar whapiLabels directamente
+            // const { getCachedChatInfo } = require('../../app-unified');
+            // const chatInfo = await getCachedChatInfo(userId);
+            const chatInfo = null; // Temporalmente desactivado
             
             // Formatear el contexto histórico
             const context = this.formatHistoricalContext(messages, profile, chatInfo);

@@ -14,36 +14,38 @@ class TypingDetector {
     private readonly CONFIDENCE_THRESHOLD = 70; // % de confianza para considerar que SÍ tiene typing
     private readonly MAX_MESSAGES_WITHOUT_TYPING = 5; // Después de 5 mensajes sin typing, asumir que no tiene
     
+    // 🔧 DESACTIVADO: Sistema de detección de typing - conflicta con app-unified.ts
     // Registrar evento de typing recibido
     recordTypingEvent(userId: string): void {
-        const capability = this.getOrCreateCapability(userId);
-        
-        capability.hasTypingSupport = true;
-        capability.lastTypingEvent = Date.now();
-        capability.typingEventsReceived++;
-        capability.confidenceScore = Math.min(100, capability.confidenceScore + 20);
-        
-        this.userCapabilities.set(userId, capability);
+        // 🔧 DESACTIVADO: Usar sistema simplificado de app-unified.ts
+        // const capability = this.getOrCreateCapability(userId);
+        // 
+        // capability.hasTypingSupport = true;
+        // capability.lastTypingEvent = Date.now();
+        // capability.typingEventsReceived++;
+        // capability.confidenceScore = Math.min(100, capability.confidenceScore + 20);
+        // 
+        // this.userCapabilities.set(userId, capability);
     }
     
+    // 🔧 DESACTIVADO: Sistema de detección de typing - conflicta con app-unified.ts
     // Registrar mensaje recibido (para detectar ausencia de typing)
     recordMessage(userId: string): void {
-        const capability = this.getOrCreateCapability(userId);
-        
-        // Si no hemos recibido typing en mucho tiempo, reducir confianza
-        const timeSinceLastTyping = Date.now() - capability.lastTypingEvent;
-        if (timeSinceLastTyping > 60000) { // 1 minuto
-            capability.messagesWithoutTyping++;
-            capability.confidenceScore = Math.max(0, capability.confidenceScore - 10);
-        }
-        
-        // Si muchos mensajes sin typing, marcar como no compatible
-        if (capability.messagesWithoutTyping >= this.MAX_MESSAGES_WITHOUT_TYPING) {
-            capability.hasTypingSupport = false;
-            capability.confidenceScore = 0;
-        }
-        
-        this.userCapabilities.set(userId, capability);
+        // 🔧 DESACTIVADO: Usar sistema simplificado de app-unified.ts
+        // const capability = this.getOrCreateCapability(userId);
+        // 
+        // const timeSinceLastTyping = Date.now() - capability.lastTypingEvent;
+        // if (timeSinceLastTyping > 60000) {
+        //     capability.messagesWithoutTyping++;
+        //     capability.confidenceScore = Math.max(0, capability.confidenceScore - 10);
+        // }
+        // 
+        // if (capability.messagesWithoutTyping >= this.MAX_MESSAGES_WITHOUT_TYPING) {
+        //     capability.hasTypingSupport = false;
+        //     capability.confidenceScore = 0;
+        // }
+        // 
+        // this.userCapabilities.set(userId, capability);
     }
     
     // Verificar si usuario tiene soporte de typing

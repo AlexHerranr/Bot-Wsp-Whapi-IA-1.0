@@ -38,10 +38,11 @@
           "new": true
         },
         {
-          "path": "docs/features/TYPING_BASED_BUFFER.md",
-          "title": "Sistema de Buffer Inteligente",
-          "description": "Buffer basado en typing para respuestas naturales",
-          "updated": "Junio 2025"
+          "path": "docs/features/TYPING_SYSTEM.md",
+          "title": "Sistema de Typing",
+          "description": "Sistema de buffer basado en typing para respuestas naturales y agrupadas",
+          "updated": "Julio 2025",
+          "new": true
         },
         {
           "path": "docs/features/BEDS24_INTEGRATION_COMPLETE.md",
@@ -115,6 +116,13 @@
       "title": "👨‍💻 Desarrollo",
       "description": "Guías para desarrolladores y contribuidores",
       "files": [
+        {
+          "path": "docs/development/WEBHOOK_STABILITY_DEBUG.md",
+          "title": "Debug: Reinicio Post-Webhook",
+          "description": "Solución al problema de reinicio del bot después del primer webhook",
+          "updated": "Julio 2025",
+          "new": true
+        },
         {
           "path": "docs/development/GIT_WORKFLOW_MANUAL.md",
           "title": "Manual de Git Workflow",
@@ -197,6 +205,13 @@
       "description": "Guías de uso y troubleshooting",
       "files": [
         {
+          "path": "docs/logging/TERMINAL_LOGS_GUIDE.md",
+          "title": "Guía de Logs de Terminal",
+          "description": "Sistema de logs limpios para terminal con enfoque en flujo humano",
+          "updated": "Julio 2025",
+          "new": true
+        },
+        {
           "path": "docs/guides/TROUBLESHOOTING_AND_FAQ.md",
           "title": "Troubleshooting y FAQ",
           "description": "Solución de problemas comunes y preguntas frecuentes",
@@ -218,6 +233,30 @@
     }
   },
   "recent_updates": [
+    {
+      "date": "Julio 2025",
+      "title": "Debug: Reinicio Post-Webhook y Estabilidad",
+      "description": "Solución al problema de reinicio del bot después del primer webhook con logs detallados, timeout en recovery y scripts de test",
+      "files_updated": [
+        "src/app-unified.ts",
+        "package.json",
+        "scripts/test-webhook-stability.js",
+        "docs/development/WEBHOOK_STABILITY_DEBUG.md",
+        "docs/DOCUMENTATION_MAP.json"
+      ]
+    },
+    {
+      "date": "Julio 2025",
+      "title": "Consolidación de Documentación y Logs Limpios",
+      "description": "Consolidación de documentación redundante y implementación de logs limpios para terminal",
+      "files_updated": [
+        "src/app-unified.ts",
+        "docs/logging/TERMINAL_LOGS_GUIDE.md",
+        "docs/features/TYPING_SYSTEM.md",
+        "README.md",
+        "docs/DOCUMENTATION_MAP.json"
+      ]
+    },
     {
       "date": "Julio 2025",
       "title": "Contexto Temporal Optimizado y División de Mensajes",

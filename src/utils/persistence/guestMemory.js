@@ -3,7 +3,8 @@ import * as path from 'path';
 import { enhancedLog } from '../core/index.js';
 import { whapiLabels } from '../whapi/index.js';
 import { threadPersistence } from './threadPersistence.js';
-import { getCachedChatInfo } from '../../app-unified.js';
+// 🔧 DESACTIVADO: Importación circular - getCachedChatInfo movido a whapi/index.js
+// import { getCachedChatInfo } from '../../app-unified.js';
 import { 
     incrementLabelCacheHits, 
     incrementLabelCacheMisses, 
@@ -24,6 +25,9 @@ class GuestMemory {
         this.labelCache = new Map(); // userId → { labels: [], timestamp: Date }
         this.LABEL_CACHE_TTL = 300000; // 5 minutos en milisegundos
         
+        // 🔧 FIX #3: Protección contra race conditions
+        this.creatingProfiles = new Set(); // Lock para evitar duplicados
+        
         //  NUEVO: Cargar perfiles al inicializar
         this.loadProfiles();
         
@@ -32,7 +36,16 @@ class GuestMemory {
             this.cleanExpiredCache();
         }, 600000); // 10 minutos
         
-        // 🔧 NUEVO:
+        // 🔧 FIX #2: Restaurar guardado automático con handlers de cierre
+        process.on('SIGINT', () => {
+            enhancedLog('info', 'GUEST_MEMORY', 'Guardando perfiles antes de cerrar (SIGINT)');
+            this.saveProfiles();
+        });
+        
+        process.on('SIGTERM', () => {
+            enhancedLog('info', 'GUEST_MEMORY', 'Guardando perfiles antes de cerrar (SIGTERM)');
+            this.saveProfiles();
+        });
     }
     
     // Asegurar que el directorio existe
@@ -89,79 +102,72 @@ class GuestMemory {
         }
     }
     
-    // Marcar cambios y programar guardado con debounce
+    // 🔧 FIX #2: Restaurar guardado automático con debounce
     markAsChanged() {
         this.hasChanges = true;
         
-        // DESACTIVADO: Guardado automático (genera muchos logs)
-        // Solo se guardará al cerrar el bot
+        // Guardar con debounce cada 30 segundos
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+        }
+        
+        this.saveTimeout = setTimeout(() => {
+            this.saveProfiles();
+        }, 30000); // 30 segundos
     }
     
-    // Obtener o crear perfil SIMPLIFICADO con sincronización de Whapi
+    // 🔧 FIX #3: Obtener o crear perfil con protección contra race conditions
     async getOrCreateProfile(userId, forceSync = false) {
+        // Verificar si ya se está creando este perfil
+        if (this.creatingProfiles.has(userId)) {
+            enhancedLog('debug', 'GUEST_MEMORY', 
+                `Perfil ${userId} ya se está creando, esperando...`);
+            // Esperar hasta que termine
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return this.getOrCreateProfile(userId, forceSync);
+        }
+        
         const existing = this.profiles.get(userId);
         if (!existing) {
-            // Crear perfil básico con SOLO datos reales
-            const newProfile = {
-                id: userId,                    // Webhook message.from
-                name: null,                    // Webhook message.chat_name
-                phone: userId,                 // Webhook message.from
-                chatId: `${userId}@s.whatsapp.net`, // Chat ID completo para endpoints
-                label: 'nuevo',                // WHAPI labels[0].name
-                whapiLabels: [],               // WHAPI labels
-                firstInteraction: new Date().toISOString(), // Timestamp creación
-                lastInteraction: new Date().toISOString(),  // Timestamp último mensaje
-                whatsappName: null,            // WHAPI name
-                lastMessage: null,             // WHAPI last_message
-                lastThread: null,              // Thread ID de OpenAI
-                lastThreadUpdate: null,        // Última actualización del thread
-                lastAssistant: null,           // Último assistant usado
-                threadMessageCount: 0          // Contador de mensajes en el thread
-            };
+            // 🔧 FIX #3: Lock para evitar duplicados
+            this.creatingProfiles.add(userId);
             
-            // Intentar obtener información desde Whapi (con cache)
             try {
-                // Importar la función cacheada desde app-unified.ts
-                const { getCachedChatInfo } = require('../../app-unified');
-                const chatInfo = await getCachedChatInfo(userId);
-                if (chatInfo) {
-                    // Sincronizar con datos REALES de Whapi
-                    if (chatInfo.name) {
-                        newProfile.whatsappName = chatInfo.name; // WHAPI name
-                        newProfile.name = chatInfo.name; // También en name para compatibilidad
-                    }
-                    
-                    if (chatInfo.labels && chatInfo.labels.length > 0) {
-                        newProfile.whapiLabels = chatInfo.labels; // WHAPI labels
-                        newProfile.label = chatInfo.labels[0].name; // WHAPI labels[0].name
-                        
-                        enhancedLog('info', 'GUEST_MEMORY', 
-                            `Sincronizado con Whapi: ${chatInfo.labels.length} etiquetas para ${userId}`);
-                    }
-                    
-                    // Guardar último mensaje REAL desde WHAPI
-                    if (chatInfo.lastMessage) {
-                        newProfile.lastMessage = chatInfo.lastMessage; // WHAPI last_message
-                    }
-                    
-                    enhancedLog('info', 'GUEST_MEMORY', 
-                        `Perfil sincronizado para ${userId}: ${chatInfo.name || 'Sin nombre'}`);
-                }
-            } catch (error) {
-                enhancedLog('warning', 'GUEST_MEMORY', 
-                    `No se pudo sincronizar con Whapi para ${userId}: ${error.message}`);
+                // Crear perfil básico con SOLO datos reales
+                const newProfile = {
+                    id: userId,                    // Webhook message.from
+                    name: null,                    // Webhook message.chat_name
+                    phone: userId,                 // Webhook message.from
+                    chatId: `${userId}@s.whatsapp.net`, // Chat ID completo para endpoints
+                    label: 'nuevo',                // WHAPI labels[0].name
+                    whapiLabels: [],               // WHAPI labels
+                    firstInteraction: new Date().toISOString(), // Timestamp creación
+                    lastInteraction: new Date().toISOString(),  // Timestamp último mensaje
+                    whatsappName: null,            // WHAPI name
+                    lastMessage: null,             // WHAPI last_message
+                    lastThread: null,              // Thread ID de OpenAI
+                    lastThreadUpdate: null,        // Última actualización del thread
+                    lastAssistant: null,           // Último assistant usado
+                    threadMessageCount: 0          // Contador de mensajes en el thread
+                };
+                
+                this.profiles.set(userId, newProfile);
+                
+                // 🔧 FIX: Usar wrapper centralizado para nuevo perfil
+                await this.syncIfNeeded(userId, forceSync, false); // isNewThread = false porque el thread ya existe
+                
+                enhancedLog('info', 'GUEST_MEMORY', 
+                    `Nuevo perfil creado para ${userId} con ${newProfile.whapiLabels.length} etiquetas`);
+                
+                // Marcar cambios en lugar de guardar inmediatamente
+                this.markAsChanged();
+                
+                // 🔧 FIX #4: Retornar DESPUÉS de todas las actualizaciones
+                return this.profiles.get(userId);
+            } finally {
+                // 🔧 FIX #3: Unlock
+                this.creatingProfiles.delete(userId);
             }
-            
-            this.profiles.set(userId, newProfile);
-            
-            // 🔧 FIX: Usar wrapper centralizado para nuevo perfil
-            await this.syncIfNeeded(userId, forceSync, true); // isNewThread = true para perfiles nuevos
-            
-            enhancedLog('info', 'GUEST_MEMORY', 
-                `Nuevo perfil creado para ${userId} con ${newProfile.whapiLabels.length} etiquetas`);
-            
-            // Marcar cambios en lugar de guardar inmediatamente
-            this.markAsChanged();
         } else {
             // Solo actualizar última interacción
             const profile = this.profiles.get(userId);
@@ -170,13 +176,10 @@ class GuestMemory {
             
             // 🔧 FIX: Usar wrapper centralizado para perfil existente
             await this.syncIfNeeded(userId, forceSync); // Solo si thread es viejo (manejado por wrapper)
+            
+            // 🔧 FIX #4: Retornar DESPUÉS de todas las actualizaciones
+            return this.profiles.get(userId);
         }
-        
-        if (existing) {
-            return existing;
-        }
-        
-        return this.profiles.get(userId);
     }
     
     // Obtener perfil (sin crear)
@@ -212,77 +215,77 @@ class GuestMemory {
         }
     }
     
-    // Sincronizar etiquetas de Whapi con el perfil local
+    // 🔧 FIX #1: Implementar syncWhapiLabels funcional
     async syncWhapiLabels(userId) {
         // 🔧 ETAPA 3: Incrementar métrica de llamadas de sync
         incrementSyncCalls();
-        
-        // 🔧 ETAPA 9: Verificar si thread es viejo antes de sincronizar
-        const isThreadOld = threadPersistence.isThreadOld(userId);
-        
-        if (!isThreadOld) {
-            enhancedLog('debug', 'GUEST_MEMORY', 
-                `Sincronización de labels SKIPPED para ${userId} - thread no es viejo`, {
-                    userId,
-                    isThreadOld,
-                    reason: 'thread_not_old'
-                });
-            return null;
-        }
         
         try {
             const profile = this.profiles.get(userId);
             if (!profile) return null;
             
-            // Importar la función cacheada desde app-unified.ts
-            const { getCachedChatInfo } = require('../../app-unified');
-            const chatInfo = await getCachedChatInfo(userId);
+            // 🔧 NUEVO: Para perfiles nuevos, obtener etiquetas inmediatamente
+            const isNewProfile = profile.whapiLabels.length === 0;
+            
+            // 🔧 ETAPA 9: Verificar si thread es viejo antes de sincronizar (solo para perfiles existentes)
+            if (!isNewProfile) {
+                const isThreadOld = threadPersistence.isThreadOld(userId);
+                
+                if (!isThreadOld) {
+                    enhancedLog('debug', 'GUEST_MEMORY', 
+                        `Sincronización de labels SKIPPED para ${userId} - thread no es viejo`, {
+                            userId,
+                            isThreadOld,
+                            reason: 'thread_not_old'
+                        });
+                    return null;
+                }
+            }
+            
+            // 🔧 FIX #1: Usar whapiLabels directamente (ya está importado)
+            const chatInfo = await whapiLabels.getChatInfo(userId);
             if (chatInfo) {
                 // Actualizar SOLO datos REALES de WHAPI
                 if (chatInfo.name) {
-                    profile.whatsappName = chatInfo.name; // WHAPI name
-                    profile.name = chatInfo.name; // Mantener compatibilidad
+                    profile.whatsappName = chatInfo.name;
+                    profile.name = chatInfo.name;
                 }
                 
                 if (chatInfo.labels) {
-                    profile.whapiLabels = chatInfo.labels; // WHAPI labels
+                    profile.whapiLabels = chatInfo.labels;
                     
-                    // Actualizar label principal si hay etiquetas
                     if (chatInfo.labels.length > 0) {
-                        profile.label = chatInfo.labels[0].name; // WHAPI labels[0].name
+                        profile.label = chatInfo.labels[0].name;
                     }
                 }
                 
-                // Actualizar último mensaje REAL
                 if (chatInfo.lastMessage) {
-                    profile.lastMessage = chatInfo.lastMessage; // WHAPI last_message
+                    profile.lastMessage = chatInfo.lastMessage;
                 }
                 
-                // 🔧 NUEVO: Asegurar que chatId esté presente
                 if (!profile.chatId) {
                     profile.chatId = `${userId}@s.whatsapp.net`;
                 }
                 
                 this.profiles.set(userId, profile);
-                this.markAsChanged(); // Usar debounce para sincronización
+                this.markAsChanged();
                 
                 enhancedLog('success', 'GUEST_MEMORY', 
                     `Perfil sincronizado para ${userId}: ${chatInfo.name || 'Sin nombre'}`, {
                         userId,
-                        isThreadOld,
+                        isNewProfile,
                         labelsCount: chatInfo.labels?.length || 0,
                         labels: chatInfo.labels?.map(l => l.name) || [],
                         hasLastMessage: !!chatInfo.lastMessage
                     });
                 
-                return profile;
+                return profile; // ✅ Retornar perfil actualizado
             }
             
         } catch (error) {
             enhancedLog('error', 'GUEST_MEMORY', 
                 `Error sincronizando perfil para ${userId}: ${error.message}`, {
-                    userId,
-                    isThreadOld
+                    userId
                 });
         }
         
@@ -448,6 +451,15 @@ class GuestMemory {
     async syncIfNeeded(userId, force = false, isNewThread = false, requestId = null) {
         const isThreadOld = threadPersistence.isThreadOld(userId);
         
+        // 🔧 NUEVO: Logging más claro para debug
+        enhancedLog('debug', 'SYNC_IF_NEEDED', `Evaluando sync para ${userId}`, {
+            userId,
+            force,
+            isNewThread,
+            isThreadOld,
+            requestId
+        });
+        
         // 🔧 ETAPA 2: Verificar cache primero (si no es force)
         if (!force) {
             const cached = this.labelCache.get(userId);
@@ -485,7 +497,7 @@ class GuestMemory {
         
         enhancedLog('info', 'SYNC_NEEDED', `Sync needed for ${userId}`, {
             userId,
-            reason: force ? 'forced' : (isNewThread ? 'new_thread' : 'old_thread'),
+            reason: force ? 'forced' : (isNewThread ? 'new_profile' : 'old_thread'),
             isThreadOld,
             isNewThread,
             force,

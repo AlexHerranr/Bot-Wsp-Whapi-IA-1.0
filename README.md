@@ -85,7 +85,28 @@ if (buffer) {
 }
 ```
 
-### **📊 Resultado en Terminal**
+### **📊 Resultado en Terminal (Logs Limpios)**
+
+```
+[BOT] === Bot TeAlquilamos Iniciado ===
+[BOT] 🚀 Servidor: localhost:3008
+[BOT] 🔗 Webhook: https://actual-bobcat-handy.ngrok-free.app/hook
+[BOT] ✅ Sistema listo
+
+[BOT] 📨 Nueva conversación con Sr Alex
+[BOT] ✍️ Sr Alex está escribiendo...
+[BOT] 👤 Sr Alex: "hola como va todo"
+[BOT] ✍️ Sr Alex está escribiendo...
+[BOT] 👤 Sr Alex: "se dice"
+[BOT] ✍️ Sr Alex está escribiendo...
+[BOT] 👤 Sr Alex: "voy"
+[BOT] 👤 Sr Alex: "a probar un mensaje"
+[BOT] 👤 Sr Alex: "largo"
+[BOT] ⏰ ✍️ Sr Alex dejó de escribir.
+[BOT] 🤖 OpenAI → Sr Alex: "Hola, todo va bien, gracias. Veo que estás probando un mensa..." (9.3s)
+```
+
+**📖 [Ver Guía Completa de Logs de Terminal](./docs/logging/TERMINAL_LOGS_GUIDE.md)**
 
 ### **🔧 Ventajas del Sistema**
 - **Nombres reales** en lugar de IDs numéricos
@@ -93,6 +114,7 @@ if (buffer) {
 - **Fallback inteligente** cuando no hay buffer
 - **Sin llamadas adicionales** a APIs externas
 - **Performance optimizada** usando datos del webhook
+- **Logs limpios** enfocados en el flujo humano
 
 ---
 

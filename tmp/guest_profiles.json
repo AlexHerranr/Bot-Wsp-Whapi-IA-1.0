@@ -1,0 +1,40 @@
+[
+  [
+    "573003913251",
+    {
+      "id": "573003913251",
+      "name": null,
+      "phone": "573003913251",
+      "chatId": "573003913251@s.whatsapp.net",
+      "label": "nuevo",
+      "whapiLabels": [],
+      "firstInteraction": "2025-07-22T19:28:27.063Z",
+      "lastInteraction": "2025-07-23T02:32:17.834Z",
+      "whatsappName": null,
+      "lastMessage": null,
+      "lastThread": null,
+      "lastThreadUpdate": null,
+      "lastAssistant": null,
+      "threadMessageCount": 0
+    }
+  ],
+  [
+    "573023371476",
+    {
+      "id": "573023371476",
+      "name": null,
+      "phone": "573023371476",
+      "chatId": "573023371476@s.whatsapp.net",
+      "label": "nuevo",
+      "whapiLabels": [],
+      "firstInteraction": "2025-07-23T02:28:25.684Z",
+      "lastInteraction": "2025-07-23T02:28:25.684Z",
+      "whatsappName": null,
+      "lastMessage": null,
+      "lastThread": null,
+      "lastThreadUpdate": null,
+      "lastAssistant": null,
+      "threadMessageCount": 0
+    }
+  ]
+]
