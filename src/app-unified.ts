@@ -32,36 +32,22 @@ import {
     logDebug,
     logFatal,
     logAlert,
-    // 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
-    // logTrace,                    // ❌ No se usa - comentado para registro
     logMessageReceived,
-    // logMessageProcess,           // ❌ No se usa - comentado para registro
-    // logWhatsAppSend,            // ❌ No se usa - comentado para registro
-    // logWhatsAppChunksComplete,  // ❌ No se usa - comentado para registro
     logOpenAIRequest,
     logOpenAIResponse,
     logFunctionCallingStart,
     logFunctionExecuting,
     logFunctionHandler,
-    // logBeds24Request,           // ❌ No se usa - comentado para registro
-    // logBeds24ApiCall,           // ❌ No se usa - comentado para registro
-    // logBeds24ResponseDetail,    // ❌ No se usa - comentado para registro
-    // logBeds24Processing,        // ❌ No se usa - comentado para registro
     logThreadCreated,
-    // logThreadPersist,           // ❌ No se usa - comentado para registro
-    // logThreadCleanup,           // ❌ No se usa - comentado para registro
     logServerStart,
-    // logBotReady,                // ❌ No se usa - comentado para registro
-    // logContextTokens,           // ❌ No se usa - comentado para registro
     logOpenAIUsage,
     logOpenAILatency,
     logFallbackTriggered,
     logPerformanceMetrics,
-    // 🔧 ETAPA 3: Nuevas funciones de tracing
+    // Funciones de tracing
     logRequestTracing,
     logToolOutputsSubmitted,
     logAssistantNoResponse,
-    // logFlowStageUpdate,         // ❌ No se usa - comentado para registro
     startRequestTracing,
     updateRequestStage,
     registerToolCall,
@@ -69,8 +55,6 @@ import {
     endRequestTracing
 } from './utils/logging/index.js';
 import { threadPersistence } from './utils/persistence/index.js';
-// 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
-// import { getChatHistory } from './utils/whapi/index';  // ❌ No se usa - comentado para registro
 import { guestMemory } from './utils/persistence/index';
 import { whapiLabels } from './utils/whapi/index';
 import { getConfig } from './config/environment';
@@ -85,8 +69,6 @@ import metricsRouter, {
     setTokensUsed, 
     setLatency, 
     incrementMessages
-    // 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
-    // updateActiveThreads  // ❌ No se usa - comentado para registro
 } from './routes/metrics.js';
 
 // Importar nuevo módulo modularizado de inyección de historial/contexto
@@ -118,21 +100,14 @@ const globalMessageBuffers = new Map<string, {
 }>();
 const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para mensajes, typing, hooks, entrada manual
 
-// 🔧 ELIMINADOS: Buffers obsoletos y redundantes
-// const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
-// const userActivityTimers = new Map<string, NodeJS.Timeout>();
-// const userTypingState = new Map();
-// const manualMessageBuffers = new Map<string, { messages: string[], agentName: string, timestamp: number }>();
-// const manualTimers = new Map<string, NodeJS.Timeout>();
+
 
 const botSentMessages = new Set<string>();
 
 // NUEVO: Map global para estados de usuario (funcionalidades media)
 const globalUserStates = new Map<string, UserState>();
 
-// 🔧 ELIMINADOS: Caches duplicados migrados a historyInjection.ts
-// Los caches historyCache y contextInjectionCache ahora están centralizados
-// en el módulo historyInjection.ts para evitar duplicación y optimizar memoria
+
 
 const MAX_MESSAGE_LENGTH = 5000;
 
@@ -166,11 +141,7 @@ interface WHAPIError {
 
 // 🔧 NUEVO: Sistema de typing dinámico
 // Configuración de timeouts optimizada para mejor UX
-// 🔧 CONSTANTES OBSOLETAS COMENTADAS PARA REGISTRO
-// const FALLBACK_TIMEOUT = 2000; // 2 segundos si no hay typing detectable (más rápido)  // ❌ No se usa - comentado para registro
-// const POST_TYPING_DELAY = 3000; // 3 segundos después de que deje de escribir (más natural)  // ❌ No se usa - comentado para registro
-// const MAX_BUFFER_SIZE = 10; // Límite máximo de mensajes por buffer (anti-spam)  // ❌ No se usa - comentado para registro
-// const MAX_BOT_MESSAGES = 1000;  // ❌ No se usa - comentado para registro
+
 
 // 🔧 FUNCIÓN GLOBAL: Transcribir audio - Movida aquí para acceso global
 async function transcribeAudio(audioUrl: string | undefined, userId: string, messageId?: string): Promise<string> {

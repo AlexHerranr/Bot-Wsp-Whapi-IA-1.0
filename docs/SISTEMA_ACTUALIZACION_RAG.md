@@ -138,7 +138,7 @@ npm run create-assistant
 # Verificar .env
 echo $OPENAI_ASSISTANT_ID
 # Si está vacío, agregar:
-# OPENAI_ASSISTANT_ID=asst_KkDuq2r9cL5EZSZa95sXkpVR
+# OPENAI_ASSISTANT_ID=asst_EXAMPLE_ID_KkDuq2r9cL5EZSZa95sXkpVR
 ```
 
 ### **Error: "Rate limit exceeded"**

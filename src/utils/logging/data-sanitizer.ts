@@ -322,9 +322,9 @@ export function testSanitization() {
     const testData = {
         phone: '573001234567',
         email: 'user@example.com',
-        token: 'sk-1234567890abcdef1234567890abcdef',
+        token: 'sk-EXAMPLE_KEY_1234567890abcdef',
         password: 'mySecretPassword123',
-        apiKey: 'whapi_abcd1234efgh5678ijkl9012mnop3456',
+        apiKey: 'whapi_EXAMPLE_TOKEN_abcd1234efgh5678',
         normalField: 'This is normal data',
         userJid: '573001234567@s.whatsapp.net'
     };

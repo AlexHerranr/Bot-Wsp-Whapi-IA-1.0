@@ -9,6 +9,7 @@
 
 ### 🏗️ Arquitectura y Diseño
 - [**Arquitectura del Sistema**](./ARCHITECTURE.md) - Diseño técnico y componentes
+- [**Estructura del Proyecto**](./architecture/PROJECT_STRUCTURE_UPDATED.md) - Mapa de navegación actualizado
 - [**API Endpoints**](./API_ENDPOINTS.md) - Documentación de endpoints HTTP
 - [**Sistema de Actualización RAG**](./SISTEMA_ACTUALIZACION_RAG.md) - Sistema de gestión de conocimiento
 
@@ -23,6 +24,7 @@
 ```
 docs/
 ├── 📄 INDEX.md                          # Este archivo
+├── 📄 README_DOCUMENTACION.md           # Introducción a la documentación
 ├── 📄 ESTADO_ACTUAL_PROYECTO.md         # Estado actual del proyecto
 ├── 📄 HISTORIAL_CONSOLIDADO_2025.md     # Historial de cambios
 ├── 📄 ARCHITECTURE.md                   # Arquitectura técnica
@@ -44,9 +46,18 @@ docs/
 ### 🔧 Desarrollo
 
 #### Guías de Desarrollo
-- [**Configuración Local**](./development/LOCAL_SETUP.md)
-- [**Guía de Contribución**](./development/CONTRIBUTING.md)
-- [**Estándares de Código**](./development/CODE_STANDARDS.md)
+- [**Configuración Local**](./development/local-setup.md) - Configuración completa para desarrollo local
+- [**Protocolo de Entornos**](./development/PROTOCOLO_ENTORNOS.md) - Manejo de entornos de desarrollo
+- [**Git Workflow Manual**](./development/GIT_WORKFLOW_MANUAL.md) - Workflow de Git para el proyecto
+
+#### Herramientas y Optimizaciones
+- [**Optimización Cloud Run**](./development/OPTIMIZACION_CLOUD_RUN.md) - Optimizaciones para Cloud Run
+- [**Solución Rate Limiting**](./development/SOLUCION_RATE_LIMITING.md) - Solución para rate limiting
+- [**Dashboard Web Desarrollo**](./development/DASHBOARD_WEB_DESARROLLO.md) - Dashboard para desarrollo
+
+#### Análisis y Resúmenes
+- [**Resumen Ejecutivo Julio 2025**](./development/EXECUTIVE_SUMMARY_JULY_2025.md) - Resumen ejecutivo actual
+- [**Resumen Análisis Logs**](./development/RESUMEN_ANALISIS_LOGS.md) - Análisis del sistema de logs
 
 #### Funciones y Características
 - [**Sistema de Funciones**](./functions/FUNCTION_SYSTEM.md)
@@ -58,6 +69,12 @@ docs/
 - [**WhatsApp Business API (Whapi)**](./integrations/WHAPI.md)
 - [**OpenAI Integration**](./integrations/OPENAI.md)
 - [**Beds24 Integration**](./integrations/BEDS24.md)
+
+### 🔐 Seguridad
+
+- [**Gestión de Secretos**](./security/SECRETS_MANAGEMENT_GUIDE.md)
+- [**Security and Deployment**](./SECURITY_AND_DEPLOYMENT.md)
+- [**Reporte de Limpieza de Seguridad**](./security/SECURITY_CLEANUP_REPORT.md) - Limpieza de secretos hardcodeados
 
 ### 📊 Monitoreo y Logs
 
@@ -92,6 +109,7 @@ docs/
 ## 📝 Notas
 
 - La documentación está organizada por categorías para facilitar la navegación
-- Los archivos obsoletos han sido movidos a `/archive`
+- Los archivos obsoletos y análisis temporales han sido movidos a `/archive`
 - Para cambios recientes, ver [Estado Actual](./ESTADO_ACTUAL_PROYECTO.md)
 - Para tareas pendientes, ver [Roadmap](./progress/TAREAS_PENDIENTES.md)
+- Para referencias históricas, consultar `/archive/README.md`

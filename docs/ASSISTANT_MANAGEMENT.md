@@ -50,7 +50,7 @@ node scripts/assistant-management/assistant-cli.js status
 ### **2. Variables de Entorno Requeridas**
 ```env
 OPENAI_API_KEY=sk-xxxxxx
-OPENAI_ASSISTANT_ID=asst_KkDuq2r9cL5EZSZa95sXkpVR
+OPENAI_ASSISTANT_ID=asst_EXAMPLE_ID_KkDuq2r9cL5EZSZa95sXkpVR
 ```
 
 ### **3. Estructura de Archivos**
@@ -135,7 +135,7 @@ node assistant-cli.js status
 ```
 📊 ESTADO DEL ASSISTANT:
 
-🤖 Assistant ID: asst_KkDuq2r9cL5EZSZa95sXkpVR
+🤖 Assistant ID: asst_EXAMPLE_ID_KkDuq2r9cL5EZSZa95sXkpVR
 🗃️ Vector Store ID: vs_6865eff81ccc8191bf41f50ba9e497c5
 📁 Archivos RAG: 17
 🕒 Última actualización: 2025-07-03T00:00:00.000Z
@@ -218,7 +218,7 @@ node assistant-cli.js list-files
 cat .env | grep OPENAI_ASSISTANT_ID
 
 # Si no existe, agregar:
-echo "OPENAI_ASSISTANT_ID=asst_KkDuq2r9cL5EZSZa95sXkpVR" >> .env
+echo "OPENAI_ASSISTANT_ID=asst_EXAMPLE_ID_KkDuq2r9cL5EZSZa95sXkpVR" >> .env
 ```
 
 ### **Error: "No se encontró assistant-config.json"**
