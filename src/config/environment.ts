@@ -119,7 +119,7 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     
     // Configuración del logger según el entorno
     const logLevel = environment === 'local' ? 'development' : 'production';
-    const enableDetailedLogs = environment === 'local';
+    const enableDetailedLogs = environment === 'local' || process.env.ENABLE_DETAILED_LOGS === 'true';
     
     // Forzar NODE_ENV correcto para Railway
     if (environment === 'cloud-run' && (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID)) {
