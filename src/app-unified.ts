@@ -98,7 +98,7 @@ const globalMessageBuffers = new Map<string, {
     lastActivity: number,
     timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para mensajes, typing, hooks, entrada manual
+const BUFFER_WINDOW_MS = 10000; // 10 segundos fijos para mensajes, typing, hooks, entrada manual
 
 
 
