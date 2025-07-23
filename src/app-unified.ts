@@ -90,7 +90,7 @@ import metricsRouter, {
 } from './routes/metrics.js';
 
 // Importar nuevo módulo modularizado de inyección de historial/contexto
-import { injectHistory, cleanupExpiredCaches, getCacheStats } from './utils/context/historyInjection.js';
+import { cleanupExpiredCaches, getCacheStats } from './utils/context/historyInjection.js';
 
 // Importar nuevo sistema de locks simplificado
 import { simpleLockManager } from './utils/simpleLockManager.js';
@@ -139,6 +139,19 @@ const terminalLog = {
         console.log(`❌ Error WHAPI (${operation}): ${error}`);
     },
     
+    // 🔧 NUEVO: Logs de function calling para terminal
+    functionStart: () => {
+        console.log('⚙️ Function calling iniciado');
+    },
+    
+    functionExecuting: (name: string) => {
+        console.log(`  ↳ ${name} ejecutándose...`);
+    },
+    
+    functionCompleted: (name: string) => {
+        console.log(`  ✓ ${name} completada`);
+    },
+    
     startup: () => {
         console.log('\n=== Bot TeAlquilamos Iniciado ===');
         console.log(`🚀 Servidor: ${appConfig?.host || 'localhost'}:${appConfig?.port || 3008}`);
@@ -167,6 +180,9 @@ const typingLogTimestamps = new Map<string, number>();
 const chatInfoCache = new Map<string, { data: any; timestamp: number }>();
 const CHAT_INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
+// 🔧 NUEVO: Control de logs de function calling en terminal
+const SHOW_FUNCTION_LOGS = process.env.TERMINAL_LOGS_FUNCTIONS !== 'false'; // true por defecto
+
 // --- Variables Globales ---
 let appConfig: AppConfig;
 let openaiClient: OpenAI;
@@ -184,21 +200,8 @@ const globalMessageBuffers = new Map<string, {
     lastActivity: number,
     timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para TODOS los tipos de entrada (mensajes, typing, voz, etc.)
-
-// 🔧 NUEVO: Sistema para rastrear typing activo
-const activeTypingUsers = new Set<string>();
-const TYPING_TIMEOUT_MS = 10000; // 10 segundos sin typing = usuario dejó de escribir
-
-// 🔧 NUEVO: Sistema para cancelar procesamiento cuando llega typing
-const cancelProcessingOnTyping = new Set<string>();
-
-// 🔧 NUEVO: Sistema para rastrear el último evento de typing por usuario
-const lastTypingEvent = new Map<string, number>();
-const TYPING_AUTO_TIMEOUT_MS = 15000; // 15 segundos sin typing = auto-considerar que dejó de escribir
-
-// 🔧 NUEVO: Timer periódico para verificar auto-timeout de typing
-let typingTimeoutCheckInterval: NodeJS.Timeout | null = null;
+const BUFFER_WINDOW_MS = 5000; // 5 segundos para agrupar mensajes normales
+const TYPING_EXTENDED_MS = 10000; // 10 segundos cuando usuario está escribiendo
 
 // 🔧 ELIMINADOS: Buffers obsoletos y redundantes
 // const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
@@ -235,7 +238,8 @@ function getOrCreateUserState(userId: string, chatId?: string, userName?: string
             userName: userName || 'Usuario',
             typingEventsCount: 0,
             averageTypingDuration: 0,
-            lastInputVoice: false
+            lastInputVoice: false,
+            lastTyping: 0  // 🔧 NUEVO: Timestamp del último typing detectado
         };
         globalUserStates.set(userId, userState);
     }
@@ -562,27 +566,42 @@ function setupEndpoints() {
                 return;
             }
             
+            // 🔧 NUEVO: Log detallado del inicio de procesamiento
+            logDebug('WEBHOOK_PROCESS_START', 'Iniciando procesamiento webhook', { 
+                bodyPreview: JSON.stringify(req.body).substring(0, 200),
+                environment: appConfig.environment,
+                timestamp: new Date().toISOString()
+            });
+            
             // 🔧 NUEVO: Filtrado temprano de webhooks
             const { messages, presences, event } = req.body;
             
             // Solo procesar si hay mensajes o presencias relevantes
             if (messages && Array.isArray(messages) && messages.length > 0) {
-                // Los mensajes individuales se mostrarán con terminalLog.message()
+                logDebug('WEBHOOK_MESSAGES_DETECTED', `Procesando ${messages.length} mensajes`);
             } else if (presences && event?.type === 'presences') {
-                // Las presencias se manejan en processWebhook
+                logDebug('WEBHOOK_PRESENCES_DETECTED', `Procesando ${presences.length} eventos de presencia`);
             } else {
                 // Otros tipos de webhook - no procesar para reducir ruido
+                logDebug('WEBHOOK_SKIP_NO_CONTENT', 'Webhook sin contenido relevante');
                 return;
             }
             
             // Procesar webhook
             await processWebhook(req.body);
             
+            // 🔧 NUEVO: Log de éxito
+            logDebug('WEBHOOK_PROCESS_END', 'Webhook procesado exitosamente');
+            
         } catch (error) {
+            // 🔧 NUEVO: Log más detallado del error
             logError('WEBHOOK_ERROR', 'Error procesando webhook', { 
                 error: error instanceof Error ? error.message : String(error),
-                environment: appConfig?.environment
+                stack: error instanceof Error ? error.stack : undefined,
+                environment: appConfig?.environment,
+                bodyPreview: JSON.stringify(req.body).substring(0, 100)
             });
+            // 🔧 NUEVO: Evitar crash, solo log
         }
     });
 
@@ -684,11 +703,7 @@ function setupSignalHandlers() {
             logInfo('SHUTDOWN', `Señal ${signal} recibida`, { environment: appConfig.environment });
         }
         
-        // 🔧 NUEVO: Limpiar timer de verificación de typing
-        if (typingTimeoutCheckInterval) {
-            clearInterval(typingTimeoutCheckInterval);
-            logInfo('SHUTDOWN', 'Timer de verificación de typing limpiado');
-        }
+        // 🔧 ELIMINADO: Timer de verificación de typing - ya no necesario
         
         if (server) {
             server.close(() => {
@@ -747,39 +762,7 @@ const cleanContactName = (rawName: any): string => {
 let processCombinedMessage: (userId: string, combinedText: string, chatId: string, userName: string, messageCount: number) => Promise<void>;
 
 // 🔧 NUEVO: Función para verificar auto-timeout de typing periódicamente
-function checkTypingTimeouts(): void {
-    const now = Date.now();
-    
-    for (const [userId, lastTyping] of lastTypingEvent.entries()) {
-        const timeSinceLastTyping = now - lastTyping;
-        
-        if (timeSinceLastTyping >= TYPING_AUTO_TIMEOUT_MS) {
-            // 🔧 MEJORADO: Obtener nombre del usuario para el mensaje
-            const buffer = globalMessageBuffers.get(userId);
-            const userName = buffer?.userName || getShortUserId(userId);
-            
-            // 🔧 NUEVO: Usar terminalLog directamente para mostrar en terminal
-            console.log(`⏰ ${userName} dejó de escribir ⏰`);
-            
-            // 🔧 MANTENIDO: Log técnico para archivos
-            logWarning('TYPING_AUTO_TIMEOUT_CHECK', `${userName} dejó de escribir ⏰`, {
-                userJid: getShortUserId(userId),
-                userName,
-                timeSinceLastTyping: Math.round(timeSinceLastTyping / 1000) + 's',
-                timeout: TYPING_AUTO_TIMEOUT_MS / 1000 + 's',
-                environment: appConfig?.environment
-            });
-            
-            // Limpiar flags de typing
-            activeTypingUsers.delete(userId);
-            lastTypingEvent.delete(userId);
-            cancelProcessingOnTyping.delete(userId);
-            
-            // Procesar mensajes acumulados
-            processGlobalBuffer(userId);
-        }
-    }
-}
+// 🔧 ELIMINADO: Función checkTypingTimeouts() - ya no necesaria con el sistema simplificado
 
 // Función para procesar el buffer global
 async function processGlobalBuffer(userId: string): Promise<void> {
@@ -788,7 +771,42 @@ async function processGlobalBuffer(userId: string): Promise<void> {
         return;
     }
     
-    // 🔧 NUEVO: Verificar si ya hay un procesamiento activo para este usuario
+    // 🔧 NUEVO: Verificar typing reciente (<10s desde último)
+    const userState = globalUserStates.get(userId);
+    if (userState?.lastTyping && (Date.now() - userState.lastTyping < TYPING_EXTENDED_MS)) {
+        const remainingTime = TYPING_EXTENDED_MS - (Date.now() - userState.lastTyping);
+        
+        logInfo('BUFFER_PROCESS_DELAYED_BY_RECENT_TYPING', 'Retrasar por typing reciente <10s', {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            messageCount: buffer.messages.length,
+            remainingTime: Math.round(remainingTime / 1000) + 's'
+        });
+        
+        // Re-set timer para esperar full 10s desde último typing (aniquila si existe)
+        if (buffer.timer) clearTimeout(buffer.timer);
+        buffer.timer = setTimeout(() => {
+            const currentBuffer = globalMessageBuffers.get(userId);
+            if (currentBuffer) {
+                currentBuffer.timer = null;
+                processGlobalBuffer(userId);
+            }
+        }, remainingTime);
+        return;
+    }
+    
+    // 🔧 NUEVO: Verificar si hay typing activo (timer extendido)
+    if (buffer.timer) {  // Si hay timer activo, significa typing en progreso -> retrasar
+        logInfo('BUFFER_PROCESS_DELAYED', 'Procesamiento de buffer retrasado por typing activo', {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            messageCount: buffer.messages.length,
+            remainingTime: TYPING_EXTENDED_MS / 1000 + 's'  // Para debug
+        });
+        return;  // No procesar ni agregar a cola todavía; el timer se encargará más tarde
+    }
+    
+    // 🔧 SIMPLIFICADO: Verificar si ya hay un procesamiento activo para este usuario
     if (activeProcessing.has(userId)) {
         logWarning('BUFFER_PROCESS_SKIPPED', 'Procesamiento ya activo para usuario', {
             userJid: getShortUserId(userId),
@@ -798,53 +816,12 @@ async function processGlobalBuffer(userId: string): Promise<void> {
         return;
     }
     
-    // 🔧 NUEVO: Verificar si el usuario está escribiendo activamente
-    if (activeTypingUsers.has(userId)) {
-        // 🔧 NUEVO: Verificar si ha pasado mucho tiempo sin eventos de typing
-        const lastTyping = lastTypingEvent.get(userId);
-        const timeSinceLastTyping = lastTyping ? Date.now() - lastTyping : 0;
-        
-        if (timeSinceLastTyping < TYPING_AUTO_TIMEOUT_MS) {
-            logInfo('BUFFER_PROCESS_TYPING_SKIPPED', 'Procesamiento saltado - usuario escribiendo activamente', {
-                userJid: getShortUserId(userId),
-                userName: buffer.userName,
-                messageCount: buffer.messages.length,
-                timeSinceLastTyping: Math.round(timeSinceLastTyping / 1000) + 's',
-                environment: appConfig?.environment
-            });
-            return;
-        } else {
-            // 🔧 NUEVO: Auto-considerar que dejó de escribir después de mucho tiempo
-            logWarning('BUFFER_PROCESS_TYPING_AUTO_END', 'Auto-considerando que usuario dejó de escribir por timeout', {
-                userJid: getShortUserId(userId),
-                userName: buffer.userName,
-                messageCount: buffer.messages.length,
-                timeSinceLastTyping: Math.round(timeSinceLastTyping / 1000) + 's',
-                timeout: TYPING_AUTO_TIMEOUT_MS / 1000 + 's',
-                environment: appConfig?.environment
-            });
-            
-            // Limpiar flags de typing
-            activeTypingUsers.delete(userId);
-            lastTypingEvent.delete(userId);
-            cancelProcessingOnTyping.delete(userId);
-        }
-    }
-    
-    // 🔧 NUEVO: Verificar si se marcó para cancelación por typing
-    if (cancelProcessingOnTyping.has(userId)) {
-        logWarning('BUFFER_PROCESS_TYPING_CANCELLED', 'Procesamiento cancelado - usuario escribiendo', {
-            userJid: getShortUserId(userId),
-            userName: buffer.userName,
-            messageCount: buffer.messages.length,
-            environment: appConfig?.environment
-        });
-        cancelProcessingOnTyping.delete(userId);
-        return;
-    }
-    
     // Marcar como procesamiento activo
     activeProcessing.add(userId);
+    
+    // 🔧 NUEVO: Log simple antes de procesar/enviar
+    const displayUser = buffer.userName || getShortUserId(userId);
+    console.log(`⏰ ✍️ ${displayUser} dejó de escribir.`);
     
     // 🚀 SIMPLIFICADO: Sin filtros - todos los mensajes van a OpenAI
     const combinedText = buffer.messages
@@ -869,85 +846,14 @@ async function processGlobalBuffer(userId: string): Promise<void> {
             await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
         }
     } finally {
-        // 🔧 NUEVO: Limpiar buffer SOLO después de completar el procesamiento
-        globalMessageBuffers.delete(userId);
-        // 🔧 NUEVO: Siempre limpiar el flag de procesamiento activo
-        activeProcessing.delete(userId);
+        // 🔧 CRÍTICO: Limpiar en orden correcto para evitar race condition
+        activeProcessing.delete(userId);      // PRIMERO limpiar el flag
+        globalMessageBuffers.delete(userId);  // DESPUÉS borrar el buffer
     }
 }
 
 // 🔧 NUEVO: Función unificada para typing (mismo timer que mensajes)
-function updateTypingStatus(userId: string, isTyping: boolean): void {
-    const buffer = globalMessageBuffers.get(userId);
-    if (!buffer) return;
-    
-    // 🔧 NUEVO: NO reiniciar timer si hay procesamiento activo
-    if (activeProcessing.has(userId)) {
-        logInfo('GLOBAL_BUFFER_TYPING_SKIPPED', `Typing ignorado - procesamiento activo`, {
-            userJid: getShortUserId(userId),
-            userName: buffer.userName,
-            environment: appConfig?.environment
-        });
-        return;
-    }
-    
-    if (isTyping) {
-        // 🔧 NUEVO: Marcar usuario como escribiendo activamente
-        activeTypingUsers.add(userId);
-        
-        // 🔧 NUEVO: Rastrear el último evento de typing
-        lastTypingEvent.set(userId, Date.now());
-        
-        // 🔧 CRÍTICO: CANCELAR cualquier timer cuando el usuario está escribiendo
-        if (buffer.timer) {
-            clearTimeout(buffer.timer);
-            buffer.timer = null; // 🔧 NUEVO: Limpiar el timer completamente
-        }
-        
-        // 🔧 CRÍTICO: Si hay procesamiento activo, marcarlo para cancelación
-        if (activeProcessing.has(userId)) {
-            logWarning('GLOBAL_BUFFER_TYPING_CANCEL_PROCESSING', `Marcando para cancelación - usuario escribiendo`, {
-                userJid: getShortUserId(userId),
-                userName: buffer.userName,
-                environment: appConfig?.environment
-            });
-            // 🔧 NUEVO: Marcar para cancelación en el próximo check
-            cancelProcessingOnTyping.add(userId);
-        }
-        
-        logInfo('GLOBAL_BUFFER_TYPING', `Timer cancelado - usuario escribiendo activamente`, {
-            userJid: getShortUserId(userId),
-            userName: buffer.userName,
-            environment: appConfig?.environment
-        });
-    } else {
-        // 🔧 NUEVO: Usuario dejó de escribir - configurar timer de procesamiento
-        setTimeout(() => {
-            activeTypingUsers.delete(userId);
-            // 🔧 NUEVO: Limpiar flag de cancelación
-            cancelProcessingOnTyping.delete(userId);
-            // 🔧 NUEVO: Limpiar último evento de typing
-            lastTypingEvent.delete(userId);
-            logInfo('GLOBAL_BUFFER_TYPING_ENDED', `Usuario dejó de escribir`, {
-                userJid: getShortUserId(userId),
-                userName: buffer.userName,
-                environment: appConfig?.environment
-            });
-            
-            // 🔧 CRÍTICO: Configurar timer de 5 segundos para procesar mensajes
-            if (buffer.messages.length > 0 && !buffer.timer) {
-                buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
-                logInfo('GLOBAL_BUFFER_TIMER_SET', `Timer configurado después de typing`, {
-                    userJid: getShortUserId(userId),
-                    userName: buffer.userName,
-                    messageCount: buffer.messages.length,
-                    delay: BUFFER_WINDOW_MS,
-                    environment: appConfig?.environment
-                });
-            }
-        }, TYPING_TIMEOUT_MS);
-    }
-}
+// 🔧 ELIMINADO: Función updateTypingStatus() - ya no necesaria con el sistema simplificado
 
 // 🔧 NUEVO: Funciones para buffering proactivo global
 function addToGlobalBuffer(userId: string, messageText: string, chatId: string, userName: string, isVoice: boolean = false): void {
@@ -964,6 +870,19 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
         globalMessageBuffers.set(userId, buffer);
     }
     
+    // 🔧 NUEVO: Verificar límite de buffer antes de agregar mensaje
+    if (buffer.messages.length >= 50) { // Máximo 50 mensajes
+        logWarning('BUFFER_LIMIT_REACHED', 'Buffer alcanzó límite máximo', {
+            userJid: getShortUserId(userId),
+            userName,
+            bufferSize: buffer.messages.length
+        });
+        // Procesar inmediatamente
+        if (buffer.timer) clearTimeout(buffer.timer);
+        processGlobalBuffer(userId);
+        return;
+    }
+    
     // Agregar mensaje al buffer
     buffer.messages.push(messageText);
     buffer.lastActivity = Date.now();
@@ -974,27 +893,25 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
         userState.lastInputVoice = true;
     }
     
-    // 🔧 UNIFICADO: 5 segundos para TODOS los tipos de entrada
-    // 🔧 CRÍTICO: NO configurar timer si el usuario está escribiendo activamente
-    if (!activeTypingUsers.has(userId)) {
-        if (buffer.timer) {
-            clearTimeout(buffer.timer);
-        }
-        buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
-    } else {
-        // 🔧 NUEVO: Si está escribiendo, cancelar cualquier timer existente
-        if (buffer.timer) {
-            clearTimeout(buffer.timer);
-            buffer.timer = null;
-        }
-        logInfo('GLOBAL_BUFFER_ADD_TYPING', `Mensaje agregado pero timer cancelado - usuario escribiendo`, {
+    // 🔧 CORREGIDO: Solo configurar timer si NO hay uno activo
+    // Esto respeta el timer de 10s si fue configurado por typing
+    if (!buffer.timer) {
+        buffer.timer = setTimeout(() => {
+            const currentBuffer = globalMessageBuffers.get(userId);
+            if (currentBuffer) {
+                currentBuffer.timer = null;  // Limpia antes de procesar
+                processGlobalBuffer(userId);
+            }
+        }, BUFFER_WINDOW_MS);
+        
+        logInfo('BUFFER_TIMER_SET', `Timer configurado para agrupar mensajes`, {
             userJid: getShortUserId(userId),
             userName,
-            messageText: messageText.substring(0, 50) + '...',
-            bufferSize: buffer.messages.length,
-            environment: appConfig?.environment
+            timerMs: BUFFER_WINDOW_MS,
+            bufferSize: buffer.messages.length
         });
     }
+    // Si ya hay timer activo, no hacer nada - dejar que expire cuando corresponda
     
     logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
         userJid: getShortUserId(userId),
@@ -1501,7 +1418,12 @@ function setupWebhooks() {
                     });
                     return; // Salir sin error, el procesamiento se reintentará cuando termine el typing
                 }
-                throw error; // Re-lanzar otros errores
+                // 🔧 NUEVO: NO re-lanzar errores para evitar crash del bot
+                logError('PROCESSING_ERROR', 'Error en procesamiento, continuando sin crash', {
+                    userJid: shortUserId,
+                    userName,
+                    error: error.message
+                });
             }
         };
         
@@ -1935,26 +1857,7 @@ function setupWebhooks() {
     const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string = null, userName: string = null, requestId?: string): Promise<string> => {
         const shortUserId = getShortUserId(userJid);
         
-        // 🔧 CRÍTICO: Verificar si el usuario está escribiendo activamente
-        if (activeTypingUsers.has(userJid)) {
-            logWarning('OPENAI_PROCESS_TYPING_CANCELLED', 'Procesamiento OpenAI cancelado - usuario escribiendo activamente', {
-                userJid: shortUserId,
-                userName,
-                environment: appConfig?.environment
-            });
-            throw new Error('PROCESSING_CANCELLED_TYPING_ACTIVE');
-        }
-        
-        // 🔧 CRÍTICO: Verificar si se marcó para cancelación por typing
-        if (cancelProcessingOnTyping.has(userJid)) {
-            logWarning('OPENAI_PROCESS_TYPING_CANCELLED', 'Procesamiento OpenAI cancelado - marcado para cancelación', {
-                userJid: shortUserId,
-                userName,
-                environment: appConfig?.environment
-            });
-            cancelProcessingOnTyping.delete(userJid);
-            throw new Error('PROCESSING_CANCELLED_TYPING_MARKED');
-        }
+        // 🔧 ELIMINADO: Verificaciones de typing - ya no necesarias con el sistema simplificado
         
         // 🔧 ETAPA 1: Tracking de métricas de performance
         const startTime = Date.now();
@@ -2042,47 +1945,9 @@ function setupWebhooks() {
                 }
             }
             
-            // 🔧 NUEVO: Usar función modularizada de inyección de historial
-            if (config.enableHistoryInject) {
-                try {
-                    const injectionResult = await injectHistory(
-                        threadId, 
-                        userJid, 
-                        chatId, 
-                        isNewThread, 
-                        undefined, // contextAnalysis - ya no se usa
-                        requestId
-                    );
-                    
-                    if (injectionResult.success) {
-                        contextTokens += injectionResult.tokensUsed;
-                        
-                        logSuccess('HISTORY_INJECTION_COMPLETED', 'Inyección de historial completada', {
-                            userId: shortUserId,
-                            threadId,
-                            tokensUsed: injectionResult.tokensUsed,
-                            contextLength: injectionResult.contextLength,
-                            historyLines: injectionResult.historyLines,
-                            labelsCount: injectionResult.labelsCount,
-                            requestId
-                        });
-                    } else {
-                        logWarning('HISTORY_INJECTION_FAILED', 'Inyección de historial falló', {
-                            userId: shortUserId,
-                            threadId,
-                            reason: injectionResult.reason,
-                            requestId
-                        });
-                    }
-                } catch (error) {
-                    logError('HISTORY_INJECTION_ERROR', 'Error en inyección de historial', {
-                        userId: shortUserId,
-                        threadId,
-                        error: error.message,
-                        requestId
-                    });
-                }
-            }
+            // 🔧 ELIMINADO: Inyección automática de historial
+            // El sistema ahora usa get_conversation_context on-demand
+            // OpenAI puede solicitar el contexto histórico cuando lo necesite
              
              // 🔧 ELIMINADO: Lógica de resumen automático obsoleta
              // El sistema ahora usa get_conversation_context para contexto histórico
@@ -2461,6 +2326,11 @@ function setupWebhooks() {
                     requestId
                 });
                 
+                // 🔧 NUEVO: Log de function calling en terminal
+                if (SHOW_FUNCTION_LOGS) {
+                    terminalLog.functionStart();
+                }
+                
                 const toolOutputs = [];
                 
                 for (const toolCall of toolCalls) {
@@ -2480,6 +2350,11 @@ function setupWebhooks() {
                         environment: appConfig.environment,
                         requestId
                     });
+                    
+                    // 🔧 NUEVO: Log de función ejecutándose en terminal
+                    if (SHOW_FUNCTION_LOGS) {
+                        terminalLog.functionExecuting(functionName);
+                    }
                     
                     try {
                         // Ejecutar la función usando el registry
@@ -2514,6 +2389,11 @@ function setupWebhooks() {
                             environment: appConfig.environment,
                             requestId
                         });
+                        
+                        // 🔧 NUEVO: Log de función completada en terminal
+                        if (SHOW_FUNCTION_LOGS) {
+                            terminalLog.functionCompleted(functionName);
+                        }
                         
                     } catch (error) {
                         const errorOutput = `Error ejecutando función: ${error.message}`;
@@ -2795,12 +2675,25 @@ async function initializeBot() {
     setTimeout(async () => {
         try {
             logInfo('ORPHANED_RUNS_RECOVERY_START', 'Iniciando recuperación de runs huérfanos');
-            await recoverOrphanedRuns();
+            
+            // 🔧 NUEVO: Agregar timeout más corto para evitar bloqueos
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Recovery timeout after 10 seconds')), 10000)
+            );
+            
+            await Promise.race([
+                recoverOrphanedRuns(),
+                timeoutPromise
+            ]);
+            
             logSuccess('ORPHANED_RUNS_RECOVERY_COMPLETE', 'Recuperación de runs huérfanos completada');
         } catch (error) {
             logError('ORPHANED_RUNS_RECOVERY_ERROR', 'Error recuperando runs huérfanos', {
-                error: error.message
+                error: error.message,
+                stack: error instanceof Error ? error.stack : undefined,
+                type: error instanceof Error ? error.constructor.name : typeof error
             });
+            // 🔧 NUEVO: NO permitir que el error cause crash
         }
     }, 5000); // Esperar 5 segundos antes de iniciar la recuperación
     
@@ -2832,16 +2725,42 @@ async function initializeBot() {
         logWarning('CACHE_STATS_ERROR', 'Error obteniendo estadísticas de cache', { error: error.message });
         }
     
-    // 🔧 NUEVO: Timer periódico para verificar auto-timeout de typing
-    typingTimeoutCheckInterval = setInterval(() => {
+    // 🔧 NUEVO: Limpieza periódica de estados de usuario y caches para evitar memory leak
+    setInterval(() => {
         try {
-            checkTypingTimeouts();
+            const now = Date.now();
+            let cleanedUserStates = 0;
+            let cleanedChatInfo = 0;
+            
+            // Limpiar estados de usuario inactivos por más de 24 horas
+            for (const [userId, state] of globalUserStates.entries()) {
+                const lastActivity = Math.max(state.lastMessageTimestamp, state.lastTypingTimestamp);
+                if ((now - lastActivity) > 24 * 60 * 60 * 1000) { // 24 horas
+                    globalUserStates.delete(userId);
+                    cleanedUserStates++;
+                }
+            }
+            
+            // Limpiar chatInfoCache expirado (más de 1 hora)
+            for (const [userId, cached] of chatInfoCache.entries()) {
+                if ((now - cached.timestamp) > 60 * 60 * 1000) { // 1 hora
+                    chatInfoCache.delete(userId);
+                    cleanedChatInfo++;
+                }
+            }
+            
+            if (cleanedUserStates > 0 || cleanedChatInfo > 0) {
+                logInfo('CACHE_CLEANUP', `Limpieza de caches completada`, {
+                    userStatesCleaned: cleanedUserStates,
+                    chatInfoCleaned: cleanedChatInfo
+                });
+            }
         } catch (error) {
-            logError('TYPING_TIMEOUT_CHECK_ERROR', 'Error verificando timeouts de typing', { error: error.message });
+            logError('CACHE_CLEANUP', 'Error limpiando caches', { error: error.message });
         }
-    }, 5000); // Verificar cada 5 segundos
+    }, 60 * 60 * 1000); // Cada hora
     
-    logInfo('TYPING_TIMEOUT_CHECK_INIT', 'Timer periódico de verificación de typing configurado');
+    // 🔧 ELIMINADO: Timer periódico de typing - ya no necesario con el sistema simplificado
     
 
     
@@ -3036,22 +2955,45 @@ async function processWebhook(body: any) {
                 });
 
                 if (status === 'typing' || status === 'recording') {
-                    // Usuario está escribiendo - actualizar estado global
-                    updateTypingStatus(userId, true);
+                    let buffer = globalMessageBuffers.get(userId);
                     
-                    // 🔧 SIMPLIFICADO: Log de typing - solo usar buffer
-                    const buffer = globalMessageBuffers.get(userId);
-                    if (buffer && buffer.userName) {
-                        terminalLog.typing(buffer.userName);
-                    } else {
-                        // Si no hay buffer, usar ID corto directamente
-                        terminalLog.typing(getShortUserId(userId));
+                    // 🔧 NUEVO: Actualizar timestamp de último typing
+                    const userState = getOrCreateUserState(userId, buffer?.chatId, buffer?.userName);
+                    userState.lastTyping = Date.now();
+                    
+                    // Si no hay buffer, crear uno vacío
+                    if (!buffer) {
+                        buffer = {
+                            messages: [],
+                            chatId: `${userId}@s.whatsapp.net`,
+                            userName: getShortUserId(userId),
+                            lastActivity: Date.now(),
+                            timer: null
+                        };
+                        globalMessageBuffers.set(userId, buffer);
                     }
                     
+                    // 🔧 NUEVO: SIEMPRE cancelar timer anterior (5s o 10s)
+                    if (buffer.timer) {
+                        clearTimeout(buffer.timer);
+                    }
+                    
+                    // 🔧 NUEVO: SIEMPRE configurar timer de 10s por typing
+                    buffer.timer = setTimeout(() => {
+                        const currentBuffer = globalMessageBuffers.get(userId);
+                        if (currentBuffer) {
+                            currentBuffer.timer = null;
+                            processGlobalBuffer(userId);
+                        }
+                    }, TYPING_EXTENDED_MS); // SIEMPRE 10s
+                    
+                    terminalLog.typing(buffer.userName || getShortUserId(userId));
                 } else if (status === 'online' || status === 'offline' || status === 'pending') {
-                    // Usuario dejó de escribir - actualizar estado global
-                    if (globalMessageBuffers.has(userId)) {
-                        updateTypingStatus(userId, false);
+                    // 🔧 CORREGIDO: Solo mostrar si hay mensajes pendientes
+                    const buffer = globalMessageBuffers.get(userId);
+                    if (buffer && buffer.messages.length > 0) {
+                        const userName = buffer.userName || getShortUserId(userId);
+                        console.log(`⏰ ✍️ ${userName} dejó de escribir.`);
                     }
                 }
             });
