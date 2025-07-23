@@ -141,7 +141,7 @@ const getCategoryEmoji = (category: string): string => {
 
 // --- Funciones de Sesión ---
 const ensureLogDirectory = (): void => {
-    if (isCloudRun) return; // No crear archivos en Cloud Run
+    // Crear directorio de logs en TODOS los entornos
     
     if (!fs.existsSync(LOG_DIR)) {
         try {
@@ -153,7 +153,7 @@ const ensureLogDirectory = (): void => {
 };
 
 const cleanupOldSessions = (): void => {
-    if (isCloudRun) return; // No limpiar archivos en Cloud Run
+    // Limpiar archivos antiguos en TODOS los entornos
     
     try {
         // Obtener todos los archivos de sesión
@@ -187,34 +187,33 @@ const cleanupOldSessions = (): void => {
 const initializeSession = (): void => {
     if (sessionInitialized) return;
     
-    if (!isCloudRun) {
-        // Solo en local: crear archivos de log
-        ensureLogDirectory();
-        cleanupOldSessions();
-        
-        // Escribir header de sesión
-        const sessionHeader = `
+    // Crear archivos de log en TODOS los entornos
+    ensureLogDirectory();
+    cleanupOldSessions();
+    
+    // Escribir header de sesión
+    const sessionHeader = `
 === NUEVA SESIÓN DEL BOT ===
 Timestamp: ${getColombiaNowTimestamp().replace(/-/g, ':').replace('T', ' ')} (Colombia UTC-5)
 Session ID: ${SESSION_ID}
 PID: ${process.pid}
 Node Version: ${process.version}
+Environment: ${isCloudRun ? 'Production (Railway/Cloud)' : 'Local Development'}
 =============================
 
 `;
+    
+    try {
+        fs.writeFileSync(LOG_FILE, sessionHeader);
         
-        try {
-            fs.writeFileSync(LOG_FILE, sessionHeader);
-            
-            // Mostrar información de sesión
-            console.log(`📁 Logs de esta sesión: ${LOG_FILE}`);
-            console.log(`🔄 Manteniendo máximo ${MAX_SESSIONS} sesiones`);
-            
-        } catch (error) {
-            console.error('Error inicializando sesión:', error);
-        }
+        // Mostrar información de sesión
+        console.log(`📁 Logs de esta sesión: ${LOG_FILE}`);
+        console.log(`🔄 Manteniendo máximo ${MAX_SESSIONS} sesiones`);
+        
+    } catch (error) {
+        console.error('Error inicializando sesión:', error);
+        // En Railway, continuar sin archivos si hay error de permisos
     }
-    // En Cloud Run: solo marcar como inicializado (sin mensaje innecesario)
     
     sessionInitialized = true;
 };
@@ -474,16 +473,17 @@ const flushBuffer = (): void => {
     const entries = [...logBuffer];
     logBuffer = [];
     
-    // Escribir al archivo de sesión (solo en local)
-    if (!isCloudRun) {
-        try {
-            const content = entries.join('\n') + '\n';
-            fs.appendFileSync(LOG_FILE, content, 'utf8');
-        } catch (error) {
-            console.error(`Error escribiendo logs: ${error}`);
-        }
-    } else if (LogConfig.enableDetailedLogs) {
-        // En Cloud Run, emitir cada línea detallada a stdout para Cloud Logging
+    // Escribir al archivo de sesión en TODOS los entornos
+    try {
+        const content = entries.join('\n') + '\n';
+        fs.appendFileSync(LOG_FILE, content, 'utf8');
+    } catch (error) {
+        console.error(`Error escribiendo logs: ${error}`);
+        // En Railway, continuar sin archivos si hay error de permisos
+    }
+    
+    // En Cloud Run, también emitir logs detallados a consola si está habilitado
+    if (isCloudRun && LogConfig.enableDetailedLogs) {
         entries.forEach(line => console.log(line));
     }
     
@@ -668,8 +668,8 @@ const cleanup = (): void => {
         flushBuffer();
     }
     
-    // Escribir footer de sesión (solo en local)
-    if (!isCloudRun) {
+    // Escribir footer de sesión en TODOS los entornos
+    try {
         const sessionFooter = `
 =============================
 === FIN DE SESIÓN DEL BOT ===
@@ -679,11 +679,10 @@ Duración: ${Math.round((Date.now() - new Date(SESSION_TIMESTAMP.replace(/-/g, '
 =============================
 `;
         
-        try {
-            fs.appendFileSync(LOG_FILE, sessionFooter);
-            console.log(`✅ Logs guardados en: ${LOG_FILE}`);
-            
-            // Mostrar resumen de sesiones disponibles
+        fs.appendFileSync(LOG_FILE, sessionFooter);
+        console.log(`✅ Logs guardados en: ${LOG_FILE}`);
+        
+        // Mostrar resumen de sesiones disponibles
             const sessions = listAvailableSessions();
             if (sessions.length > 0) {
                 console.log(`\n📁 Sesiones disponibles (${sessions.length}/${MAX_SESSIONS}):`);
@@ -693,11 +692,10 @@ Duración: ${Math.round((Date.now() - new Date(SESSION_TIMESTAMP.replace(/-/g, '
                     console.log(`   ${index + 1}. ${session.name} (${sizeKB}KB - ${date})`);
                 });
             }
-        } catch (error) {
-            console.error('Error guardando logs:', error);
-        }
+    } catch (error) {
+        console.error('Error guardando logs de sesión:', error);
+        // En Railway, continuar sin logs de archivo si hay error de permisos
     }
-    // En Cloud Run: logs se envían automáticamente (sin mensaje innecesario)
 };
 
 process.on('exit', cleanup);
