@@ -32,9 +32,10 @@ const LOG_DIR = 'logs';
 const LOG_FILE = path.join(LOG_DIR, `bot-session-${SESSION_TIMESTAMP}.log`);
 const MAX_SESSIONS = 5; // Máximo número de sesiones a mantener
 
-// --- Configuración de Buffer ---
-const BUFFER_FLUSH_INTERVAL = 100; // 100ms
-const MAX_BUFFER_SIZE = 50; // Flush si hay 50+ entradas
+// --- Configuración de Buffer por Entorno ---
+const BUFFER_FLUSH_INTERVAL = 100; // 100ms solo para local
+const MAX_BUFFER_SIZE_LOCAL = 50; // 50 entradas para local (tiempo real)
+const MAX_BUFFER_SIZE_RAILWAY = 400; // 400 entradas para Railway (eficiente)
 
 // --- Estado Global ---
 let logBuffer: string[] = [];
@@ -487,14 +488,17 @@ const flushBuffer = (): void => {
         entries.forEach(line => console.log(line));
     }
     
-    // Limpiar timer
-    if (flushTimer) {
+    // Limpiar timer (solo local)
+    if (!isCloudRun && flushTimer) {
         clearTimeout(flushTimer);
         flushTimer = null;
     }
 };
 
 const scheduleFlush = (): void => {
+    // Solo programar timer en LOCAL (no en Railway)
+    if (isCloudRun) return;
+    
     if (flushTimer) return;
     
     flushTimer = setTimeout(() => {
@@ -505,11 +509,13 @@ const scheduleFlush = (): void => {
 const addToBuffer = (logEntry: string): void => {
     logBuffer.push(logEntry);
     
-    // Flush inmediato si el buffer está lleno
-    if (logBuffer.length >= MAX_BUFFER_SIZE) {
-        flushBuffer();
-    } else {
-        scheduleFlush();
+    // Buffer diferente según entorno
+    const maxSize = isCloudRun ? MAX_BUFFER_SIZE_RAILWAY : MAX_BUFFER_SIZE_LOCAL;
+    
+    if (logBuffer.length >= maxSize) {
+        flushBuffer(); // Flush inmediato cuando se llena
+    } else if (!isCloudRun) {
+        scheduleFlush(); // Solo programar timer en LOCAL
     }
 };
 
@@ -715,6 +721,7 @@ detailedLog('SUCCESS', 'LOGGER_INIT', 'Sistema de logging por sesión inicializa
     sessionId: SESSION_ID,
     logFile: LOG_FILE,
     maxSessions: MAX_SESSIONS,
-    bufferInterval: BUFFER_FLUSH_INTERVAL,
-    maxBufferSize: MAX_BUFFER_SIZE
+    maxBufferSizeLocal: MAX_BUFFER_SIZE_LOCAL,
+    maxBufferSizeRailway: MAX_BUFFER_SIZE_RAILWAY,
+    bufferInterval: BUFFER_FLUSH_INTERVAL
 }); 
