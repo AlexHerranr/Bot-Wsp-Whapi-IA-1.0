@@ -226,7 +226,7 @@ async function transcribeAudio(audioUrl: string | undefined, userId: string, mes
         }
         
         const audioBuffer = await audioResponse.arrayBuffer();
-        const audioFile = new File([audioBuffer], 'audio.ogg', { type: 'audio/ogg' });
+        const audioFile = new File([audioBuffer as any], 'audio.ogg', { type: 'audio/ogg' });
         
         // Transcribir con Whisper
         const openai = new OpenAI({ apiKey: appConfig.secrets.OPENAI_API_KEY });
@@ -522,7 +522,7 @@ function setupEndpoints() {
     });
     
     // 🔊 NUEVO: Endpoint para servir archivos de audio temporales
-    app.get('/audio/:filename', async (req: Request, res: Response) => {
+    app.get('/audio/:filename', async (req: any, res: any) => {
         try {
             const { filename } = req.params;
             
@@ -723,7 +723,7 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
     
     // 🔧 NUEVO: Marcar que el usuario envió voz
     if (isVoice) {
-        const userState = globalUserStates.get(userId) || { lastInputVoice: false };
+        const userState = globalUserStates.get(userId) || { lastInputVoice: false } as any;
         userState.lastInputVoice = true;
         globalUserStates.set(userId, userState);
     }
@@ -2973,7 +2973,7 @@ async function processWebhook(body: any) {
                         console.log(`🎤 [${getShortUserId(userId)}] Procesando nota de voz...`);
                         
                         // Marcar que el usuario envió voz
-                        const userState = globalUserStates.get(userId) || { lastInputVoice: false };
+                        const userState = globalUserStates.get(userId) || { lastInputVoice: false } as any;
                         userState.lastInputVoice = true;
                         globalUserStates.set(userId, userState);
                         
