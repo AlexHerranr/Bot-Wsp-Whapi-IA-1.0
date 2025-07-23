@@ -139,7 +139,7 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     // Inyección de historial
     const historyInjectMonths = parseInt(process.env.HISTORY_INJECT_MONTHS || '1', 10); // Reducido de 3 a 1 mes
     const historyMsgCount = parseInt(process.env.HISTORY_MSG_COUNT || '50', 10); // Reducido de 200 a 50
-    const enableHistoryInject = process.env.ENABLE_HISTORY_INJECT !== 'false';
+    const enableHistoryInject = false; // DESACTIVADO: OpenAI decide contexto bajo demanda usando get_conversation_context
     
     // 🔧 ETAPA 10: Límite de historial para threads nuevos
     const historyLimitNewThreads = parseInt(process.env.HISTORY_LIMIT_NEW_THREADS || '20', 10); // Reducido de 50 a 20

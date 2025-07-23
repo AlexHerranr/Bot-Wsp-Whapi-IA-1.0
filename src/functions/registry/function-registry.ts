@@ -22,8 +22,8 @@ export const FUNCTION_REGISTRY: Record<string, FunctionDefinition> = {
   escalate_to_human: escalateToHumanFunction,
   
   // Funciones de contexto e historial
-  inject_history: injectHistoryFunction,
-  get_conversation_context: getConversationContextFunction,
+  // inject_history: injectHistoryFunction, // DESACTIVADO: OpenAI ya no necesita inyectar automáticamente
+  get_conversation_context: getConversationContextFunction, // ✅ ACTIVO: OpenAI solicita contexto bajo demanda
   
   // Funciones de booking (documentadas, pendientes de implementación)
   // create_booking: createBookingFunction,

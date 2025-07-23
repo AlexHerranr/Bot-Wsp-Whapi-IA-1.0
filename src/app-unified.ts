@@ -98,7 +98,7 @@ const globalMessageBuffers = new Map<string, {
     lastActivity: number,
     timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 10000; // 10 segundos fijos para mensajes, typing, hooks, entrada manual
+const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para mensajes, typing, hooks, entrada manual
 
 
 
@@ -1707,47 +1707,14 @@ function setupWebhooks() {
                 }
             }
             
-            // 🔧 NUEVO: Usar función modularizada de inyección de historial
-            if (config.enableHistoryInject) {
-                try {
-                    const injectionResult = await injectHistory(
-                        threadId, 
-                        userJid, 
-                        chatId, 
-                        isNewThread, 
-                        undefined, // contextAnalysis - ya no se usa
-                        requestId
-                    );
-                    
-                    if (injectionResult.success) {
-                        contextTokens += injectionResult.tokensUsed;
-                        
-                        logSuccess('HISTORY_INJECTION_COMPLETED', 'Inyección de historial completada', {
-                            userId: shortUserId,
-                            threadId,
-                            tokensUsed: injectionResult.tokensUsed,
-                            contextLength: injectionResult.contextLength,
-                            historyLines: injectionResult.historyLines,
-                            labelsCount: injectionResult.labelsCount,
-                            requestId
-                        });
-                    } else {
-                        logWarning('HISTORY_INJECTION_FAILED', 'Inyección de historial falló', {
-                            userId: shortUserId,
-                            threadId,
-                            reason: injectionResult.reason,
-                            requestId
-                        });
-                    }
-                } catch (error) {
-                    logError('HISTORY_INJECTION_ERROR', 'Error en inyección de historial', {
-                        userId: shortUserId,
-                        threadId,
-                        error: error.message,
-                        requestId
-                    });
-                }
-            }
+            // 🔧 ELIMINADO: Ya no se inyecta historial automáticamente
+            // OpenAI decide cuándo necesita contexto usando get_conversation_context(30|60|100|200)
+            logInfo('HISTORY_STRATEGY', 'OpenAI decide contexto bajo demanda - sin inyección automática', {
+                userId: shortUserId,
+                threadId,
+                isNewThread,
+                requestId
+            });
              
              // 🔧 ELIMINADO: Lógica de resumen automático obsoleta
              // El sistema ahora usa get_conversation_context para contexto histórico
