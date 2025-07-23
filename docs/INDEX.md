@@ -9,6 +9,7 @@
 
 ### 🏗️ Arquitectura y Diseño
 - [**Arquitectura del Sistema**](./ARCHITECTURE.md) - Diseño técnico y componentes
+- [**Estructura del Proyecto**](./architecture/PROJECT_STRUCTURE_UPDATED.md) - Mapa de navegación actualizado
 - [**API Endpoints**](./API_ENDPOINTS.md) - Documentación de endpoints HTTP
 - [**Sistema de Actualización RAG**](./SISTEMA_ACTUALIZACION_RAG.md) - Sistema de gestión de conocimiento
 
@@ -23,6 +24,7 @@
 ```
 docs/
 ├── 📄 INDEX.md                          # Este archivo
+├── 📄 README_DOCUMENTACION.md           # Introducción a la documentación
 ├── 📄 ESTADO_ACTUAL_PROYECTO.md         # Estado actual del proyecto
 ├── 📄 HISTORIAL_CONSOLIDADO_2025.md     # Historial de cambios
 ├── 📄 ARCHITECTURE.md                   # Arquitectura técnica
@@ -58,6 +60,11 @@ docs/
 - [**WhatsApp Business API (Whapi)**](./integrations/WHAPI.md)
 - [**OpenAI Integration**](./integrations/OPENAI.md)
 - [**Beds24 Integration**](./integrations/BEDS24.md)
+
+### 🔐 Seguridad
+
+- [**Gestión de Secretos**](./security/SECRETS_MANAGEMENT_GUIDE.md)
+- [**Security and Deployment**](./SECURITY_AND_DEPLOYMENT.md)
 
 ### 📊 Monitoreo y Logs
 
