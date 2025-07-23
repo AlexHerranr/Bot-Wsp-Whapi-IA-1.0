@@ -48,7 +48,12 @@ function formatRecentMessages(historyText: string, messageCount: number): string
  */
 async function handleGetConversationContext(args: any, requestId?: string): Promise<any> {
   const { context_level } = args;
-  const userId = requestId; // El requestId contiene el userId
+  let userId = requestId; // El requestId contiene el userId
+  
+  // Asegurar formato correcto para WhatsApp (agregar @ si no lo tiene)
+  if (userId && !userId.includes('@')) {
+    userId = userId + '@c.us';
+  }
   
   detailedLog('INFO', 'CONTEXT_FUNCTION', 'Solicitando contexto de conversación', {
     userId,
