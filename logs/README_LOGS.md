@@ -81,6 +81,8 @@ logs/
 ├── local-development/           # 💻 Logs de desarrollo local
 │   ├── README.md               # 📖 Guía de desarrollo local
 │   └── sessions/               # 📁 Sesiones de desarrollo
+├── railway-downloads/           # 🚂 Logs descargados de Railway
+│   └── *.txt, *.json           # 📄 Archivos de logs con timestamps
 └── README.md                   # 📖 Documentación general
 ```
 
@@ -230,6 +232,56 @@ npm test -- --grep "aggregation"
 gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=tu-servicio" --limit=50
 ```
 
+## 🚂 **Logs de Railway**
+
+### **Descarga Automática de Logs:**
+```powershell
+# Descargar logs del deployment más reciente
+.\scripts\windows\download-railway-logs.ps1
+
+# Descargar logs de un deployment específico
+.\scripts\windows\download-railway-logs.ps1 ae0abf4
+
+# Especificar directorio de salida
+.\scripts\windows\download-railway-logs.ps1 ae0abf4 "C:\temp\logs"
+```
+
+### **Configuración Inicial de Railway:**
+```bash
+# Instalar Railway CLI
+npm install -g @railway/cli
+
+# Autenticarse
+railway login
+
+# Enlazar proyecto
+railway link
+```
+
+### **Análisis de Logs Descargados:**
+```powershell
+# Filtrar errores críticos
+Get-Content logs\railway-downloads\railway-logs-*.txt | Select-String '☠️|🚨'
+
+# Filtrar mensajes de WhatsApp
+Get-Content logs\railway-downloads\railway-logs-*.txt | Select-String '💬'
+
+# Filtrar respuestas de OpenAI
+Get-Content logs\railway-downloads\railway-logs-*.txt | Select-String '🤖'
+
+# Análisis JSON de errores
+Get-Content logs\railway-downloads\railway-logs-*.json | ConvertFrom-Json | Where-Object { $_.level -eq 'error' }
+```
+
+### **Características del Script:**
+- ✅ **Verificación automática** de Railway CLI
+- ✅ **Autenticación** y enlace de proyecto
+- ✅ **Descarga dual** (TXT + JSON)
+- ✅ **Timestamps** automáticos en archivos
+- ✅ **Estadísticas** de descarga
+- ✅ **Manejo de errores** robusto
+- ✅ **Sugerencias** de comandos útiles
+
 ## 📚 **Referencias y Estándares**
 
 ### **Estándares de la Industria:**
@@ -302,6 +354,7 @@ type RFC5424Level =
 - **Parser de logs**: `tools/log-tools/cloud-parser/`
 - **Tests**: `tests/logging/`
 - **Métricas**: Endpoint `/metrics`
+- **Railway logs**: `scripts/windows/download-railway-logs.ps1`
 
 ---
 
