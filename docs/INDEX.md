@@ -59,6 +59,11 @@ docs/
 - [**OpenAI Integration**](./integrations/OPENAI.md)
 - [**Beds24 Integration**](./integrations/BEDS24.md)
 
+### 🔐 Seguridad
+
+- [**Gestión de Secretos**](./security/SECRETS_MANAGEMENT_GUIDE.md)
+- [**Security and Deployment**](./SECURITY_AND_DEPLOYMENT.md)
+
 ### 📊 Monitoreo y Logs
 
 - [**Sistema de Logging**](./logging/LOGGING_SYSTEM.md)
