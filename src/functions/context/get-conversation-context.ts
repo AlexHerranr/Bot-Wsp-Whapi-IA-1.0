@@ -50,9 +50,9 @@ async function handleGetConversationContext(args: any, requestId?: string): Prom
   const { context_level } = args;
   let userId = requestId; // El requestId contiene el userId
   
-  // Asegurar formato correcto para WhatsApp (agregar @ si no lo tiene)
+  // Asegurar formato correcto para Whapi (agregar @s.whatsapp.net si no lo tiene)
   if (userId && !userId.includes('@')) {
-    userId = userId + '@c.us';
+    userId = userId + '@s.whatsapp.net';
   }
   
   detailedLog('INFO', 'CONTEXT_FUNCTION', 'Solicitando contexto de conversación', {
