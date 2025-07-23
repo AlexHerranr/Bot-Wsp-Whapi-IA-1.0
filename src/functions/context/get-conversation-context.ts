@@ -67,17 +67,20 @@ async function handleGetConversationContext(args: any, requestId?: string): Prom
     
     // Determinar cuántos mensajes obtener según el nivel
     switch (context_level) {
-      case "recent_30":
-        messageCount = 30;
-        break;
-      case "recent_60":
-        messageCount = 60;
+      case "recent_50":
+        messageCount = 50;
         break;
       case "recent_100":
         messageCount = 100;
         break;
       case "recent_200":
         messageCount = 200;
+        break;
+      case "recent_400":
+        messageCount = 400;
+        break;
+      case "recent_600":
+        messageCount = 600;
         break;
       default:
         throw new Error(`Nivel de contexto no válido: ${context_level}`);
@@ -131,8 +134,8 @@ export const getConversationContextFunction: FunctionDefinition = {
     properties: {
       context_level: {
         type: 'string',
-        enum: ['recent_30', 'recent_60', 'recent_100', 'recent_200'],
-        description: 'Nivel de contexto: 30, 60, 100 o 200 mensajes recientes. OpenAI determinará cuánto contexto necesita para responder correctamente.'
+        enum: ['recent_50', 'recent_100', 'recent_200', 'recent_400', 'recent_600'],
+        description: 'Nivel de contexto: 50 (consulta básica), 100 (contexto moderado), 200 (conversación completa), 400 (historial extenso), 600 (contexto máximo)'
       }
     },
     required: ['context_level']
