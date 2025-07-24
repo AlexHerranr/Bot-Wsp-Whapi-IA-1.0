@@ -81,6 +81,82 @@ import { simpleLockManager } from './utils/simpleLockManager.js';
 // 🔧 NUEVO: Rate limiting para logs spam
 const webhookCounts = new Map<string, { lastLog: number; count: number }>();
 
+// 🔧 NUEVO: Sistema de logs limpios para terminal
+const terminalLog = {
+    // Logs principales con formato limpio
+    message: (user: string, text: string) => {
+        console.log(`👤 ${user}: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`);
+    },
+    
+    typing: (user: string) => {
+        console.log(`✍️ ${user} está escribiendo...`);
+    },
+    
+    processing: (user: string) => {
+        // 🔧 ELIMINADO: No mostrar en terminal
+    },
+    
+    response: (user: string, text: string, duration: number) => {
+        console.log(`🤖 OpenAI → ${user}: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}" (${duration}s)`);
+    },
+    
+    error: (message: string) => {
+        console.log(`❌ Error: ${message}`);
+    },
+    
+    openaiError: (user: string, error: string) => {
+        console.log(`❌ Error enviar a OpenAI → ${user}: ${error}`);
+    },
+    
+    imageError: (user: string, error: string) => {
+        console.log(`❌ Error al procesar imagen → ${user}: ${error}`);
+    },
+    
+    voiceError: (user: string, error: string) => {
+        console.log(`❌ Error al procesar audio → ${user}: ${error}`);
+    },
+    
+    functionError: (functionName: string, error: string) => {
+        console.log(`❌ Error en función ${functionName}: ${error}`);
+    },
+    
+    whapiError: (operation: string, error: string) => {
+        console.log(`❌ Error WHAPI (${operation}): ${error}`);
+    },
+    
+    // 🔧 NUEVO: Logs de function calling para terminal
+    functionStart: () => {
+        console.log('⚙️ Function calling iniciado');
+    },
+    
+    functionExecuting: (name: string) => {
+        console.log(`  ↳ ${name} ejecutándose...`);
+    },
+    
+    functionCompleted: (name: string) => {
+        console.log(`  ✓ ${name} completada`);
+    },
+    
+    startup: () => {
+        console.log('\n=== Bot TeAlquilamos Iniciado ===');
+        console.log(`🚀 Servidor: ${appConfig?.host || 'localhost'}:${appConfig?.port || 3008}`);
+        console.log(`🔗 Webhook: ${appConfig?.webhookUrl || 'configurando...'}`);
+        console.log('✅ Sistema listo\n');
+    },
+    
+    newConversation: (user: string) => {
+        console.log(`\n📨 Nueva conversación con ${user}`);
+    },
+    
+    image: (user: string) => {
+        console.log(`📷 ${user}: [Imagen recibida]`);
+    },
+    
+    voice: (user: string) => {
+        console.log(`🎤 ${user}: [Nota de voz recibida]`);
+    }
+};
+
 // --- Variables Globales ---
 let appConfig: AppConfig;
 let openaiClient: OpenAI;
@@ -98,9 +174,21 @@ const globalMessageBuffers = new Map<string, {
     lastActivity: number,
     timer: NodeJS.Timeout | null
 }>();
-const BUFFER_WINDOW_MS = 5000; // 5 segundos fijos para mensajes, typing, hooks, entrada manual
+const BUFFER_WINDOW_MS = 5000; // 5 segundos para agrupar mensajes normales
+const TYPING_EXTENDED_MS = 10000; // 10 segundos cuando usuario está escribiendo
 
+// 🔧 NUEVO: Rate limiting para logs de typing (10 s)
+const typingLogTimestamps = new Map<string, number>();
+// 🔧 NUEVO: Cache para información de chat (evitar llamadas redundantes)
+const chatInfoCache = new Map<string, { data: any; timestamp: number }>();
+const CHAT_INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
+// 🔴 CRÍTICO: Cache de contexto global para invalidación
+const contextCache = new Map<string, { context: string, timestamp: number }>();
+
+// 🟡 OPTIMIZACIÓN: Cache pre-computado para contexto base
+let precomputedContextBase: { date: string; time: string; timestamp: number } | null = null;
+const CONTEXT_BASE_CACHE_TTL = 60 * 1000; // 1 minuto
 
 const botSentMessages = new Set<string>();
 
@@ -144,7 +232,7 @@ interface WHAPIError {
 
 
 // 🔧 FUNCIÓN GLOBAL: Transcribir audio - Movida aquí para acceso global
-async function transcribeAudio(audioUrl: string | undefined, userId: string, messageId?: string): Promise<string> {
+async function transcribeAudio(audioUrl: string | undefined, userId: string, userName?: string, messageId?: string): Promise<string> {
     try {
         // Verificar que appConfig esté cargado
         if (!appConfig) {
@@ -216,6 +304,10 @@ async function transcribeAudio(audioUrl: string | undefined, userId: string, mes
         return transcription.text || 'No se pudo transcribir el audio';
         
     } catch (error) {
+        // 🔧 NUEVO: Log de error de audio en terminal
+        const displayName = userName || getShortUserId(userId);
+        terminalLog.voiceError(displayName, error.message);
+        
         logError('TRANSCRIPTION_ERROR', 'Error en transcripción de audio', {
             userId: getShortUserId(userId),
             error: error.message
@@ -591,7 +683,102 @@ const cleanContactName = (rawName: any): string => {
     return cleaned.substring(0, 50) || 'Usuario';
 };
 
+// 🔴 CRÍTICO: Función para invalidar caches cuando cambia el estado del usuario
+function invalidateUserCaches(userId: string) {
+    const shortUserId = getShortUserId(userId);
+    
+    // Invalidar cache de chat info
+    chatInfoCache.delete(userId);
+    chatInfoCache.delete(shortUserId);
+    
+    // Invalidar cache de contexto
+    contextCache.delete(shortUserId);
+    
+    logInfo('CACHE_INVALIDATED', 'Caches de usuario invalidados', {
+        userId: shortUserId,
+        caches: ['chatInfo', 'context']
+    });
+}
 
+// 🔧 NUEVO: Control de logs de function calling en terminal
+const SHOW_FUNCTION_LOGS = process.env.TERMINAL_LOGS_FUNCTIONS !== 'false'; // true por defecto
+
+// 🟡 OPTIMIZACIÓN: Cache pre-computado para contexto base
+function getPrecomputedContextBase(): { date: string; time: string } {
+    const now = Date.now();
+    
+    // Si el cache es válido, usarlo
+    if (precomputedContextBase && (now - precomputedContextBase.timestamp) < CONTEXT_BASE_CACHE_TTL) {
+        return { date: precomputedContextBase.date, time: precomputedContextBase.time };
+    }
+    
+    // Generar nuevo contexto base
+    const currentDate = new Date().toLocaleDateString('es-ES', { 
+        timeZone: 'America/Bogota',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+
+    const currentTime = new Date().toLocaleTimeString('en-US', { 
+        timeZone: 'America/Bogota',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+    
+    // Actualizar cache
+    precomputedContextBase = {
+        date: currentDate,
+        time: currentTime,
+        timestamp: now
+    };
+    
+    return { date: currentDate, time: currentTime };
+}
+
+// 🔧 NUEVO: Función helper para crear/obtener UserState
+function getOrCreateUserState(userId: string, chatId?: string, userName?: string): UserState {
+    let userState = globalUserStates.get(userId);
+    if (!userState) {
+        userState = {
+            userId,
+            isTyping: false,
+            lastTypingTimestamp: 0,
+            lastMessageTimestamp: 0,
+            messages: [],
+            chatId: chatId || `${userId}@s.whatsapp.net`,
+            userName: userName || 'Usuario',
+            typingEventsCount: 0,
+            averageTypingDuration: 0,
+            lastInputVoice: false,
+            lastTyping: 0  // 🔧 NUEVO: Timestamp del último typing detectado
+        };
+        globalUserStates.set(userId, userState);
+    }
+    return userState;
+}
+
+// 🔧 NUEVO: Función helper para obtener información de chat con cache
+export async function getCachedChatInfo(userId: string): Promise<any> {
+    const now = Date.now();
+    const cached = chatInfoCache.get(userId);
+    
+    if (cached && (now - cached.timestamp) < CHAT_INFO_CACHE_TTL) {
+        return cached.data;
+    }
+    
+    try {
+        const chatInfo = await whapiLabels.getChatInfo(userId);
+        chatInfoCache.set(userId, { data: chatInfo, timestamp: now });
+        return chatInfo;
+    } catch (error) {
+        logWarning('CHAT_INFO_CACHE_ERROR', `Error obteniendo info de chat para ${userId}`, {
+            error: error.message
+        });
+        return null;
+    }
+}
 
 // Declaración adelantada de processCombinedMessage
 let processCombinedMessage: (userId: string, combinedText: string, chatId: string, userName: string, messageCount: number) => Promise<void>;
@@ -601,6 +788,41 @@ async function processGlobalBuffer(userId: string): Promise<void> {
     const buffer = globalMessageBuffers.get(userId);
     if (!buffer || buffer.messages.length === 0) {
         return;
+    }
+    
+    // 🔧 NUEVO: Verificar typing reciente (<10s desde último)
+    const userState = globalUserStates.get(userId);
+    if (userState?.lastTyping && (Date.now() - userState.lastTyping < TYPING_EXTENDED_MS)) {
+        const remainingTime = TYPING_EXTENDED_MS - (Date.now() - userState.lastTyping);
+        
+        logInfo('BUFFER_PROCESS_DELAYED_BY_RECENT_TYPING', 'Retrasar por typing reciente <10s', {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            messageCount: buffer.messages.length,
+            remainingTime: Math.round(remainingTime / 1000) + 's'
+        });
+        
+        // Re-set timer para esperar full 10s desde último typing (aniquila si existe)
+        if (buffer.timer) clearTimeout(buffer.timer);
+        buffer.timer = setTimeout(() => {
+            const currentBuffer = globalMessageBuffers.get(userId);
+            if (currentBuffer) {
+                currentBuffer.timer = null;
+                processGlobalBuffer(userId);
+            }
+        }, remainingTime);
+        return;
+    }
+    
+    // 🔧 NUEVO: Verificar si hay typing activo (timer extendido)
+    if (buffer.timer) {  // Si hay timer activo, significa typing en progreso -> retrasar
+        logInfo('BUFFER_PROCESS_DELAYED', 'Procesamiento de buffer retrasado por typing activo', {
+            userJid: getShortUserId(userId),
+            userName: buffer.userName,
+            messageCount: buffer.messages.length,
+            remainingTime: TYPING_EXTENDED_MS / 1000 + 's'  // Para debug
+        });
+        return;  // No procesar ni agregar a cola todavía; el timer se encargará más tarde
     }
     
     // 🔧 NUEVO: Verificar si ya hay un procesamiento activo para este usuario
@@ -649,28 +871,39 @@ async function processGlobalBuffer(userId: string): Promise<void> {
 
 // 🔧 NUEVO: Función unificada para typing (mismo timer que mensajes)
 function updateTypingStatus(userId: string, isTyping: boolean): void {
-    const buffer = globalMessageBuffers.get(userId);
-    if (!buffer) return;
+    let buffer = globalMessageBuffers.get(userId);
     
-    // 🔧 UNIFICADO: Reiniciar timer de 5 segundos cuando llega typing
+    if (!buffer) {
+        // Si no hay buffer, crear uno vacío
+        buffer = {
+            messages: [],
+            chatId: `${userId}@s.whatsapp.net`,
+            userName: getShortUserId(userId),
+            lastActivity: Date.now(),
+            timer: null
+        };
+        globalMessageBuffers.set(userId, buffer);
+    }
+    
+    // 🔧 NUEVO: SIEMPRE actualizar timestamp de último typing
+    const userState = getOrCreateUserState(userId, buffer.chatId, buffer.userName);
+    userState.lastTyping = Date.now();
+    
+    // 🔧 NUEVO: SIEMPRE cancelar timer anterior (5s o 10s)
     if (buffer.timer) {
         clearTimeout(buffer.timer);
     }
     
-    // CRÍTICO: Mismo timer de 5 segundos que para mensajes
-    buffer.timer = setTimeout(() => processGlobalBuffer(userId), BUFFER_WINDOW_MS);
+    // 🔧 NUEVO: SIEMPRE configurar timer de 10s por typing
+    buffer.timer = setTimeout(() => {
+        const currentBuffer = globalMessageBuffers.get(userId);
+        if (currentBuffer) {
+            currentBuffer.timer = null;
+            processGlobalBuffer(userId);
+        }
+    }, TYPING_EXTENDED_MS); // SIEMPRE 10s
     
-    // 🔧 NUEVO: Solo loguear en debug mode
-    if (process.env.DEBUG_LOGS === 'true') {
-        console.log(`✍️ [TYPING] ${buffer.userName}: Escribiendo... → ⏳ 5s...`);
-    }
-    
-    logInfo('GLOBAL_BUFFER_TYPING', `Timer reiniciado por typing`, {
-        userJid: getShortUserId(userId),
-        userName: buffer.userName,
-        delay: BUFFER_WINDOW_MS,
-        environment: appConfig?.environment
-    });
+    terminalLog.typing(buffer.userName || getShortUserId(userId));
 }
 
 // 🔧 NUEVO: Funciones para buffering proactivo global
@@ -694,32 +927,39 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
     
     // 🔧 NUEVO: Marcar que el usuario envió voz
     if (isVoice) {
-        const userState = globalUserStates.get(userId) || { lastInputVoice: false } as any;
+        const userState = getOrCreateUserState(userId, chatId, userName);
         userState.lastInputVoice = true;
-        globalUserStates.set(userId, userState);
     }
     
-    // 🔧 OPTIMIZADO: Usar delay más corto para media (2s) vs texto normal (5s)
-    const isMediaMessage = messageText.includes('🎤') || 
-                          messageText.includes('El usuario envió una imagen:') ||
-                          isVoice;
-    const bufferDelay = isMediaMessage ? 2000 : BUFFER_WINDOW_MS;
-    
-    // Reiniciar timer con el delay apropiado
-    if (buffer.timer) {
-        clearTimeout(buffer.timer);
+    // 🔧 CORREGIDO: Solo configurar timer si NO hay uno activo
+    // Esto respeta el timer de 10s si fue configurado por typing
+    if (!buffer.timer) {
+        buffer.timer = setTimeout(() => {
+            const currentBuffer = globalMessageBuffers.get(userId);
+            if (currentBuffer) {
+                currentBuffer.timer = null;  // Limpia antes de procesar
+                processGlobalBuffer(userId);
+            }
+        }, BUFFER_WINDOW_MS);
+        
+        logInfo('BUFFER_TIMER_SET', `Timer configurado para agrupar mensajes`, {
+            userJid: getShortUserId(userId),
+            userName,
+            timerMs: BUFFER_WINDOW_MS,
+            bufferSize: buffer.messages.length
+        });
     }
-    buffer.timer = setTimeout(() => processGlobalBuffer(userId), bufferDelay);
+    // Si ya hay timer activo, no hacer nada - dejar que expire cuando corresponda
     
-    console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${bufferDelay/1000}s...`);
+    console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${BUFFER_WINDOW_MS/1000}s...`);
     
     logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
         userJid: getShortUserId(userId),
         userName,
         messageText: messageText.substring(0, 50) + '...',
         bufferSize: buffer.messages.length,
-        delay: bufferDelay,
-        isMedia: isMediaMessage,
+        delay: BUFFER_WINDOW_MS,
+        isMedia: isVoice,
         environment: appConfig?.environment
     });
 }
@@ -1537,18 +1777,10 @@ function setupWebhooks() {
             
             // 🔧 NUEVO: Validar respuesta antes de loguear
             if (response && response.trim()) {
-                // Log mejorado con preview completo y duración real
-                // Detectar si habrá división en párrafos
-                const willSplit = response.includes('\n\n') || response.split('\n').some(line => line.trim().match(/^[•\-\*]/));
-                if (willSplit) {
-                    const paragraphCount = response.split(/\n\n+/).filter(p => p.trim()).length;
-                    console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 ${paragraphCount} párrafos`);
-                } else {
-                    const preview = response.length > 50 ? response.substring(0, 50) + '...' : response;
-                    console.log(`✅ [BOT] Completado (${aiDuration}s) → 💬 "${preview}"`);
-                }
+                // 🔧 NUEVO: Log de respuesta limpio usando terminalLog
+                terminalLog.response(buffer.userName, response, parseFloat(aiDuration));
             } else {
-                console.log(`❌ [BOT] Completado (${aiDuration}s) → Sin respuesta`);
+                terminalLog.error(`Sin respuesta (${aiDuration}s)`);
                 logWarning('EMPTY_RESPONSE', 'OpenAI devolvió respuesta vacía', {
                     userId: shortUserId,
                     requestId,
@@ -2098,6 +2330,11 @@ function setupWebhooks() {
                     requestId
                 });
                 
+                // 🔧 NUEVO: Log de function calling en terminal
+                if (SHOW_FUNCTION_LOGS) {
+                    terminalLog.functionStart();
+                }
+                
                 const toolOutputs = [];
                 
                 for (const toolCall of toolCalls) {
@@ -2117,6 +2354,11 @@ function setupWebhooks() {
                         environment: appConfig.environment,
                         requestId
                     });
+                    
+                    // 🔧 NUEVO: Log de función ejecutándose en terminal
+                    if (SHOW_FUNCTION_LOGS) {
+                        terminalLog.functionExecuting(functionName);
+                    }
                     
                     try {
                         // Ejecutar la función usando el registry
@@ -2152,6 +2394,11 @@ function setupWebhooks() {
                             requestId
                         });
                         
+                        // 🔧 NUEVO: Log de función completada en terminal
+                        if (SHOW_FUNCTION_LOGS) {
+                            terminalLog.functionCompleted(functionName);
+                        }
+                        
                     } catch (error) {
                         const errorOutput = `Error ejecutando función: ${error.message}`;
                         toolOutputs.push({
@@ -2163,6 +2410,9 @@ function setupWebhooks() {
                         if (requestId) {
                             updateToolCallStatus(requestId, toolCall.id, 'error');
                         }
+                        
+                        // 🔧 NUEVO: Log de error de función en terminal
+                        terminalLog.functionError(functionName, error.message);
                         
                         logError('FUNCTION_ERROR', `Error ejecutando función ${functionName}`, {
                             shortUserId,
@@ -2417,7 +2667,9 @@ function setupWebhooks() {
 async function initializeBot() {
     // ... lógica de inicialización
     isServerInitialized = true;
-    console.log('✅ Bot completamente inicializado');
+    
+    // 🔧 NUEVO: Log de startup limpio
+    terminalLog.startup();
     
     // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (del comentario externo)
     // Ejecutar en background para no bloquear el healthcheck
@@ -2908,7 +3160,9 @@ async function processWebhook(body: any) {
                     
                     // Procesar mensajes de voz/audio
                     if (message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') {
-                        console.log(`🎤 [${getShortUserId(userId)}] Procesando nota de voz...`);
+                        
+                        // 🔧 NUEVO: Log de nota de voz limpio
+                        terminalLog.voice(userName);
                         
                         // Marcar que el usuario envió voz
                         const userState = globalUserStates.get(userId) || { lastInputVoice: false } as any;
@@ -2954,6 +3208,9 @@ async function processWebhook(body: any) {
                     // Procesar mensajes de texto normales
                     else if (message.type === 'text' && message.text?.body) {
                         const text = message.text.body.trim();
+                        
+                        // 🔧 NUEVO: Log de mensaje limpio
+                        terminalLog.message(userName, text);
                         
                         // Agregar al buffer global
                         addToGlobalBuffer(userId, text, chatId, userName);

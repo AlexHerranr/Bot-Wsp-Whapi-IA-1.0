@@ -18,6 +18,8 @@ export interface UserState {
     // NUEVO: Campos para funcionalidades media
     lastInputVoice?: boolean;
     quotedMessagesCount?: number;
+    // 🔧 NUEVO: Timestamp del último typing detectado
+    lastTyping?: number;
 }
 
 export class UserStateManager {
