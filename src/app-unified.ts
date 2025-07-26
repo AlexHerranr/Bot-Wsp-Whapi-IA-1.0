@@ -85,7 +85,9 @@ import { simpleLockManager } from './utils/simpleLockManager.js';
 const terminalLog = {
     // Logs principales con formato limpio
     message: (user: string, text: string) => {
-        console.log(`👤 ${user}: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`);
+        const logMsg = `👤 ${user}: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}}"`;
+        console.log(logMsg);
+        botDashboard.addLog(logMsg);
     },
     
     typing: (user: string) => {
@@ -97,7 +99,9 @@ const terminalLog = {
     },
     
     response: (user: string, text: string, duration: number) => {
-        console.log(`🤖 OpenAI → ${user} (${(duration/1000).toFixed(1)}s)`);
+        const logMsg = `🤖 OpenAI → ${user} (${(duration/1000).toFixed(1)}s)`;
+        console.log(logMsg);
+        botDashboard.addLog(logMsg);
     },
     
     error: (message: string) => {
@@ -163,7 +167,9 @@ const terminalLog = {
     },
     
     voice: (user: string) => {
-        console.log(`🎤 ${user}: [Nota de voz recibida]`);
+        const logMsg = `🎤 ${user}: [Nota de voz recibida]`;
+        console.log(logMsg);
+        botDashboard.addLog(logMsg);
     },
     
     recording: (user: string) => {
@@ -173,7 +179,9 @@ const terminalLog = {
     // 🆕 Log específico para resultados de disponibilidad
     availabilityResult: (completas: number, splits: number, duration?: number) => {
         const durationStr = duration ? ` (${(duration/1000).toFixed(1)}s)` : '';
-        console.log(`🏠 ${completas} completa${completas !== 1 ? 's' : ''} + ${splits} alternativa${splits !== 1 ? 's' : ''}${durationStr}`);
+        const logMsg = `🏠 ${completas} completa${completas !== 1 ? 's' : ''} + ${splits} alternativa${splits !== 1 ? 's' : ''}${durationStr}`;
+        console.log(logMsg);
+        botDashboard.addLog(logMsg);
     },
     
     // 🆕 Log para APIs externas
@@ -1111,7 +1119,9 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
     
     if (shouldUseVoice) {
         try {
-            console.log(`🎤 Generando voz para ${shortUserId}: "${message.substring(0, 50)}..."`);
+            const voiceLogMsg = `🎤 Generando voz para ${shortUserId}: "${message.substring(0, 50)}..."`;
+            console.log(voiceLogMsg);
+            botDashboard.addLog(voiceLogMsg);
             
             // Generar audio con OpenAI TTS
             const ttsResponse = await openaiClient.audio.speech.create({

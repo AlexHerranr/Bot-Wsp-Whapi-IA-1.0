@@ -231,10 +231,17 @@ function enrichedLog(
     if (IS_PRODUCTION) {
         // Cloud Run: Solo logs estructurados
         console.log(JSON.stringify(detailedLogEntry));
+        
+        // 🌐 DASHBOARD: Enviar log limpio al dashboard web
+        if (simpleLogEntry) {
+            botDashboard.addLog(simpleLogEntry);
+        }
     } else {
         // Desarrollo local: Terminal limpio + archivo detallado
         if (simpleLogEntry) {
             console.log(simpleLogEntry);
+            // 🌐 DASHBOARD: También enviar al dashboard en local
+            botDashboard.addLog(simpleLogEntry);
         }
         
         // Escribir log detallado al archivo usando el sistema existente
