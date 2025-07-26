@@ -59,10 +59,12 @@
   "dependencies": {
     "@google-cloud/secret-manager": "^6.1.0",
     "@google/generative-ai": "^0.21.0",
+    "@types/handlebars": "^4.0.40",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "fast-levenshtein": "^3.0.0",
+    "handlebars": "^4.7.8",
     "node-fetch": "^3.3.2",
     "openai": "^4.76.0",
     "prom-client": "^15.1.3",
