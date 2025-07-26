@@ -3,11 +3,10 @@ FROM node:18-alpine AS deps
 WORKDIR /app
 
 # Copiar solo archivos de dependencias primero
-COPY package.json pnpm-lock.yaml ./
+COPY package.json package-lock.json ./
 
-# Instalar pnpm y dependencias (sin scripts de post-install)
-RUN npm install -g pnpm && \
-    pnpm install --frozen-lockfile --prod --ignore-scripts
+# Instalar dependencias de producción (sin scripts de post-install)
+RUN npm ci --only=production --ignore-scripts
 
 # Stage de build
 FROM node:18-alpine AS builder
@@ -19,10 +18,9 @@ RUN apk add --no-cache python3 make g++
 # Copiar dependencias de producción
 COPY --from=deps /app/node_modules ./node_modules
 
-# Instalar dependencias de desarrollo
-COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && \
-    pnpm install --frozen-lockfile --ignore-scripts
+# Instalar todas las dependencias (incluidas dev)
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
 
 # Copiar código fuente y archivos de configuración
 COPY tsconfig.json ./
@@ -30,7 +28,7 @@ COPY src/ ./src/
 COPY config/ ./config/
 
 # Compilar aplicación
-RUN pnpm run build
+RUN npm run build
 
 # Stage de producción - imagen mínima
 FROM node:18-alpine AS runner

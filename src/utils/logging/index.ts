@@ -252,10 +252,8 @@ function enrichedLog(
         }
     }
     
-    // 🔧 NUEVO: Enviar log al dashboard
+    // 🔧 NUEVO: Enviar actividad de usuario al dashboard (solo para métricas)
     try {
-        const emoji = { 'SUCCESS': '✅', 'ERROR': '❌', 'WARNING': '⚠️', 'INFO': 'ℹ️' }[level];
-        const dashboardLogEntry = `${emoji} [${category.toUpperCase()}] ${message}`;
         if (details?.userName || details?.shortUserId) {
             const userName = details.userName || details.shortUserId;
             botDashboard.logActivity(userName, message, 
@@ -264,10 +262,9 @@ function enrichedLog(
                 category === 'MESSAGE_RECEIVED' ? 'received' : 'processing'
             );
         }
-        botDashboard.addLog(dashboardLogEntry);
     } catch (error) {
         // Silenciar errores del dashboard para no afectar el logging principal
-        console.error('Dashboard log error:', error.message);
+        console.error('Dashboard activity log error:', error.message);
     }
 }
 
