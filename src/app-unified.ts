@@ -32,6 +32,7 @@ import {
     logDebug,
     logFatal,
     logAlert,
+    // 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
     logMessageReceived,
     logOpenAIRequest,
     logOpenAIResponse,
@@ -44,7 +45,7 @@ import {
     logOpenAILatency,
     logFallbackTriggered,
     logPerformanceMetrics,
-    // Funciones de tracing
+    // 🔧 ETAPA 3: Nuevas funciones de tracing
     logRequestTracing,
     logToolOutputsSubmitted,
     logAssistantNoResponse,
@@ -55,8 +56,9 @@ import {
     endRequestTracing
 } from './utils/logging/index.js';
 import { threadPersistence } from './utils/persistence/index.js';
-import { guestMemory } from './utils/persistence/index';
-import { whapiLabels } from './utils/whapi/index';
+// 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
+import { guestMemory } from './utils/persistence/index.js';
+import { whapiLabels } from './utils/whapi/index.js';
 import { getConfig } from './config/environment';
 
 // NUEVO: Importar tipo UserState para funcionalidades media
@@ -69,18 +71,16 @@ import metricsRouter, {
     setTokensUsed, 
     setLatency, 
     incrementMessages
+    // 🔧 IMPORTS OBSOLETOS COMENTADOS PARA REGISTRO
 } from './routes/metrics.js';
 
 // Importar nuevo módulo modularizado de inyección de historial/contexto
-import { injectHistory, cleanupExpiredCaches, getCacheStats } from './utils/context/historyInjection.js';
+import { cleanupExpiredCaches, getCacheStats } from './utils/context/historyInjection.js';
 
 // Importar nuevo sistema de locks simplificado
 import { simpleLockManager } from './utils/simpleLockManager.js';
 
 // Agregar al inicio del archivo (después de los imports)
-// 🔧 NUEVO: Rate limiting para logs spam
-const webhookCounts = new Map<string, { lastLog: number; count: number }>();
-
 // 🔧 NUEVO: Sistema de logs limpios para terminal
 const terminalLog = {
     // Logs principales con formato limpio
@@ -97,7 +97,7 @@ const terminalLog = {
     },
     
     response: (user: string, text: string, duration: number) => {
-        console.log(`🤖 OpenAI → ${user}: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}" (${duration}s)`);
+        console.log(`🤖 OpenAI → ${user} (${(duration/1000).toFixed(1)}s)`);
     },
     
     error: (message: string) => {
@@ -124,20 +124,30 @@ const terminalLog = {
         console.log(`❌ Error WHAPI (${operation}): ${error}`);
     },
     
-    // 🔧 NUEVO: Logs de function calling para terminal
-    functionStart: () => {
-        console.log('⚙️ Function calling iniciado');
+    // 🔧 OPTIMIZADO: Logs de function calling más limpios
+    functionStart: (name: string, args?: any) => {
+        if (name === 'check_availability' && args) {
+            const { startDate, endDate } = args;
+            const start = startDate?.split('-').slice(1).join('/'); // MM/DD
+            const end = endDate?.split('-').slice(1).join('/');     // MM/DD
+            const nights = args.endDate && args.startDate ? 
+                Math.round((new Date(args.endDate) - new Date(args.startDate)) / (1000 * 60 * 60 * 24)) : '?';
+            console.log(`⚙️ check_availability(${start}-${end}, ${nights} noches)`);
+        } else {
+            console.log(`⚙️ ${name}()`);
+        }
     },
     
-    functionExecuting: (name: string) => {
-        console.log(`  ↳ ${name} ejecutándose...`);
+    functionProgress: (name: string, step: string, data?: any) => {
+        // Eliminado - logs redundantes
     },
     
-    functionCompleted: (name: string) => {
-        console.log(`  ✓ ${name} completada`);
+    functionCompleted: (name: string, result?: any, duration?: number) => {
+        // Eliminado - se maneja en availabilityResult
     },
     
     startup: () => {
+        console.clear();
         console.log('\n=== Bot TeAlquilamos Iniciado ===');
         console.log(`🚀 Servidor: ${appConfig?.host || 'localhost'}:${appConfig?.port || 3008}`);
         console.log(`🔗 Webhook: ${appConfig?.webhookUrl || 'configurando...'}`);
@@ -154,8 +164,43 @@ const terminalLog = {
     
     voice: (user: string) => {
         console.log(`🎤 ${user}: [Nota de voz recibida]`);
+    },
+    
+    recording: (user: string) => {
+        console.log(`🎙️ ${user} está grabando...`);
+    },
+    
+    // 🆕 Log específico para resultados de disponibilidad
+    availabilityResult: (completas: number, splits: number, duration?: number) => {
+        const durationStr = duration ? ` (${(duration/1000).toFixed(1)}s)` : '';
+        console.log(`🏠 ${completas} completa${completas !== 1 ? 's' : ''} + ${splits} alternativa${splits !== 1 ? 's' : ''}${durationStr}`);
+    },
+    
+    // 🆕 Log para APIs externas
+    externalApi: (service: string, action: string, result?: string) => {
+        const timestamp = new Date().toLocaleTimeString();
+        if (result) {
+            console.log(`🔗 [${timestamp}] ${service} → ${action} → ${result}`);
+        } else {
+            console.log(`🔗 [${timestamp}] ${service} → ${action}...`);
+        }
     }
 };
+
+// 🔧 NUEVO: Rate limiting para logs spam
+const webhookCounts = new Map<string, { lastLog: number; count: number }>();
+// 🔧 NUEVO: Rate limiting para logs de typing (10 s)
+const typingLogTimestamps = new Map<string, number>();
+// 🔧 NUEVO: Cache para información de chat (evitar llamadas redundantes)
+const chatInfoCache = new Map<string, { data: any; timestamp: number }>();
+const CHAT_INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+// 🔧 NUEVO: Cache para contexto temporal (evitar envío repetitivo)
+const contextCache = new Map<string, { context: string, timestamp: number }>();
+const CONTEXT_CACHE_TTL = 60 * 60 * 1000; // 1 hora
+
+// 🔧 NUEVO: Control de logs de function calling en terminal
+const SHOW_FUNCTION_LOGS = process.env.TERMINAL_LOGS_FUNCTIONS !== 'false'; // true por defecto
 
 // --- Variables Globales ---
 let appConfig: AppConfig;
@@ -172,35 +217,99 @@ const globalMessageBuffers = new Map<string, {
     chatId: string,
     userName: string,
     lastActivity: number,
-    timer: NodeJS.Timeout | null
+    timer: NodeJS.Timeout | null,
+    currentDelay?: number  // 🔧 NUEVO: Delay actual del timer para comparaciones
 }>();
 const BUFFER_WINDOW_MS = 5000; // 5 segundos para agrupar mensajes normales
-const TYPING_EXTENDED_MS = 10000; // 10 segundos cuando usuario está escribiendo
+const TYPING_EXTENDED_MS = 10000; // 10 segundos cuando usuario está escribiendo/grabando
 
-// 🔧 NUEVO: Rate limiting para logs de typing (10 s)
-const typingLogTimestamps = new Map<string, number>();
-// 🔧 NUEVO: Cache para información de chat (evitar llamadas redundantes)
-const chatInfoCache = new Map<string, { data: any; timestamp: number }>();
-const CHAT_INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+// 🔧 ELIMINADOS: Buffers obsoletos y redundantes
+// const userMessageBuffers = new Map<string, { messages: string[], chatId: string, name: string, lastActivity: number }>();
 
-// 🔴 CRÍTICO: Cache de contexto global para invalidación
-const contextCache = new Map<string, { context: string, timestamp: number }>();
-
-// 🟡 OPTIMIZACIÓN: Cache pre-computado para contexto base
-let precomputedContextBase: { date: string; time: string; timestamp: number } | null = null;
-const CONTEXT_BASE_CACHE_TTL = 60 * 1000; // 1 minuto
+// 🟡 OPTIMIZACIÓN: Buffer simple para imágenes pendientes
+const pendingImages = new Map<string, string[]>(); // userId -> imageUrls[]
+// const userActivityTimers = new Map<string, NodeJS.Timeout>();
+// const userTypingState = new Map();
+// const manualMessageBuffers = new Map<string, { messages: string[], agentName: string, timestamp: number }>();
+// const manualTimers = new Map<string, NodeJS.Timeout>();
 
 const botSentMessages = new Set<string>();
 
 // NUEVO: Map global para estados de usuario (funcionalidades media)
 const globalUserStates = new Map<string, UserState>();
 
-
+// 🔧 ELIMINADOS: Caches duplicados migrados a historyInjection.ts
+// Los caches historyCache y contextInjectionCache ahora están centralizados
+// en el módulo historyInjection.ts para evitar duplicación y optimizar memoria
 
 const MAX_MESSAGE_LENGTH = 5000;
 
 // NUEVO: Función helper para timestamps
 const getTimestamp = () => new Date().toISOString();
+
+// 🔧 NUEVO: Función helper para crear/obtener UserState
+function getOrCreateUserState(userId: string, chatId?: string, userName?: string): UserState {
+    let userState = globalUserStates.get(userId);
+    if (!userState) {
+        userState = {
+            userId,
+            isTyping: false,
+            lastTypingTimestamp: 0,
+            lastMessageTimestamp: 0,
+            messages: [],
+            chatId: chatId || `${userId}@s.whatsapp.net`,
+            userName: userName || 'Usuario',
+            typingEventsCount: 0,
+            averageTypingDuration: 0,
+            lastInputVoice: false,
+            lastTyping: 0  // 🔧 NUEVO: Timestamp del último typing detectado
+        };
+        globalUserStates.set(userId, userState);
+    }
+    return userState;
+}
+
+// 🔧 NUEVO: Función helper para obtener información de chat con cache
+export async function getCachedChatInfo(userId: string): Promise<any> {
+    const now = Date.now();
+    const cached = chatInfoCache.get(userId);
+    
+    if (cached && (now - cached.timestamp) < CHAT_INFO_CACHE_TTL) {
+        logInfo('CACHE_HIT', 'Chat info desde cache', {
+            userId: getShortUserId(userId),
+            cacheAge: Math.round((now - cached.timestamp) / 1000)
+        });
+        return cached.data;
+    }
+    
+    try {
+        const chatInfo = await whapiLabels.getChatInfo(userId);
+        chatInfoCache.set(userId, { data: chatInfo, timestamp: now });
+        return chatInfo;
+    } catch (error) {
+        logWarning('CHAT_INFO_CACHE_ERROR', `Error obteniendo info de chat para ${userId}`, {
+            error: error.message
+        });
+        return null;
+    }
+}
+
+// 🟡 OPTIMIZACIÓN: Función para invalidar cachés de usuario cuando cambian datos
+export function invalidateUserCaches(userId: string): void {
+    const shortUserId = getShortUserId(userId);
+    
+    // Invalidar cache de chat info
+    if (chatInfoCache.has(userId)) {
+        chatInfoCache.delete(userId);
+        logInfo('CACHE_INVALIDATED', 'Cache de chat info invalidado', { userId: shortUserId });
+    }
+    
+    // Invalidar cache de contexto temporal
+    if (contextCache.has(shortUserId)) {
+        contextCache.delete(shortUserId);
+        logInfo('CACHE_INVALIDATED', 'Cache de contexto temporal invalidado', { userId: shortUserId });
+    }
+}
 
 // NUEVO: Tipos para respuestas de WHAPI
 interface WHAPIMediaLink {
@@ -229,7 +338,7 @@ interface WHAPIError {
 
 // 🔧 NUEVO: Sistema de typing dinámico
 // Configuración de timeouts optimizada para mejor UX
-
+// 🔧 CONSTANTES OBSOLETAS COMENTADAS PARA REGISTRO
 
 // 🔧 FUNCIÓN GLOBAL: Transcribir audio - Movida aquí para acceso global
 async function transcribeAudio(audioUrl: string | undefined, userId: string, userName?: string, messageId?: string): Promise<string> {
@@ -285,7 +394,7 @@ async function transcribeAudio(audioUrl: string | undefined, userId: string, use
         }
         
         const audioBuffer = await audioResponse.arrayBuffer();
-        const audioFile = new File([audioBuffer as any], 'audio.ogg', { type: 'audio/ogg' });
+        const audioFile = new File([new Uint8Array(audioBuffer)], 'audio.ogg', { type: 'audio/ogg' });
         
         // Transcribir con Whisper
         const openai = new OpenAI({ apiKey: appConfig.secrets.OPENAI_API_KEY });
@@ -331,20 +440,21 @@ function releaseThreadLock(userId: string): void {
 
 // --- Aplicación Express ---
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use('/metrics', metricsRouter);
 
 // --- Función Principal Asíncrona ---
 const main = async () => {
     try {
-        console.log('\n🚀 Iniciando TeAlquilamos Bot...');
-        console.log(`📍 Environment: ${process.env.NODE_ENV || 'not set'}`);
-        console.log(`📍 PORT: ${process.env.PORT || 'not set'}`);
-        console.log(`📍 Working directory: ${process.cwd()}`);
+        // 🟢 LOGS INICIALES LIMPIOS
+        console.log('\n🚀 TeAlquilamos Bot - Iniciando...');
+        console.log('📅 Timestamp:', new Date().toISOString());
+        console.log('🔧 Node.js:', process.version);
+        console.log('💾 Memoria inicial:', Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB');
+        console.log('🌍 Entorno:', process.env.NODE_ENV || 'development');
+        console.log('─'.repeat(50));
         
         appConfig = await loadAndValidateConfig();
-        console.log('✅ Configuración y secretos cargados.');
-        console.log(`📍 Config - Host: ${appConfig.host}, Port: ${appConfig.port}`);
         
         logEnvironmentConfig();
         
@@ -358,8 +468,6 @@ const main = async () => {
             timeout: appConfig.openaiTimeout,
             maxRetries: appConfig.openaiRetries
         });
-        
-        console.log(`🤖 OpenAI configurado (timeout: ${appConfig.openaiTimeout}ms, retries: ${appConfig.openaiRetries})`);
 
         // Configurar endpoints y lógica del bot
         setupEndpoints();
@@ -368,9 +476,6 @@ const main = async () => {
         // Crear e iniciar servidor
         server = http.createServer(app);
         server.listen(appConfig.port, appConfig.host, () => {
-            console.log(`🚀 Servidor HTTP iniciado en ${appConfig.host}:${appConfig.port}`);
-            console.log(`🔗 Webhook URL: ${appConfig.webhookUrl}`);
-            
             logServerStart('Servidor HTTP iniciado', { 
                 host: appConfig.host,
                 port: appConfig.port,
@@ -385,7 +490,7 @@ const main = async () => {
         
     } catch (error) {
         console.error('❌ Error durante inicialización:', error);
-        console.log('🚨 Iniciando servidor mínimo para healthcheck...');
+        // 🔧 ELIMINADO: Logs de error de configuración - no mostrar en terminal
         
         // Servidor mínimo para que Railway no falle el healthcheck
         const minimalApp = express();
@@ -401,8 +506,7 @@ const main = async () => {
         });
         
         minimalApp.listen(port, '0.0.0.0', () => {
-            console.log(`🚨 Servidor mínimo escuchando en 0.0.0.0:${port}`);
-            console.log(`❌ Error de configuración: ${error.message}`);
+            // 🔧 ELIMINADO: Logs de servidor mínimo - no mostrar en terminal
         });
     }
 };
@@ -510,27 +614,42 @@ function setupEndpoints() {
                 return;
             }
             
+            // 🔧 NUEVO: Log detallado del inicio de procesamiento
+            logDebug('WEBHOOK_PROCESS_START', 'Iniciando procesamiento webhook', { 
+                bodyPreview: JSON.stringify(req.body).substring(0, 200),
+                environment: appConfig.environment,
+                timestamp: new Date().toISOString()
+            });
+            
             // 🔧 NUEVO: Filtrado temprano de webhooks
             const { messages, presences, event } = req.body;
             
-            // Solo loguear si hay mensajes o presencias relevantes
+            // Solo procesar si hay mensajes o presencias relevantes
             if (messages && Array.isArray(messages) && messages.length > 0) {
-                console.log(`📨 Webhook: ${messages.length} mensajes recibidos`);
+                logDebug('WEBHOOK_MESSAGES_DETECTED', `Procesando ${messages.length} mensajes`);
             } else if (presences && event?.type === 'presences') {
-                // Las presencias se manejan en processWebhook
+                logDebug('WEBHOOK_PRESENCES_DETECTED', `Procesando ${presences.length} eventos de presencia`);
             } else {
-                // Otros tipos de webhook - no loguear para reducir ruido
+                // Otros tipos de webhook - no procesar para reducir ruido
+                logDebug('WEBHOOK_SKIP_NO_CONTENT', 'Webhook sin contenido relevante');
                 return;
             }
             
             // Procesar webhook
             await processWebhook(req.body);
             
+            // 🔧 NUEVO: Log de éxito
+            logDebug('WEBHOOK_PROCESS_END', 'Webhook procesado exitosamente');
+            
         } catch (error) {
+            // 🔧 NUEVO: Log más detallado del error
             logError('WEBHOOK_ERROR', 'Error procesando webhook', { 
                 error: error instanceof Error ? error.message : String(error),
-                environment: appConfig?.environment
+                stack: error instanceof Error ? error.stack : undefined,
+                environment: appConfig?.environment,
+                bodyPreview: JSON.stringify(req.body).substring(0, 100)
             });
+            // 🔧 NUEVO: Evitar crash, solo log
         }
     });
 
@@ -589,8 +708,8 @@ function setupEndpoints() {
         try {
             const { filename } = req.params;
             
-            // Validar nombre de archivo
-            if (!filename || !filename.match(/^voice_\d+_\d+\.ogg$/)) {
+            // Validar nombre de archivo (soportar .mp3 y .ogg)
+            if (!filename || !filename.match(/^voice_\d+_\d+\.(mp3|ogg)$/)) {
                 return res.status(400).json({ error: 'Invalid filename' });
             }
             
@@ -603,8 +722,9 @@ function setupEndpoints() {
                 return res.status(404).json({ error: 'Audio file not found' });
             }
             
-            // Configurar headers para audio
-            res.setHeader('Content-Type', 'audio/ogg');
+            // Configurar headers para audio según extensión
+            const contentType = filename.endsWith('.mp3') ? 'audio/mpeg' : 'audio/ogg; codecs=opus';
+            res.setHeader('Content-Type', contentType);
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             
             // Leer y enviar el archivo
@@ -627,14 +747,16 @@ function setupEndpoints() {
 
 function setupSignalHandlers() {
     const shutdown = (signal: string) => {
-        console.log(`\n⏹️  Señal ${signal} recibida, cerrando servidor...`);
+        // 🔧 ELIMINADO: Log de shutdown - no mostrar en terminal
         if (appConfig) {
             logInfo('SHUTDOWN', `Señal ${signal} recibida`, { environment: appConfig.environment });
         }
         
+        // 🔧 ELIMINADO: Timer de verificación de typing - ya no necesario
+        
         if (server) {
             server.close(() => {
-                console.log('👋 Servidor cerrado correctamente');
+                // 🔧 ELIMINADO: Log de servidor cerrado - no mostrar en terminal
                 if (appConfig) {
                     logSuccess('SHUTDOWN', 'Servidor cerrado exitosamente', { environment: appConfig.environment });
                 }
@@ -661,6 +783,8 @@ function setupSignalHandlers() {
 // Esta es una versión abreviada, el código completo se aplicará.
 // --- Funciones auxiliares globales ---
 
+// Función removida: generateVoiceResponse - Simplificado a mensaje de texto únicamente
+
 // Función para obtener ID corto de usuario
 const getShortUserId = (jid: string): string => {
     if (typeof jid === 'string') {
@@ -683,105 +807,13 @@ const cleanContactName = (rawName: any): string => {
     return cleaned.substring(0, 50) || 'Usuario';
 };
 
-// 🔴 CRÍTICO: Función para invalidar caches cuando cambia el estado del usuario
-function invalidateUserCaches(userId: string) {
-    const shortUserId = getShortUserId(userId);
-    
-    // Invalidar cache de chat info
-    chatInfoCache.delete(userId);
-    chatInfoCache.delete(shortUserId);
-    
-    // Invalidar cache de contexto
-    contextCache.delete(shortUserId);
-    
-    logInfo('CACHE_INVALIDATED', 'Caches de usuario invalidados', {
-        userId: shortUserId,
-        caches: ['chatInfo', 'context']
-    });
-}
 
-// 🔧 NUEVO: Control de logs de function calling en terminal
-const SHOW_FUNCTION_LOGS = process.env.TERMINAL_LOGS_FUNCTIONS !== 'false'; // true por defecto
-
-// 🟡 OPTIMIZACIÓN: Cache pre-computado para contexto base
-function getPrecomputedContextBase(): { date: string; time: string } {
-    const now = Date.now();
-    
-    // Si el cache es válido, usarlo
-    if (precomputedContextBase && (now - precomputedContextBase.timestamp) < CONTEXT_BASE_CACHE_TTL) {
-        return { date: precomputedContextBase.date, time: precomputedContextBase.time };
-    }
-    
-    // Generar nuevo contexto base
-    const currentDate = new Date().toLocaleDateString('es-ES', { 
-        timeZone: 'America/Bogota',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-
-    const currentTime = new Date().toLocaleTimeString('en-US', { 
-        timeZone: 'America/Bogota',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    });
-    
-    // Actualizar cache
-    precomputedContextBase = {
-        date: currentDate,
-        time: currentTime,
-        timestamp: now
-    };
-    
-    return { date: currentDate, time: currentTime };
-}
-
-// 🔧 NUEVO: Función helper para crear/obtener UserState
-function getOrCreateUserState(userId: string, chatId?: string, userName?: string): UserState {
-    let userState = globalUserStates.get(userId);
-    if (!userState) {
-        userState = {
-            userId,
-            isTyping: false,
-            lastTypingTimestamp: 0,
-            lastMessageTimestamp: 0,
-            messages: [],
-            chatId: chatId || `${userId}@s.whatsapp.net`,
-            userName: userName || 'Usuario',
-            typingEventsCount: 0,
-            averageTypingDuration: 0,
-            lastInputVoice: false,
-            lastTyping: 0  // 🔧 NUEVO: Timestamp del último typing detectado
-        };
-        globalUserStates.set(userId, userState);
-    }
-    return userState;
-}
-
-// 🔧 NUEVO: Función helper para obtener información de chat con cache
-export async function getCachedChatInfo(userId: string): Promise<any> {
-    const now = Date.now();
-    const cached = chatInfoCache.get(userId);
-    
-    if (cached && (now - cached.timestamp) < CHAT_INFO_CACHE_TTL) {
-        return cached.data;
-    }
-    
-    try {
-        const chatInfo = await whapiLabels.getChatInfo(userId);
-        chatInfoCache.set(userId, { data: chatInfo, timestamp: now });
-        return chatInfo;
-    } catch (error) {
-        logWarning('CHAT_INFO_CACHE_ERROR', `Error obteniendo info de chat para ${userId}`, {
-            error: error.message
-        });
-        return null;
-    }
-}
 
 // Declaración adelantada de processCombinedMessage
 let processCombinedMessage: (userId: string, combinedText: string, chatId: string, userName: string, messageCount: number) => Promise<void>;
+
+// 🔧 NUEVO: Función para verificar auto-timeout de typing periódicamente
+// 🔧 ELIMINADO: Función checkTypingTimeouts() - ya no necesaria con el sistema simplificado
 
 // Función para procesar el buffer global
 async function processGlobalBuffer(userId: string): Promise<void> {
@@ -790,9 +822,9 @@ async function processGlobalBuffer(userId: string): Promise<void> {
         return;
     }
     
-    // 🔧 NUEVO: Verificar typing reciente (<10s desde último)
+    // 🔧 NUEVO: Verificar typing reciente (<10s desde último), pero procesar inmediatamente si múltiples mensajes
     const userState = globalUserStates.get(userId);
-    if (userState?.lastTyping && (Date.now() - userState.lastTyping < TYPING_EXTENDED_MS)) {
+    if (userState?.lastTyping && (Date.now() - userState.lastTyping < TYPING_EXTENDED_MS) && buffer.messages.length === 1) {
         const remainingTime = TYPING_EXTENDED_MS - (Date.now() - userState.lastTyping);
         
         logInfo('BUFFER_PROCESS_DELAYED_BY_RECENT_TYPING', 'Retrasar por typing reciente <10s', {
@@ -825,7 +857,7 @@ async function processGlobalBuffer(userId: string): Promise<void> {
         return;  // No procesar ni agregar a cola todavía; el timer se encargará más tarde
     }
     
-    // 🔧 NUEVO: Verificar si ya hay un procesamiento activo para este usuario
+    // 🔧 SIMPLIFICADO: Verificar si ya hay un procesamiento activo para este usuario
     if (activeProcessing.has(userId)) {
         logWarning('BUFFER_PROCESS_SKIPPED', 'Procesamiento ya activo para usuario', {
             userJid: getShortUserId(userId),
@@ -838,72 +870,137 @@ async function processGlobalBuffer(userId: string): Promise<void> {
     // Marcar como procesamiento activo
     activeProcessing.add(userId);
     
+    // 🔧 NUEVO: Log simple antes de procesar/enviar
+    const displayUser = buffer.userName || getShortUserId(userId);
+    const wasVoiceInput = userState?.lastInputVoice === true;
+    console.log(`⏰ ${wasVoiceInput ? '🎙️' : '✍️'} ${displayUser} dejó de ${wasVoiceInput ? 'grabar' : 'escribir'}.`);
+    
+    // 🔧 NUEVO: Hacer copia de mensajes para evitar race condition
+    const messagesToProcess = [...buffer.messages];
+    const bufferInfo = {
+        chatId: buffer.chatId,
+        userName: buffer.userName
+    };
+    
+    // 🔧 CRÍTICO: Limpiar mensajes del buffer ANTES de procesar
+    buffer.messages = [];
+    
     // 🚀 SIMPLIFICADO: Sin filtros - todos los mensajes van a OpenAI
-    const combinedText = buffer.messages
-        .join(' ')
-        .replace(/\s+/g, ' ') // Reemplazar múltiples espacios con uno solo
+    const combinedText = messagesToProcess
+        .join('\n')
         .trim();
     
-    const messageCount = buffer.messages.length;
+    const messageCount = messagesToProcess.length;
     
     // 🔧 SIMPLIFICADO: Un solo log de procesamiento
-    logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global después de 5 segundos`, {
+    logInfo('GLOBAL_BUFFER_PROCESS', `Procesando buffer global después de ${BUFFER_WINDOW_MS/1000} segundos`, {
         userJid: getShortUserId(userId),
-        userName: buffer.userName,
+        userName: bufferInfo.userName,
         messageCount,
         combinedText: combinedText.substring(0, 100) + '...',
         environment: appConfig?.environment
     });
     
-    // Limpiar buffer
-    globalMessageBuffers.delete(userId);
-    
     try {
         // Procesar mensaje combinado
         if (processCombinedMessage) {
-            await processCombinedMessage(userId, combinedText, buffer.chatId, buffer.userName, messageCount);
+            await processCombinedMessage(userId, combinedText, bufferInfo.chatId, bufferInfo.userName, messageCount);
         }
     } finally {
-        // 🔧 NUEVO: Siempre limpiar el flag de procesamiento activo
+        // 🔧 NUEVO: Solo limpiar el flag, mantener buffer para nuevos mensajes
         activeProcessing.delete(userId);
+        
+        // 🔧 NUEVO: Solo eliminar buffer si está vacío
+        const currentBuffer = globalMessageBuffers.get(userId);
+        if (currentBuffer && currentBuffer.messages.length === 0) {
+            globalMessageBuffers.delete(userId);
+        }
     }
 }
 
-// 🔧 NUEVO: Función unificada para typing (mismo timer que mensajes)
-function updateTypingStatus(userId: string, isTyping: boolean): void {
+// 🔧 NUEVO: Sistema unificado de timers inteligentes
+function setIntelligentTimer(userId: string, chatId: string, userName: string, triggerType: 'message' | 'voice' | 'typing' | 'recording'): void {
     let buffer = globalMessageBuffers.get(userId);
     
+    // Crear buffer si no existe
     if (!buffer) {
-        // Si no hay buffer, crear uno vacío
         buffer = {
             messages: [],
-            chatId: `${userId}@s.whatsapp.net`,
-            userName: getShortUserId(userId),
+            chatId,
+            userName,
             lastActivity: Date.now(),
             timer: null
         };
         globalMessageBuffers.set(userId, buffer);
     }
     
-    // 🔧 NUEVO: SIEMPRE actualizar timestamp de último typing
-    const userState = getOrCreateUserState(userId, buffer.chatId, buffer.userName);
-    userState.lastTyping = Date.now();
+    // Determinar delay según prioridad
+    const userState = getOrCreateUserState(userId, chatId, userName);
+    let bufferDelay = BUFFER_WINDOW_MS; // 5s por defecto
     
-    // 🔧 NUEVO: SIEMPRE cancelar timer anterior (5s o 10s)
-    if (buffer.timer) {
-        clearTimeout(buffer.timer);
+    switch (triggerType) {
+        case 'message':
+            bufferDelay = BUFFER_WINDOW_MS; // 5s
+            break;
+        case 'voice':
+            bufferDelay = 8000; // 8s para notas de voz
+            if (userState.isCurrentlyRecording) {
+                bufferDelay = 10000; // 10s si está grabando
+            }
+            break;
+        case 'typing':
+            bufferDelay = TYPING_EXTENDED_MS; // 10s para typing
+            break;
+        case 'recording':
+            bufferDelay = 10000; // 10s para grabación
+            userState.isCurrentlyRecording = true;
+            break;
     }
     
-    // 🔧 NUEVO: SIEMPRE configurar timer de 10s por typing
-    buffer.timer = setTimeout(() => {
-        const currentBuffer = globalMessageBuffers.get(userId);
-        if (currentBuffer) {
-            currentBuffer.timer = null;
-            processGlobalBuffer(userId);
-        }
-    }, TYPING_EXTENDED_MS); // SIEMPRE 10s
+    // Aplicar lógica de prioridad: solo reconfigurar si nuevo delay es mayor
+    const shouldSetNewTimer = !buffer.timer || (buffer.currentDelay && bufferDelay > buffer.currentDelay);
     
-    terminalLog.typing(buffer.userName || getShortUserId(userId));
+    if (shouldSetNewTimer) {
+        // Cancelar timer existente si existe
+        if (buffer.timer) {
+            clearTimeout(buffer.timer);
+            logInfo('BUFFER_TIMER_CANCELLED', `Timer cancelado para reconfigurar con delay mayor`, {
+                userJid: getShortUserId(userId),
+                oldDelay: buffer.currentDelay,
+                newDelay: bufferDelay,
+                triggerType
+            });
+        }
+        
+        buffer.timer = setTimeout(() => {
+            const currentBuffer = globalMessageBuffers.get(userId);
+            if (currentBuffer) {
+                currentBuffer.timer = null;
+                currentBuffer.currentDelay = undefined;
+                processGlobalBuffer(userId);
+            }
+        }, bufferDelay);
+        
+        buffer.currentDelay = bufferDelay;
+        
+        logInfo('BUFFER_TIMER_SET', `Timer inteligente configurado`, {
+            userJid: getShortUserId(userId),
+            userName,
+            timerMs: bufferDelay,
+            bufferSize: buffer.messages.length,
+            triggerType,
+            wasReconfigured: !!buffer.timer
+        });
+    } else {
+        logInfo('BUFFER_TIMER_RESPECTED', `Timer existente respetado (delay actual es suficiente)`, {
+            userJid: getShortUserId(userId),
+            userName,
+            bufferSize: buffer.messages.length,
+            currentDelay: buffer.currentDelay,
+            requestedDelay: bufferDelay,
+            triggerType
+        });
+    }
 }
 
 // 🔧 NUEVO: Funciones para buffering proactivo global
@@ -919,6 +1016,24 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
             timer: null
         };
         globalMessageBuffers.set(userId, buffer);
+    } else {
+        // 🔧 NUEVO: Actualizar userName del buffer si el actual es mejor
+        if (userName && userName !== 'Usuario' && userName !== getShortUserId(userId)) {
+            buffer.userName = userName;
+        }
+    }
+    
+    // 🔧 NUEVO: Verificar límite de buffer antes de agregar mensaje
+    if (buffer.messages.length >= 50) { // Máximo 50 mensajes
+        logWarning('BUFFER_LIMIT_REACHED', 'Buffer alcanzó límite máximo', {
+            userJid: getShortUserId(userId),
+            userName,
+            bufferSize: buffer.messages.length
+        });
+        // Procesar inmediatamente
+        if (buffer.timer) clearTimeout(buffer.timer);
+        processGlobalBuffer(userId);
+        return;
     }
     
     // Agregar mensaje al buffer
@@ -931,27 +1046,9 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
         userState.lastInputVoice = true;
     }
     
-    // 🔧 CORREGIDO: Solo configurar timer si NO hay uno activo
-    // Esto respeta el timer de 10s si fue configurado por typing
-    if (!buffer.timer) {
-        buffer.timer = setTimeout(() => {
-            const currentBuffer = globalMessageBuffers.get(userId);
-            if (currentBuffer) {
-                currentBuffer.timer = null;  // Limpia antes de procesar
-                processGlobalBuffer(userId);
-            }
-        }, BUFFER_WINDOW_MS);
-        
-        logInfo('BUFFER_TIMER_SET', `Timer configurado para agrupar mensajes`, {
-            userJid: getShortUserId(userId),
-            userName,
-            timerMs: BUFFER_WINDOW_MS,
-            bufferSize: buffer.messages.length
-        });
-    }
-    // Si ya hay timer activo, no hacer nada - dejar que expire cuando corresponda
-    
-    console.log(`📥 [BUFFER] ${userName}: "${messageText.substring(0, 30)}..." → ⏳ ${BUFFER_WINDOW_MS/1000}s...`);
+    // 🔧 NUEVO: Usar sistema unificado de timers inteligentes
+    const triggerType = isVoice ? 'voice' : 'message';
+    setIntelligentTimer(userId, chatId, userName, triggerType);
     
     logInfo('GLOBAL_BUFFER_ADD', `Mensaje agregado al buffer global`, {
         userJid: getShortUserId(userId),
@@ -964,129 +1061,41 @@ function addToGlobalBuffer(userId: string, messageText: string, chatId: string, 
     });
 }
 
+// 🆕 NUEVO: Función helper para enviar recording indicator
+async function sendRecordingIndicator(chatId: string): Promise<void> {
+    if (!chatId) return;
+    
+    try {
+        await fetch(`${appConfig.secrets.WHAPI_API_URL}/presences/${chatId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                presence: "recording",
+                delay: 0
+            })
+        });
+        
+        logInfo('RECORDING_INDICATOR_SENT', 'Recording indicator enviado para procesamiento de audio', {
+            chatId,
+            environment: appConfig.environment
+        });
+    } catch (error: any) {
+        logError('RECORDING_INDICATOR_ERROR', 'Error enviando recording indicator', {
+            chatId,
+            error: error.message,
+            environment: appConfig.environment
+        });
+    }
+}
+
 // Función para envío de mensajes a WhatsApp con división inteligente en párrafos
 async function sendWhatsAppMessage(chatId: string, message: string) {
     const shortUserId = getShortUserId(chatId);
     
-    // NUEVO: Decisión inteligente de usar voz
-    const userState = globalUserStates.get(chatId);
-    const messageLength = message.length;
-    const voiceThreshold = parseInt(process.env.VOICE_THRESHOLD || '150');
-    const randomProbability = parseFloat(process.env.VOICE_RANDOM_PROBABILITY || '0.1');
-    
-    // 🔧 MODIFICADO: Si el usuario envió voz, SIEMPRE responder con voz
-    const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && (
-        userState?.lastInputVoice                      // Usuario envió voz - SIEMPRE responder con voz
-    );
-    
-    if (shouldUseVoice) {
-        try {
-            console.log(`${getTimestamp()} 🔊 [${shortUserId}] Generando respuesta de voz (${messageLength} chars)...`);
-            
-            // Limpiar emojis y caracteres especiales para TTS
-            const cleanMessage = message
-                .replace(/[\u{1F600}-\u{1F6FF}]/gu, '') // Emojis
-                .replace(/\*/g, '')                      // Asteriscos
-                .substring(0, 4096);                     // Límite TTS
-            
-            // Generar audio con TTS
-            const ttsResponse = await openaiClient.audio.speech.create({
-                model: 'tts-1',
-                voice: process.env.TTS_VOICE as any || 'alloy',
-                input: cleanMessage,
-                speed: 1.0
-            });
-            
-            // Convertir respuesta a buffer
-            const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-            
-            // Generar nombre único para el archivo
-            const fileName = `voice_${shortUserId}_${Date.now()}.ogg`;
-            const audioPath = path.join('tmp', 'audio', fileName);
-            
-            // Crear directorio si no existe
-            await fs.mkdir(path.dirname(audioPath), { recursive: true });
-            
-            // Guardar archivo temporalmente
-            await fs.writeFile(audioPath, audioBuffer);
-            
-            // Generar URL pública para el archivo
-            // Quitar '/hook' del final de la URL si existe
-            const baseUrl = appConfig.webhookUrl.replace(/\/hook$/, '');
-            const audioUrl = `${baseUrl}/audio/${fileName}`;
-            
-            logInfo('VOICE_FILE_CREATED', 'Archivo de audio creado temporalmente', {
-                userId: shortUserId,
-                fileName,
-                url: audioUrl
-            });
-            
-            // Programar eliminación del archivo después de 5 minutos
-            setTimeout(async () => {
-                try {
-                    await fs.unlink(audioPath);
-                    logDebug('VOICE_FILE_DELETED', 'Archivo de audio temporal eliminado', { fileName });
-                } catch (error) {
-                    // Ignorar si ya fue eliminado
-                }
-            }, 5 * 60 * 1000);
-            
-            // Enviar como nota de voz via WHAPI con URL
-            const voiceEndpoint = `${appConfig.secrets.WHAPI_API_URL}/messages/voice`;
-            const voicePayload = {
-                to: chatId,
-                media: audioUrl
-            };
-            
-            const whapiResponse = await fetch(voiceEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(voicePayload)
-            });
-            
-            if (whapiResponse.ok) {
-                const responseData = await whapiResponse.json() as any;
-                
-                // Guardar ID del mensaje
-                if (responseData.message?.id) {
-                    botSentMessages.add(responseData.message.id);
-                    setTimeout(() => {
-                        botSentMessages.delete(responseData.message.id);
-                    }, 10 * 60 * 1000);
-                }
-                
-                console.log(`${getTimestamp()} 🔊 [${shortUserId}] ✓ Nota de voz enviada`);
-                
-                logSuccess('VOICE_RESPONSE_SENT', 'Nota de voz enviada exitosamente', {
-                    userId: shortUserId,
-                    messageLength,
-                    voice: process.env.TTS_VOICE || 'alloy'
-                });
-                
-                // Limpiar flag de voz después de responder
-                if (userState) {
-                    userState.lastInputVoice = false;
-                    globalUserStates.set(chatId, userState);
-                }
-                
-                return true; // Éxito, no enviar texto
-            } else {
-                const errorData = await whapiResponse.json() as WHAPIError;
-                throw new Error(`WHAPI error ${whapiResponse.status}: ${errorData.error?.message || 'Unknown error'}`);
-            }
-            
-        } catch (voiceError: any) {
-            logError('VOICE_SEND_ERROR', 'Error enviando nota de voz, fallback a texto', {
-                userId: shortUserId,
-                error: voiceError.message
-            });
-            console.log(`${getTimestamp()} ⚠️ [${shortUserId}] Error en nota de voz, enviando como texto`);
-            // Continuar con envío de texto
-        }
-    }
+    // Voice/TTS handling removed - text-only for hotel queries
     
     // 🔧 NUEVO: No enviar mensajes vacíos
     if (!message || message.trim() === '') {
@@ -1177,7 +1186,8 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
                 },
                 body: JSON.stringify({
                     to: chatId,
-                    body: message
+                    body: message,
+                    typing_time: message.includes('🔄') || message.includes('📊') ? 5 : 3 // Tiempo de typing según contenido
                 })
             });
             
@@ -1196,7 +1206,7 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
                 }, 10 * 60 * 1000); // Limpiar después de 10 minutos
             }
             
-            console.log(`${getTimestamp()} ✅ [${shortUserId}] Mensaje enviado`);
+            // 🔧 ELIMINADO: Log duplicado - ya se maneja con terminalLog.response()
             return true;
         } else {
             // Múltiples chunks - enviar con delays
@@ -1218,7 +1228,8 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
                     },
                     body: JSON.stringify({
                         to: chatId,
-                        body: chunk
+                        body: chunk,
+                        typing_time: i === 0 ? 3 : 2 // 3s primer mensaje, 2s siguientes
                     })
                 });
                 
@@ -1237,7 +1248,7 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
                     }, 10 * 60 * 1000);
                 }
                 
-                console.log(`${getTimestamp()} ✅ [${shortUserId}] Parte ${i + 1}/${chunks.length} enviada`);
+                // 🔧 ELIMINADO: Log duplicado - ya se maneja con terminalLog.response()
                 
                 // Delay entre chunks (excepto el último)
                 if (i < chunks.length - 1) {
@@ -1249,6 +1260,9 @@ async function sendWhatsAppMessage(chatId: string, message: string) {
             return true;
         }
     } catch (error) {
+        // 🔧 NUEVO: Log de error de WHAPI en terminal
+        terminalLog.whapiError('enviar mensaje', error.message);
+        
         logError('WHATSAPP_SEND_ERROR', `Error enviando mensaje a ${shortUserId}`, {
             chatId,
             error: error.message,
@@ -1368,9 +1382,7 @@ function setupWebhooks() {
     // 🔧 NUEVO: Función para suscribirse a presencia de usuario
     const subscribedPresences = new Set<string>();
     
-    // 🔧 NUEVO: Cache para contexto temporal (evitar envío repetitivo)
-    const contextCache = new Map<string, { context: string, timestamp: number }>();
-    const CONTEXT_CACHE_TTL = 60 * 60 * 1000; // 1 hora // Rastrea usuarios suscritos
+    // Cache declarations moved to module level
     
     // Función para procesar mensajes combinados
     processCombinedMessage = async function(userId: string, combinedText: string, chatId: string, userName: string, messageCount: number): Promise<void> {
@@ -1424,7 +1436,7 @@ function setupWebhooks() {
                                 combinedText: combinedText.substring(0, 50) + '...',
                                 environment: appConfig?.environment
                             });
-                            console.log(`⏸️ [BUFFER_SKIP] ${userName}: Run activo → Saltando procesamiento`);
+                            // 🔧 ELIMINADO: Log duplicado - ya se maneja con logInfo
                             return;
                         }
                     }
@@ -1438,8 +1450,28 @@ function setupWebhooks() {
             }
 
             // Todo mensaje relevante va directo a OpenAI
-            const response = await processWithOpenAI(combinedText, userId, chatId, userName);
-            await sendWhatsAppMessage(chatId, response);
+            try {
+                const response = await processWithOpenAI(combinedText, userId, chatId, userName);
+                await sendWhatsAppMessage(chatId, response);
+            } catch (error) {
+                // 🔧 NUEVO: Manejar cancelación por typing
+                if (error.message === 'PROCESSING_CANCELLED_TYPING_ACTIVE' || 
+                    error.message === 'PROCESSING_CANCELLED_TYPING_MARKED') {
+                    logInfo('PROCESSING_CANCELLED_BY_TYPING', 'Procesamiento cancelado por typing activo', {
+                        userJid: shortUserId,
+                        userName,
+                        error: error.message,
+                        environment: appConfig?.environment
+                    });
+                    return; // Salir sin error, el procesamiento se reintentará cuando termine el typing
+                }
+                // 🔧 NUEVO: NO re-lanzar errores para evitar crash del bot
+                logError('PROCESSING_ERROR', 'Error en procesamiento, continuando sin crash', {
+                    userJid: shortUserId,
+                    userName,
+                    error: error.message
+                });
+            }
         };
         
         // 🔧 ETAPA 2.2: Chequeo de run activo antes de agregar a cola
@@ -1486,7 +1518,7 @@ function setupWebhooks() {
     }
     
     // NUEVO: Función auxiliar para analizar imágenes
-    async function analyzeImage(imageUrl: string | undefined, userId: string, messageId?: string): Promise<string> {
+    async function analyzeImage(imageUrl: string | undefined, userId: string, userName?: string, messageId?: string): Promise<string> {
         try {
             let finalImageUrl = imageUrl;
             
@@ -1560,6 +1592,10 @@ function setupWebhooks() {
             return visionResponse.choices[0].message.content || 'Imagen recibida';
             
         } catch (error) {
+            // 🔧 NUEVO: Log de error de imagen en terminal
+            const displayName = userName || getShortUserId(userId);
+            terminalLog.imageError(displayName, error.message);
+            
             logError('IMAGE_ANALYSIS_ERROR', 'Error analizando imagen', {
                 userId,
                 error: error.message
@@ -1571,15 +1607,21 @@ function setupWebhooks() {
     
     async function subscribeToPresence(userId: string): Promise<void> {
         if (subscribedPresences.has(userId)) {
-            // Comentado para reducir spam en logs
-            // logDebug('PRESENCE_ALREADY_SUBSCRIBED', `Ya suscrito a presencia de ${userId}`, {
-            //     userId,
-            //     environment: appConfig.environment
-            // });
+            // 🔧 MEJORADO: Log informativo para debug
+            logDebug('PRESENCE_ALREADY_SUBSCRIBED', `Ya suscrito a presencia de ${userId}`, {
+                userId,
+                environment: appConfig.environment
+            });
             return; // Ya suscrito
         }
         
         try {
+            // 🔧 MEJORADO: Log de intento de suscripción
+            logInfo('PRESENCE_SUBSCRIBE_ATTEMPT', `Intentando suscribirse a presencia de ${userId}`, {
+                userId,
+                environment: appConfig.environment
+            });
+            
             // Suscribirse a presencia del usuario (sin body)
             const response = await fetch(`${appConfig.secrets.WHAPI_API_URL}/presences/${userId}`, {
                 method: 'POST',
@@ -1595,6 +1637,8 @@ function setupWebhooks() {
                     userId,
                     environment: appConfig.environment
                 });
+                // 🔧 MEJORADO: Log visual de confirmación
+                // 🔧 ELIMINADO: Log duplicado - ya se maneja en processWebhook
             } else if (response.status === 409) {
                 // Ya suscrito - agregar al set para evitar futuros intentos
                 subscribedPresences.add(userId);
@@ -1603,6 +1647,8 @@ function setupWebhooks() {
                     status: response.status,
                     environment: appConfig.environment
                 });
+                // 🔧 MEJORADO: Log visual de confirmación
+                // 🔧 ELIMINADO: Log duplicado - ya se maneja en processWebhook
             } else {
                 const errorText = await response.text();
                 logError('PRESENCE_SUBSCRIBE_ERROR', `Error suscribiendo a ${userId}`, { 
@@ -1611,6 +1657,7 @@ function setupWebhooks() {
                     error: errorText,
                     environment: appConfig.environment
                 });
+                // 🔧 ELIMINADO: Log de presence - no mostrar en terminal
             }
         } catch (error: any) {
             logError('PRESENCE_SUBSCRIBE_FAIL', `Fallo de red suscribiendo a ${userId}`, { 
@@ -1618,6 +1665,7 @@ function setupWebhooks() {
                 error: error.message,
                 environment: appConfig.environment
             });
+                            // 🔧 ELIMINADO: Log de presence - no mostrar en terminal
         }
     }
 
@@ -1629,6 +1677,29 @@ function setupWebhooks() {
     // Función para analizar si necesita inyección de contexto
     // 🚀 ELIMINADO: Función de análisis de contexto arbitrario
     // OpenAI ahora decide cuándo necesita contexto usando get_conversation_context
+
+    // 🟡 OPTIMIZACIÓN: Cache pre-computado para contexto base
+    let precomputedContextBase: { date: string; time: string; timestamp: number } | null = null;
+    const CONTEXT_BASE_CACHE_TTL = 60 * 1000; // 1 minuto
+
+    function getPrecomputedContextBase(): { date: string; time: string } {
+        const now = Date.now();
+        
+        // Si el cache es válido, usarlo
+        if (precomputedContextBase && (now - precomputedContextBase.timestamp) < CONTEXT_BASE_CACHE_TTL) {
+            logDebug('CACHE_HIT', 'Context base desde cache', {
+                cacheAge: Math.round((now - precomputedContextBase.timestamp) / 1000)
+            });
+            return { date: precomputedContextBase.date, time: precomputedContextBase.time };
+        }
+        
+        // Generar nuevo
+        const currentDate = new Date().toLocaleDateString('es-ES', { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric' });
+        const currentTime = new Date().toLocaleTimeString('en-US', { timeZone: 'America/Bogota', hour: 'numeric', minute: '2-digit', hour12: true });
+        
+        precomputedContextBase = { date: currentDate, time: currentTime, timestamp: now };
+        return { date: currentDate, time: currentTime };
+    }
 
     // Función para obtener contexto relevante del historial
     async function getRelevantContext(userId: string, requestId?: string): Promise<string> {
@@ -1662,27 +1733,15 @@ function setupWebhooks() {
             
             // Obtener perfil del usuario (incluye etiquetas)
             const profile = await guestMemory.getOrCreateProfile(userId);
-            // Obtener información del chat desde Whapi
-            const chatInfo = await whapiLabels.getChatInfo(userId);
+            // Obtener información del chat desde Whapi (con cache)
+            const chatInfo = await getCachedChatInfo(userId);
             
             // 🔧 MEJORADO: Extracción de nombre más robusta
             const clientName = profile?.name || 'Cliente';
             const contactName = chatInfo?.name || clientName;
             
-            // 🔧 MEJORADO: Formato de fecha y hora más claro con AM/PM
-            const currentDate = new Date().toLocaleDateString('es-ES', { 
-                timeZone: 'America/Bogota',
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
-
-            const currentTime = new Date().toLocaleTimeString('en-US', { 
-                timeZone: 'America/Bogota',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
+            // 🟡 OPTIMIZACIÓN: Usar fecha y hora pre-computadas desde cache
+            const { date: currentDate, time: currentTime } = getPrecomputedContextBase();
             
             // Etiquetas del perfil y Whapi (solo las primeras 2)
             const profileLabels = profile?.whapiLabels?.map((l: any) => l.name) || [];
@@ -1767,8 +1826,7 @@ function setupWebhooks() {
             // 🔧 ETAPA 3: Actualizar etapa del flujo
             updateRequestStage(requestId, 'processing');
 
-            // Log compacto - Inicio
-            console.log(`🤖 [BOT] ${buffer.messages.length} msgs → OpenAI`);
+
             
             // Enviar a OpenAI con el userId original y la información completa del cliente
             const startTime = Date.now();
@@ -1776,20 +1834,27 @@ function setupWebhooks() {
             const aiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
             
             // 🔧 NUEVO: Validar respuesta antes de loguear
-            if (response && response.trim()) {
-                // 🔧 NUEVO: Log de respuesta limpio usando terminalLog
-                terminalLog.response(buffer.userName, response, parseFloat(aiDuration));
-            } else {
+            if (!response || !response.trim()) {
                 terminalLog.error(`Sin respuesta (${aiDuration}s)`);
                 logWarning('EMPTY_RESPONSE', 'OpenAI devolvió respuesta vacía', {
                     userId: shortUserId,
                     requestId,
                     duration: aiDuration
                 });
+                return; // 🔧 FIX: No continuar si no hay respuesta
             }
             
             // 🔧 ETAPA 2: Incrementar métrica de mensajes procesados
             incrementMessages();
+            
+            // 🔧 DEBUG: Log antes de enviar a WhatsApp
+            logInfo('WHATSAPP_SEND_DEBUG', 'Mensaje enviándose a WhatsApp', {
+                userId: userId,
+                responseLength: response.length,
+                hasDoubleAsterisks: response.includes('**'),
+                responsePreview: response.substring(0, 200) + (response.length > 200 ? '...' : ''),
+                chatId: buffer.chatId
+            });
             
             // Enviar respuesta a WhatsApp
             await sendWhatsAppMessage(buffer.chatId, response);
@@ -1831,15 +1896,15 @@ function setupWebhooks() {
         if (!chatId) return;
         
         try {
-            await fetch(`${secrets.WHAPI_API_URL}/presence`, {
-                method: 'PATCH',
+            await fetch(`${appConfig.secrets.WHAPI_API_URL}/presences/${chatId}`, {
+                method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${secrets.WHAPI_TOKEN}`,
+                    'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    chat_id: chatId,
-                    typing: true
+                    presence: "typing",
+                    delay: 0
                 })
             });
             
@@ -1847,9 +1912,8 @@ function setupWebhooks() {
                 chatId,
                 environment: appConfig.environment
             });
-        } catch (error) {
-            // No bloquear el flujo si falla el typing indicator
-            logWarning('TYPING_INDICATOR_ERROR', 'Error enviando typing indicator', {
+        } catch (error: any) {
+            logError('TYPING_INDICATOR_ERROR', 'Error enviando typing indicator', {
                 chatId,
                 error: error.message,
                 environment: appConfig.environment
@@ -1859,6 +1923,13 @@ function setupWebhooks() {
 
     const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string = null, userName: string = null, requestId?: string): Promise<string> => {
         const shortUserId = getShortUserId(userJid);
+        
+        // Send typing indicator for text responses
+        if (chatId) {
+            await sendTypingIndicator(chatId);
+        }
+        
+        // 🔧 ELIMINADO: Verificaciones de typing - ya no necesarias con el sistema simplificado
         
         // 🔧 ETAPA 1: Tracking de métricas de performance
         const startTime = Date.now();
@@ -1872,10 +1943,7 @@ function setupWebhooks() {
                 updateRequestStage(requestId, 'openai_start');
             }
             
-            logOpenAIRequest('starting_process', { 
-                shortUserId,
-                requestId 
-            });
+            // 🔧 ELIMINADO: Log de OpenAI - ya no se muestra en terminal
              
             const config = getConfig();
              
@@ -1888,8 +1956,8 @@ function setupWebhooks() {
                 threadId = thread.id;
                 threadPersistence.setThread(shortUserId, threadId, chatId, userName);
                 
-                // Suscribirse a presencia solo cuando se crea un thread nuevo
-                await subscribeToPresence(shortUserId);
+                // 🔧 NUEVO: Log de nueva conversación
+                terminalLog.newConversation(userName);
                 
                 logThreadCreated('Thread creado', { 
                     shortUserId,
@@ -1897,9 +1965,9 @@ function setupWebhooks() {
                     chatId, 
                     userName,
                     environment: appConfig.environment,
-                                requestId
-                            });
-                        } else {
+                    requestId
+                });
+            } else {
                 logInfo('THREAD_REUSE', `Thread reutilizado para ${shortUserId}`, {
                     shortUserId,
                     threadId,
@@ -1915,6 +1983,16 @@ function setupWebhooks() {
                     requestId
                 });
             }
+            
+            // 🔧 MANTENIDO: Log solo en archivos JSON para debug
+            logInfo('OPENAI_PROCESSING_START', `Procesando mensaje de ${userName}`, {
+                shortUserId,
+                userName,
+                requestId
+            });
+            
+            // 🔧 CORREGIDO: Suscribirse a presencia SIEMPRE, no solo en threads nuevos
+            await subscribeToPresence(shortUserId);
             
             // 🔧 ETAPA 4: Cleanup simplificado - solo si es thread nuevo
             if (threadId && isNewThread) {
@@ -1939,14 +2017,9 @@ function setupWebhooks() {
                 }
             }
             
-            // 🔧 ELIMINADO: Ya no se inyecta historial automáticamente
-            // OpenAI decide cuándo necesita contexto usando get_conversation_context(30|60|100|200)
-            logInfo('HISTORY_STRATEGY', 'OpenAI decide contexto bajo demanda - sin inyección automática', {
-                userId: shortUserId,
-                threadId,
-                isNewThread,
-                requestId
-            });
+            // 🔧 ELIMINADO: Inyección automática de historial
+            // El sistema ahora usa get_conversation_context on-demand
+            // OpenAI puede solicitar el contexto histórico cuando lo necesite
              
              // 🔧 ELIMINADO: Lógica de resumen automático obsoleta
              // El sistema ahora usa get_conversation_context para contexto histórico
@@ -1984,46 +2057,153 @@ function setupWebhooks() {
                      }
                      
                                          // No hay runs activos, agregar mensaje con contexto temporal
-                    // 🔧 NUEVO: Obtener contexto temporal para cada mensaje
-                    const temporalContext = await getRelevantContext(userJid, requestId);
+                    // 🔧 OPTIMIZADO: Contexto temporal solo cuando sea necesario
+                    const needsTemporalContext = await (async () => {
+                        const thread = threadPersistence.getThread(userJid);
+                        if (!thread) return { needed: true, reason: 'primer_mensaje' }; // Primer mensaje
+                        
+                        // 1. Verificar tiempo (cada 3 horas)
+                        const lastActivity = new Date(thread.lastActivity);
+                        const now = new Date();
+                        const hoursElapsed = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
+                        
+                        if (hoursElapsed >= 3) {
+                            return { needed: true, reason: 'tiempo_3h' };
+                        }
+                        
+                        // 2. Verificar cambios en perfil/labels
+                        try {
+                            const currentProfile = await guestMemory.getOrCreateProfile(userJid);
+                            const currentChatInfo = await getCachedChatInfo(userJid);
+                            
+                            // Comparar nombres
+                            const currentClientName = currentProfile?.name || 'Cliente';
+                            const currentContactName = currentChatInfo?.name || currentClientName;
+                            const storedName = thread.name || thread.userName;
+                            
+                            if (currentClientName !== storedName || currentContactName !== storedName) {
+                                return { needed: true, reason: 'cambio_nombre' };
+                            }
+                            
+                            // Comparar labels
+                            const profileLabels = currentProfile?.whapiLabels?.map((l: any) => l.name) || [];
+                            const chatLabels = currentChatInfo?.labels?.map((l: any) => l.name) || [];
+                            const currentLabels = [...new Set([...profileLabels, ...chatLabels])].sort();
+                            const storedLabels = (thread.labels || []).sort();
+                            
+                            if (JSON.stringify(currentLabels) !== JSON.stringify(storedLabels)) {
+                                return { needed: true, reason: 'cambio_labels' };
+                            }
+                            
+                            // 3. Verificar cambio de thread (esto ya lo detectaría el primer mensaje)
+                            // No necesario verificar aquí
+                            
+                            return { needed: false, reason: 'no_cambios' };
+                            
+                        } catch (error) {
+                            // En caso de error, incluir contexto por seguridad
+                            return { needed: true, reason: 'error_verificacion' };
+                        }
+                    })();
                     
-                    // 🔧 NUEVO: Detectar si es nota de voz y agregar instrucciones especiales
-                    const isVoiceMessage = userMsg.includes('🎤 [NOTA DE VOZ]');
+                    const temporalContext = needsTemporalContext.needed ? 
+                        await getRelevantContext(userJid, requestId) : '';
+                    
+                    // 🔧 NUEVO: Solo usar contexto + mensaje (sin instrucciones adicionales)
                     let messageWithContext = temporalContext + userMsg;
                     
-                    if (isVoiceMessage) {
-                        // Agregar instrucciones especiales para respuestas de voz
-                        const voiceInstructions = `\n\n[INSTRUCCIÓN DEL SISTEMA: El usuario envió una NOTA DE VOZ. Por favor responde de forma CONCISA y NATURAL, como si estuvieras hablando. Usa un tono conversacional, evita listas largas o información muy detallada. Máximo 2-3 oraciones cortas.]`;
-                        messageWithContext = temporalContext + userMsg + voiceInstructions;
-                        
-                        logInfo('VOICE_MESSAGE_DETECTED', 'Mensaje de voz detectado, agregando instrucciones especiales', {
-                            shortUserId,
-                            requestId
-                        });
-                    }
-                    
-                    // 🔧 DEBUG: Log del contexto que se envía a OpenAI
+                    // 🔧 DEBUG: Log del contexto que se envía a OpenAI (optimizado)
+                    const isVoiceMessage = userMsg.includes('🎤');
                     logInfo('CONTEXT_DEBUG', 'Contexto enviado a OpenAI', {
                         shortUserId,
-                        contextPreview: temporalContext.substring(0, 200),
+                        needsTemporalContext: needsTemporalContext.needed,
+                        contextReason: needsTemporalContext.reason,
+                        contextPreview: temporalContext ? temporalContext.substring(0, 200) : 'NO_CONTEXT',
                         messagePreview: userMsg.substring(0, 100),
                         totalLength: messageWithContext.length,
                         isVoiceMessage,
+                        contextTokensSaved: needsTemporalContext.needed ? 0 : ~150,
                         requestId
                     });
                     
+                    // 🟡 OPTIMIZACIÓN: Crear contenido multimodal si hay imágenes pendientes
+                    let messageContent: any = messageWithContext;
+                    
+                    // Obtener imágenes pendientes para este usuario
+                    const userImages = pendingImages.get(userJid) || [];
+                    
+                    if (userImages.length > 0) {
+                        // Crear array multimodal con texto e imágenes
+                        messageContent = [
+                            {
+                                type: "text",
+                                text: messageWithContext
+                            }
+                        ];
+                        
+                        // Agregar cada imagen al contenido
+                        userImages.forEach(imageUrl => {
+                            messageContent.push({
+                                type: "image_url",
+                                image_url: {
+                                    url: imageUrl
+                                }
+                            });
+                        });
+                        
+                        console.log(`🖼️ Enviando mensaje con ${userImages.length} imagen(es) al Assistant`);
+                        
+                        // Limpiar imágenes pendientes después de usar
+                        pendingImages.delete(userJid);
+                    }
+                    
                     await openaiClient.beta.threads.messages.create(threadId, {
                         role: 'user',
-                        content: messageWithContext
+                        content: messageContent
                     });
+                    
+                    // 🔧 NUEVO: Actualizar metadatos del thread cuando hay cambios
+                    if (needsTemporalContext.needed && ['cambio_nombre', 'cambio_labels'].includes(needsTemporalContext.reason)) {
+                        try {
+                            const currentProfile = await guestMemory.getOrCreateProfile(userJid);
+                            const currentChatInfo = await getCachedChatInfo(userJid);
+                            
+                            const updates: any = {};
+                            
+                            // Actualizar nombres si cambió
+                            if (needsTemporalContext.reason === 'cambio_nombre') {
+                                const currentClientName = currentProfile?.name || 'Cliente';
+                                const currentContactName = currentChatInfo?.name || currentClientName;
+                                updates.name = currentClientName;
+                                updates.userName = currentContactName;
+                            }
+                            
+                            // Actualizar labels si cambió
+                            if (needsTemporalContext.reason === 'cambio_labels') {
+                                const profileLabels = currentProfile?.whapiLabels?.map((l: any) => l.name) || [];
+                                const chatLabels = currentChatInfo?.labels?.map((l: any) => l.name) || [];
+                                updates.labels = [...new Set([...profileLabels, ...chatLabels])];
+                            }
+                            
+                            if (Object.keys(updates).length > 0) {
+                                threadPersistence.updateThreadMetadata(userJid, updates);
+                                logInfo('THREAD_METADATA_UPDATED', 'Metadatos del thread actualizados', {
+                                    shortUserId,
+                                    reason: needsTemporalContext.reason,
+                                    updates: Object.keys(updates),
+                                    requestId
+                                });
+                            }
+                        } catch (metadataError) {
+                            logWarning('THREAD_METADATA_UPDATE_ERROR', 'Error actualizando metadatos del thread', {
+                                shortUserId,
+                                error: metadataError.message,
+                                requestId
+                            });
+                        }
+                    }
                      
-                     logOpenAIRequest('message_added_with_context', { 
-                         shortUserId,
-                         originalLength: userMsg.length,
-                         contextLength: temporalContext.length,
-                         totalLength: messageWithContext.length,
-                         requestId 
-                     });
+                     // Log de mensaje agregado con contexto (eliminado para reducir ruido)
                      
                      break; // Salir del loop
                      
@@ -2054,19 +2234,12 @@ function setupWebhooks() {
                  }
              }
              
-             // Crear y ejecutar run
-             logOpenAIRequest('creating_run', { 
-                 shortUserId,
-                 requestId 
-             });
+             // Crear y ejecutar run (log eliminado para reducir ruido)
              let run = await openaiClient.beta.threads.runs.create(threadId, {
                  assistant_id: secrets.ASSISTANT_ID
              });
              
-             logOpenAIRequest('run_started', { 
-                 shortUserId,
-                 requestId 
-             });
+             // Run iniciado (log eliminado para reducir ruido)
              
              // 🔧 ELIMINADO: Mensaje interino duplicado - ya se envía específicamente en function calling
             
@@ -2080,7 +2253,7 @@ function setupWebhooks() {
                 run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
                 attempts++;
                 
-                if (attempts % 10 === 0) {
+                if (attempts === 1) { // Solo log al inicio del polling para reducir ruido
                     logInfo('OPENAI_POLLING', `Esperando...`, { 
                         shortUserId, 
                         runId: run.id, 
@@ -2097,10 +2270,11 @@ function setupWebhooks() {
                     updateRequestStage(requestId, 'completed');
                 }
                 
-                logSuccess('OPENAI_RUN_COMPLETED', `Run completado para ${shortUserId}`, { 
-                    threadId,
-                    requestId 
-                });
+                // 🔧 ELIMINADO: Log de terminal para OPENAI_RUN_COMPLETED
+                // logSuccess('OPENAI_RUN_COMPLETED', `Run completado para ${shortUserId}`, { 
+                //     threadId,
+                //     requestId 
+                // });
                 
                 // 🔧 ETAPA 1: Loggear métricas de tokens y latencia
                 const durationMs = Date.now() - startTime;
@@ -2131,27 +2305,29 @@ function setupWebhooks() {
                     });
                 }
                 
-                logOpenAIUsage('Run completado con métricas', {
-                    shortUserId,
-                    threadId,
-                    runId: run.id,
-                    totalTokens,
-                    promptTokens: run.usage?.prompt_tokens || 0,
-                    completionTokens: run.usage?.completion_tokens || 0,
-                    contextTokens,
-                    durationMs,
-                    tokensPerSecond: totalTokens > 0 ? Math.round(totalTokens / (durationMs / 1000)) : 0,
-                    requestId
-                });
+                // 🔧 ELIMINADO: Log de métricas de OpenAI para evitar spam
+                // logOpenAIUsage('Run completado con métricas', {
+                //     shortUserId,
+                //     threadId,
+                //     runId: run.id,
+                //     totalTokens,
+                //     promptTokens: run.usage?.prompt_tokens || 0,
+                //     completionTokens: run.usage?.completion_tokens || 0,
+                //     contextTokens,
+                //     durationMs,
+                //     tokensPerSecond: totalTokens > 0 ? Math.round(totalTokens / (durationMs / 1000)) : 0,
+                //     requestId
+                // });
                 
-                logOpenAILatency('Latencia del procesamiento', {
-                    shortUserId,
-                    threadId,
-                    totalDurationMs: durationMs,
-                    durationSeconds: (durationMs / 1000).toFixed(2),
-                    isHighLatency: durationMs > 30000, // >30s es alta latencia
-                    requestId
-                });
+                // 🔧 ELIMINADO: Log de latencia de OpenAI para evitar spam
+                // logOpenAILatency('Latencia del procesamiento', {
+                //     shortUserId,
+                //     threadId,
+                //     totalDurationMs: durationMs,
+                //     durationSeconds: (durationMs / 1000).toFixed(2),
+                //     isHighLatency: durationMs > 30000, // >30s es alta latencia
+                //     requestId
+                // });
                 
                 // Forzar limit: 1 para obtener solo el último mensaje
                 const messages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
@@ -2235,6 +2411,17 @@ function setupWebhooks() {
                 
                 const responseText = content.text.value;
                 
+                // 🔧 DEBUG: Log exacto de la respuesta recibida de OpenAI
+                logInfo('OPENAI_RESPONSE_RAW', 'Respuesta exacta recibida de OpenAI', {
+                    shortUserId,
+                    responseText: responseText,
+                    responseLength: responseText.length,
+                    hasDoubleAsterisks: responseText.includes('**'),
+                    responsePreview: responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''),
+                    threadId,
+                    requestId
+                });
+                
                 // Validación básica (sin cambios del plan original)
                 if (responseText === userMsg || responseText === userMsg.trim()) {
                     logError('RESPONSE_ECHO_DETECTED', 'Bot enviando input del usuario como respuesta', {
@@ -2264,13 +2451,14 @@ function setupWebhooks() {
                     });
                 }
                 
-                logOpenAIResponse('response_received', {
-                    shortUserId,
-                    threadId,
-                    responseLength: responseText.length,
-                    environment: appConfig.environment,
-                    requestId
-                });
+                // 🔧 ELIMINADO: Log de terminal para response_received
+                // logOpenAIResponse('response_received', {
+                //     shortUserId,
+                //     threadId,
+                //     responseLength: responseText.length,
+                //     environment: appConfig.environment,
+                //     requestId
+                // });
                 
                 // 🔧 ELIMINADO: Timer interino duplicado
                 
@@ -2295,24 +2483,29 @@ function setupWebhooks() {
                     requestId
                 });
                 
+                // 🔧 NUEVO: Log de respuesta limpio
+                const duration = (finalDurationMs / 1000).toFixed(1);
+                terminalLog.response(userName, responseText, parseFloat(duration));
+                
                 return responseText;
             } else if (run.status === 'requires_action' && run.required_action?.type === 'submit_tool_outputs') {
                 // Manejar function calling - SIMPLIFICADO
                 const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
                 
-                // 🔧 ETAPA 2: MENSAJE INTERINO INTELIGENTE
+                // 🔧 ETAPA 2: MENSAJE INTERINO INTELIGENTE SOLO PARA CONSULTAS COMPLEJAS
                 const hasAvailabilityCheck = toolCalls.some(tc => 
                     tc.function.name === 'check_availability'
                 );
                 
-                if (hasAvailabilityCheck && chatId) {
-                    // Enviar mensaje INMEDIATAMENTE
-                    await sendWhatsAppMessage(chatId, "Permítame consultar disponibilidad en mi sistema... 🔍");
-                    logInfo('AVAILABILITY_INTERIM_SENT', 'Mensaje interino enviado', { 
+                if (hasAvailabilityCheck && chatId && (toolCalls.length > 1 || JSON.parse(toolCalls[0].function.arguments).nights > 7)) {
+                    // 🔧 SIMPLIFICADO: Mensaje simple antes de consultar disponibilidad compleja
+                    await sendWhatsAppMessage(chatId, "Voy a consultar disponibilidad");
+                    logInfo('AVAILABILITY_INTERIM_SENT', 'Mensaje interino enviado para consulta compleja', { 
                         userId: shortUserId,
                         chatId,
                         environment: appConfig.environment,
-                        requestId
+                        requestId,
+                        toolCount: toolCalls.length
                     });
                 }
                 
@@ -2330,10 +2523,7 @@ function setupWebhooks() {
                     requestId
                 });
                 
-                // 🔧 NUEVO: Log de function calling en terminal
-                if (SHOW_FUNCTION_LOGS) {
-                    terminalLog.functionStart();
-                }
+                // 🔧 ELIMINADO: Log general redundante - se muestra en cada función individual
                 
                 const toolOutputs = [];
                 
@@ -2355,15 +2545,17 @@ function setupWebhooks() {
                         requestId
                     });
                     
-                    // 🔧 NUEVO: Log de función ejecutándose en terminal
+                    // 🔧 NUEVO: Log de función iniciando en terminal
                     if (SHOW_FUNCTION_LOGS) {
-                        terminalLog.functionExecuting(functionName);
+                        terminalLog.functionStart(functionName, functionArgs);
                     }
                     
                     try {
                         // Ejecutar la función usando el registry
+                        const functionStartTime = Date.now();
                         const { executeFunction } = await import('./functions/registry/function-registry.js');
                         const result = await executeFunction(functionName, functionArgs, requestId);
+                        const functionDuration = Date.now() - functionStartTime;
                         
                         let formattedResult;
                         if (typeof result === 'string') {
@@ -2396,7 +2588,13 @@ function setupWebhooks() {
                         
                         // 🔧 NUEVO: Log de función completada en terminal
                         if (SHOW_FUNCTION_LOGS) {
-                            terminalLog.functionCompleted(functionName);
+                            terminalLog.functionCompleted(functionName, formattedResult, functionDuration);
+                            
+                            // Log específico para availability - usar información de contexto
+                            if (functionName === 'check_availability') {
+                                // Por ahora mostrar resultado genérico, hasta que implementemos mejor tracking
+                                // La información correcta está en los logs detallados de BEDS24_RESPONSE_SUMMARY
+                            }
                         }
                         
                     } catch (error) {
@@ -2454,7 +2652,7 @@ function setupWebhooks() {
                 await new Promise(resolve => setTimeout(resolve, 1000)); // Reducido de 2s a 1s
                 
                 let postAttempts = 0;
-                const maxPostAttempts = 5; // Aumentado de 3 a 5 para más robustez
+                const maxPostAttempts = 10; // Optimizado para respuestas rápidas
                 
                 while (postAttempts < maxPostAttempts) {
                     run = await openaiClient.beta.threads.runs.retrieve(threadId, run.id);
@@ -2483,8 +2681,8 @@ function setupWebhooks() {
                         break;
                     }
                     
-                    // 🔧 ETAPA 3.3: Backoff progresivo (1s, 2s, 3s, 4s, 5s)
-                    const backoffDelay = Math.min((postAttempts + 1) * 1000, 5000);
+                    // 🔧 ETAPA 3.3: Backoff progresivo optimizado (500ms inicial, max 5s)
+                    const backoffDelay = Math.min((postAttempts + 1) * 500, 5000);
                     await new Promise(resolve => setTimeout(resolve, backoffDelay));
                     postAttempts++;
                 }
@@ -2512,6 +2710,17 @@ function setupWebhooks() {
                         if (content.type === 'text' && content.text.value && content.text.value.trim() !== '') {
                             const responseText = content.text.value;
                             
+                            // 🔧 DEBUG: Log exacto de la respuesta recibida de OpenAI (function calling)
+                            logInfo('OPENAI_RESPONSE_RAW_FUNCTION', 'Respuesta exacta recibida de OpenAI después de function calling', {
+                                shortUserId,
+                                responseText: responseText,
+                                responseLength: responseText.length,
+                                hasDoubleAsterisks: responseText.includes('**'),
+                                responsePreview: responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''),
+                                threadId,
+                                requestId
+                            });
+                            
                             logSuccess('FUNCTION_CALLING_RESPONSE', `Respuesta final recibida después de function calling`, {
                                 shortUserId,
                                 threadId,
@@ -2521,8 +2730,9 @@ function setupWebhooks() {
                                 requestId
                             });
                             
-                            // Log bonito para terminal
-                            console.log(`✅ [TOOL_SUCCESS] Respuesta recibida después de ${toolCalls.length} tool calls`);
+                            // 🔧 NUEVO: Log de respuesta limpio después de tool calls
+                            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+                            terminalLog.response(userName, responseText, parseFloat(duration));
                             
                             return responseText;
                         }
@@ -2559,18 +2769,17 @@ function setupWebhooks() {
                     requestId
                 });
                 
-                // Log bonito para terminal con información clara
-                console.log(`⚠️ [TOOL_TIMEOUT] Run no completado (status: ${run.status}) después de tools - Intentos: ${postAttempts}`);
+                // 🔧 ELIMINADO: Log duplicado - ya se maneja con logWarning
                 
-                // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
-                logWarning('FUNCTION_CALLING_TIMEOUT', 'Run no completado después de tool outputs, permitiendo flujo natural', {
+                // 🔧 MEJORADO: Fallback con mensaje informativo en lugar de cadena vacía
+                logWarning('FUNCTION_CALLING_TIMEOUT', 'Run no completado después de tool outputs, enviando mensaje de espera', {
                     shortUserId,
                     runId: run.id,
                     threadId,
                     requestId
                 });
                 
-                return '';
+                return 'Estoy verificando la disponibilidad, dame un momento más... 🔍';
             } else {
                 logError('OPENAI_RUN_ERROR', `Run falló o timeout`, {
                     shortUserId,
@@ -2634,6 +2843,9 @@ function setupWebhooks() {
                 }
             }
             
+            // 🔧 NUEVO: Log de error de OpenAI en terminal
+            terminalLog.openaiError(userName, error.message);
+            
             // 🔧 ETAPA 1: Loggear error general
             const durationMs = Date.now() - startTime;
             
@@ -2671,17 +2883,30 @@ async function initializeBot() {
     // 🔧 NUEVO: Log de startup limpio
     terminalLog.startup();
     
-    // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (del comentario externo)
+    // 🔧 ETAPA 1: Recuperación de runs huérfanos al inicio (UNA SOLA VEZ)
     // Ejecutar en background para no bloquear el healthcheck
     setTimeout(async () => {
         try {
             logInfo('ORPHANED_RUNS_RECOVERY_START', 'Iniciando recuperación de runs huérfanos');
-            await recoverOrphanedRuns();
+            
+            // 🔧 NUEVO: Agregar timeout más corto para evitar bloqueos
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Recovery timeout after 10 seconds')), 10000)
+            );
+            
+            await Promise.race([
+                recoverOrphanedRuns(),
+                timeoutPromise
+            ]);
+            
             logSuccess('ORPHANED_RUNS_RECOVERY_COMPLETE', 'Recuperación de runs huérfanos completada');
         } catch (error) {
             logError('ORPHANED_RUNS_RECOVERY_ERROR', 'Error recuperando runs huérfanos', {
-                error: error.message
+                error: error.message,
+                stack: error instanceof Error ? error.stack : undefined,
+                type: error instanceof Error ? error.constructor.name : typeof error
             });
+            // 🔧 NUEVO: NO permitir que el error cause crash
         }
     }, 5000); // Esperar 5 segundos antes de iniciar la recuperación
     
@@ -2712,6 +2937,43 @@ async function initializeBot() {
         } catch (error) {
         logWarning('CACHE_STATS_ERROR', 'Error obteniendo estadísticas de cache', { error: error.message });
         }
+    
+    // 🔧 NUEVO: Limpieza periódica de estados de usuario y caches para evitar memory leak
+    setInterval(() => {
+        try {
+            const now = Date.now();
+            let cleanedUserStates = 0;
+            let cleanedChatInfo = 0;
+            
+            // Limpiar estados de usuario inactivos por más de 24 horas
+            for (const [userId, state] of globalUserStates.entries()) {
+                const lastActivity = Math.max(state.lastMessageTimestamp, state.lastTypingTimestamp);
+                if ((now - lastActivity) > 24 * 60 * 60 * 1000) { // 24 horas
+                    globalUserStates.delete(userId);
+                    cleanedUserStates++;
+                }
+            }
+            
+            // Limpiar chatInfoCache expirado (más de 1 hora)
+            for (const [userId, cached] of chatInfoCache.entries()) {
+                if ((now - cached.timestamp) > 60 * 60 * 1000) { // 1 hora
+                    chatInfoCache.delete(userId);
+                    cleanedChatInfo++;
+                }
+            }
+            
+            if (cleanedUserStates > 0 || cleanedChatInfo > 0) {
+                logInfo('CACHE_CLEANUP', `Limpieza de caches completada`, {
+                    userStatesCleaned: cleanedUserStates,
+                    chatInfoCleaned: cleanedChatInfo
+                });
+            }
+        } catch (error) {
+            logError('CACHE_CLEANUP', 'Error limpiando caches', { error: error.message });
+        }
+    }, 60 * 60 * 1000); // Cada hora
+    
+    // 🔧 ELIMINADO: Timer periódico de typing - ya no necesario con el sistema simplificado
     
 
     
@@ -2906,23 +3168,41 @@ async function processWebhook(body: any) {
                 });
 
                 if (status === 'typing' || status === 'recording') {
-                    // Usuario está escribiendo - actualizar estado global
-                    updateTypingStatus(userId, true);
+                    // 🔧 MEJORADO: Siempre actualizar timestamp de última actividad
+                    const userState = getOrCreateUserState(userId, `${userId}@s.whatsapp.net`, getShortUserId(userId));
+                    userState.lastTyping = Date.now();
                     
-                    // 🔧 NUEVO: Solo loguear en debug mode
-                    if (process.env.DEBUG_LOGS === 'true') {
-                        console.log(`✍️ ${shortUserId} está escribiendo... (extendiendo buffer)`);
+                    // 🔧 NUEVO: Usar sistema unificado de timers inteligentes
+                    setIntelligentTimer(userId, `${userId}@s.whatsapp.net`, getShortUserId(userId), status as 'typing' | 'recording');
+                    
+                    // 🔧 NUEVO: Mostrar indicador inmediatamente con rate limiting simple
+                    const buffer = globalMessageBuffers.get(userId);
+                    const userName = buffer?.userName || getShortUserId(userId);
+                    const now = Date.now();
+                    const lastLog = typingLogTimestamps.get(userId) || 0;
+                    
+                    // Solo aplicar rate limiting si ya se mostró hace menos de 5 segundos
+                    if (now - lastLog > 5000) {
+                        if (status === 'typing') {
+                            terminalLog.typing(userName);
+                        } else if (status === 'recording') {
+                            terminalLog.recording(userName);
+                        }
+                        typingLogTimestamps.set(userId, now);
+                    }
+                } else if (status === 'online' || status === 'offline' || status === 'pending') {
+                    // 🔧 NUEVO: Limpiar estado de grabación cuando deje de grabar
+                    const userState = globalUserStates.get(userId);
+                    if (userState) {
+                        userState.isCurrentlyRecording = false;
                     }
                     
-                } else if (status === 'online' || status === 'offline' || status === 'pending') {
-                    // Usuario dejó de escribir - actualizar estado global
-                    if (globalMessageBuffers.has(userId)) {
-                        updateTypingStatus(userId, false);
-                        
-                        // 🔧 NUEVO: Solo loguear en debug mode
-                        if (process.env.DEBUG_LOGS === 'true') {
-                            console.log(`⏸️ ${shortUserId} dejó de escribir`);
-                        }
+                    // 🔧 CORREGIDO: Solo mostrar si hay mensajes pendientes
+                    const buffer = globalMessageBuffers.get(userId);
+                    if (buffer && buffer.messages.length > 0) {
+                        const userName = buffer.userName || getShortUserId(userId);
+                        const wasVoiceInput = userState?.lastInputVoice === true;
+                        console.log(`⏰ ${wasVoiceInput ? '🎙️' : '✍️'} ${userName} dejó de ${wasVoiceInput ? 'grabar' : 'escribir'}.`);
                     }
                 }
             });
@@ -2981,10 +3261,7 @@ async function processWebhook(body: any) {
             return;
         }
         
-        logInfo('WEBHOOK', `Procesando ${messages.length} mensajes del webhook`, {
-            environment: appConfig.environment,
-            messageCount: messages.length
-        });
+
         
         // Procesar cada mensaje
         for (const message of messages) {
@@ -3007,7 +3284,7 @@ async function processWebhook(body: any) {
                     // Verificar si hay thread activo
                     const threadRecord = threadPersistence.getThread(shortClientId);
                     if (!threadRecord) {
-                        console.log(`⚠️  [AGENT] Sin conversación activa con ${shortClientId}`);
+                        // 🔧 ELIMINADO: Log duplicado - ya se maneja con logWarning
                         logWarning('MANUAL_NO_THREAD', `No hay conversación activa`, { 
                             shortClientId: shortClientId,
                             agentName: fromName,
@@ -3016,11 +3293,7 @@ async function processWebhook(body: any) {
                         continue;
                     }
                     
-                    // 🎯 Log compacto - Solo primer mensaje del grupo
-                    if (!globalMessageBuffers.has(chatId)) {
-                        const clientName = threadRecord.userName || 'Cliente';
-                        console.log(`🔧 [AGENT] ${fromName} → ${clientName}: "${text.substring(0, 25)}${text.length > 25 ? '...' : ''}"`);
-                    }
+                                // 🔧 ELIMINADO: Log duplicado - ya se maneja con logInfo
                     
                     // Solo log técnico detallado
                     logInfo('MANUAL_DETECTED', `Mensaje manual del agente detectado`, {
@@ -3091,7 +3364,7 @@ async function processWebhook(body: any) {
                                 // 1. Agregar contexto del sistema - INSTRUCCIÓN SIMPLE
                                 await openaiClient.beta.threads.messages.create(threadRecord.threadId, {
                                     role: 'user',
-                                    content: `[Mensaje manual escrito por agente ${finalBuffer.userName} - NO RESPONDER]`
+                                    content: `[Mensaje manual de ${finalBuffer.userName}]`
                                 });
                                 
                                 // 2. Agregar el mensaje manual agrupado
@@ -3105,7 +3378,7 @@ async function processWebhook(body: any) {
                                 
                                 // 🎯 Log compacto final
                                 const msgCount = finalBuffer.messages.length > 1 ? `${finalBuffer.messages.length} msgs` : '1 msg';
-                                console.log(`✅ [BOT] Enviado a 🤖 OpenAI → Contexto actualizado (${msgCount})`);
+                                // 🔧 ELIMINADO: Log duplicado - ya se maneja con logInfo
                                 
                                 // Solo log técnico
                                 logSuccess('MANUAL_SYNC_SUCCESS', `Mensajes manuales sincronizados exitosamente`, {
@@ -3119,7 +3392,7 @@ async function processWebhook(body: any) {
                                 });
                                 
                             } catch (error) {
-                                console.log(`❌ [AGENT] Error sincronizando con OpenAI: ${error.message}`);
+                                // 🔧 ELIMINADO: Log duplicado - ya se maneja con logError
                                 logError('MANUAL_SYNC_ERROR', `Error sincronizando mensajes manuales`, {
                                     error: error.message,
                                     threadId: threadRecord.threadId,
@@ -3142,52 +3415,80 @@ async function processWebhook(body: any) {
                     continue;
                 }
                 
-                logMessageReceived('Mensaje recibido', {
-                    userId: message.from,
-                    chatId: message.chat_id,
-                    from: message.from,
-                    type: message.type,
-                    timestamp: message.timestamp,
-                    body: message.text?.body?.substring(0, 100) + '...',
-                    environment: appConfig.environment
-                });
+                // Log ya se hace arriba con el nombre del usuario
                 
                 // Procesar mensajes de texto y voz que no sean del bot
                 if (!message.from_me) {
                     const userId = message.from;
                     const chatId = message.chat_id;
-                    const userName = cleanContactName(message.from_name);
                     
+                    // 🔧 NUEVO: Usar chat_name del webhook directamente
+                    let userName = message.chat_name || cleanContactName(message.from_name);
+                    
+                    // 🔧 NUEVO: Si no hay chat_name, usar from_name limpio
+                    if (!userName || userName === 'Usuario') {
+                        userName = cleanContactName(message.from_name) || getShortUserId(userId);
+                    }
+                    
+                    // 🔧 ELIMINADO: Log de debug - no mostrar en terminal
+                    
+                    // 🔧 ELIMINADO: Log duplicado - ya se maneja con terminalLog.message()
+                    
+                    // Procesar mensajes de imagen
+                    if (message.type === 'image') {
+                        // 🔧 NUEVO: Log de imagen limpio
+                        terminalLog.image(userName);
+                        
+                        // 🟡 OPTIMIZACIÓN: Guardar imagen para envío directo al Assistant
+                        const imageUrl = message.image?.link;
+                        if (imageUrl) {
+                            // Guardar URL de imagen para el usuario
+                            if (!pendingImages.has(userId)) {
+                                pendingImages.set(userId, []);
+                            }
+                            pendingImages.get(userId)!.push(imageUrl);
+                            
+                            console.log(`🖼️ Imagen guardada para envío al Assistant: ${imageUrl}`);
+                            
+                            // Agregar texto simple al buffer
+                            addToGlobalBuffer(userId, '📷 Imagen recibida', chatId, userName);
+                        } else {
+                            addToGlobalBuffer(userId, '📷 Sin URL disponible', chatId, userName);
+                        }
+                    }
                     // Procesar mensajes de voz/audio
-                    if (message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') {
+                    else if (message.type === 'voice' || message.type === 'audio' || message.type === 'ptt') {
                         
                         // 🔧 NUEVO: Log de nota de voz limpio
                         terminalLog.voice(userName);
                         
                         // Marcar que el usuario envió voz
-                        const userState = globalUserStates.get(userId) || { lastInputVoice: false } as any;
+                        const userState = getOrCreateUserState(userId, chatId, userName);
                         userState.lastInputVoice = true;
-                        globalUserStates.set(userId, userState);
+                        
+                        // 🔧 FIX: Guardar también con chatId para consistencia
+                        globalUserStates.set(chatId, userState);
+                        
                         
                         // Verificar si la transcripción está habilitada
                         if (process.env.ENABLE_VOICE_TRANSCRIPTION === 'true') {
-                            try {
-                                // Obtener URL del audio
-                                const audioUrl = message.voice?.url || message.audio?.url || message.ptt?.url;
+                                                            try {
+                                    // Obtener URL del audio
+                                    const audioUrl = message.voice?.link || message.audio?.link || message.ptt?.link;
                                 
                                 if (audioUrl) {
                                     // Transcribir el audio usando la función global
-                                    const transcription = await transcribeAudio(audioUrl, userId, message.id);
-                                    const audioText = `🎤 [NOTA DE VOZ]: ${transcription}`;
+                                    const transcription = await transcribeAudio(audioUrl, userId, userName, message.id);
+                                    const audioText = `🎤 ${transcription}`;
                                     
-                                    console.log(`🎤 [${getShortUserId(userId)}] Transcripción: "${transcription.substring(0, 50)}..."`);
+                                    // 🔧 NUEVO: Log de transcripción limpio
+                                    terminalLog.message(userName, transcription);
                                     
                                     // Agregar transcripción al buffer con metadata especial
                                     addToGlobalBuffer(userId, audioText, chatId, userName, true); // true = es voz
                                 } else {
                                     // Si no hay URL, usar mensaje por defecto
-                                    console.log(`⚠️ [${getShortUserId(userId)}] Nota de voz sin URL`);
-                                    addToGlobalBuffer(userId, '🎤 [NOTA DE VOZ]: Sin transcripción disponible', chatId, userName, true);
+                                    addToGlobalBuffer(userId, '🎤 Sin transcripción disponible', chatId, userName, true);
                                 }
                             } catch (error) {
                                 console.error(`❌ Error transcribiendo audio:`, error);
@@ -3197,12 +3498,11 @@ async function processWebhook(body: any) {
                                 });
                                 
                                 // Fallback si falla la transcripción
-                                addToGlobalBuffer(userId, '🎤 [NOTA DE VOZ]: Error en transcripción', chatId, userName, true);
+                                addToGlobalBuffer(userId, '🎤 Error en transcripción', chatId, userName, true);
                             }
                         } else {
                             // Si la transcripción no está habilitada
-                            console.log(`ℹ️ [${getShortUserId(userId)}] Transcripción deshabilitada`);
-                            addToGlobalBuffer(userId, '🎤 [NOTA DE VOZ]: Transcripción deshabilitada', chatId, userName, true);
+                            addToGlobalBuffer(userId, '🎤 Transcripción deshabilitada', chatId, userName, true);
                         }
                     }
                     // Procesar mensajes de texto normales
@@ -3212,8 +3512,13 @@ async function processWebhook(body: any) {
                         // 🔧 NUEVO: Log de mensaje limpio
                         terminalLog.message(userName, text);
                         
-                        // Agregar al buffer global
-                        addToGlobalBuffer(userId, text, chatId, userName);
+                        // 🔧 FIX: Marcar que el usuario envió texto (no voz)
+                        const userState = getOrCreateUserState(userId, chatId, userName);
+                        userState.lastInputVoice = false;
+                        globalUserStates.set(chatId, userState);
+                        
+                        // Agregar al buffer global con emoji de texto
+                        addToGlobalBuffer(userId, `📝 ${text}`, chatId, userName);
                     }
                 }
             } catch (error) {
