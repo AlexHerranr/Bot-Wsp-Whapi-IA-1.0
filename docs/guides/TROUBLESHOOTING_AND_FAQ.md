@@ -6,7 +6,40 @@ Esta guía ayuda a resolver problemas comunes del bot, interpretar métricas y r
 
 ## **Problemas Comunes y Soluciones**
 
-### **1. Race Errors Elevados**
+### **1. Problemas de Validación de Respuestas**
+
+#### **Síntomas**
+- Bot envía apartamentos incorrectos (ej: 1722-B en lugar de 1722-A)
+- Precios no coinciden con datos de BEDS24
+- Logs: `RESPONSE_VALIDATION` o `RESPONSE_RETRY_ATTEMPT` frecuentes
+
+#### **Causas Posibles**
+- OpenAI altera datos al generar respuestas naturales
+- Patrones regex no detectan nuevos formatos
+- Datos originales de BEDS24 con formato inesperado
+
+#### **Soluciones**
+```bash
+# 1. Verificar logs de validación
+grep "RESPONSE_VALIDATION\|RESPONSE_RETRY" logs/bot-session-*.log | tail -10
+
+# 2. Revisar patrones detectados
+grep "apartment_name\|price.*no encontrado" logs/bot-session-*.log
+
+# 3. Verificar datos originales vs respuesta
+grep -A5 -B5 "OPENAI_RESPONSE_RAW_FUNCTION" logs/bot-session-*.log
+```
+
+#### **Ajustes de Configuración**
+```typescript
+// Modificar patrones en src/utils/response-validator.ts
+const apartmentRegex = /(?:Apartamento|Apartaestudio|Apto\.?|Suite)\s+(\d{3,4}-[A-Z])/gi;
+
+// Ajustar timeout de retry
+const RETRY_TIMEOUT = 300000; // 5 minutos por defecto
+```
+
+### **2. Race Errors Elevados**
 
 #### **Síntomas**
 - Métrica `race_errors_total` crece rápidamente
@@ -196,6 +229,23 @@ A: Verificar logs de `THREAD_LOCK_BUSY` y `ORPHANED_RUN_CANCELLED`. Posibles cau
 
 **Q: ¿Cómo sé si el bot está funcionando correctamente?**
 A: Monitorear `bot_messages_processed_total` (debe crecer), `race_errors_total` (debe ser bajo), y logs de actividad normal.
+
+### **Validación de Respuestas**
+
+**Q: ¿Por qué el bot envía apartamentos incorrectos?**
+A: El sistema de validación detecta y corrige automáticamente estos errores. Verificar logs `RESPONSE_VALIDATION` para ver correcciones aplicadas.
+
+**Q: ¿Cuándo hace retry el bot?**
+A: Solo para errores complejos (precios incorrectos). Errores simples (nombres de apartamentos) se corrigen automáticamente sin retry.
+
+**Q: ¿Qué pasa si el retry falla?**
+A: Se aplica corrección manual como fallback. Ver logs `RESPONSE_RETRY_FAILED` y `RESPONSE_RETRY_FALLBACK`.
+
+**Q: ¿Puedo desactivar la validación?**
+A: No recomendado. La validación previene errores críticos. Si es necesario, modificar `needsRetry: false` en `response-validator.ts`.
+
+**Q: ¿Cómo verificar que la validación funciona?**
+A: Monitorear logs `RESPONSE_VALIDATION` y `RESPONSE_RETRY_SUCCESS`. Dashboard web muestra correcciones en tiempo real.
 
 ### **Configuración y Tuning**
 

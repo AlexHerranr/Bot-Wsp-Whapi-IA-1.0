@@ -7,6 +7,7 @@
 ### **📖 Documentación Esencial**
 - **[🏗️ Arquitectura](architecture/ARCHITECTURE.md)** - Diseño del sistema
 - **[⚙️ Funcionalidades](features/)** - Características implementadas
+- **[🔍 Validación de Respuestas](features/RESPONSE_VALIDATION_SYSTEM.md)** - Sistema anti-errores IA
 - **[🔧 Funciones OpenAI](functions/)** - Inventario de funciones
 - **[🏨 Integración Beds24](integrations/beds24/)** - API hotelera
 - **[📱 API WhatsApp](integrations/WHAPI_COMPLETE_API_REFERENCE.md)** - Referencia completa
@@ -19,6 +20,7 @@
 
 ### **📋 Guías de Usuario**
 - **[🎯 Guías Prácticas](guides/)** - Dashboard, APIs, troubleshooting
+- **[⚙️ Configuración Validador](guides/RESPONSE_VALIDATION_CONFIG.md)** - Setup del sistema de validación
 - **[🤖 Gestión Asistente](development/ASSISTANT_MANAGEMENT.md)** - Configuración OpenAI
 - **[🧠 Sistema RAG](rag/)** - Documentos de contexto
 

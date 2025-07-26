@@ -98,6 +98,7 @@ src/
 │   └── README.md               # Documentación
 ├── utils/monitoring/           # Monitoreo y métricas
 │   └── dashboard.ts            # Dashboard de métricas
+├── utils/response-validator.ts  # 🔍 Validador post-generación
 ├── utils/whapi/                # Utilidades WhatsApp
 │   ├── chatHistory.ts          # Historial de chat
 │   ├── whapiLabels.js          # Gestión de etiquetas
@@ -128,7 +129,11 @@ Cliente Nuevo? → Obtener Historial → Cache → Inyección Contexto
 
 ### **3. PROCESAMIENTO IA**
 ```
-OpenAI Assistant → Function Calling → Resolución → Respuesta
+OpenAI Assistant → Function Calling → Resolución → Validación → Respuesta
+                                                      ↓
+                                               Response Validator
+                                                      ↓
+                                            [Corrección/Retry] → Respuesta Final
 ```
 
 ### **4. INTEGRACIÓN EXTERNA**
@@ -150,6 +155,10 @@ Formateo → WhatsApp API → Etiquetas → Logging
 - **Assistants API**: Gestión de conversaciones persistentes
 - **Function Calling**: Ejecución de funciones específicas
 - **Context Management**: Gestión de contexto histórico
+- **🔍 Response Validation**: Sistema de validación post-generación
+  - Validación automática de apartamentos y precios
+  - Corrección inteligente de discrepancias
+  - Sistema de retry con feedback interno
 
 ### **💬 INTEGRACIÓN WHATSAPP**
 - **WhatsApp Business API**: Comunicación con usuarios
