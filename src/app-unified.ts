@@ -66,6 +66,9 @@ import type { UserState } from './utils/userStateManager.js';
 
 // Importar sistema de monitoreo
 import { botDashboard } from './utils/monitoring/dashboard.js';
+
+// Importar validador de respuestas
+import { validateAndCorrectResponse } from './utils/response-validator.js';
 import metricsRouter, { 
     incrementFallbacks, 
     setTokensUsed, 
@@ -2828,20 +2831,39 @@ function setupWebhooks() {
                                 requestId
                             });
                             
+                            // 🔧 NUEVO: Validar y corregir respuesta post-generación
+                            const originalOutputs = toolOutputs.map(output => output.output);
+                            const validation = validateAndCorrectResponse(responseText, originalOutputs);
+                            
+                            let finalResponse = responseText;
+                            if (validation.hadErrors) {
+                                finalResponse = validation.correctedResponse;
+                                
+                                logWarning('RESPONSE_VALIDATION', 'Correcciones aplicadas a respuesta de OpenAI', {
+                                    shortUserId,
+                                    threadId,
+                                    corrections: validation.corrections,
+                                    originalLength: responseText.length,
+                                    correctedLength: finalResponse.length,
+                                    requestId
+                                });
+                            }
+                            
                             logSuccess('FUNCTION_CALLING_RESPONSE', `Respuesta final recibida después de function calling`, {
                                 shortUserId,
                                 threadId,
-                                responseLength: responseText.length,
+                                responseLength: finalResponse.length,
                                 toolCallsExecuted: toolCalls.length,
                                 environment: appConfig.environment,
-                                requestId
+                                requestId,
+                                hadValidationCorrections: validation.hadErrors
                             });
                             
                             // 🔧 NUEVO: Log de respuesta limpio después de tool calls
                             const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-                            terminalLog.response(userName, responseText, parseFloat(duration));
+                            terminalLog.response(userName, finalResponse, parseFloat(duration));
                             
-                            return responseText;
+                            return finalResponse;
                         }
                     }
                     
