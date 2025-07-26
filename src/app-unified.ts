@@ -394,15 +394,24 @@ async function transcribeAudio(audioUrl: string | undefined, userId: string, use
         }
         
         const audioBuffer = await audioResponse.arrayBuffer();
-        const audioFile = new File([new Uint8Array(audioBuffer)], 'audio.ogg', { type: 'audio/ogg' });
+        
+        // Crear archivo temporal en Node.js (compatible con Railway)
+        const tempAudioPath = path.join('tmp', `audio_${Date.now()}.ogg`);
+        await fs.writeFile(tempAudioPath, Buffer.from(audioBuffer));
+        
+        // Crear ReadStream para OpenAI (método oficial para Node.js)
+        const audioStream = (await import('fs')).createReadStream(tempAudioPath);
         
         // Transcribir con Whisper
         const openai = new OpenAI({ apiKey: appConfig.secrets.OPENAI_API_KEY });
         const transcription = await openai.audio.transcriptions.create({
-            file: audioFile,
+            file: audioStream as any,
             model: 'whisper-1',
             language: 'es'
         });
+        
+        // Limpiar archivo temporal para evitar acumulación
+        await fs.unlink(tempAudioPath).catch(() => {}); // Ignorar error si falla
         
         logSuccess('AUDIO_TRANSCRIBED', 'Audio transcrito exitosamente', {
             userId: getShortUserId(userId),
