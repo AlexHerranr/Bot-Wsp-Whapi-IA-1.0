@@ -1108,14 +1108,36 @@ async function sendRecordingIndicator(chatId: string): Promise<void> {
     }
 }
 
+// Función para detectar contenido sensible (precios, números, enlaces)
+function isQuoteOrPriceMessage(message: string): boolean {
+    const sensitivePatterns = [
+        /\$\d+[.,]?\d*/g,           // $840.000, $210,000
+        /\d+[.,]?\d*\s*(cop|pesos?)/gi,  // 840000 COP, 210 pesos
+        /\d+\s*noches?/gi,         // 4 noches
+        /https?:\/\/\S+/i,         // URLs (enlaces)
+        /wa\.me\/p/i               // enlaces específicos de WhatsApp
+    ];
+    
+    return sensitivePatterns.some(pattern => pattern.test(message));
+}
+
 // Función para envío de mensajes a WhatsApp con división inteligente en párrafos
 async function sendWhatsAppMessage(chatId: string, message: string) {
     const shortUserId = getShortUserId(chatId);
     
     // Verificar si debe responder con voz (si input fue voz)
     const userState = globalUserStates.get(getShortUserId(chatId));
-    const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && 
+    let shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && 
         userState?.lastInputVoice === true;
+
+    // Forzar texto si es cotización/precio
+    if (shouldUseVoice && isQuoteOrPriceMessage(message)) {
+        shouldUseVoice = false;  // Responder en texto
+        logInfo('VOICE_FORCED_TO_TEXT', 'Respuesta forzada a texto por contenido sensible (precios/números/enlaces)', {
+            userId: getShortUserId(chatId),
+            messagePreview: message.substring(0, 50)
+        });
+    }
     
     if (shouldUseVoice) {
         try {
