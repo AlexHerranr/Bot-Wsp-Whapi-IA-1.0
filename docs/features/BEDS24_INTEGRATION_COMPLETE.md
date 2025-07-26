@@ -168,40 +168,40 @@ Conversiones OBLIGATORIAS (usar 2025):
 
 ---
 
-## 📤 Formatos de Respuesta
+## 📤 Formatos de Respuesta (ACTUALIZADO JULIO 26, 2025)
+
+### **🆕 NUEVO FORMATO: Texto Organizado (Reemplaza JSON)**
 
 ### Caso 1: Opciones Completas Disponibles
 ```
-📅 **Consulta: 15 Jul - 18 Jul (3 noches)**
+📅 Disponibilidad: 15/07/2025 al 18/07/2025 (3 noches)
 
-🥇 **DISPONIBILIDAD COMPLETA (3 opciones)**
-✅ **Opción 1**: 1317 - 3 noches
-   💰 Total: $540,000
-   📊 Promedio: $180,000/noche
-
-✅ **Opción 2**: 2005 A - 3 noches
-   💰 Total: $615,000
-   📊 Promedio: $205,000/noche
-
-🔄 *Datos en tiempo real desde Beds24*
+✅ APARTAMENTOS DISPONIBLES (2 Aptos Disponibles):
+🏠 Apartamento 1317 - $540,000 total ($180,000/noche)
+🏠 Apartamento 2005-A - $615,000 total ($205,000/noche)
 ```
 
 ### Caso 2: Solo Opciones con Traslados
 ```
-📅 **Consulta: 10 Jul - 20 Jul (10 noches)**
+📅 Disponibilidad: 10/07/2025 al 20/07/2025 (10 noches)
 
-🥈 **ALTERNATIVAS CON TRASLADO** (por disponibilidad limitada - posible descuento)
-🔄 **Opción 1**: 1 traslado - $1,560,000
-   🏠 1421 B: 2025-07-10 a 2025-07-13 (4 noches) - $480,000
-   🔄 1001: 2025-07-14 a 2025-07-19 (6 noches) - $1,080,000
+🔄 ALTERNATIVAS (2 Cambios de Apto - solo si necesario):
+🏠 Opción 1 traslado - $1,560,000 total
+   Apartamento 1421-B: 10/07-13/07 ($480,000)
+   Apartamento 1001: 14/07-19/07 ($1,080,000)
 
-🔄 **Opción 2**: 2 traslados - $1,410,000
-   🏠 1722 A: 2025-07-10 (1 noche) - $0
-   🔄 1818: 2025-07-11 a 2025-07-16 (6 noches) - $900,000
-   🔄 1722 B: 2025-07-17 a 2025-07-19 (3 noches) - $510,000
-
-🔄 *Datos en tiempo real desde Beds24*
+🏠 Opción 2 traslados - $1,410,000 total
+   Apartamento 1722-A: 10/07 ($0)
+   Apartamento 1818: 11/07-16/07 ($900,000)
+   Apartamento 1722-B: 17/07-19/07 ($510,000)
 ```
+
+### **📊 Cambios vs Formato Anterior:**
+- ✅ **Eliminado JSON**: Reemplazado por texto fácil de leer
+- ✅ **Contadores dinámicos**: `(2 Aptos Disponibles)` se ajusta automáticamente
+- ✅ **Fechas DD/MM/YYYY**: Formato más natural
+- ✅ **Indicador excepcionalidad**: `solo si necesario` para alternativas
+- ✅ **Reducción tokens**: ~50% menos tokens que formato JSON
 
 ---
 

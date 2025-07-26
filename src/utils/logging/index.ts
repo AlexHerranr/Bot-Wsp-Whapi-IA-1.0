@@ -1,4 +1,4 @@
-// src/utils/logging/index.ts
+// src/utils/logging/index.ts - Updated with Voice/Image optimizations
 
 import { botDashboard } from '../monitoring/dashboard.js';
 
@@ -266,6 +266,18 @@ function enrichedLog(
 
 // 🔧 NUEVO: Función para formatear logs simples de terminal
 function formatSimpleConsoleLog(category: string, message: string, details: any, level: LogLevel): string {
+    // 🔧 NUEVO: Reducir logs técnicos en terminal (como código antiguo)
+    if (process.env.LOG_TO_CONSOLE !== 'true' && !IS_PRODUCTION) {
+        // Solo mostrar mensajes críticos y de flujo principal
+        const allowedCategories = [
+            'MESSAGE_RECEIVED', 'MESSAGE_PROCESS', 'OPENAI_RESPONSE', 
+            'SERVER_START', 'BOT_READY', 'ERROR', 'FATAL', 'ALERT'
+        ];
+        if (!allowedCategories.includes(category)) {
+            return null;
+        }
+    }
+    
     const emoji = { 'SUCCESS': '✅', 'ERROR': '❌', 'WARNING': '⚠️', 'INFO': 'ℹ️' }[level];
     
     // Extraer información útil de los detalles
@@ -293,57 +305,53 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
         return `🤖 [BOT] ${count} msgs → OpenAI`;
     }
     
-    // === PROCESAMIENTO IA ===
+    // === PROCESAMIENTO IA === (formateadores eliminados - se usa terminalLog)
     if (category === 'OPENAI_REQUEST') {
-        return `🤖 [BOT] Procesando con IA...`;
+        return null; // No mostrar en terminal - se usa terminalLog
     }
     
     if (category === 'OPENAI_RESPONSE') {
-        const duration = details?.duration ? `${(details.duration/1000).toFixed(1)}s` : '';
-        return `✅ [BOT] Completado (${duration}) → 💬 "${messagePreview.substring(0, 50)}${messagePreview.length > 50 ? '...' : ''}"`;
+        return `🤖 OpenAI → response_received`;
     }
     
     if (category === 'OPENAI_ERROR') {
-        return `❌ [BOT] Error en procesamiento OpenAI para ${userName}`;
+        return null; // No mostrar en terminal - se usa terminalLog.openaiError()
     }
     
-    // === FUNCIONES ===
+    // === FUNCIONES === (eliminado - se usa terminalLog)
     if (category === 'FUNCTION_CALLING_START') {
-        const functionName = details?.functionName || 'función';
-        return `⚙️ Ejecutando función: ${functionName}`;
+        return null; // No mostrar - se usa terminalLog.functionStart
     }
     
     if (category === 'FUNCTION_HANDLER') {
-        const functionName = details?.functionName || 'función';
-        return `✅ ${functionName} → ${details?.result || 'completado'}`;
+        return null; // No mostrar - se usa terminalLog.functionCompleted
     }
     
-    // === BEDS24 ===
+    // === BEDS24 === (eliminado - se usa terminalLog en functions)
     if (category === 'BEDS24_REQUEST') {
-        return `🏨 Beds24 → Consultando disponibilidad...`;
+        return null; // No mostrar - se usa terminalLog.functionProgress
     }
     
     if (category === 'BEDS24_RESPONSE_DETAIL') {
-        const options = details?.options || details?.availabilityCount || 0;
-        return `✅ Beds24 → ${options} opciones encontradas`;
+        return null; // No mostrar - se usa terminalLog.availabilityResult
     }
     
-    // === WHATSAPP ===
+    // === WHATSAPP === (formateadores eliminados - se usa terminalLog.response)
     if (category === 'WHATSAPP_SEND') {
-        return `📤 Enviando respuesta a ${userName}...`;
+        return null; // No mostrar en terminal - se usa terminalLog.response()
     }
     
     if (category === 'WHATSAPP_SEND' && level === 'SUCCESS') {
-        return `✅ Mensaje enviado exitosamente`;
+        return null; // No mostrar en terminal - se usa terminalLog.response()
     }
     
-    // === THREADS ===
+    // === THREADS === (formateadores eliminados - se usa terminalLog.newConversation)
     if (category === 'THREAD_CREATED') {
-        return `🧵 Nuevo thread creado`;
+        return null; // No mostrar en terminal - se usa terminalLog.newConversation()
     }
     
     if (category === 'THREAD_REUSE') {
-        return `🧵 Thread existente reutilizado`;
+        return null; // No mostrar en terminal - no necesario
     }
     
     // === BUFFER ===
@@ -352,10 +360,9 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
         return `📦 Agrupados ${count} msgs`;
     }
     
-    // === ETIQUETAS ===
+    // === ETIQUETAS === (eliminado para reducir spam)
     if (category === 'WHAPI_LABELS') {
-        const count = details?.labelsCount || 0;
-        return `🏷️ ${count} etiquetas sincronizadas`;
+        return null; // No mostrar en terminal - genera spam
     }
     
     // === ERRORES ===

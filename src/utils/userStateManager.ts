@@ -20,6 +20,8 @@ export interface UserState {
     quotedMessagesCount?: number;
     // 🔧 NUEVO: Timestamp del último typing detectado
     lastTyping?: number;
+    // 🔧 NUEVO: Estado de grabación actual para buffer inteligente
+    isCurrentlyRecording?: boolean;
 }
 
 export class UserStateManager {

@@ -1,95 +1,81 @@
-# Bot Logs Parser - .gitignore
+# TeAlquilamos Bot - WhatsApp AI Assistant
 
-# Variables de entorno y secretos
+# Dependencies
+node_modules/
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+
+# Environment files
 .env
 .env.local
+.env.production
+.env.staging
 .env.*.local
 
-# Archivos de logs generados
-bot_sessions_*.txt
+# Logs (organized structure)
+logs/sessions/current/*.log
+logs/sessions/archived/
+logs/railway/downloads/*.txt
 *.log
 
-# Archivos temporales de Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+# Temporary files (organized structure)
+tmp/audio/voice_*.ogg
+tmp/audio/voice_*.mp3
+tmp/audio/archive/
+tmp/backups/threads/
+tmp/processing/
+tmp/images/
+tmp/documents/
 
-# Cache de logs
-/tmp/bot_logs_cache.json
-*.cache
-
-# Archivos de entorno virtual
-venv/
-env/
-ENV/
-
-# Archivos del IDE
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Archivos del sistema
+# OS files
 .DS_Store
 Thumbs.db
 desktop.ini
+*.lnk
+ehthumbs.db
 
-# Archivos de configuración local
-config.local.yaml
-.env
-.env.local
-cloud-run-config.yaml
+# Lock files (keep only pnpm-lock.yaml)
+package-lock.json
+yarn.lock
 
-# Archivos de prueba temporales
-test_output_*.txt
-temp_*.txt
+# Coverage and test outputs
+coverage/
+*.lcov
+.nyc_output
 
-# Logs de error
-error.log
-debug.log
+# Assistant config with sensitive data
+config/assistant/assistant-config.json
+config/environments/production.json
+config/secrets/
 
-# Archivos de backup
+# Python files (for log tools)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+ENV/
+
+# Backup files
 *.bak
 *.backup
 *.old
 
-# Archivos comprimidos temporales
+# Cache files
+*.cache
+/tmp/bot_logs_cache.json
+
+# Compressed files
 *.zip
 *.tar.gz
 *.rar
-
-# Archivos de audio temporales
-tmp/audio/
-tmp/audio/*.ogg
-tmp/audio/*.mp3
-
-# Mantener estructura de directorios pero ignorar contenido temporal
-examples/*.txt
-!examples/ejemplo_archivo_consolidado.txt
-
-# Archivos específicos de Windows
-*.lnk
-ehthumbs.db
-node_modules
-
-*.env
-.env

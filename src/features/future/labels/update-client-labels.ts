@@ -15,6 +15,7 @@
 import { whapiLabels } from '../../../utils/whapi/index.js';
 import { enhancedLog } from '../../../utils/core/index.js';
 import { threadPersistence } from '../../../utils/persistence/index.js';
+import { invalidateUserCaches } from '../../../app-unified.js';
 
 export interface UpdateLabelsArgs {
   userId: string;
@@ -62,6 +63,9 @@ export async function updateClientLabels(args: UpdateLabelsArgs): Promise<Update
 
     // Actualizar etiquetas en Whapi
     const result = await whapiLabels.updateChatLabels(userId, removeIds, addIds);
+    
+    // 🟡 OPTIMIZACIÓN: Invalidar cachés después de actualizar etiquetas
+    invalidateUserCaches(userId);
 
     // Sincronizar etiquetas en el sistema de persistencia de threads
     try {

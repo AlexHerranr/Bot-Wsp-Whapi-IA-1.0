@@ -1,71 +1,133 @@
-# 📚 Documentación - Bot Logs Parser
+# 📚 **Documentación - Bot WhatsApp TeAlquilamos**
 
-Esta carpeta contiene la documentación detallada del analizador de logs.
+> Sistema de IA conversacional para gestión de reservas hoteleras con OpenAI GPT-4
 
-## 📋 **Índice de Documentación**
+## 🚀 **Inicio Rápido**
 
-### **📖 Manuales de Usuario**
-- **[MANUAL_USO.md](MANUAL_USO.md)** - Manual completo de uso
-- **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Instrucciones de instalación
-- **[README_BOT_LOGS.md](README_BOT_LOGS.md)** - Documentación técnica detallada
+### **📖 Documentación Esencial**
+- **[🏗️ Arquitectura](architecture/ARCHITECTURE.md)** - Diseño del sistema
+- **[⚙️ Funcionalidades](features/)** - Características implementadas
+- **[🔧 Funciones OpenAI](functions/)** - Inventario de funciones
+- **[🏨 Integración Beds24](integrations/beds24/)** - API hotelera
+- **[📱 API WhatsApp](integrations/WHAPI_COMPLETE_API_REFERENCE.md)** - Referencia completa
 
-### **🚀 Guías Rápidas** (En directorio principal)
-- **[../COMANDOS_INDIVIDUALES.md](../COMANDOS_INDIVIDUALES.md)** - Guía de archivos individuales
-- **[../COMANDOS_RAPIDOS.md](../COMANDOS_RAPIDOS.md)** - Comandos básicos
-- **[../QUICK_START.md](../QUICK_START.md)** - Inicio rápido
+### **🛠️ Desarrollo**
+- **[🚀 Despliegue](deployment/)** - Guías de deployment
+- **[💻 Desarrollo Local](development/)** - Setup y workflow
+- **[🔒 Seguridad](security/)** - Manejo de secretos y seguridad
+- **[📊 Logging](logging/)** - Sistema de logs
 
-## 🎯 **Por Dónde Empezar**
+### **📋 Guías de Usuario**
+- **[🎯 Guías Prácticas](guides/)** - Dashboard, APIs, troubleshooting
+- **[🤖 Gestión Asistente](development/ASSISTANT_MANAGEMENT.md)** - Configuración OpenAI
+- **[🧠 Sistema RAG](rag/)** - Documentos de contexto
 
-### **👨‍💻 Si eres desarrollador:**
-1. Leer **[../README.md](../README.md)** - Visión general
-2. Seguir **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Instalación
-3. Usar **[../COMANDOS_INDIVIDUALES.md](../COMANDOS_INDIVIDUALES.md)** - Comandos diarios
-
-### **🔧 Si necesitas configuración avanzada:**
-1. **[MANUAL_USO.md](MANUAL_USO.md)** - Configuración completa
-2. **[README_BOT_LOGS.md](README_BOT_LOGS.md)** - Detalles técnicos
-
-### **⚡ Si solo quieres usar rápido:**
-1. **[../QUICK_START.md](../QUICK_START.md)** - 5 minutos
-2. **[../COMANDOS_RAPIDOS.md](../COMANDOS_RAPIDOS.md)** - Comandos esenciales
-
-## 🎯 **Estructura Recomendada de Lectura**
+## 📁 **Estructura de Documentación**
 
 ```
-📚 Documentación
-├── 🚀 Inicio Rápido
-│   ├── ../README.md (Visión general)
-│   ├── ../QUICK_START.md (5 minutos)
-│   └── ../COMANDOS_RAPIDOS.md (Comandos básicos)
+docs/
+├── 📖 README.md                    # Esta guía principal
+├── 🗺️ DOCUMENTATION_MAP.json      # Mapa navegacional
+├── 📋 README_DOCS.md               # Manual de organización
 │
-├── 👨‍💻 Uso Diario
-│   ├── ../COMANDOS_INDIVIDUALES.md (Guía principal)
-│   └── SETUP_INSTRUCTIONS.md (Instalación)
+├── 🏗️ architecture/               # Arquitectura del sistema
+│   ├── ARCHITECTURE.md            # Diseño principal
+│   ├── PROJECT_STRUCTURE.md       # Estructura del proyecto
+│   ├── GOOGLE_CLOUD_ARCHITECTURE.md
+│   └── LOCKING_AND_RECOVERY.md    # Sistema de bloqueos
 │
-└── 🔧 Avanzado
-    ├── MANUAL_USO.md (Configuración completa)
-    └── README_BOT_LOGS.md (Detalles técnicos)
+├── ⚙️ features/                   # Funcionalidades activas
+│   ├── MEDIA_FEATURES.md          # Características multimedia
+│   ├── FUNCTION_INVENTORY.md      # Inventario de funciones
+│   ├── BEDS24_INTEGRATION_COMPLETE.md
+│   ├── ESCALATE_TO_HUMAN_SPEC.md  # Escalamiento humano
+│   └── VOICE_TO_VOICE_IMPLEMENTATION.md
+│
+├── 🔧 functions/                  # Funciones OpenAI
+│   ├── FUNCTION_INVENTORY.md      # Inventario completo
+│   └── booking/                   # Funciones de reserva
+│       ├── create_booking.md
+│       ├── cancel_booking.md
+│       └── get_booking_details.md
+│
+├── 🔗 integrations/               # Integraciones externas
+│   ├── WHAPI_COMPLETE_API_REFERENCE.md
+│   └── beds24/
+│       └── architecture.md
+│
+├── 🚀 deployment/                 # Despliegue y producción
+│   ├── README.md                  # Guía general
+│   └── RAILWAY_DEPLOYMENT_GUIDE.md
+│
+├── 💻 development/                # Desarrollo local
+│   ├── README.md                  # Guía de desarrollo
+│   ├── local-setup.md             # Setup local
+│   ├── GIT_WORKFLOW_MANUAL.md     # Workflow Git
+│   ├── MIGRATION_GUIDE.md         # Guías de migración
+│   ├── PROTOCOLO_ENTORNOS.md      # Manejo de entornos
+│   ├── ASSISTANT_MANAGEMENT.md    # Gestión asistente OpenAI
+│   ├── ASSISTANT_CONFIG.md        # Configuración asistente
+│   └── OPENAI_CONTEXT_MESSAGES.md # Contexto OpenAI
+│
+├── 📋 guides/                     # Guías prácticas
+│   ├── API_ENDPOINTS.md           # Endpoints del sistema
+│   ├── DASHBOARD_GUIDE.md         # Uso del dashboard
+│   ├── HERRAMIENTAS_BOT.md        # Herramientas disponibles
+│   ├── NAVIGATION_GUIDE.md        # Navegación del sistema
+│   └── TROUBLESHOOTING_AND_FAQ.md # Resolución de problemas
+│
+├── 🔒 security/                   # Seguridad
+│   ├── SECRETS_MANAGEMENT_GUIDE.md
+│   ├── SECURITY_AND_DEPLOYMENT.md
+│   └── SECURITY_CLEANUP_REPORT.md
+│
+├── 📊 logging/                    # Sistema de logging
+│   └── LOGGING_SYSTEM_COMPLETE.md
+│
+├── 🧠 rag/                        # Sistema RAG (contexto IA)
+│   ├── SISTEMA_ACTUALIZACION_RAG.md # Sistema de actualización RAG
+│   ├── # 00_INSTRUCCIONES_DEL_ASISTENTE.txt
+│   ├── # 02_TARIFAS_TEMPORADAS.txt
+│   ├── # 03_INVENTARIO_APARTAMENTOS.txt
+│   └── [... otros archivos de contexto]
+│
+└── 🗃️ archive/                   # Documentación archivada
+    ├── docs-historical/           # Reportes históricos
+    ├── docs-implemented-features/ # Features ya completadas
+    └── docs-technical-redundant/  # Docs técnicos redundantes
 ```
 
-## 📝 **Resumen de Funcionalidades**
+## 🎯 **Por Dónde Empezar Según tu Rol**
 
-### **🎯 Lo que hace el parser:**
-- ✅ Convierte logs de Cloud Run en formato local
-- ✅ Elimina 90% de metadatos HTTP inútiles
-- ✅ Crea archivos individuales por sesión
-- ✅ Limpieza automática (máximo 10 archivos)
-- ✅ Análisis avanzado con 8 tipos de métricas
+### **👨‍💻 Desarrollador Nuevo**
+1. **[🏗️ Arquitectura](architecture/ARCHITECTURE.md)** - Entender el sistema
+2. **[💻 Setup Local](development/local-setup.md)** - Configurar entorno
+3. **[⚙️ Funcionalidades](features/FUNCTION_INVENTORY.md)** - Conocer características
+4. **[🔧 Funciones](functions/)** - API y funciones disponibles
 
-### **📁 Archivos que genera:**
-- **Individuales**: `/logsGoogleCloud/session_*.txt`
-- **Consolidado**: Solo con `--save-consolidated`
-- **Limpieza**: Automática cada 10 archivos
+### **🚀 DevOps/Deployment**
+1. **[🚀 Deployment](deployment/)** - Guías de despliegue
+2. **[🔒 Seguridad](security/)** - Manejo de secretos
+3. **[📊 Logging](logging/)** - Sistema de monitoreo
+4. **[🏗️ Arquitectura Cloud](architecture/GOOGLE_CLOUD_ARCHITECTURE.md)**
 
-### **🚀 Comando principal:**
-```bash
-python parse_bot_logs.py --hours 2
-```
+### **🎯 Usuario/Tester**
+1. **[📋 Guías Prácticas](guides/)** - Uso del sistema
+2. **[🤖 Gestión Asistente](ASSISTANT_MANAGEMENT.md)** - Configuración
+3. **[🧠 Sistema RAG](rag/)** - Contexto y datos
+4. **[📋 Troubleshooting](guides/TROUBLESHOOTING_AND_FAQ.md)**
 
----
+## 📝 **Documentación Actualizada**
 
-**💡 Tip**: Empieza por el **[README principal](../README.md)** para una visión completa del proyecto.
+- ✅ **Estructura limpia** - Eliminados duplicados y obsoletos
+- ✅ **Documentación activa** - Solo features y sistemas actuales
+- ✅ **Organización profesional** - Por área funcional
+- ✅ **Archivos históricos** - Movidos a `archive/`
+- ✅ **Referencias cruzadas** - Enlaces internos consistentes
+
+## 🔄 **Mantenimiento de Documentación**
+
+- **Archivos activos**: Mantener actualizados con cambios en código
+- **Archivos archivados**: Preservados en `archive/` para referencia histórica
+- **Nuevas características**: Documentar en carpeta `features/`
+- **Cambios de arquitectura**: Actualizar `architecture/`

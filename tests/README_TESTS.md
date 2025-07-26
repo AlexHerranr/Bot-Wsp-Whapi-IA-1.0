@@ -1,106 +1,145 @@
-# 🧪 Tests - Bot WhatsApp TeAlquilamos
+# 🧪 Tests Structure - Bot WhatsApp TeAlquilamos
 
-## 📁 Estructura de Tests
+Estructura profesional de tests reorganizada según mejores prácticas de testing.
+
+## 📁 Nueva Estructura Organizada
 
 ```
 tests/
-├── README_TESTS.md              # Esta documentación
-├── test-chat-history.js         # Test de historial de chat
+├── 📁 unit/                           # Tests unitarios
+│   ├── data-sanitizer.test.ts         # Tests de sanitización de datos
+│   ├── logger.test.ts                 # Tests del logger
+│   ├── simple.test.ts                 # Tests simples unitarios
+│   └── logging/                       # Tests del sistema de logging
+│       └── test-logging-system.js
 │
-├── beds24/                      # Tests de integración Beds24
-│   ├── test-beds24.js          # Test principal de Beds24
-│   └── TEST_BEDS24_README.md   # Documentación específica
+├── 📁 integration/                    # Tests de integración
+│   ├── test-chat-history.js          # Integración historial de chat
+│   ├── test-labels-update.js         # Integración actualización de labels
+│   └── beds24/                       # Integración con Beds24
+│       ├── test-beds24.js
+│       ├── TEST_BEDS24_README.md
+│       └── logs/
 │
-├── escalation/                  # Tests de escalamiento
-│   ├── test-minimal-escalation.js
-│   └── ANALISIS_RAZONES_ESCALAMIENTO.md
+├── 📁 functional/                     # Tests funcionales (flujos completos)
+│   ├── test-hybrid-flow.js           # Flujo híbrido completo
+│   └── escalation/                   # Tests de escalamiento
+│       ├── test-minimal-escalation.js
+│       └── ANALISIS_RAZONES_ESCALAMIENTO.md
 │
-├── logging/                     # Tests del sistema de logging
-│   └── test-logging-system.js
+├── 📁 media/                          # Tests multimedia
+│   ├── README_IMAGE_PROCESSING.md    # Documentación de procesamiento
+│   ├── test-direct-vision.js         # Test visión directa
+│   ├── test-full-image-flow.js       # Flujo completo de imágenes
+│   ├── test-image-multimodal.js      # Tests multimodales
+│   ├── test-real-assistant-image.js  # Test asistente real con imágenes
+│   └── test-url-image.js             # Test imágenes por URL
 │
-├── voice/                       # Tests de funcionalidad de voz
-│   ├── README_VOICE_TESTS.md   # Documentación de tests de voz
-│   ├── test-voice-simple.mjs   # Test simple de voz
-│   └── test-voice-to-voice.mjs # Test de voz a voz
+├── 📁 audio/                          # Tests de audio
+│   ├── README_AUDIO_TO_TEXT.md       # Documentación audio → texto
+│   ├── README_TEXT_TO_AUDIO.md       # Documentación texto → audio
+│   ├── test-audio-formats.js         # Test formatos de audio
+│   ├── test-generated-audio.mp3      # Audio de prueba generado
+│   ├── test-real-audio-flow.js       # Flujo real de audio
+│   ├── test-simple-audio.js          # Test simple de audio
+│   ├── test-text-to-audio.js         # Test texto a audio
+│   └── test-voice-response-ready.js  # Test respuesta de voz lista
 │
-└── whapi/                       # Tests de WhatsApp API
-    ├── README_WHAPI_TESTS.md    # Documentación de tests WHAPI
-    ├── README_MESSAGES_TEST.md  # Guía de tests de mensajes
-    └── test-chat-specific.js    # Test de análisis de chat específico
+├── 📁 voice/                          # Tests específicos de voz
+│   ├── README.md                     # Documentación de voz
+│   ├── VOICE_IMPLEMENTATION_STATUS.md # Estado implementación
+│   ├── test-voice-simple.mjs         # Test simple de voz
+│   └── test-voice-to-voice.mjs       # Test voz a voz
+│
+├── 📁 e2e/                           # Tests end-to-end (preparado para futuro)
+├── setup.ts                         # Configuración global de tests
+└── README_TESTS.md                   # Esta documentación
 ```
 
-## 🎯 Tests Disponibles
+## 🎯 Clasificación por Tipos de Tests
 
-### 1. 🏨 **Tests de Beds24**
-- **Archivo**: `beds24/test-beds24.js`
-- **Documentación**: `beds24/TEST_BEDS24_README.md`
-- **Propósito**: Probar integración con API de Beds24
+### 🔬 Unit Tests (`unit/`)
+**Propósito**: Tests de componentes aislados y funciones puras
+- Sanitización de datos
+- Sistema de logging
+- Utilidades individuales
+- **Características**: Rápidos, sin dependencias externas
 
-### 2. 💬 **Tests de WhatsApp API**
-- **Archivo**: `whapi/test-chat-specific.js`
-- **Documentación**: `whapi/README_WHAPI_TESTS.md`
-- **Propósito**: Análisis de conversaciones específicas
+### 🔗 Integration Tests (`integration/`)
+**Propósito**: Tests de integración entre servicios y APIs
+- Historial de conversaciones con WhatsApp API
+- Integración con Beds24 API
+- Actualización de labels/etiquetas
+- **Características**: Requieren servicios externos, más lentos
 
-### 3. 🎤 **Tests de Voz**
-- **Archivos**: `voice/test-voice-simple.mjs`, `voice/test-voice-to-voice.mjs`
-- **Documentación**: `voice/README_VOICE_TESTS.md`
-- **Propósito**: Probar funcionalidades de voz y transcripción
+### ⚙️ Functional Tests (`functional/`)
+**Propósito**: Tests de flujos completos y escenarios reales
+- Flujos híbridos de conversación
+- Escalamiento a humanos
+- Procesos end-to-end del bot
+- **Características**: Prueban funcionalidades completas
 
-### 4. 📊 **Tests de Logging**
-- **Archivo**: `logging/test-logging-system.js`
-- **Propósito**: Validar sistema de logging
+### 🎨 Media Tests (`media/`, `audio/`, `voice/`)
+**Propósito**: Tests de capacidades multimedia
+- **Media**: Procesamiento de imágenes, visión por computadora
+- **Audio**: Conversión de formatos, transcripción, síntesis
+- **Voice**: Conversaciones por voz, respuestas habladas
+- **Características**: Requieren procesamiento multimedia, archivos de prueba
 
-### 5. 🚨 **Tests de Escalamiento**
-- **Archivo**: `escalation/test-minimal-escalation.js`
-- **Documentación**: `escalation/ANALISIS_RAZONES_ESCALAMIENTO.md`
-- **Propósito**: Probar escalamiento a agente humano
-
-### 6. 📜 **Test de Historial**
-- **Archivo**: `test-chat-history.js`
-- **Propósito**: Probar gestión de historial de conversaciones
-
-## 🚀 **Uso Rápido**
+## 🚀 Comandos de Ejecución
 
 ```bash
-# Test de Beds24
-npx tsx tests/beds24/test-beds24.js health
+# Todos los tests
+npm test
 
-# Test de análisis de chat específico
-node tests/whapi/test-chat-specific.js 573003913251
+# Por categoría
+npm run test:unit                    # Solo tests unitarios
+npm run test:integration             # Solo tests de integración  
+npm run test:functional              # Solo tests funcionales
+npm run test:media                   # Tests multimedia
 
-# Test de voz simple
+# Tests específicos
+node tests/integration/test-chat-history.js 573003913251
+node tests/functional/test-hybrid-flow.js
+npx tsx tests/integration/beds24/test-beds24.js health
 node tests/voice/test-voice-simple.mjs
-
-# Test de logging
-node tests/logging/test-logging-system.js
-
-# Test de historial de chat
-node tests/test-chat-history.js 573003913251
 ```
 
-## 📖 **Documentación Detallada**
+## 📊 Benefits de la Nueva Estructura
 
-Cada carpeta de tests contiene su propia documentación:
-- `beds24/TEST_BEDS24_README.md` - Guía completa de tests de Beds24
-- `whapi/README_WHAPI_TESTS.md` - Documentación de tests de WhatsApp
-- `voice/README_VOICE_TESTS.md` - Guía de tests de voz
-- `escalation/ANALISIS_RAZONES_ESCALAMIENTO.md` - Análisis de escalamiento
+### ✅ **Beneficios Organizacionales**
+- **Separación clara** por tipo y propósito
+- **Escalabilidad** para nuevos tests
+- **Mantenimiento** simplificado
+- **Onboarding** más fácil para nuevos desarrolladores
 
-## 🔧 **Organización y Mantenimiento**
+### ✅ **Beneficios Técnicos**
+- **Ejecución selectiva** por categorías
+- **Paralelización** de tests por tipo
+- **Configuración específica** por categoría
+- **CI/CD optimizado** por pipeline
 
-### Archivos Archivados
-- **Tests obsoletos**: Movidos a `/archive/tests-obsoletos/`
-- **Documentación completada**: Movida a `/archive/tests-documentacion/`
+### ✅ **Beneficios de Desarrollo**
+- **Debugging** más eficiente
+- **Documentación** específica por área
+- **Reutilización** de código de test
+- **Cobertura** organizada por funcionalidad
 
-### Estructura Actual
-- Cada tipo de test en su propia carpeta
-- Documentación específica por funcionalidad
-- Tests activos y mantenidos únicamente
+## 🛠 Mejores Prácticas Implementadas
 
-## 📝 **Cambios Recientes (2025-07-23)**
+1. **Naming Convention**: Prefijo claro (`test-`) + descripción funcional
+2. **Folder Structure**: Agrupación lógica por tipo y propósito  
+3. **Documentation**: README específico por área funcional
+4. **Isolation**: Tests unitarios sin dependencias externas
+5. **Integration**: Tests de integración con servicios reales
+6. **Multimedia**: Separación por tipo de media (audio, imagen, voz)
 
-1. ✅ Movidos tests de voz a carpeta `voice/`
-2. ✅ Archivado `test-labels-update.js` (funcionalidad DISABLED)
-3. ✅ Archivado `test-hybrid-flow.js` (ETAPA 2 completada)
-4. ✅ Renombrados READMEs para evitar confusión
-5. ✅ Archivada documentación de implementaciones completadas 
+## 📝 Migración Completada
+
+- ✅ **Tests sueltos** movidos a carpetas apropiadas
+- ✅ **Estructura jerárquica** implementada
+- ✅ **Documentación** actualizada y reorganizada
+- ✅ **Archivos obsoletos** movidos a archive/
+- ✅ **Tests activos** organizados por funcionalidad
+
+Esta estructura profesional facilita el desarrollo, mantenimiento y escalabilidad del sistema de tests del bot de WhatsApp.

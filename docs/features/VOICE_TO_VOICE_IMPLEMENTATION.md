@@ -1,8 +1,8 @@
 # Implementación de Voz a Voz 🎤 → 🔊
 
-## Estado Actual ✅
+## Estado Actual ✅ (Actualizado 26 Julio 2025)
 
-La funcionalidad de voz a voz está **completamente implementada** en el código, pero tiene una limitación con WHAPI en entornos de desarrollo local.
+La funcionalidad de voz a voz está **implementada con simplificación** en mensajes interinos. Se eliminó la complejidad de mensajes interinos de voz por solicitud del usuario.
 
 ### Lo que funciona:
 
@@ -19,17 +19,57 @@ La funcionalidad de voz a voz está **completamente implementada** en el código
    - OpenAI responde de forma concisa (2-3 oraciones máximo)
 
 4. **Generación de audio TTS** ✅
-   - Convierte la respuesta a voz usando OpenAI TTS
-   - Genera archivos OGG en `tmp/audio/`
-   - Crea URLs públicas para los archivos
+   - Convierte la respuesta a voz usando OpenAI TTS con modelo `gpt-4o-mini-tts`
+   - Usa voz `coral` optimizada para español
+   - Genera archivos MP3 con base64 directo para mejor compatibilidad
 
 5. **Decisión inteligente** ✅
    - SIEMPRE responde con voz cuando el usuario envió voz
    - Ignora otros criterios (longitud, probabilidad aleatoria)
 
+6. **🆕 Mensajes interinos simplificados** ✅ (26 Julio 2025)
+   - **ELIMINADO**: Sistema complejo de mensajes interinos de voz (`generateVoiceResponse`)
+   - **NUEVO**: Mensaje simple de texto "Voy a consultar disponibilidad" antes de funciones
+   - **Beneficios**: Código más simple, menos complejidad, mismo propósito funcional
+
 ### Limitación con WHAPI ⚠️
 
 WHAPI devuelve **error 500** al intentar descargar archivos desde URLs de ngrok. Esto es una limitación conocida en desarrollo local.
+
+## 🔄 **Cambios Recientes (26 Julio 2025)**
+
+### **❌ Removido: Función `generateVoiceResponse`**
+```typescript
+// ANTES (Eliminado):
+async function generateVoiceResponse(message: string, chatId: string): Promise<void> {
+    // 67 líneas de código complejo para TTS interino
+    // Lógica de generación de audio
+    // Manejo de errores y fallbacks
+}
+```
+
+### **✅ Nuevo: Mensajes interinos simplificados**
+```typescript
+// DESPUÉS (Simplificado):
+if (hasAvailabilityCheck && chatId) {
+    await sendWhatsAppMessage(chatId, "Voy a consultar disponibilidad");
+    logInfo('AVAILABILITY_INTERIM_SENT', 'Mensaje interino enviado', { 
+        userId: shortUserId,
+        chatId,
+        environment: appConfig.environment,
+        requestId
+    });
+}
+```
+
+### **📊 Beneficios de la Simplificación:**
+- ✅ **67 líneas menos** de código complejo
+- ✅ **Sin dependencias** de TTS para mensajes interinos
+- ✅ **Menos puntos de falla** (errores de audio, base64, etc.)
+- ✅ **Respuesta más rápida** (sin generar audio temporal)
+- ✅ **Mismo propósito funcional** (informar al usuario sobre el proceso)
+
+---
 
 ## Código Implementado
 
@@ -126,8 +166,124 @@ grep -E "VOICE_.*ERROR" logs/bot-session-*.log
 grep "573003913251" logs/bot-session-*.log | grep -E "(VOICE|MESSAGE_RECEIVED|OPENAI)"
 ```
 
+## ⚠️ Problemas Identificados
+
+### Problema Crítico: Pronunciación en Español del TTS
+
+**Estado**: Problema activo reportado  
+**Severidad**: Media - Afecta calidad de experiencia de usuario  
+**Modelo Actual**: OpenAI TTS con voz `alloy` (por defecto en código)
+
+#### Descripción del Problema
+El modelo TTS actual (configurado como `alloy` en `src/app-unified.ts:1045`) está presentando **fallas en la pronunciación del español**, lo que afecta la comprensión y naturalidad de las respuestas de voz del bot.
+
+#### Modelos/Voces Disponibles para Evaluación
+
+**Voces OpenAI TTS Actuales:**
+- `alloy` - Neutral, balanceada ⚠️ **(Actual - Con problemas)**
+- `echo` - Masculina, profunda  
+- `fable` - Británica, expresiva
+- `onyx` - Masculina, grave
+- `nova` - Femenina, cálida 🔍 **(Candidata para español)**
+- `shimmer` - Femenina, suave 🔍 **(Candidata para español)**
+
+#### Alternativas Técnicas a Evaluar
+
+**1. Cambio de Voz OpenAI TTS:**
+```env
+# Probar en .env
+TTS_VOICE=nova    # Voz más cálida, podría ser mejor para español
+# o
+TTS_VOICE=shimmer # Voz suave, alternativa para español
+```
+
+**2. Servicios Especializados en Español:**
+- **Amazon Polly**: Voces nativas en español (Conchita, Enrique, Miguel, Penélope)
+- **Google Cloud TTS**: Voces WaveNet en español con pronunciación superior
+- **Microsoft Azure Speech**: Voces neurales específicas para español latinoamericano
+- **ElevenLabs**: TTS premium con voces muy naturales (costo más alto)
+
+**3. Modelos Open Source:**
+- **Coqui TTS**: Modelos entrenados específicamente en español
+- **Mozilla TTS**: Alternativa open source con soporte español
+- **Tortoise TTS**: Alta calidad pero mayor latencia
+
+#### Configuración de Evaluación
+
+```typescript
+// src/app-unified.ts - Líneas a modificar
+// Actual:
+voice: process.env.TTS_VOICE as any || 'alloy',
+
+// Para testing:
+voice: process.env.TTS_VOICE as any || 'nova', // Cambiar default
+```
+
+#### Variables de Entorno para Testing
+```env
+# Testing de voces OpenAI
+TTS_VOICE=nova          # Probar voz cálida
+TTS_VOICE=shimmer       # Probar voz suave
+TTS_VOICE=onyx          # Probar voz masculina grave
+
+# Para implementación futura de servicios alternativos
+TTS_SERVICE=openai      # openai, aws-polly, google, azure
+AWS_POLLY_VOICE=Penelope # Si se implementa Polly
+GOOGLE_TTS_VOICE=es-ES-Wavenet-C # Si se implementa Google
+```
+
+#### Plan de Evaluación Sugerido
+
+**Fase 1: Testing Inmediato (OpenAI)**
+1. Cambiar default de `alloy` a `nova` 
+2. Probar respuestas con texto en español típico del dominio hotelero
+3. Evaluar pronunciación de: fechas, números, direcciones, nombres propios
+
+**Fase 2: Comparación Sistemática**
+1. Crear script de testing con frases comunes del bot
+2. Generar audios con todas las voces OpenAI disponibles
+3. Evaluación cualitativa de pronunciación y naturalidad
+
+**Fase 3: Implementación de Alternativas (Si es necesario)**
+1. Integración con Amazon Polly para voces nativas español
+2. Comparación de calidad vs costo vs latencia
+3. Implementación de fallback automático
+
+#### Impacto en Costos
+- **OpenAI TTS**: $0.015 por 1K caracteres (sin cambio de costo)
+- **Amazon Polly**: $4.00 por 1M caracteres (26% más barato)
+- **Google Cloud TTS**: $16.00 por 1M caracteres (similar a OpenAI)
+- **ElevenLabs**: $0.30 por 1K caracteres (20x más caro)
+
+#### Métricas para Evaluación
+- **Pronunciación correcta**: Palabras en español, números, fechas
+- **Naturalidad**: Fluidez y entonación apropiada
+- **Comprensibilidad**: Facilidad de entendimiento por usuarios
+- **Consistencia**: Calidad uniforme en diferentes tipos de respuesta
+- **Latencia**: Tiempo de generación de audio
+- **Costo**: Impacto en costos operacionales
+
+#### ✅ Implementado - Julio 2025
+- [x] **Upgrade a `gpt-4o-mini-tts`**: Modelo más reciente 2024-2025 (reemplaza tts-1-hd)
+- [x] **Instrucciones de pronunciación**: Agregadas instrucciones específicas para español neutro
+- [x] **Cambio a voz `coral`**: Nueva voz recomendada por OpenAI (reemplaza nova)
+- [x] **11 voces disponibles**: Acceso a voces nuevas (ash, ballad, coral, sage)
+- [x] **Investigación completa**: Documentado análisis comparativo vs Amazon Polly
+
+#### Tareas Pendientes
+- [ ] Crear script de testing con frases típicas del dominio hotelero
+- [ ] **EVALUAR INMEDIATO**: Pronunciación con `gpt-4o-mini-tts` + `coral` + instrucciones
+- [ ] Probar voces nuevas: `ash`, `ballad`, `sage` para español
+- [ ] Documentar diferencias de pronunciación entre las 11 voces disponibles
+- [ ] Investigar integración con Amazon Polly (solo si persisten problemas)
+- [ ] Considerar implementación de selección dinámica de voz por idioma
+- [ ] Determinar costo del nuevo modelo `gpt-4o-mini-tts`
+
+---
+
 ## Resumen
 
-✅ **La implementación está completa y funcional**
-⚠️ **Limitación**: WHAPI no puede acceder a URLs de ngrok en desarrollo local
-🚀 **Solución**: Funcionará correctamente en producción con URLs públicas reales
+✅ **La implementación está completa y funcional**  
+⚠️ **Limitación**: WHAPI no puede acceder a URLs de ngrok en desarrollo local  
+🚀 **Solución**: Funcionará correctamente en producción con URLs públicas reales  
+🔍 **Pendiente**: Evaluar y mejorar pronunciación en español del TTS actual

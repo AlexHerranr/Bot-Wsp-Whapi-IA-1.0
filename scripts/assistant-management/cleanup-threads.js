@@ -1,20 +1,15 @@
 #!/usr/bin/env node
 
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const { join } = require('path');
 
 console.log('🧹 Limpiando todos los threads/conversaciones del assistant...\n');
 
 async function cleanupThreads() {
     try {
-        const dotenv = await import('dotenv');
-        dotenv.config();
+        require('dotenv').config();
         
-        const OpenAI = await import('openai');
-        const openai = new OpenAI.default({
+        const OpenAI = require('openai');
+        const openai = new OpenAI({
             apiKey: process.env.OPENAI_API_KEY
         });
 
@@ -24,7 +19,7 @@ async function cleanupThreads() {
             // Intentar cargar desde config
             try {
                 const configPath = join(__dirname, '..', '..', 'config', 'assistant-config.json');
-                const config = JSON.parse((await import('fs')).readFileSync(configPath, 'utf8'));
+                const config = JSON.parse(require('fs').readFileSync(configPath, 'utf8'));
                 assistantId = config.assistant?.id;
             } catch {}
         }
@@ -73,8 +68,8 @@ async function cleanupThreads() {
     }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
     cleanupThreads();
 }
 
-export { cleanupThreads }; 
+module.exports = { cleanupThreads }; 

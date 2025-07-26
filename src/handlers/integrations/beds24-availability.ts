@@ -793,56 +793,83 @@ function buildConsecutiveSplitStartWith(partialOptions: PropertyData[], dateRang
 }
 
 /**
- * Formatea respuesta optimizada para OpenAI
+ * Formatea respuesta optimizada para OpenAI en texto organizado
  */
 function formatOptimizedResponse(result: OptimizedResult, startDate: string, endDate: string): string {
     const { completeOptions, splitOptions, totalNights } = result;
     
-    // 🔧 MEJORADO: Formato JSON plano para facilitar interpretación por OpenAI
-    const response = {
-        dateRange: `${startDate} al ${endDate}`,
-        totalNights,
-        completeOptions: completeOptions.slice(0, 3).map(option => ({
-            propertyName: option.propertyName,
-            totalPrice: Object.values(option.prices).reduce((sum, price) => sum + price, 0),
-            pricePerNight: Math.round(Object.values(option.prices).reduce((sum, price) => sum + price, 0) / totalNights)
-        })),
-        splitOptions: splitOptions.slice(0, 3).map(split => ({
-            transfers: split.transfers,
-            totalPrice: split.totalPrice,
-            properties: split.properties.map(prop => ({
-                propertyName: prop.propertyName,
-                dates: prop.dates,
-                price: prop.price
-            }))
-        })),
-        hasCompleteOptions: completeOptions.length > 0,
-        hasSplitOptions: splitOptions.length > 0,
-        timestamp: new Date().toISOString()
+    // Formatear fechas DD/MM/YYYY
+    const formatDate = (dateStr: string): string => {
+        const [year, month, day] = dateStr.split('-');
+        return `${day}/${month}/${year}`;
     };
-
-    // Log para análisis (solo en logs, no en consola)
+    
+    let response = `📅 Disponibilidad: ${formatDate(startDate)} al ${formatDate(endDate)} (${totalNights} ${totalNights === 1 ? 'noche' : 'noches'})\n\n`;
+    
+    // Sección de apartamentos disponibles
+    if (completeOptions.length > 0) {
+        const count = completeOptions.length;
+        response += `✅ APARTAMENTOS DISPONIBLES (${count} ${count === 1 ? 'Apto Disponible' : 'Aptos Disponibles'}):\n`;
+        
+        completeOptions.slice(0, 3).forEach(option => {
+            const totalPrice = Object.values(option.prices).reduce((sum, price) => sum + price, 0);
+            const pricePerNight = Math.round(totalPrice / totalNights);
+            response += `🏠 ${option.propertyName} - $${totalPrice.toLocaleString()} total ($${pricePerNight.toLocaleString()}/noche)\n`;
+        });
+        response += '\n';
+    }
+    
+    // Sección de alternativas con traslado
+    if (splitOptions.length > 0) {
+        const count = splitOptions.length;
+        response += `🔄 ALTERNATIVAS (${count} ${count === 1 ? 'Cambio de Apto' : 'Cambios de Apto'} - solo si necesario):\n`;
+        
+        splitOptions.slice(0, 3).forEach((split, index) => {
+            const transferText = split.transfers === 1 ? '1 traslado' : `${split.transfers} traslados`;
+            response += `🏠 Opción ${transferText} - $${split.totalPrice.toLocaleString()} total\n`;
+            
+            split.properties.forEach(prop => {
+                const formatDates = (dates: string[]): string => {
+                    if (dates.length === 1) {
+                        return formatDate(dates[0]);
+                    } else if (dates.length === 2) {
+                        return `${formatDate(dates[0])}-${formatDate(dates[1])}`;
+                    } else {
+                        return `${formatDate(dates[0])}-${formatDate(dates[dates.length - 1])}`;
+                    }
+                };
+                response += `   ${prop.propertyName}: ${formatDates(prop.dates)} ($${prop.price.toLocaleString()})\n`;
+            });
+            
+            if (index < splitOptions.slice(0, 3).length - 1) {
+                response += '\n';
+            }
+        });
+    }
+    
+    // Log para análisis
     logInfo('BEDS24_DEBUG_OUTPUT', 'Respuesta formateada para OpenAI', {
-        responsePreview: JSON.stringify(response).substring(0, 200),
-        responseLength: JSON.stringify(response).length,
+        responsePreview: response.substring(0, 200),
+        responseLength: response.length,
         hasCompleteOptions: result.completeOptions.length > 0,
-        hasSplitOptions: result.splitOptions.length > 0
+        hasSplitOptions: result.splitOptions.length > 0,
+        estimatedTokens: Math.ceil(response.length / 4)
     });
 
     // Log detallado para análisis
     logInfo('BEDS24_RESPONSE_DETAIL', 'Respuesta completa de Beds24 enviada a OpenAI', {
-        responseLength: JSON.stringify(response).length,
-        estimatedTokens: Math.ceil(JSON.stringify(response).length / 4),
+        responseLength: response.length,
+        estimatedTokens: Math.ceil(response.length / 4),
         hasCompleteOptions: result.completeOptions.length > 0,
         hasSplitOptions: result.splitOptions.length > 0,
         completeOptionsCount: result.completeOptions.length,
         splitOptionsCount: result.splitOptions.length,
         totalNights: result.totalNights,
-        responsePreview: JSON.stringify(response).substring(0, 200) + (JSON.stringify(response).length > 200 ? '...' : ''),
-        fullResponse: JSON.stringify(response) // Contenido completo para análisis
+        responsePreview: response.substring(0, 200) + (response.length > 200 ? '...' : ''),
+        fullResponse: response // Contenido completo para análisis
     });
 
-    return JSON.stringify(response);
+    return response;
 }
 
 /**

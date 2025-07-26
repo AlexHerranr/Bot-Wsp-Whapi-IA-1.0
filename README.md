@@ -23,6 +23,13 @@ Un asistente virtual avanzado que utiliza **OpenAI GPT-4** y **WhatsApp Business
 - **Sistema de etiquetas** automático
 - **Buffer basado en typing** para respuestas naturales
 
+### **🎤🖼️ Capacidades Multimedia**
+- **🎤➡️📝 Audio-to-Text**: Transcripción de notas de voz con Whisper
+- **📝➡️🎤 Text-to-Audio**: Respuestas de voz naturales con TTS
+- **🖼️➡️📝 Procesamiento de Imágenes**: Análisis con GPT-4 Vision
+- **🔄 Conversaciones Voz-a-Voz**: Flujo completo de audio bidireccional
+- **🎨 Análisis Visual Contextual**: Descripción y consultas sobre imágenes
+
 ### **🏨 Gestión de Reservas**
 - **Integración Beds24** para consultas de disponibilidad
 - **Sistema de reservas** automatizado
@@ -102,6 +109,13 @@ ASSISTANT_ID=your_assistant_id
 # WhatsApp Business API
 WHAPI_TOKEN=your_whapi_token
 WHAPI_API_URL=https://gate.whapi.cloud/
+
+# Funcionalidades Multimedia
+ENABLE_VOICE_TRANSCRIPTION=true
+ENABLE_VOICE_RESPONSES=true
+ENABLE_IMAGE_PROCESSING=true
+TTS_VOICE=nova
+IMAGE_ANALYSIS_MODEL=gpt-4o-mini
 
 # Beds24 (opcional)
 BEDS24_API_KEY=your_beds24key
@@ -219,6 +233,13 @@ src/
 - **[Contexto de Conversación](docs/features/CONTEXTO_HISTORIAL_CONVERSACION.md)** - Memoria persistente
 - **[Sistema de Etiquetas](docs/features/SISTEMA_ETIQUETAS_SIMPLE.md)** - Organización automática
 - **[Sistema de Buffer](docs/features/TYPING_BASED_BUFFER.md)** - Respuestas naturales
+
+### **🎤🖼️ Funcionalidades Multimedia**
+- **[Sistema Audio-to-Text](tests/audio/README_AUDIO_TO_TEXT.md)** - Transcripción de voz
+- **[Sistema Text-to-Audio](tests/audio/README_TEXT_TO_AUDIO.md)** - Respuestas de voz
+- **[Procesamiento de Imágenes](tests/media/README_IMAGE_PROCESSING.md)** - Análisis visual
+- **[Tests de Audio](tests/audio/)** - Pruebas y validación de audio
+- **[Tests de Media](tests/media/)** - Pruebas de imágenes y multimedia
 
 ### **🔧 Herramientas y Utilidades**
 - **[Herramientas del Bot](docs/guides/HERRAMIENTAS_BOT.md)** - Scripts y utilidades

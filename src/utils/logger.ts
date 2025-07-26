@@ -311,40 +311,45 @@ const formatSimpleConsoleEntry = (entry: LogEntry): string => {
     }
     
     if (category === 'FUNCTION_CALLING_START') {
-        const count = details?.toolCallsCount || message.match(/\d+/)?.[0] || '?';
-        return `${colors.YELLOW}${getCategoryEmoji(category)} Ejecutando ${count} función(es)...${colors.RESET}`;
+        // Eliminado - redundante
+        return '';
     }
     
     if (category === 'FUNCTION_EXECUTING') {
-        const functionName = details?.functionName || message.match(/función: (\w+)/)?.[1] || 'función';
-        // Resumir mejor - solo mostrar función activa
-        return `${colors.YELLOW}  ↳ ${functionName} ejecutándose...${colors.RESET}`;
+        // Eliminado - redundante
+        return '';
     }
     
     if (category === 'FUNCTION_HANDLER' || category === 'FUNCTION_EXECUTED') {
-        const functionName = details?.functionName || message.match(/función (\w+)/)?.[1] || '';
-        return `${colors.GREEN}  ✓ ${functionName} completada${colors.RESET}`;
+        // Eliminado - se maneja en resultado específico
+        return '';
     }
     
     // === BEDS24 ===
     if (category === 'BEDS24_REQUEST') {
-        const dates = details?.dateFrom && details?.dateTo ? 
-            ` (${details.dateFrom} → ${details.dateTo})` : '';
-        return `${colors.CYAN}${getCategoryEmoji(category)} Beds24 → Consultando disponibilidad${dates}${colors.RESET}`;
+        // Eliminado - redundante
+        return '';
     }
     
     if (category === 'BEDS24_API_CALL') {
-        // Resumir mejor - solo mostrar que está activo
-        return `${colors.CYAN}  ↳ Consultando API...${colors.RESET}`;
+        // Eliminado - redundante
+        return '';
     }
     
     if (category === 'BEDS24_RESPONSE_DETAIL') {
-        const properties = details?.propertiesCount || details?.totalProperties || '?';
-        return `${colors.GREEN}  ✓ Beds24 → ${properties} propiedades procesadas${colors.RESET}`;
+        // Eliminado - redundante
+        return '';
     }
     
     if (category === 'BEDS24_RESPONSE_SUMMARY') {
-        return `${colors.GREEN}${getCategoryEmoji(category)} Beds24 → ${message}${colors.RESET}`;
+        // Extraer números de opciones desde el mensaje
+        const completasMatch = message.match(/(\d+) opciones completas/);
+        const splitsMatch = message.match(/(\d+) opciones con traslado/);
+        
+        const completas = completasMatch ? parseInt(completasMatch[1]) : 0;
+        const splits = splitsMatch ? parseInt(splitsMatch[1]) : 0;
+        
+        return `${colors.GREEN}🏠 ${completas} completa${completas !== 1 ? 's' : ''} + ${splits} alternativa${splits !== 1 ? 's' : ''}${colors.RESET}`;
     }
     
     // === MENSAJES Y PROCESAMIENTO ===

@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(mkdir:*)",
+      "Bash(node:*)",
+      "Bash(cd \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\")",
+      "Bash(git add src/utils/logger.ts README_LOGS.md)",
+      "Bash(git commit -m \"feat: implementar logging diferenciado por entorno + documentación\n\nCAMBIOS PRINCIPALES:\n✅ LOCAL: Tiempo real (100ms timer + 50 logs buffer) - como antes\n✅ RAILWAY: Eficiente (solo cada 400 logs, sin timer) - optimizado\n✅ Detección automática de entorno\n✅ Buffer diferenciado según plataforma\n\nSISTEMAS DE LOGGING:\n📱 Terminal Local Limpios - desarrollo básico\n📁 Local Técnicos - tiempo real con archivos \n☁️ Railway Técnicos - optimizado para producción\n\nDOCUMENTACIÓN:\n📋 README_LOGS.md - guía completa de los 3 sistemas\n🔍 Comparación detallada de características\n⚙️ Comandos útiles para debugging\n\nRESULTADO:\n- Local mantiene experiencia de desarrollo fluida\n- Railway optimizado para menor I/O y mejor performance\n- Documentación completa para el equipo\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(echo $HOME)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run check:*)",
+      "Bash(npm run:*)",
+      "Bash(timeout 10s npm run dev)",
+      "Bash(grep:*)",
+      "Bash(mv:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(move:*)",
+      "Bash(taskkill:*)",
+      "Bash(rm:*)",
+      "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\test-typing-indicator.js\")",
+      "Bash(git add:*)",
+      "Bash(git push:*)"
+    ],
+    "deny": []
+  }
+}

@@ -1,3 +1,4 @@
+// Updated with invalidateUserCaches optimization
 import * as fs from 'fs';
 import * as path from 'path';
 import { enhancedLog } from '../core/index.js';
@@ -461,18 +462,53 @@ export class ThreadPersistenceManager {
         return removed;
     }
 
-    // 🔧 NUEVO: Método para inicializar cleanup después de que la configuración esté disponible
+    // 🔧 NUEVO: Método para inicializar cleanup con intervalo de 5min como código antiguo
     initializeCleanup(): void {
+        // Hacer cleanup inicial
         try {
             const config = getConfig();
             const months = config.historyInjectMonths || 12;
             this.cleanupOldThreads(months);
-            enhancedLog('info', 'THREAD_PERSIST', `Cleanup inicializado con ${months} meses`);
+            enhancedLog('info', 'THREAD_PERSIST', `Cleanup inicial ejecutado con ${months} meses`);
         } catch (error) {
             // Si la configuración no está disponible, usar valor por defecto
             this.cleanupOldThreads(12);
-            enhancedLog('info', 'THREAD_PERSIST', 'Cleanup inicializado con valor por defecto (12 meses)');
+            enhancedLog('info', 'THREAD_PERSIST', 'Cleanup inicial ejecutado con valor por defecto (12 meses)');
         }
+
+        // Configurar limpieza periódica cada 5 minutos como código antiguo
+        setInterval(() => {
+            try {
+                const config = getConfig();
+                const months = config.historyInjectMonths || 12;
+                
+                // Usar chequeo de edad como antiguo: daysSinceActivity > 90
+                let removed = 0;
+                const now = new Date();
+                
+                for (const userId of this.getAllUserIds()) {
+                    const record = this.getThread(userId);
+                    if (record) {
+                        const lastActivity = new Date(record.lastActivity);
+                        const daysSinceActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24);
+                        
+                        if (daysSinceActivity > 90) { // Más de 90 días como código antiguo
+                            this.removeThread(userId, 'periodic_cleanup_90_days');
+                            removed++;
+                        }
+                    }
+                }
+                
+                if (removed > 0) {
+                    enhancedLog('info', 'THREAD_CLEANUP', `Cleanup periódico: ${removed} threads eliminados (> 90 días)`);
+                    this.saveThreads();
+                }
+            } catch (error) {
+                enhancedLog('error', 'THREAD_CLEANUP', `Error en cleanup periódico: ${error.message}`);
+            }
+        }, 5 * 60 * 1000); // 5 minutos como código antiguo
+        
+        enhancedLog('info', 'THREAD_PERSIST', 'Cleanup periódico configurado cada 5 minutos');
     }
 }
 

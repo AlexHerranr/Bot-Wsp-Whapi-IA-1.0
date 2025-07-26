@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { invalidateUserCaches } from '../app-unified.js';
 
 interface GuestProfile {
   phoneNumber: string;
@@ -57,6 +58,9 @@ export class GuestMemoryService {
     const profile = await this.getOrCreateProfile(phoneNumber);
     Object.assign(profile, updates);
     await this.saveProfiles();
+    
+    // 🟡 OPTIMIZACIÓN: Invalidar cachés después de actualizar perfil
+    invalidateUserCaches(phoneNumber);
   }
 
   private async saveProfiles(): Promise<void> {
