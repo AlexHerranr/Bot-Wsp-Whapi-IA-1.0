@@ -69,6 +69,9 @@ import { botDashboard } from './utils/monitoring/dashboard.js';
 
 // Importar validador de respuestas
 import { validateAndCorrectResponse } from './utils/response-validator.js';
+
+// Estructura para manejar retry counts por usuario (evitar loops)
+const userRetryState = new Map<string, { retryCount: number; lastRetryTime: number }>();
 import metricsRouter, { 
     incrementFallbacks, 
     setTokensUsed, 
@@ -2836,13 +2839,125 @@ function setupWebhooks() {
                             const validation = validateAndCorrectResponse(responseText, originalOutputs);
                             
                             let finalResponse = responseText;
-                            if (validation.hadErrors) {
-                                finalResponse = validation.correctedResponse;
+                            
+                            // Verificar si necesita retry por errores complejos
+                            if (validation.hadErrors && validation.needsRetry) {
+                                // Verificar si ya se hizo retry para este usuario recientemente (evitar loops)
+                                const now = Date.now();
+                                const retryState = userRetryState.get(shortUserId);
+                                const canRetry = !retryState || 
+                                                (retryState.retryCount === 0) || 
+                                                (now - retryState.lastRetryTime > 300000); // 5 minutos
                                 
-                                logWarning('RESPONSE_VALIDATION', 'Correcciones aplicadas a respuesta de OpenAI', {
+                                if (canRetry) {
+                                    logWarning('RESPONSE_RETRY_ATTEMPT', 'Iniciando retry con feedback interno por errores complejos', {
+                                        shortUserId,
+                                        threadId,
+                                        discrepancies: validation.discrepancies,
+                                        requestId
+                                    });
+                                    
+                                    try {
+                                        // Marcar que se está haciendo retry
+                                        userRetryState.set(shortUserId, { 
+                                            retryCount: 1, 
+                                            lastRetryTime: now 
+                                        });
+                                        
+                                        // Crear mensaje correctivo interno
+                                        const correctiveMessage = `Nota interna: vuelve a responder, ya que el check availability arrojó:\n\n${originalOutputs.join('\n\n')}\n\nY tu respuesta fue: ${responseText}\n\nCorrige cualquier discrepancia en nombres de apartamentos, precios, fechas u otros detalles, manteniendo exactitud y naturalidad.`;
+                                        
+                                        // Agregar mensaje correctivo al thread
+                                        await openaiClient.beta.threads.messages.create(threadId, {
+                                            role: 'user',
+                                            content: correctiveMessage
+                                        });
+                                        
+                                        // Re-ejecutar run con instrucciones adicionales
+                                        const retryRun = await openaiClient.beta.threads.runs.create(threadId, {
+                                            assistant_id: process.env.OPENAI_ASSISTANT_ID || '',
+                                            additional_instructions: 'Prioriza datos exactos de herramientas sin alteraciones. Revisa cuidadosamente precios, fechas y nombres de apartamentos.'
+                                        });
+                                        
+                                        // Polling para retry (reutilizar lógica existente)
+                                        let retryAttempts = 0;
+                                        const maxRetryAttempts = 20;
+                                        let retryRunStatus = await openaiClient.beta.threads.runs.retrieve(threadId, retryRun.id);
+                                        
+                                        while (['queued', 'in_progress'].includes(retryRunStatus.status) && retryAttempts < maxRetryAttempts) {
+                                            await new Promise(resolve => setTimeout(resolve, 1000));
+                                            retryRunStatus = await openaiClient.beta.threads.runs.retrieve(threadId, retryRun.id);
+                                            retryAttempts++;
+                                        }
+                                        
+                                        if (retryRunStatus.status === 'completed') {
+                                            // Obtener nueva respuesta
+                                            const retryMessages = await openaiClient.beta.threads.messages.list(threadId, { limit: 1 });
+                                            const retryAssistantMessage = retryMessages.data.find(msg => msg.role === 'assistant');
+                                            
+                                            if (retryAssistantMessage && retryAssistantMessage.content[0] && 'text' in retryAssistantMessage.content[0]) {
+                                                const retryResponseText = retryAssistantMessage.content[0].text.value;
+                                                
+                                                // Validar respuesta de retry
+                                                const retryValidation = validateAndCorrectResponse(retryResponseText, originalOutputs);
+                                                
+                                                if (!retryValidation.needsRetry || retryValidation.discrepancies.length < validation.discrepancies.length) {
+                                                    finalResponse = retryValidation.correctedResponse;
+                                                    
+                                                    logSuccess('RESPONSE_RETRY_SUCCESS', 'Retry completado con mejora', {
+                                                        shortUserId,
+                                                        threadId,
+                                                        originalErrors: validation.discrepancies.length,
+                                                        retryErrors: retryValidation.discrepancies.length,
+                                                        retryDuration: retryAttempts,
+                                                        requestId
+                                                    });
+                                                } else {
+                                                    // Fallback a corrección manual
+                                                    finalResponse = validation.correctedResponse;
+                                                    logWarning('RESPONSE_RETRY_FALLBACK', 'Retry no mejoró suficiente, usando corrección manual', {
+                                                        shortUserId,
+                                                        threadId,
+                                                        requestId
+                                                    });
+                                                }
+                                            }
+                                        } else {
+                                            // Retry falló, usar corrección manual
+                                            finalResponse = validation.correctedResponse;
+                                            logWarning('RESPONSE_RETRY_FAILED', 'Retry falló, usando corrección manual', {
+                                                shortUserId,
+                                                threadId,
+                                                retryStatus: retryRunStatus.status,
+                                                requestId
+                                            });
+                                        }
+                                        
+                                    } catch (retryError) {
+                                        logError('RESPONSE_RETRY_ERROR', 'Error durante retry', {
+                                            shortUserId,
+                                            threadId,
+                                            error: retryError.message,
+                                            requestId
+                                        });
+                                        finalResponse = validation.correctedResponse;
+                                    }
+                                } else {
+                                    // Ya se hizo retry, usar corrección manual
+                                    finalResponse = validation.correctedResponse;
+                                    logWarning('RESPONSE_RETRY_SKIPPED', 'Retry omitido para evitar loop, usando corrección manual', {
+                                        shortUserId,
+                                        threadId,
+                                        requestId
+                                    });
+                                }
+                            } else if (validation.hadErrors) {
+                                // Solo errores simples, usar corrección manual
+                                finalResponse = validation.correctedResponse;
+                                logWarning('RESPONSE_VALIDATION', 'Correcciones simples aplicadas a respuesta de OpenAI', {
                                     shortUserId,
                                     threadId,
-                                    corrections: validation.corrections,
+                                    discrepancies: validation.discrepancies,
                                     originalLength: responseText.length,
                                     correctedLength: finalResponse.length,
                                     requestId

@@ -26,7 +26,10 @@
       "Bash(rm:*)",
       "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\test-typing-indicator.js\")",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(railway:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }

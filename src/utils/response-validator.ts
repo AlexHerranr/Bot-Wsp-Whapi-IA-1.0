@@ -1,90 +1,128 @@
 /**
- * Validador de respuestas post-generación
- * Corrige discrepancias entre datos de BEDS24 y respuestas de OpenAI
+ * Validador de respuestas post-generación expandido
+ * Detecta discrepancias amplias entre datos de BEDS24 y respuestas de OpenAI
  */
 
-interface ApartmentReference {
+interface ValidationDiscrepancy {
+  type: 'apartment_name' | 'price';
   original: string;
-  corrected?: string;
+  incorrect: string;
+  description: string;
+}
+
+interface ValidationResult {
+  correctedResponse: string; 
+  discrepancies: ValidationDiscrepancy[]; 
+  hadErrors: boolean;
+  needsRetry: boolean; // Para casos complejos que requieren retry
 }
 
 /**
  * Extrae nombres de apartamentos de un texto
  */
 function extractApartmentNames(text: string): string[] {
-  // Regex para detectar patrones como "Apartamento 1722-A", "Apartaestudio 1722-B", etc.
   const apartmentRegex = /(?:Apartamento|Apartaestudio|Apto\.?)\s+(\d{3,4}-[A-Z])/gi;
   const matches = text.matchAll(apartmentRegex);
-  return Array.from(matches, match => match[1]); // Solo el código (ej: "1722-A")
+  return Array.from(matches, match => match[1]);
 }
 
 /**
- * Corrige nombres de apartamentos en la respuesta de OpenAI basándose en datos originales
+ * Extrae precios de un texto (formato colombiano)
+ */
+function extractPrices(text: string): string[] {
+  const priceRegex = /\$[\d,]+(?:,000)?(?:\s*COP)?/gi;
+  return text.match(priceRegex) || [];
+}
+
+// Funciones de extracción adicionales removidas por simplicidad
+// Solo validamos apartamentos y precios por ahora
+
+/**
+ * Validación simplificada de respuestas post-generación
+ * Detecta discrepancias solo en apartamentos y precios
  */
 export function validateAndCorrectResponse(
   openaiResponse: string, 
   originalToolOutputs: string[]
-): { 
-  correctedResponse: string; 
-  corrections: ApartmentReference[]; 
-  hadErrors: boolean 
-} {
+): ValidationResult {
   
-  // Extraer apartamentos de los outputs originales de BEDS24
-  const originalApartments = new Set<string>();
-  originalToolOutputs.forEach(output => {
-    const apartments = extractApartmentNames(output);
-    apartments.forEach(apt => originalApartments.add(apt));
-  });
-
-  // Si no hay apartamentos en los datos originales, no hay nada que validar
-  if (originalApartments.size === 0) {
+  if (originalToolOutputs.length === 0) {
     return {
       correctedResponse: openaiResponse,
-      corrections: [],
-      hadErrors: false
+      discrepancies: [],
+      hadErrors: false,
+      needsRetry: false
     };
   }
 
-  // Extraer apartamentos de la respuesta de OpenAI
-  const responseApartments = extractApartmentNames(openaiResponse);
-  
-  // Buscar discrepancias
-  const corrections: ApartmentReference[] = [];
+  const discrepancies: ValidationDiscrepancy[] = [];
   let correctedResponse = openaiResponse;
-  let hadErrors = false;
+  let hasComplexErrors = false;
 
+  // Combinar todos los outputs originales
+  const originalText = originalToolOutputs.join('\n');
+  
+  // 1. Validar nombres de apartamentos
+  const originalApartments = new Set<string>();
+  originalToolOutputs.forEach(output => {
+    extractApartmentNames(output).forEach(apt => originalApartments.add(apt));
+  });
+
+  const responseApartments = extractApartmentNames(openaiResponse);
   responseApartments.forEach(responseApt => {
-    // Buscar si existe exactamente en los originales
     if (!originalApartments.has(responseApt)) {
-      // Buscar el apartamento correcto más similar (mismo número, diferente letra)
       const apartmentNumber = responseApt.split('-')[0];
       const correctApartment = Array.from(originalApartments).find(orig => 
         orig.startsWith(apartmentNumber + '-')
       );
 
       if (correctApartment) {
-        // Reemplazar todas las ocurrencias del apartamento incorrecto
+        // Corrección automática para nombres
         const wrongPattern = new RegExp(
           `((?:Apartamento|Apartaestudio|Apto\\.?)\\s+)${responseApt.replace(/[-]/g, '\\-')}`, 
           'gi'
         );
-        
         correctedResponse = correctedResponse.replace(wrongPattern, `$1${correctApartment}`);
         
-        corrections.push({
-          original: responseApt,
-          corrected: correctApartment
+        discrepancies.push({
+          type: 'apartment_name',
+          original: correctApartment,
+          incorrect: responseApt,
+          description: `Nombre de apartamento corregido: ${responseApt} → ${correctApartment}`
         });
-        
-        hadErrors = true;
       }
     }
   });
 
+  // 2. Validar precios
+  const originalPrices = new Set(extractPrices(originalText));
+  const responsePrices = extractPrices(openaiResponse);
+  
+  responsePrices.forEach(responsePrice => {
+    // Buscar precio similar o exacto en originales
+    const matchingPrice = Array.from(originalPrices).find(origPrice => 
+      origPrice.replace(/[,\s]/g, '') === responsePrice.replace(/[,\s]/g, '') ||
+      origPrice.includes(responsePrice.replace(/[,\s$]/g, ''))
+    );
+
+    if (!matchingPrice) {
+      discrepancies.push({
+        type: 'price',
+        original: Array.from(originalPrices).join(', ') || 'N/A',
+        incorrect: responsePrice,
+        description: `Precio no encontrado en datos originales: ${responsePrice}`
+      });
+      hasComplexErrors = true; // Precios requieren retry
+    }
+  });
+
+  // Solo validamos apartamentos y precios por ahora
+  // Fechas y descripciones se validarán en futuras versiones
+
   return {
     correctedResponse,
-    corrections,
-    hadErrors
+    discrepancies,
+    hadErrors: discrepancies.length > 0,
+    needsRetry: hasComplexErrors // Solo retry para errores de precios (complejos)
   };
 }

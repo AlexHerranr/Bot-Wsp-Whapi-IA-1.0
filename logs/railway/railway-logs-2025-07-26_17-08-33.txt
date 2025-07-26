@@ -1,0 +1,71 @@
+Starting Container
+
+> tealquilamos-bot@1.0.0 start
+> node dist/app-unified.js
+
+📁 Logs de esta sesión: logs/bot-session-2025-07-26T17-06-08.log
+🔄 Manteniendo máximo 5 sesiones
+[2025-07-26T17:06:08.675Z] [SUCCESS] LOGGER_INIT [unknown.ts]: Sistema de logging por sesión inicializado | {"sessionId":"session-2025-07-26T17-06-08","logFile":"logs/bot-session-2025-07-26T17-06-08.log","maxSessions":5,"maxBufferSizeLocal":50,"maxBufferSizeRailway":400,"bufferInterval":100}
+2025-07-26T22:06:08.846148151Z [INFO] [THREAD_PERSIST] Directorio creado: tmp/backups jsonPayload={"category":"THREAD_PERSIST","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:06:08.741Z"} labels={"app":"whatsapp-bot","category":"THREAD_PERSIST","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:08.741Z"
+2025-07-26T22:06:08.846169931Z [INFO] [THREAD_PERSIST] No se encontró archivo de threads, iniciando vacío jsonPayload={"category":"THREAD_PERSIST","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:06:08.742Z"} labels={"app":"whatsapp-bot","category":"THREAD_PERSIST","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:08.742Z"
+2025-07-26T22:06:08.846191665Z [INFO] [THREAD_PERSIST] Auto-guardado optimizado configurado cada 5 minutos jsonPayload={"category":"THREAD_PERSIST","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:06:08.742Z"} labels={"app":"whatsapp-bot","category":"THREAD_PERSIST","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:08.742Z"
+2025-07-26T22:06:08.846327577Z [INFO] [GUEST_MEMORY] Sistema de cache de labels inicializado (TTL: 300s, limpieza: 10min) jsonPayload={"category":"GUEST_MEMORY","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:06:08.783Z"} labels={"app":"whatsapp-bot","category":"GUEST_MEMORY","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:08.783Z"
+
+🚀 TeAlquilamos Bot - Iniciando...
+📅 Timestamp: 2025-07-26T22:06:08.787Z
+🔧 Node.js: v18.20.8
+💾 Memoria inicial: 27MB
+🌍 Entorno: production
+──────────────────────────────────────────────────
+🔍 Detectando entorno...
+   RAILWAY_ENVIRONMENT: production
+   RAILWAY_PROJECT_ID: 84017f88-1aab-4519-afd2-4e55a45cee90
+   K_SERVICE: not set
+   NODE_ENV: production
+✅ Detectado: Railway
+🔧 Puerto detectado: 8080 (process.env.PORT: 8080)
+🔧 Forzando NODE_ENV=production para Railway
+🔧 Configuración del Entorno:
+   📍 Entorno: cloud-run
+   🌐 Puerto: 8080
+   �� Webhook: https://bot-wsp-whapi-ia-10-production.up.railway.app/hook
+   📊 Log Level: production
+   🔍 Logs Detallados: Sí
+   ⏱️  Buffer de Mensajes: Activo (10s)
+   ☁️  Modo: Cloud Run
+   🚀 Producción: Activo
+   🔑 Secretos: Cargados
+   📜 Inyección Historial: Inactiva (3 meses, 200 msgs)
+   ⏱️ Cache TTL: 3600 segundos (1h)
+2025-07-26T22:06:08.846806243Z [INFO] [THREAD_PERSIST] Cleanup inicial ejecutado con 3 meses jsonPayload={"category":"THREAD_PERSIST","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:06:08.790Z"} labels={"app":"whatsapp-bot","category":"THREAD_PERSIST","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:08.790Z"
+2025-07-26T22:06:08.846825590Z [INFO] [THREAD_PERSIST] Cleanup periódico configurado cada 5 minutos jsonPayload={"category":"THREAD_PERSIST","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:06:08.790Z"} labels={"app":"whatsapp-bot","category":"THREAD_PERSIST","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:08.790Z"
+2025-07-26T22:06:08.846859580Z [INFO] [SERVER_START] Servidor HTTP iniciado jsonPayload={"category":"SERVER_START","environment":"cloud-run","flow":{"stage":"0_unknown"},"host":"0.0.0.0","level":"INFO","port":8080,"timestamp":"2025-07-26T22:06:08.796Z","webhookUrl":"https://bot-wsp-whapi-ia-10-production.up.railway.app/hook"} labels={"app":"whatsapp-bot","category":"SERVER_START","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:08.796Z"
+
+=== Bot TeAlquilamos Iniciado ===
+🚀 Servidor: 0.0.0.0:8080
+🔗 Webhook: https://bot-wsp-whapi-ia-10-production.up.railway.app/hook
+✅ Sistema listo
+
+2025-07-26T22:06:08.847076979Z [INFO] [BOT_INIT] Cleanup automático de threads y cache configurado jsonPayload={"category":"BOT_INIT","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:06:08.797Z"} labels={"app":"whatsapp-bot","category":"BOT_INIT","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:08.797Z"
+2025-07-26T22:06:08.847103444Z [INFO] [CACHE_INIT] Estadísticas de cache al inicio jsonPayload={"category":"CACHE_INIT","contextCache":{"size":0,"ttlMinutes":1},"environment":"cloud-run","flow":{"stage":"0_unknown"},"historyCache":{"size":0,"ttlMinutes":60},"injectionCache":{"size":0,"ttlMinutes":5},"level":"INFO","timestamp":"2025-07-26T22:06:08.797Z"} labels={"app":"whatsapp-bot","category":"CACHE_INIT","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:08.797Z"
+2025-07-26T22:06:13.804162574Z [INFO] [ORPHANED_RUNS_RECOVERY_START] Iniciando recuperación de runs huérfanos jsonPayload={"category":"ORPHANED_RUNS_RECOVERY_START","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:06:13.798Z"} labels={"app":"whatsapp-bot","category":"ORPHANED_RUNS_RECOVERY_START","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:13.798Z"
+2025-07-26T22:06:13.804197651Z [INFO] [ORPHANED_RUNS_RECOVERY_START] Iniciando recuperación de runs huérfanos jsonPayload={"category":"ORPHANED_RUNS_RECOVERY_START","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:06:13.799Z"} labels={"app":"whatsapp-bot","category":"ORPHANED_RUNS_RECOVERY_START","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:06:13.799Z"
+2025-07-26T22:06:13.804234210Z [INFO] [ORPHANED_RUNS_RECOVERY_COMPLETE] Recuperación de runs huérfanos completada jsonPayload={"category":"ORPHANED_RUNS_RECOVERY_COMPLETE","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"SUCCESS","runsCancelled":0,"runsChecked":0,"timestamp":"2025-07-26T22:06:13.799Z"} labels={"app":"whatsapp-bot","category":"ORPHANED_RUNS_RECOVERY_COMPLETE","flow_stage":"0_unknown","level":"SUCCESS"} timestamp="2025-07-26T22:06:13.799Z"
+2025-07-26T22:06:13.804264837Z [INFO] [ORPHANED_RUNS_RECOVERY_COMPLETE] Recuperación de runs huérfanos completada jsonPayload={"category":"ORPHANED_RUNS_RECOVERY_COMPLETE","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"SUCCESS","timestamp":"2025-07-26T22:06:13.800Z"} labels={"app":"whatsapp-bot","category":"ORPHANED_RUNS_RECOVERY_COMPLETE","flow_stage":"0_unknown","level":"SUCCESS"} timestamp="2025-07-26T22:06:13.800Z"
+Stopping Container
+[2025-07-26T17:06:08.675Z] [SUCCESS] LOGGER_INIT [unknown.ts]: Sistema de logging por sesión inicializado | {"sessionId":"session-2025-07-26T17-06-08","logFile":"logs/bot-session-2025-07-26T17-06-08.log","maxSessions":5,"maxBufferSizeLocal":50,"maxBufferSizeRailway":400,"bufferInterval":100}
+✅ Logs guardados en: logs/bot-session-2025-07-26T17-06-08.log
+
+📁 Sesiones disponibles (1/5):
+   1. bot-session-2025-07-26T17-06-08.log (0.7KB - 26/7/2025, 10:14:30 p. m.)
+2025-07-26T22:14:34.005718992Z [INFO] [THREAD_PERSIST] Guardando threads antes de cerrar... jsonPayload={"category":"THREAD_PERSIST","environment":"cloud-run","flow":{"stage":"0_unknown"},"level":"INFO","timestamp":"2025-07-26T22:14:30.096Z"} labels={"app":"whatsapp-bot","category":"THREAD_PERSIST","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:14:30.096Z"
+2025-07-26T22:14:34.005741041Z [INFO] [THREAD_PERSIST] 0 threads guardados jsonPayload={"category":"THREAD_PERSIST","environment":"cloud-run","file":"tmp/threads.json","flow":{"stage":"0_unknown"},"level":"INFO","source":"save_operation","threadsCount":0,"timestamp":"2025-07-26T22:14:30.096Z"} labels={"app":"whatsapp-bot","category":"THREAD_PERSIST","flow_stage":"0_unknown","level":"INFO"} timestamp="2025-07-26T22:14:30.096Z"
+✅ Logs guardados en: logs/bot-session-2025-07-26T17-06-08.log
+
+📁 Sesiones disponibles (1/5):
+   1. bot-session-2025-07-26T17-06-08.log (0.9KB - 26/7/2025, 10:14:30 p. m.)
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.5.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.1
+npm notice To update run: npm install -g npm@11.5.1
+npm notice
