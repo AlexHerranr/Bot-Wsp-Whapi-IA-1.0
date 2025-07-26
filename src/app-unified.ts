@@ -1982,9 +1982,17 @@ function setupWebhooks() {
     const processWithOpenAI = async (userMsg: string, userJid: string, chatId: string = null, userName: string = null, requestId?: string): Promise<string> => {
         const shortUserId = getShortUserId(userJid);
         
-        // Send typing indicator for text responses
+        // Send appropriate indicator based on response type
         if (chatId) {
-            await sendTypingIndicator(chatId);
+            const userState = globalUserStates.get(shortUserId);
+            const willRespondWithVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && 
+                userState?.lastInputVoice === true;
+            
+            if (willRespondWithVoice) {
+                await sendRecordingIndicator(chatId);
+            } else {
+                await sendTypingIndicator(chatId);
+            }
         }
         
         // 🔧 ELIMINADO: Verificaciones de typing - ya no necesarias con el sistema simplificado
