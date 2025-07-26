@@ -131,7 +131,7 @@ const terminalLog = {
             const start = startDate?.split('-').slice(1).join('/'); // MM/DD
             const end = endDate?.split('-').slice(1).join('/');     // MM/DD
             const nights = args.endDate && args.startDate ? 
-                Math.round((new Date(args.endDate) - new Date(args.startDate)) / (1000 * 60 * 60 * 24)) : '?';
+                Math.round((new Date(args.endDate).getTime() - new Date(args.startDate).getTime()) / (1000 * 60 * 60 * 24)) : '?';
             console.log(`⚙️ check_availability(${start}-${end}, ${nights} noches)`);
         } else {
             console.log(`⚙️ ${name}()`);
@@ -1095,7 +1095,65 @@ async function sendRecordingIndicator(chatId: string): Promise<void> {
 async function sendWhatsAppMessage(chatId: string, message: string) {
     const shortUserId = getShortUserId(chatId);
     
-    // Voice/TTS handling removed - text-only for hotel queries
+    // Verificar si debe responder con voz (si input fue voz)
+    const userState = globalUserStates.get(getShortUserId(chatId));
+    const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && 
+        userState?.lastInputVoice === true;
+    
+    if (shouldUseVoice) {
+        try {
+            console.log(`🎤 Generando voz para ${shortUserId}: "${message.substring(0, 50)}..."`);
+            
+            // Generar audio con OpenAI TTS
+            const ttsResponse = await openaiClient.audio.speech.create({
+                model: 'tts-1',
+                voice: 'nova',
+                input: message.substring(0, 4000), // Límite TTS
+                response_format: 'mp3'
+            });
+            
+            const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+            const base64Audio = audioBuffer.toString('base64');
+            const audioDataUrl = `data:audio/mp3;base64,${base64Audio}`;
+            
+            // Enviar como nota de voz
+            const voiceResponse = await fetch(`${appConfig.secrets.WHAPI_API_URL}/messages/voice`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${appConfig.secrets.WHAPI_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    to: chatId,
+                    media: audioDataUrl
+                })
+            });
+            
+            if (voiceResponse.ok) {
+                logSuccess('VOICE_RESPONSE_SENT', 'Respuesta de voz enviada exitosamente', {
+                    userId: shortUserId,
+                    messageLength: message.length
+                });
+                
+                // Limpiar flag de voz
+                if (userState) {
+                    userState.lastInputVoice = false;
+                    globalUserStates.set(getShortUserId(chatId), userState);
+                }
+                
+                return true;
+            } else {
+                throw new Error(`WHAPI error ${voiceResponse.status}`);
+            }
+            
+        } catch (voiceError: any) {
+            logError('VOICE_SEND_ERROR', 'Error enviando voz, fallback a texto', {
+                userId: shortUserId,
+                error: voiceError.message
+            });
+            // Continuar con envío de texto
+        }
+    }
     
     // 🔧 NUEVO: No enviar mensajes vacíos
     if (!message || message.trim() === '') {
