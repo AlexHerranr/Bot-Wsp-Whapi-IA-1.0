@@ -108,21 +108,135 @@ class BotDashboard {
 
   // Configurar rutas Express (delegado al nuevo sistema modular)
   setupRoutes(app: express.Application) {
-    // Configurar archivos estáticos
-    app.use('/static', express.static(path.join(__dirname, '../../web/dashboard/static')));
+    // Configurar archivos estáticos con path correcto para producción
+    const staticPath = process.env.NODE_ENV === 'production' 
+      ? path.join(process.cwd(), 'src/web/dashboard/static')
+      : path.join(__dirname, '../../web/dashboard/static');
+    app.use('/static', express.static(staticPath));
     
-    // Importar rutas del dashboard modular
-    import('../../web/dashboard/routes/dashboard.routes.js').then(({ default: dashboardRoutes }) => {
-      app.use('/', dashboardRoutes);
-    }).catch(error => {
-      console.error('Error cargando rutas del dashboard:', error);
-      // Fallback a las rutas legacy si hay problemas
-      this.setupLegacyRoutes(app);
-    });
+    // Por ahora usar rutas legacy hasta resolver problemas de path en producción
+    console.log('Usando rutas legacy del dashboard por compatibilidad');
+    this.setupLegacyRoutes(app);
   }
 
   // Rutas legacy como respaldo
   private setupLegacyRoutes(app: express.Application) {
+    // Dashboard HTML simplificado
+    app.get('/dashboard', (req, res) => {
+      try {
+        const uptime = Math.floor((Date.now() - this.metrics.systemStatus.uptime) / 1000);
+        const uptimeFormatted = this.formatUptime(uptime);
+        
+        const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeAlquilamos Bot - Monitor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: rgba(255,255,255,0.95); padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header h1 { color: #2c3e50; text-align: center; margin-bottom: 10px; }
+        .status-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .status-item { background: #f8f9fa; padding: 10px 15px; border-radius: 5px; border-left: 4px solid #28a745; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .metric-card { background: rgba(255,255,255,0.95); padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .metric-card h3 { color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+        .metric-value { font-size: 2em; font-weight: bold; color: #3498db; text-align: center; margin: 10px 0; }
+        .logs-section { background: rgba(255,255,255,0.95); padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .logs-container { background: #1e1e1e; color: #fff; padding: 15px; border-radius: 5px; height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; }
+        .log-entry { margin-bottom: 5px; padding: 2px 0; }
+        .log-user { color: #4CAF50; font-weight: bold; }
+        .log-bot { color: #2196F3; font-weight: bold; }
+        .log-error { color: #f44336; font-weight: bold; }
+        .activity-list { max-height: 300px; overflow-y: auto; }
+        .activity-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .activity-status { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .status-received { background: #e3f2fd; color: #1976d2; }
+        .status-processing { background: #fff3e0; color: #f57c00; }
+        .status-completed { background: #e8f5e8; color: #388e3c; }
+        .status-error { background: #ffebee; color: #d32f2f; }
+        .refresh-btn { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 10px; }
+        .refresh-btn:hover { background: #2980b9; }
+    </style>
+    <script>
+        function refreshPage() { location.reload(); }
+        setInterval(refreshPage, 30000);
+        window.onload = function() { document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-ES'); }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏨 TeAlquilamos Bot - Monitor en Vivo</h1>
+            <div class="status-bar">
+                <div class="status-item"><strong>Estado:</strong> ✅ Activo</div>
+                <div class="status-item"><strong>Entorno:</strong> ${this.metrics.systemStatus.environment}</div>
+                <div class="status-item"><strong>Uptime:</strong> ${uptimeFormatted}</div>
+                <div class="status-item"><strong>Última actualización:</strong> <span id="lastUpdate"></span></div>
+            </div>
+        </div>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>📊 Mensajes Totales</h3>
+                <div class="metric-value">${this.metrics.totalMessages}</div>
+                <p>Mensajes procesados desde el inicio</p>
+            </div>
+            <div class="metric-card">
+                <h3>⚡ Tiempo Promedio</h3>
+                <div class="metric-value">${this.metrics.averageResponseTime.toFixed(1)}s</div>
+                <p>Tiempo promedio de respuesta</p>
+            </div>
+            <div class="metric-card">
+                <h3>👥 Usuarios Activos</h3>
+                <div class="metric-value">${this.metrics.messagesPerUser.size}</div>
+                <p>Usuarios únicos que han interactuado</p>
+            </div>
+            <div class="metric-card">
+                <h3>📈 Actividad Reciente</h3>
+                <div class="activity-list">
+                    ${this.metrics.lastMessages.slice(0, 10).map(msg => `
+                        <div class="activity-item">
+                            <div>
+                                <strong>${msg.user}</strong>: ${msg.message}
+                                <br><small>${new Date(msg.timestamp).toLocaleString('es-ES')}</small>
+                            </div>
+                            <span class="activity-status status-${msg.status}">
+                                ${msg.status}${msg.responseTime ? ` (${msg.responseTime.toFixed(1)}s)` : ''}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+        <div class="logs-section">
+            <h3>📋 Logs del Sistema</h3>
+            <button class="refresh-btn" onclick="refreshPage()">🔄 Actualizar</button>
+            <div class="logs-container">
+                ${this.logBuffer.slice(0, 200).map(log => {
+                    let cssClass = 'log-entry';
+                    if (log.includes('👤')) cssClass += ' log-user';
+                    else if (log.includes('🤖') || log.includes('[BOT]')) cssClass += ' log-bot';
+                    else if (log.includes('ERROR') || log.includes('❌')) cssClass += ' log-error';
+                    return `<div class="${cssClass}">${this.escapeHtml(log)}</div>`;
+                }).join('')}
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+        
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+      } catch (error) {
+        console.error('Error en dashboard legacy:', error);
+        res.status(500).send('Error interno del servidor');
+      }
+    });
+
     app.get('/api/metrics', (req, res) => {
       res.json({
         ...this.metrics,

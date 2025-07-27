@@ -70,7 +70,10 @@ function getLogCssClass(log: string): string {
 // Rutas
 router.get('/dashboard', async (req, res) => {
     try {
-        const templatePath = path.join(__dirname, '../templates/dashboard.html');
+        // Ajustar path para producción (dist) y desarrollo (src)
+        const templatePath = process.env.NODE_ENV === 'production' 
+            ? path.join(process.cwd(), 'src/web/dashboard/templates/dashboard.html')
+            : path.join(__dirname, '../templates/dashboard.html');
         const templateSource = await fs.readFile(templatePath, 'utf-8');
         const template = handlebars.compile(templateSource);
         
