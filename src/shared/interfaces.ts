@@ -1,4 +1,6 @@
 // Interfaces para la arquitectura modular y de plugins
+import { MediaProcessingResult, MediaType } from './types';
+
 export interface ToolCallFunction {
   (args: any, context?: any): Promise<string>;
 }
@@ -43,8 +45,9 @@ export interface IUserManager {
 }
 
 export interface IMediaService {
-  transcribeAudio(audioUrl: string, userId: string, userName: string, messageId: string): Promise<string>;
-  analyzeImage(imageUrl: string, userId: string, userName: string, messageId: string): Promise<string>;
+  transcribeAudio(audioUrl: string, userId: string): Promise<MediaProcessingResult>;
+  analyzeImage(imageUrl: string, userId: string, prompt?: string): Promise<MediaProcessingResult>;
+  processMedia(mediaUrl: string, mediaType: MediaType, userId: string, additionalPrompt?: string): Promise<MediaProcessingResult>;
 }
 
 export interface IOpenAIService {

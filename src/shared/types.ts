@@ -79,11 +79,24 @@ export interface FunctionCall {
 }
 
 // Tipos para Media Processing
+export type MediaType = 'audio' | 'image' | 'video' | 'document';
+
 export interface MediaProcessingResult {
     success: boolean;
-    content?: string;
+    type: MediaType;
+    result?: string;
     error?: string;
-    processingTime: number;
+    metadata?: {
+        processingTime?: number;
+        fileSize?: number;
+        duration?: number | null;
+        language?: string;
+        mimeType?: string;
+        tokensUsed?: number | null;
+        model?: string;
+        attemptedUrl?: string;
+        imageSize?: number;
+    };
 }
 
 // Tipos para Cache
