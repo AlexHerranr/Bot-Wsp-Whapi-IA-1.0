@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeAlquilamos - Dashboard de Datos</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { 
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stat-number { font-size: 2em; font-weight: bold; color: #4CAF50; }
+        .stat-label { color: #666; margin-top: 5px; }
+        .tabs {
+            display: flex;
+            background: #e9ecef;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .tab.active { background: white; color: #4CAF50; font-weight: bold; }
+        .tab:hover { background: #dee2e6; }
+        .content {
+            padding: 20px;
+            min-height: 500px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+        .data-table tr:hover { background: #f8f9fa; }
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #495057;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn:hover { background: #45a049; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .refresh-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .message-preview {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .role-user { color: #007bff; font-weight: bold; }
+        .role-assistant { color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <button class="refresh-btn" onclick="loadData()">🔄 Actualizar</button>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🤖 TeAlquilamos - Dashboard de Datos</h1>
+            <p>Gestión completa de usuarios, conversaciones y mensajes</p>
+        </div>
+        
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalUsers">-</div>
+                <div class="stat-label">👥 Usuarios</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalThreads">-</div>
+                <div class="stat-label">💬 Conversaciones</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalMessages">-</div>
+                <div class="stat-label">📝 Mensajes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeToday">-</div>
+                <div class="stat-label">📊 Activos Hoy</div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('users')">👥 Usuarios</button>
+            <button class="tab" onclick="showTab('threads')">💬 Conversaciones</button>
+            <button class="tab" onclick="showTab('messages')">📝 Mensajes</button>
+            <button class="tab" onclick="showTab('add')">➕ Agregar Datos</button>
+        </div>
+        
+        <div class="content">
+            <!-- USUARIOS -->
+            <div id="users-content" class="tab-content">
+                <h2>👥 Gestión de Usuarios</h2>
+                <div class="loading" id="users-loading">Cargando usuarios...</div>
+                <table class="data-table" id="users-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>📱 Teléfono</th>
+                            <th>👤 Nombre</th>
+                            <th>📅 Registro</th>
+                            <th>⏰ Última Actividad</th>
+                            <th>💬 Conversaciones</th>
+                            <th>🔧 Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-body"></tbody>
+                </table>
+            </div>
+            
+            <!-- CONVERSACIONES -->
+            <div id="threads-content" class="tab-content" style="display: none;">
+                <h2>💬 Gestión de Conversaciones</h2>
+                <div class="loading" id="threads-loading">Cargando conversaciones...</div>
+                <table class="data-table" id="threads-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>🆔 Thread ID</th>
+                            <th>📱 Usuario</th>
+                            <th>📅 Iniciada</th>
+                            <th>⏰ Última Msg</th>
+                            <th>📝 Mensajes</th>
+                            <th>🏷️ Etiquetas</th>
+                            <th>🔧 Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="threads-body"></tbody>
+                </table>
+            </div>
+            
+            <!-- MENSAJES -->
+            <div id="messages-content" class="tab-content" style="display: none;">
+                <h2>📝 Historial de Mensajes</h2>
+                <div class="loading" id="messages-loading">Cargando mensajes...</div>
+                <table class="data-table" id="messages-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>📅 Fecha</th>
+                            <th>📱 Usuario</th>
+                            <th>👤 Rol</th>
+                            <th>💬 Mensaje</th>
+                            <th>🔧 Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="messages-body"></tbody>
+                </table>
+            </div>
+            
+            <!-- AGREGAR DATOS -->
+            <div id="add-content" class="tab-content" style="display: none;">
+                <h2>➕ Agregar Datos Manualmente</h2>
+                
+                <div class="form-section">
+                    <h3>👤 Agregar Usuario</h3>
+                    <form id="add-user-form">
+                        <div class="form-group">
+                            <label>📱 Número de Teléfono:</label>
+                            <input type="text" id="userPhone" placeholder="573001234567@s.whatsapp.net" required>
+                        </div>
+                        <div class="form-group">
+                            <label>👤 Nombre:</label>
+                            <input type="text" id="userName" placeholder="Juan Pérez">
+                        </div>
+                        <button type="submit" class="btn">➕ Crear Usuario</button>
+                    </form>
+                </div>
+                
+                <div class="form-section">
+                    <h3>💬 Simular Mensaje</h3>
+                    <form id="add-message-form">
+                        <div class="form-group">
+                            <label>📱 Usuario:</label>
+                            <select id="messageUser" required>
+                                <option value="">Seleccionar usuario...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>👤 Rol:</label>
+                            <select id="messageRole" required>
+                                <option value="user">👤 Usuario</option>
+                                <option value="assistant">🤖 Asistente</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>💬 Mensaje:</label>
+                            <textarea id="messageContent" rows="3" placeholder="Escribe el mensaje aquí..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn">📝 Enviar Mensaje</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = {};
+        
+        // Cargar datos al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+        });
+        
+        // Función para cargar datos
+        async function loadData() {
+            try {
+                // Simular carga de datos (en real sería una API)
+                console.log('Cargando datos...');
+                
+                // Aquí se haría fetch a una API real
+                // const response = await fetch('/api/data');
+                // currentData = await response.json();
+                
+                // Por ahora, simulamos datos
+                simulateDataLoad();
+                
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+            }
+        }
+        
+        // Simular carga de datos
+        function simulateDataLoad() {
+            currentData = {
+                stats: {
+                    totalUsers: 3,
+                    totalThreads: 3,
+                    totalMessages: 2,
+                    activeToday: 1
+                },
+                users: [
+                    { id: '1', phone: '573001111111@s.whatsapp.net', name: 'Usuario Test', created: new Date(), lastActivity: new Date(), threads: 1 },
+                    { id: '2', phone: '573009876543@s.whatsapp.net', name: 'Usuario Prueba', created: new Date(), lastActivity: new Date(), threads: 1 },
+                    { id: '3', phone: '573001234567@s.whatsapp.net', name: 'Usuario Demo', created: new Date(), lastActivity: new Date(), threads: 1 }
+                ],
+                threads: [
+                    { id: 'thread_1', openaiId: 'thread_1753831774796_mo8ggdx1d', userPhone: '573001111111@s.whatsapp.net', created: new Date(), lastActivity: new Date(), messages: 2, labels: [] },
+                    { id: 'thread_2', openaiId: 'thread_1753831571764_oem60q1wi', userPhone: '573009876543@s.whatsapp.net', created: new Date(), lastActivity: new Date(), messages: 0, labels: [] }
+                ],
+                messages: [
+                    { id: '1', userPhone: '573001111111@s.whatsapp.net', role: 'user', content: 'Mensaje final para probar persistencia completa', created: new Date() },
+                    { id: '2', userPhone: '573001111111@s.whatsapp.net', role: 'assistant', content: '✅ Respuesta de TeAlquilamos para el mensaje...', created: new Date() }
+                ]
+            };
+            
+            updateStats();
+            updateTables();
+        }
+        
+        // Actualizar estadísticas
+        function updateStats() {
+            document.getElementById('totalUsers').textContent = currentData.stats.totalUsers;
+            document.getElementById('totalThreads').textContent = currentData.stats.totalThreads;
+            document.getElementById('totalMessages').textContent = currentData.stats.totalMessages;
+            document.getElementById('activeToday').textContent = currentData.stats.activeToday;
+        }
+        
+        // Actualizar tablas
+        function updateTables() {
+            updateUsersTable();
+            updateThreadsTable();
+            updateMessagesTable();
+            updateUserSelect();
+        }
+        
+        // Actualizar tabla de usuarios
+        function updateUsersTable() {
+            const tbody = document.getElementById('users-body');
+            tbody.innerHTML = '';
+            
+            currentData.users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.phone}</td>
+                    <td>${user.name}</td>
+                    <td>${user.created.toLocaleDateString('es-CO')}</td>
+                    <td>${user.lastActivity.toLocaleString('es-CO')}</td>
+                    <td>${user.threads}</td>
+                    <td>
+                        <button class="btn btn-secondary" onclick="viewUser('${user.id}')">👁️ Ver</button>
+                        <button class="btn btn-danger" onclick="deleteUser('${user.id}')">🗑️ Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('users-loading').style.display = 'none';
+            document.getElementById('users-table').style.display = 'table';
+        }
+        
+        // Actualizar tabla de conversaciones
+        function updateThreadsTable() {
+            const tbody = document.getElementById('threads-body');
+            tbody.innerHTML = '';
+            
+            currentData.threads.forEach(thread => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><code>${thread.openaiId.substring(0, 20)}...</code></td>
+                    <td>${thread.userPhone}</td>
+                    <td>${thread.created.toLocaleDateString('es-CO')}</td>
+                    <td>${thread.lastActivity.toLocaleString('es-CO')}</td>
+                    <td>${thread.messages}</td>
+                    <td>${JSON.stringify(thread.labels)}</td>
+                    <td>
+                        <button class="btn btn-secondary" onclick="viewThread('${thread.id}')">👁️ Ver</button>
+                        <button class="btn btn-danger" onclick="deleteThread('${thread.id}')">🗑️ Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('threads-loading').style.display = 'none';
+            document.getElementById('threads-table').style.display = 'table';
+        }
+        
+        // Actualizar tabla de mensajes
+        function updateMessagesTable() {
+            const tbody = document.getElementById('messages-body');
+            tbody.innerHTML = '';
+            
+            currentData.messages.forEach(message => {
+                const row = document.createElement('tr');
+                const roleClass = message.role === 'user' ? 'role-user' : 'role-assistant';
+                const roleIcon = message.role === 'user' ? '👤' : '🤖';
+                
+                row.innerHTML = `
+                    <td>${message.created.toLocaleString('es-CO')}</td>
+                    <td>${message.userPhone}</td>
+                    <td><span class="${roleClass}">${roleIcon} ${message.role}</span></td>
+                    <td><div class="message-preview">${message.content}</div></td>
+                    <td>
+                        <button class="btn btn-secondary" onclick="viewMessage('${message.id}')">👁️ Ver</button>
+                        <button class="btn btn-danger" onclick="deleteMessage('${message.id}')">🗑️ Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('messages-loading').style.display = 'none';
+            document.getElementById('messages-table').style.display = 'table';
+        }
+        
+        // Actualizar select de usuarios
+        function updateUserSelect() {
+            const select = document.getElementById('messageUser');
+            select.innerHTML = '<option value="">Seleccionar usuario...</option>';
+            
+            currentData.users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.phone;
+                option.textContent = `${user.name} (${user.phone})`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Mostrar pestaña
+        function showTab(tabName) {
+            // Ocultar todas las pestañas
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Remover clase active de todos los tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Mostrar pestaña seleccionada
+            document.getElementById(tabName + '-content').style.display = 'block';
+            event.target.classList.add('active');
+        }
+        
+        // Funciones de formularios
+        document.getElementById('add-user-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const phone = document.getElementById('userPhone').value;
+            const name = document.getElementById('userName').value;
+            
+            alert(`Usuario ${name} (${phone}) agregado correctamente!`);
+            // Aquí harías la llamada real a la API
+            
+            this.reset();
+        });
+        
+        document.getElementById('add-message-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const user = document.getElementById('messageUser').value;
+            const role = document.getElementById('messageRole').value;
+            const content = document.getElementById('messageContent').value;
+            
+            alert(`Mensaje de ${role} enviado correctamente!`);
+            // Aquí harías la llamada real a la API
+            
+            this.reset();
+        });
+        
+        // Funciones de acciones
+        function viewUser(id) { alert('Ver detalles del usuario ' + id); }
+        function deleteUser(id) { if(confirm('¿Eliminar usuario?')) alert('Usuario eliminado'); }
+        function viewThread(id) { alert('Ver conversación ' + id); }
+        function deleteThread(id) { if(confirm('¿Eliminar conversación?')) alert('Conversación eliminada'); }
+        function viewMessage(id) { alert('Ver mensaje ' + id); }
+        function deleteMessage(id) { if(confirm('¿Eliminar mensaje?')) alert('Mensaje eliminado'); }
+    </script>
+</body>
+</html>

@@ -1,403 +1,259 @@
-# 7. Inicialización, Monitoreo y Sistemas Auxiliares
+# 7. Setup, Servidor, Monitoreo y Sistemas Auxiliares
 
-> **Introducción**: Esta sección describe las funciones de inicialización del bot, sistemas de limpieza automática y monitoreo básico implementados en `app-unified.ts`. Cubre la función `initializeBot()` que configura intervalos de limpieza periódica, la recuperación de runs huérfanos de OpenAI, el sistema de logging y el dashboard de monitoreo. El código se enfoca en el procesamiento de mensajes más que en infraestructura de servidor compleja, manteniendo el bot operativo mediante tareas de mantenimiento automático.
+> **Introducción**: Esta sección describe la configuración del servidor Express con endpoints específicos, el manejo de signals para shutdown graceful, la inicialización del bot con intervals para cleanups y recovery, el dashboard para logs en tiempo real via `botDashboard.addLog(logMsg)`, el sistema de tracing para requests (e.g., `startRequestTracing`, `updateRequestStage`), el logging con `terminalLog` y métricas via Prometheus (e.g., `incrementFallbacks`, `setTokensUsed`). Representa la capa de infraestructura que asegura la operatividad, monitoreo y estabilidad del bot, facilitando el debugging y la optimización.
 
 ## Ubicación en el Código
-* **Inicialización del Bot**: `initializeBot()` (líneas `~3123-3324`)
-* **Recovery de Runs**: `recoverOrphanedRuns()` (líneas `~3331-3389`)
-* **Processing de Webhooks**: `processWebhook()` (líneas `~3392-3775`)
-* **Sistema de Logging**: `terminalLog` object (líneas `~91-200`)
+* **Setup y Configuración**: `setupEndpoints()`, `setupSignalHandlers()` (líneas ~2000-2500)
+* **Servidor Express**: Creación de app, middleware, rutas (~300-500 y ~2500-3000)
+* **Inicialización**: `initializeBot()`, `recoverOrphanedRuns()` (~3500-3700)
+* **Main y Orquestación**: `main()` (~3700+)
 
-## 1. Variables Globales y Configuración
+## 1. Configuración del Servidor Express
 
-### Variables de Estado del Sistema
-El sistema utiliza variables globales para mantener el estado:
-
-```typescript
-// Variables de configuración
-let appConfig: AppConfig;
-let openaiClient: OpenAI;
-let server: http.Server;
-let isServerInitialized = false;
-
-// Sistema de logging para terminal
-const terminalLog = {
-    message: (user: string, text: string) => {
-        const logMsg = `👤 ${user}: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}}"`;
-        console.log(logMsg);
-        botDashboard.addLog(logMsg);
-    },
-    
-    typing: (user: string) => {
-        console.log(`✍️ ${user} está escribiendo...`);
-    },
-    
-    response: (user: string, text: string, duration: number) => {
-        const logMsg = `🤖 OpenAI → ${user} (${(duration/1000).toFixed(1)}s)`;
-        console.log(logMsg);
-        botDashboard.addLog(logMsg);
-    },
-    
-    startup: () => {
-        console.clear();
-        console.log('\n=== Bot TeAlquilamos Iniciado ===');
-        console.log(`🚀 Servidor: ${appConfig?.host || 'localhost'}:${appConfig?.port || 3008}`);
-        console.log(`🔗 Webhook: ${appConfig?.webhookUrl || 'configurando...'}`);
-        console.log('✅ Sistema listo\n');
-    }
-    // ... otros métodos de logging
-};
-```
-
-**Nota**: El código no contiene la configuración de servidor Express que se esperaba. La infraestructura de servidor debe estar implementada en un archivo separado no visible en `app-unified.ts`.
-
-## 2. Sistema de Dashboard y Monitoreo
-
-### Integración con Dashboard
-El código se integra con un sistema de dashboard importado de un módulo externo:
+### Creación de la Aplicación
+El servidor Express se configura con middleware para manejar payloads grandes y exposición de métricas via /metrics con funciones como incrementFallbacks:
 
 ```typescript
-// Importar sistema de monitoreo
-import { botDashboard } from './utils/monitoring/dashboard.js';
+const app = express();
+app.use(express.json({ limit: '50mb' })); // línea ~300
+app.use('/metrics', metricsRouter); // Métricas (incrementFallbacks, setTokensUsed, setLatency, incrementMessages)
 ```
 
-El dashboard se utiliza principalmente para agregar logs:
-- `botDashboard.addLog(logMsg)` - Añade mensajes al dashboard
-- Integrado con `terminalLog` para logging dual (consola + dashboard)
+* **limit: '50mb'**: Soporta mensajes con media grande (e.g., imágenes base64).
+* **Variables**: `let server: http.Server; let isServerInitialized = false;`
 
-### Sistema de Métricas
-El código importa un router de métricas para Prometheus:
+## 2. Endpoints y Rutas del Sistema
 
+### Tabla Completa de Endpoints
+| Ruta | Método | Propósito | Observaciones |
+|------|--------|-----------|---------------|
+| `/health` | GET | Status general con stats (buffers, threads) | Usado para healthchecks, responde incluso sin inicialización completa |
+| `/hook` | POST | Recepción de webhooks de Whapi | Respuesta 200 inmediata, procesamiento async; **filtra y procesa `messages` y `presences`**; rate limiting en logs con `webhookCounts` Map |
+| `/` | GET | Info general del bot (versión, environment, status, webhookUrl) | Responde con stats de threads |
+| `/locks` | GET | Estado de locks (activeLocks, activeQueues) | Monitoreo del sistema de locks |
+| `/locks/clear` | POST | Limpia todos los locks | Solo en desarrollo (403 en producción) |
+| `/audio/:filename` | GET | Sirve audio temporal | Validación de filename (/^voice_\d+_\d+\.(mp3|ogg)$/); Content-Type dinámico; verifica existencia con fs.access; Cache-Control no-cache |
+
+* **Dashboard Routes**: Configuradas via botDashboard.setupRoutes(app): /dashboard (UI principal), /dashboard/logs (históricos), /dashboard/stats (estadísticas), /dashboard/api/logs (WebSocket)
+
+### Detalle de Endpoints Clave
+
+#### `/health`
+Responde con status y stats incluso si no inicializado:
+- Incluye: status, timestamp, environment, initialized, buffers (activeProcessing), threads (via threadPersistence.getStats())
+
+#### `/hook`
+- Respuesta inmediata para evitar timeouts.
+- Procesamiento en background con `processWebhook`.
+- Rate limiting en logs con webhookCounts Map (línea ~150, y en processWebhook).
+
+#### `/audio/:filename`
+- Validación estricta de filename.
+- Content-Type: 'audio/mpeg' (.mp3), 'audio/ogg; codecs=opus' (.ogg).
+- Usa fs.access para existencia.
+- Cache-Control: 'no-cache, no-store, must-revalidate'.
+
+## 3. Signal Handlers y Shutdown Graceful
+
+### Implementación
 ```typescript
-import metricsRouter, { 
-    incrementFallbacks, 
-    setTokensUsed, 
-    setLatency, 
-    incrementMessages
-} from './routes/metrics.js';
+function setupSignalHandlers() {
+    const shutdown = (signal: string) => {
+        // 🔧 ELIMINADO: Log de shutdown - no mostrar en terminal
+        if (appConfig) {
+            logInfo('SHUTDOWN', `Señal ${signal} recibida`, { environment: appConfig.environment });
+        }
+        
+        // Se eliminan los bucles y timers aquí, ya que el server.close() los manejará
+        
+        if (server) {
+            server.close(() => {
+                // 🔧 ELIMINADO: Log de servidor cerrado - no mostrar en terminal
+                if (appConfig) {
+                    logSuccess('SHUTDOWN', 'Servidor cerrado exitosamente', { environment: appConfig.environment });
+                }
+                process.exit(0);
+            });
+        } else {
+            process.exit(0);
+        }
+
+        setTimeout(() => {
+            logWarning('SHUTDOWN', 'Cierre forzado por timeout', { environment: appConfig ? appConfig.environment : 'unknown' });
+            process.exit(1);
+        }, 5000);
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+}
 ```
 
-Estas funciones se utilizan a lo largo del código para:
-- `incrementFallbacks()` - Contar fallbacks cuando OpenAI falla
-- `setTokensUsed()` - Registrar tokens consumidos
-- `setLatency()` - Medir latencia de respuestas
-- `incrementMessages()` - Contar mensajes procesados
+* **Secuencia**: Limpia timers de globalMessageBuffers, cierra server, timeout de 5s.
+* **Error Handlers**: `uncaughtException` y `unhandledRejection` loggean y salen con delay de 2s.
 
-## 3. Inicialización del Bot - `initializeBot()`
+## 4. Inicialización del Bot y Recovery
 
-La función principal que configura el sistema de limpieza automática y recovery:
-
-### Implementación Real
+### Proceso de Inicialización
 ```typescript
 async function initializeBot() {
-    // Marcar sistema como inicializado
     isServerInitialized = true;
-    
-    // Log de startup limpio
     terminalLog.startup();
     
-    // 1. Recovery de runs huérfanos (con timeout de 10 segundos)
+    // Recuperación de runs huérfanos con timeout de 10s para no bloquear
     setTimeout(async () => {
         try {
-            logInfo('ORPHANED_RUNS_RECOVERY_START', 'Iniciando recuperación de runs huérfanos');
-            
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Recovery timeout after 10 seconds')), 10000)
-            );
-            
-            await Promise.race([
-                recoverOrphanedRuns(),
-                timeoutPromise
-            ]);
-            
-            logSuccess('ORPHANED_RUNS_RECOVERY_COMPLETE', 'Recuperación de runs huérfanos completada');
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Recovery timeout')), 10000));
+            await Promise.race([recoverOrphanedRuns(), timeoutPromise]);
         } catch (error) {
-            logError('ORPHANED_RUNS_RECOVERY_ERROR', 'Error recuperando runs huérfanos', {
-                error: error.message,
-                stack: error instanceof Error ? error.stack : undefined,
-                type: error instanceof Error ? error.constructor.name : typeof error
-            });
+            logError('ORPHANED_RUNS_RECOVERY_ERROR', 'Error recuperando runs huérfanos', { error: error.message });
         }
     }, 5000);
     
-    // 2. Cleanup automático de caches de inyección (cada 10 minutos)
+    // Interval 1: Cleanup de Caches de Inyección (cada 10 min)
     setInterval(() => {
-        try {
-            cleanupExpiredCaches();
-        } catch (error) {
-            logError('INJECTION_CACHE_CLEANUP', 'Error en cleanup de caches de inyección', { error: error.message });
-        }
+        cleanupExpiredCaches();
     }, 10 * 60 * 1000);
     
-    // 3. Limpieza de estados de usuario y caches (cada hora)
+    // Interval 2: Cleanup de Estados de Usuario y ChatInfo (cada hora)
     setInterval(() => {
-        try {
-            const now = Date.now();
-            let cleanedUserStates = 0;
-            let cleanedChatInfo = 0;
-            
-            // Limpiar estados de usuario inactivos por más de 24 horas
-            for (const [userId, state] of globalUserStates.entries()) {
-                const lastActivity = Math.max(state.lastMessageTimestamp, state.lastTypingTimestamp);
-                if ((now - lastActivity) > 24 * 60 * 60 * 1000) {
-                    globalUserStates.delete(userId);
-                    cleanedUserStates++;
-                }
+        const now = Date.now();
+        for (const [userId, state] of globalUserStates.entries()) {
+            const lastActivity = Math.max(state.lastMessageTimestamp, state.lastTypingTimestamp);
+            if ((now - lastActivity) > 24 * 60 * 60 * 1000) { // >24h inactivo
+                globalUserStates.delete(userId);
             }
-            
-            // Limpiar chatInfoCache expirado (más de 1 hora)
-            for (const [userId, cached] of chatInfoCache.entries()) {
-                if ((now - cached.timestamp) > 60 * 60 * 1000) {
-                    chatInfoCache.delete(userId);
-                    cleanedChatInfo++;
-                }
+        }
+        for (const [userId, cached] of chatInfoCache.entries()) {
+            if ((now - cached.timestamp) > 60 * 60 * 1000) { // >1h de antigüedad
+                chatInfoCache.delete(userId);
             }
-            
-            if (cleanedUserStates > 0 || cleanedChatInfo > 0) {
-                logInfo('CACHE_CLEANUP', `Limpieza de caches completada`, {
-                    userStatesCleaned: cleanedUserStates,
-                    chatInfoCleaned: cleanedChatInfo
-                });
-            }
-        } catch (error) {
-            logError('CACHE_CLEANUP', 'Error limpiando caches', { error: error.message });
         }
     }, 60 * 60 * 1000);
     
-    // 4. Cleanup de buffers globales (cada 10 minutos)
+    // Interval 3: Cleanup del Buffer Global (cada 10 min)
     setInterval(() => {
-        try {
-            const now = Date.now();
-            let expiredCount = 0;
-            
-            // Limpiar buffers después de 15 minutos de inactividad
-            for (const [userId, buffer] of globalMessageBuffers.entries()) {
-                if ((now - buffer.lastActivity) > 15 * 60 * 1000) {
-                    if (buffer.timer) {
-                        clearTimeout(buffer.timer);
-                    }
-                    globalMessageBuffers.delete(userId);
-                    expiredCount++;
-                }
+        const now = Date.now();
+        for (const [userId, buffer] of globalMessageBuffers.entries()) {
+            if ((now - buffer.lastActivity) > 15 * 60 * 1000) { // >15min inactivo
+                if (buffer.timer) clearTimeout(buffer.timer);
+                globalMessageBuffers.delete(userId);
             }
-            
-            if (expiredCount > 0) {
-                logInfo('GLOBAL_BUFFER_CLEANUP', `Global buffer cleanup: ${expiredCount} buffers expirados removidos`, {
-                    remainingEntries: globalMessageBuffers.size
-                });
-            }
-        } catch (error) {
-            logError('GLOBAL_BUFFER_CLEANUP', 'Error en cleanup del buffer global', { error: error.message });
         }
     }, 10 * 60 * 1000);
     
-    // 5. Monitoreo de memoria (cada 5 minutos)
+    // Interval 4: Logging de Memoria (cada 5 min)
     setInterval(() => {
-        try {
-            const memUsage = process.memoryUsage();
-            const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
-            const heapTotalMB = memUsage.heapTotal / 1024 / 1024;
-            const rssMB = memUsage.rss / 1024 / 1024;
-            const heapUsagePercentage = (heapUsedMB / heapTotalMB) * 100;
-            
-            // Solo loggear cuando hay problemas o cada 30 minutos
-            const isHighMemory = heapUsedMB > 300;
-            const isMemoryLeak = heapUsagePercentage > 95;
-            const isModerateMemory = heapUsedMB > 200;
-            const shouldLogMemory = isHighMemory || isMemoryLeak || isModerateMemory || 
-                (Date.now() % (30 * 60 * 1000) < 60000);
-            
-            if (shouldLogMemory) {
-                logInfo('MEMORY_USAGE', 'Métricas de memoria del sistema', {
-                    memory: {
-                        rss: Math.round(rssMB) + 'MB',
-                        heapUsed: Math.round(heapUsedMB) + 'MB',
-                        heapTotal: Math.round(heapTotalMB) + 'MB',
-                        heapUsagePercent: Math.round(heapUsagePercentage) + '%'
-                    },
-                    threads: {
-                        active: threadPersistence.getStats().activeThreads,
-                        total: threadPersistence.getStats().totalThreads
-                    },
-                    uptime: Math.round(process.uptime()) + 's'
-                });
-            }
-            
-            if (isHighMemory) {
-                logAlert('HIGH_MEMORY_USAGE', 'Uso alto de memoria detectado', {
-                    heapUsedMB: Math.round(heapUsedMB),
-                    threshold: 300,
-                    heapUsagePercent: Math.round(heapUsagePercentage) + '%'
-                });
-            }
-            
-            if (isMemoryLeak) {
-                logFatal('MEMORY_LEAK_DETECTED', 'Posible memory leak crítico detectado', {
-                    heapUsedMB: Math.round(heapUsedMB),
-                    heapUsagePercent: Math.round(heapUsagePercentage) + '%',
-                    threshold: 95
-                });
-            }
-        } catch (error) {
-            logError('MEMORY_METRICS_ERROR', 'Error obteniendo métricas de memoria', { error: error.message });
-        }
+        const memUsage = process.memoryUsage();
+        const heapUsedMB = memUsage.heapUsed / 1024 / 1024;
+        const heapUsagePercentage = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+        if (heapUsedMB > 300) { logAlert('HIGH_MEMORY_USAGE', '...'); }
+        if (heapUsagePercentage > 95) { logFatal('MEMORY_LEAK_DETECTED', '...'); }
     }, 5 * 60 * 1000);
 }
 ```
 
-## 4. Recovery de Runs Huérfanos - `recoverOrphanedRuns()`
-
-Función que cancela runs activos de OpenAI que pueden haber quedado pendientes:
-
+### Recovery de Runs Huérfanos
 ```typescript
-async function recoverOrphanedRuns() {
-    try {
-        logInfo('ORPHANED_RUNS_RECOVERY_START', 'Iniciando recuperación de runs huérfanos');
-        
-        const threads = threadPersistence.getAllThreadsInfo();
-        let runsChecked = 0;
-        let runsCancelled = 0;
-        
-        for (const [userId, threadInfo] of Object.entries(threads)) {
-            try {
-                // Verificar si hay runs activos en el thread
-                const runs = await openaiClient.beta.threads.runs.list(threadInfo.threadId, { limit: 10 });
-                
-                for (const run of runs.data) {
-                    runsChecked++;
-                    
-                    // Cancelar TODOS los runs activos al inicio
-                    if (['queued', 'in_progress', 'requires_action'].includes(run.status)) {
-                        try {
-                            await openaiClient.beta.threads.runs.cancel(threadInfo.threadId, run.id);
-                            runsCancelled++;
-                            
-                            logWarning('ORPHANED_RUN_CANCELLED', `Run huérfano cancelado al inicio`, {
-                                userId,
-                                threadId: threadInfo.threadId,
-                                runId: run.id,
-                                status: run.status,
-                                ageMinutes: Math.round((Date.now() - new Date(run.created_at).getTime()) / 1000 / 60)
-                            });
-                        } catch (cancelError) {
-                            logError('ORPHANED_RUN_CANCEL_ERROR', `Error cancelando run huérfano`, {
-                                userId,
-                                threadId: threadInfo.threadId,
-                                runId: run.id,
-                                error: cancelError.message
-                            });
-                        }
-                    }
-                }
-            } catch (threadError) {
-                logError('ORPHANED_RUNS_THREAD_ERROR', `Error verificando thread para runs huérfanos`, {
-                    userId,
-                    threadId: threadInfo.threadId,
-                    error: threadError.message
-                });
+async function recoverOrphanedRuns(): Promise<void> {
+    const threads = threadPersistence.getAllThreadsInfo();
+    for (const [userId, threadInfo] of Object.entries(threads)) {
+        const runs = await openaiClient.beta.threads.runs.list(threadInfo.threadId, { limit: 10 });
+        for (const run of runs.data) {
+            if (['queued', 'in_progress', 'requires_action'].includes(run.status)) {
+                await openaiClient.beta.threads.runs.cancel(threadInfo.threadId, run.id);
             }
         }
-        
-        logSuccess('ORPHANED_RUNS_RECOVERY_COMPLETE', 'Recuperación de runs huérfanos completada', {
-            runsChecked,
-            runsCancelled
-        });
-        
-    } catch (error) {
-        logError('ORPHANED_RUNS_RECOVERY_ERROR', 'Error durante recuperación de runs huérfanos', {
-            error: error.message
-        });
     }
 }
 ```
 
-**Beneficios del Recovery**:
-- **Protección de costos**: Evita facturación por runs abandonados
-- **Limpieza de estado**: Elimina estado inconsistente entre reinicios
-- **Liberación de recursos**: Libera recursos de OpenAI
+## 5. Sistemas Auxiliares
 
-## 5. Sistema de Tracing y Logging
+### Sistema de Logging (terminalLog)
+Objeto con ~20 métodos (línea ~150-300) para logs limpios en terminal y dashboard:
+- Ejemplos: message, typing, response, error, openaiError, etc.
+- Integra `botDashboard.addLog(logMsg)` en algunos (e.g., message, response).
 
-### Request Tracing
-El código importa funciones de tracing desde el sistema de logging:
+*Nota: Métodos como `typing`, `error`, y `functionStart` intencionalmente no llaman a `botDashboard.addLog()` para mantener el dashboard enfocado en el flujo de la conversación (mensajes y respuestas) y reducir el ruido visual.*
 
-```typescript
-import {
-    startRequestTracing,
-    updateRequestStage,
-    registerToolCall,
-    updateToolCallStatus,
-    endRequestTracing
-} from './utils/logging/index.js';
+### Sistema de Tracing
+Funciones importadas (línea ~50-100) para tracking de requests:
+- `startRequestTracing(userId)`: Inicia trace, retorna requestId.
+- `updateRequestStage(requestId, stage)`: Actualiza etapas (e.g., 'init', 'processing').
+- `registerToolCall(requestId, toolCallId, name, status)`: Registra tool calls.
+- `updateToolCallStatus(requestId, toolCallId, status)`: Actualiza status de tools.
+- `endRequestTracing(requestId)`: Finaliza trace con summary.
+
+### Métricas
+Funciones importadas (línea ~120): `incrementFallbacks()`, `setTokensUsed(tokens)`, `setLatency(ms)`, `incrementMessages()` - Usadas en métricas Prometheus via /metrics.
+
+### Dashboard (botDashboard)
+- `setupRoutes(app)` (línea ~2500): Configura rutas para UI, logs, stats, WebSocket.
+- `addLog(msg)`: Agrega logs a dashboard en tiempo real.
+
+## 6. Función Main y Orquestación
+
+### Secuencia Exacta de Main
+1. Logs iniciales (versión Node, memoria, entorno).
+2. `loadAndValidateConfig()` → appConfig.
+3. `logEnvironmentConfig()`.
+4. new OpenAI client.
+5. `setupEndpoints()`.
+6. `setupWebhooks()`.
+7. createServer, listen.
+8. `initializeBot()`.
+9. `setupSignalHandlers()`.
+10. Catch con servidor mínimo en puerto 8080.
+
+## 7. Análisis: Problemas Conocidos y Mitigaciones
+| Problema | Riesgo | Mitigación |
+|----------|--------|------------|
+| Memory leaks en intervals | Acumulación si cleanups fallan | Intervals de cleanup (10min-1h); logs de memoria (5min) con alertas (>300MB o >95%) |
+| Runs huérfanos facturando | Costos extra post-restart | `recoverOrphanedRuns()` al boot (5s delay), cancela activos |
+| Shutdown incompleto | Timers pendientes | Limpia timers de globalMessageBuffers en signal handlers |
+| Webhook timeouts | Whapi reintentos fallidos | Respuesta 200 inmediata, procesamiento async |
+
+## 8. Diagramas de Flujo
+
+### Sincronización de Mensajes Manuales (from_me: true)
+```
+Webhook → from_me: true & !botSentMessages.has(id)
+    ↓
+Buffer en globalMessageBuffers (key=chatId)
+    ↓
+Timer BUFFER_WINDOW_MS (5s) → Agrupa mensajes
+    ↓
+Procesar:
+    1. messages.create(role: 'user', content: '[Mensaje manual de agentName]')
+    2. messages.create(role: 'assistant', content: combinedMessage)
+    ↓
+setThread() → actualiza metadata
+    ↓
+Log MANUAL_SYNC_SUCCESS
 ```
 
-Estas funciones permiten seguir el ciclo de vida de cada request:
-- `startRequestTracing(userId)` - Inicia el seguimiento
-- `updateRequestStage(requestId, stage)` - Actualiza el estado
-- `registerToolCall(...)` - Registra llamadas a herramientas
-- `endRequestTracing(requestId)` - Finaliza el seguimiento
-
-### Validación de Respuestas
-El sistema incluye un validador de respuestas para corregir errores de OpenAI:
-
-```typescript
-import { validateAndCorrectResponse } from './utils/response-validator.js';
+### Ciclo de Procesamiento con Function Calling
 ```
-
-## 6. Procesamiento de Webhooks - `processWebhook()`
-
-La función principal que maneja los webhooks de Whapi:
-
-### Características Principales
-- **Procesamiento de mensajes**: Texto, voz, imágenes
-- **Eventos de presencia**: Typing, recording, online/offline
-- **Buffering inteligente**: Agrupa mensajes rápidos
-- **Rate limiting**: Control de logs para evitar spam
-- **Manejo de errores**: Robusto con logging detallado
-
-### Flujo de Procesamiento
-1. **Validación**: Verifica que el webhook sea válido
-2. **Filtrado**: Filtra tipos de webhook reconocidos
-3. **Procesamiento por tipo**: Mensajes vs eventos de presencia
-4. **Buffering**: Agrupa mensajes en ventanas de 5 segundos
-5. **Envío a OpenAI**: Procesa con `processWithOpenAI()`
-
-## 7. Diagrama de Flujo Simplificado
-
-### Inicialización del Sistema
+processCombinedMessage → addToQueue(processFunction)
+    ↓
+isRunActive() → cleanupOldRuns
+    ↓
+processWithOpenAI:
+    ↓ sendTyping/RecordingIndicator
+    ↓ Crear/obtener thread
+    ↓ subscribeToPresence
+    ↓ getRelevantContext si necesario
+    ↓ Adjuntar pendingImages si multimodal
+    ↓ threads.messages.create (user, content)
+    ↓ runs.create
+    ↓ Polling (1s, max 30, backoff race conditions)
+    ↓ Si requires_action:
+        ↓ executeFunction (registerToolCall, updateToolCallStatus)
+        ↓ submitToolOutputs
+        ↓ Polling post-tool (500ms-5s backoff, max 10)
+    ↓ validateAndCorrectResponse → retry si needsRetry (userRetryState)
+    ↓ Si context_length_exceeded → nuevo thread
+    ↓
+endRequestTracing + métricas
 ```
-🚀 initializeBot()
-    ↓
-✅ isServerInitialized = true
-    ↓
-🧹 setTimeout(recoverOrphanedRuns, 5000)
-    ↓
-⏰ setInterval cleanupExpiredCaches (10min)
-    ↓
-⏰ setInterval cleanup user states (1h)
-    ↓
-⏰ setInterval cleanup buffers (10min)
-    ↓
-📊 setInterval memory monitoring (5min)
-```
-
-### Procesamiento de Webhook
-```
-📥 processWebhook(body)
-    ↓
-❓ Validar webhook
-    ↓
-🔍 Procesar por tipo:
-    ├─ 📝 Texto → addToGlobalBuffer()
-    ├─ 🎤 Voz → transcribir → addToGlobalBuffer()
-    ├─ 📷 Imagen → guardar URL → addToGlobalBuffer()
-    └─ ✍️ Typing → mostrar indicador
-    ↓
-📦 Buffer agrupación (5s)
-    ↓
-🤖 processWithOpenAI()
-```
-
----
-
-**Nota**: Esta documentación refleja el código real encontrado en `app-unified.ts`. El sistema no contiene la infraestructura avanzada de servidor Express, endpoints complejos, o sistemas avanzados de circuit breakers que se describían anteriormente. El enfoque está en el procesamiento de mensajes y mantenimiento automático del sistema.
