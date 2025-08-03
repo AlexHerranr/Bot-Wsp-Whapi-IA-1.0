@@ -85,7 +85,8 @@
       "Bash(del test-compact-logging.js)",
       "Bash(del debug-chunks.js)",
       "Bash(del nul)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\utils\\messageBuffering.ts\")"
     ],
     "deny": []
   }
