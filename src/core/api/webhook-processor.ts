@@ -5,9 +5,6 @@ import { UserManager } from '../state/user-state-manager';
 import { MediaService } from '../services/media.service';
 import { DatabaseService } from '../services/database.service';
 import { TerminalLog } from '../utils/terminal-log';
-import { WebhookPayloadSchema } from '../../shared/validation';
-import { container } from 'tsyringe';
-import { SimpleCRMService } from '../services/simple-crm.service';
 import { RateLimiter } from '../utils/rate-limiter';
 import { logInfo, logSuccess, logError, logWarning } from '../../utils/logging';
 
@@ -145,13 +142,12 @@ export class WebhookProcessor {
                     lastActivity: now
                 });
                 
-                // Log técnico de sesión para eventos de presencia (SIN rate limiting)
-                logInfo('PRESENCE_EVENT', `Usuario ${status}`, {
+                // Log técnico específico para buffer
+                logInfo('BUFFER_EVENT', 'Evento de presencia detectado', {
                     userId,
-                    status,
                     userName: userState.userName || 'Usuario',
-                    timestamp: new Date().toISOString(),
-                    timeSinceLastTyping: userState.lastTyping ? now - userState.lastTyping : 'never'
+                    status,
+                    reason: 'extend_timer'
                 });
                 
                 // SIEMPRE procesar el timer (crítico para buffering)

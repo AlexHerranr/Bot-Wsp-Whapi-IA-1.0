@@ -48,7 +48,6 @@ export interface MessageBuffer {
     userName: string;
     lastActivity: number;
     timer: NodeJS.Timeout | null;
-    currentDelay?: number;
 }
 
 // Registro de Threads en Persistencia

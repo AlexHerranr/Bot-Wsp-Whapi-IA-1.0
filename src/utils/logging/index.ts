@@ -469,7 +469,7 @@ function formatCompactLog(category: string, message: string, details: any, level
         case 'BUFFER_TIMER_SET':
         case 'BUFFER_TIMER_CANCELLED':
         case 'BUFFER_TIMER_RESPECTED':
-            const delay = details?.delay || details?.currentDelay || details?.newDelay;
+            const delay = details?.delay || details?.newDelay;
             const reason = details?.reason || 'unknown';
             const count = messageCount ? ` | msgs:${messageCount}` : '';
             const action = category === 'BUFFER_TIMER_SET' ? 'Starting buffer' : 

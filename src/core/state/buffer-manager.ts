@@ -1,7 +1,7 @@
 // src/core/state/buffer-manager.ts - Versión con Extensión Dinámica Simplificada
 import { MessageBuffer } from '../../shared/types';
 import { IBufferManager } from '../../shared/interfaces';
-import { BUFFER_WINDOW_MS, TYPING_ACTIVITY_MS } from '../utils/constants';
+import { BUFFER_DELAY_MS, MAX_BUFFER_MESSAGES } from '../utils/constants';
 import { logInfo, logSuccess, logWarning } from '../../utils/logging';
 
 export class BufferManager implements IBufferManager {
@@ -24,7 +24,7 @@ export class BufferManager implements IBufferManager {
             if (chatId && !buffer.chatId) buffer.chatId = chatId;
         }
 
-        if (buffer.messages.length >= 50) {
+        if (buffer.messages.length >= MAX_BUFFER_MESSAGES) {
             logWarning('BUFFER_LIMIT_REACHED', 'Límite alcanzado, procesando inmediatamente', { userId, userName, messageCount: buffer.messages.length });
             this.processBuffer(userId);
             return;
@@ -38,22 +38,17 @@ export class BufferManager implements IBufferManager {
         buffer.messages.push(messageText);
         buffer.lastActivity = Date.now();
         
-        // Si el buffer tenía un delay largo (esperando transcripción), mantenerlo
-        const hadLongDelay = buffer.currentDelay && buffer.currentDelay >= TYPING_ACTIVITY_MS;
+        // Log técnico para adición de mensaje
+        logInfo('BUFFER_ADD', 'Mensaje agregado al buffer', {
+            userId,
+            userName: buffer.userName || 'Usuario',
+            messagePreview: messageText.substring(0, 50),
+            messageCount: buffer.messages.length,
+            reason: 'new_message'
+        });
         
-        if (hadLongDelay) {
-            // Mantener el delay largo para no interrumpir la espera de transcripción
-            logInfo('BUFFER_KEEP_LONG_DELAY', 'Manteniendo delay largo tras agregar mensaje', {
-                userId,
-                userName,
-                currentDelay: buffer.currentDelay,
-                messagePreview: messageText.substring(0, 50)
-            });
-            this.setTimer(userId, 'activity'); // Usar 'activity' para mantener 5s
-        } else {
-            // Comportamiento normal para mensajes regulares
-            this.setTimer(userId, 'message');
-        }
+        // Sistema unificado: siempre usar timer de 5s
+        this.setOrExtendTimer(userId, 'message');
     }
 
     public onTypingOrRecording(userId: string): void {
@@ -66,58 +61,41 @@ export class BufferManager implements IBufferManager {
         
         buffer.lastActivity = Date.now();
         
-        // Mata timer anterior y crea nuevo para actividad
-        this.setTimer(userId, 'activity');
+        // Sistema unificado: usar timer de 5s
+        this.setOrExtendTimer(userId, 'typing_recording');
     }
 
-    private setTimer(userId: string, triggerType: 'message' | 'activity'): void {
+    // Método unificado: "Last event wins" - cancela timer anterior y establece nuevo timer de 5s
+    private setOrExtendTimer(userId: string, reason: string = 'message'): void {
         const buffer = this.buffers.get(userId);
         if (!buffer) return;
 
-        // Determinar delay base por tipo
-        let delay = (triggerType === 'message') ? BUFFER_WINDOW_MS : TYPING_ACTIVITY_MS;  // 2s o 5s
+        const delay = BUFFER_DELAY_MS; // Siempre 5s unificado
 
-        // Si usuario está activo, SIEMPRE usar delay largo (full desde ahora)
-        if (this.getUserState) {
-            const userState = this.getUserState(userId);
-            if (userState?.isTyping || userState?.isRecording) {
-                delay = TYPING_ACTIVITY_MS;  // 5s desde ahora
-                buffer.lastActivity = Date.now();  // Actualizar timestamp
-                logInfo('BUFFER_ACTIVITY_EXTENSION', 'Extendiendo full por actividad', { 
-                    userId, 
-                    userName: buffer.userName, 
-                    delay, 
-                    triggerType,
-                    reason: 'user_active' 
-                });
-            }
-        }
-
-        // MATA el timer anterior si existe
+        // Cancelar timer anterior si existe (last event wins)
         if (buffer.timer) {
             clearTimeout(buffer.timer);
-            logInfo('BUFFER_TIMER_KILLED', 'Timer anterior eliminado para extender', {
+            logInfo('BUFFER_TIMER_CANCEL', 'Timer anterior cancelado', {
                 userId,
-                userName: buffer.userName,
-                previousDelay: buffer.currentDelay,
-                newDelay: delay,
-                reason: `new_${triggerType}`
+                userName: buffer.userName || 'Usuario',
+                reason: 'new_event',
+                previousDelay: delay
             });
         }
 
-        // Crear NUEVO timer (mata anterior, full delay desde ahora)
+        // Crear nuevo timer de 5s
         buffer.timer = setTimeout(() => {
             this.processBuffer(userId);
         }, delay);
 
-        buffer.currentDelay = delay;
+        buffer.lastActivity = Date.now();
 
-        logInfo('BUFFER_TIMER_SET', 'Nuevo timer full', {
+        logInfo('BUFFER_TIMER_SET', 'Nuevo timer iniciado', {
             userId,
-            userName: buffer.userName,
+            userName: buffer.userName || 'Usuario',
             delay,
-            messageCount: buffer.messages.length,
-            triggerType
+            reason,
+            messageCount: buffer.messages.length
         });
     }
 

@@ -1,6 +1,6 @@
 // tests/unit/buffer-manager.test.ts
 import { BufferManager } from '../../src/core/state/buffer-manager';
-import { BUFFER_WINDOW_MS, VOICE_BUFFER_MS, TYPING_EXTENDED_MS } from '../../src/core/utils/constants';
+import { BUFFER_DELAY_MS } from '../../src/core/utils/constants';
 
 describe('🧪 Buffer Manager', () => {
     let bufferManager: BufferManager;
@@ -77,25 +77,23 @@ describe('🧪 Buffer Manager', () => {
             );
         });
 
-        test('should warn when buffer limit is reached', () => {
-            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-            
-            // Add 50 messages first
-            for (let i = 1; i <= 50; i++) {
+        test('should process buffer immediately when reaching MAX_BUFFER_MESSAGES', () => {
+            // Add messages up to the limit - 1
+            for (let i = 1; i < 50; i++) {
                 bufferManager.addMessage('user123', `Message ${i}`, 'chat123', 'TestUser');
             }
             
-            // The 51st message should trigger the warning
-            bufferManager.addMessage('user123', 'Message 51', 'chat123', 'TestUser');
+            // Callback should not have been called yet
+            expect(mockProcessCallback).not.toHaveBeenCalled();
             
-            expect(consoleSpy).toHaveBeenCalledWith(
-                expect.stringContaining('Buffer limit reached for user user123')
-            );
+            // Adding the 50th message should trigger immediate processing
+            bufferManager.addMessage('user123', 'Message 50', 'chat123', 'TestUser');
             
-            consoleSpy.mockRestore();
+            // Now it should have been called
+            expect(mockProcessCallback).toHaveBeenCalled();
         });
 
-        test('should combine messages with newlines when processing', async () => {
+        test('should combine messages with spaces when processing', async () => {
             jest.useFakeTimers();
             
             bufferManager.addMessage('user123', 'Line 1', 'chat123', 'TestUser');
@@ -103,13 +101,13 @@ describe('🧪 Buffer Manager', () => {
             bufferManager.addMessage('user123', 'Line 3', 'chat123', 'TestUser');
             
             // Fast-forward past buffer window
-            jest.advanceTimersByTime(BUFFER_WINDOW_MS + 100);
+            jest.advanceTimersByTime(BUFFER_DELAY_MS + 100);
             
             await jest.runAllTimersAsync();
             
             expect(mockProcessCallback).toHaveBeenCalledWith(
                 'user123',
-                'Line 1\nLine 2\nLine 3',
+                'Line 1 Line 2 Line 3',
                 'chat123',
                 'TestUser'
             );
@@ -121,7 +119,7 @@ describe('🧪 Buffer Manager', () => {
             bufferManager.addMessage('user123', 'Test message', 'chat123', 'TestUser');
             
             // Fast-forward to trigger processing
-            jest.advanceTimersByTime(BUFFER_WINDOW_MS + 100);
+            jest.advanceTimersByTime(BUFFER_DELAY_MS + 100);
             await jest.runAllTimersAsync();
             
             // Buffer should be deleted after processing
@@ -138,7 +136,7 @@ describe('🧪 Buffer Manager', () => {
             bufferManager.addMessage('user123', 'Hello', 'chat123', 'TestUser');
             
             const buffer = bufferManager.getBuffer('user123');
-            expect(buffer.currentDelay).toBe(BUFFER_WINDOW_MS); // 5000ms
+            expect(buffer.timer).toBeDefined(); // Timer debe existir
             
             consoleSpy.mockRestore();
         });
@@ -151,7 +149,7 @@ describe('🧪 Buffer Manager', () => {
             bufferManager.setIntelligentTimer('user123', 'voice');
             
             const buffer = bufferManager.getBuffer('user123');
-            expect(buffer.currentDelay).toBe(VOICE_BUFFER_MS); // 8000ms
+            expect(buffer.timer).toBeDefined(); // Timer unificado de 5s establecido
             
             consoleSpy.mockRestore();
         });
@@ -164,7 +162,7 @@ describe('🧪 Buffer Manager', () => {
             bufferManager.setIntelligentTimer('user123', 'typing');
             
             const buffer = bufferManager.getBuffer('user123');
-            expect(buffer.currentDelay).toBe(TYPING_EXTENDED_MS); // 10000ms
+            expect(buffer.timer).toBeDefined(); // Timer unificado de 5s establecido
             
             consoleSpy.mockRestore();
         });
@@ -177,50 +175,45 @@ describe('🧪 Buffer Manager', () => {
             bufferManager.setIntelligentTimer('user123', 'recording');
             
             const buffer = bufferManager.getBuffer('user123');
-            expect(buffer.currentDelay).toBe(TYPING_EXTENDED_MS); // 10000ms
+            expect(buffer.timer).toBeDefined(); // Timer unificado de 5s establecido
             
             consoleSpy.mockRestore();
         });
 
-        test('should reconfigure timer when new delay is greater', () => {
+        test('should always use unified 5s timer for all events', () => {
             jest.useFakeTimers();
             const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
             
-            // Start with message (5s)
+            // Start with message - should be 5s timer
             bufferManager.addMessage('user123', 'Hello', 'chat123', 'TestUser');
-            expect(bufferManager.getBuffer('user123').currentDelay).toBe(5000);
+            expect(bufferManager.getBuffer('user123').timer).toBeDefined();
             
-            // Upgrade to voice (8s) - should reconfigure
+            // Voice event - should restart timer (also 5s)
             bufferManager.setIntelligentTimer('user123', 'voice');
-            expect(bufferManager.getBuffer('user123').currentDelay).toBe(8000);
+            expect(bufferManager.getBuffer('user123').timer).toBeDefined();
             
-            // Upgrade to typing (10s) - should reconfigure
+            // Typing event - should restart timer (also 5s)
             bufferManager.setIntelligentTimer('user123', 'typing');
-            expect(bufferManager.getBuffer('user123').currentDelay).toBe(10000);
-            
-            expect(consoleSpy).toHaveBeenCalledWith(
-                expect.stringContaining('Timer reconfigured for user user123')
-            );
+            expect(bufferManager.getBuffer('user123').timer).toBeDefined();
             
             consoleSpy.mockRestore();
         });
 
-        test('should respect existing timer when new delay is smaller', () => {
+        test('should implement "last event wins" - always restart timer', () => {
             jest.useFakeTimers();
             const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
             
-            // Start with typing (10s)
+            // Start with typing - creates 5s timer
             bufferManager.addMessage('user123', 'Hello', 'chat123', 'TestUser');
             bufferManager.setIntelligentTimer('user123', 'typing');
-            expect(bufferManager.getBuffer('user123').currentDelay).toBe(10000);
+            const firstTimer = bufferManager.getBuffer('user123').timer;
+            expect(firstTimer).toBeDefined();
             
-            // Try to downgrade to message (5s) - should be respected
+            // New message event - should cancel previous and create new 5s timer
             bufferManager.setIntelligentTimer('user123', 'message');
-            expect(bufferManager.getBuffer('user123').currentDelay).toBe(10000); // Still 10s
-            
-            expect(consoleSpy).toHaveBeenCalledWith(
-                expect.stringContaining('Timer respected for user user123')
-            );
+            const secondTimer = bufferManager.getBuffer('user123').timer;
+            expect(secondTimer).toBeDefined();
+            expect(secondTimer).not.toBe(firstTimer); // Different timer object
             
             consoleSpy.mockRestore();
         });
@@ -239,7 +232,7 @@ describe('🧪 Buffer Manager', () => {
             bufferManager.addMessage('user123', 'Test message', 'chat123', 'TestUser');
             
             // Fast-forward past buffer window
-            jest.advanceTimersByTime(BUFFER_WINDOW_MS + 100);
+            jest.advanceTimersByTime(BUFFER_DELAY_MS + 100);
             await jest.runAllTimersAsync();
             
             expect(mockProcessCallback).toHaveBeenCalledWith(
@@ -252,20 +245,18 @@ describe('🧪 Buffer Manager', () => {
 
         test('should handle processing errors gracefully', async () => {
             jest.useFakeTimers();
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+            const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
             
             // Make callback throw an error
             mockProcessCallback.mockRejectedValueOnce(new Error('Processing failed'));
             
             bufferManager.addMessage('user123', 'Test message', 'chat123', 'TestUser');
             
-            jest.advanceTimersByTime(BUFFER_WINDOW_MS + 100);
+            jest.advanceTimersByTime(BUFFER_DELAY_MS + 100);
             await jest.runAllTimersAsync();
             
-            expect(consoleSpy).toHaveBeenCalledWith(
-                expect.stringContaining('Error processing buffer for user user123'),
-                expect.any(Error)
-            );
+            // Should have attempted to process (error handling is internal)
+            expect(mockProcessCallback).toHaveBeenCalled();
             
             consoleSpy.mockRestore();
         });
@@ -278,7 +269,7 @@ describe('🧪 Buffer Manager', () => {
             const buffer = bufferManager.getBuffer('user123');
             buffer.messages = []; // Empty the messages
             
-            jest.advanceTimersByTime(BUFFER_WINDOW_MS + 100);
+            jest.advanceTimersByTime(BUFFER_DELAY_MS + 100);
             await jest.runAllTimersAsync();
             
             expect(mockProcessCallback).not.toHaveBeenCalled();

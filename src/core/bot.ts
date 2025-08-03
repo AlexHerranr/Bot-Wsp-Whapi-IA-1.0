@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import express from 'express';
 import http from 'http';
 import OpenAI from 'openai';
-import { injectable, inject, container } from 'tsyringe';
+import { injectable, container } from 'tsyringe';
 
 // Importar todos nuestros módulos y servicios
 import { BufferManager } from './state/buffer-manager';
@@ -22,7 +22,6 @@ import { TerminalLog } from './utils/terminal-log';
 import { IFunctionRegistry } from '../shared/interfaces';
 import { crmRoutes } from './routes/crm.routes';
 import { logBotReady, logServerStart, logInfo, logSuccess, logError, logWarning } from '../utils/logging';
-import { TYPING_ACTIVITY_MS } from './utils/constants';
 
 // Simulación de la configuración
 interface AppConfig {
@@ -396,6 +395,14 @@ export class CoreBot {
                 });
             }
 
+            // Log técnico: inicio de run OpenAI
+            logInfo('OPENAI_RUN_START', 'Iniciando run de OpenAI', {
+                userId,
+                userName,
+                threadId: existingThreadId || 'new',
+                inputPreview: processedMessage.substring(0, 50)
+            });
+
             // Procesar con OpenAI Service usando thread existente si está disponible
             const processingResult = await this.openaiService.processMessage(
                 userId, 
@@ -404,6 +411,14 @@ export class CoreBot {
                 userName,
                 existingThreadId
             );
+
+            // Log técnico: fin de run OpenAI
+            logSuccess('OPENAI_RUN_END', 'Run de OpenAI completado', {
+                userId,
+                userName,
+                status: processingResult.success ? 'completed' : 'failed',
+                threadId: processingResult.threadId || 'unknown'
+            });
 
             if (!processingResult.success) {
                 throw new Error(processingResult.error || 'OpenAI processing failed');

@@ -157,7 +157,7 @@ describe('Equivalencia Funcional End-to-End', () => {
   });
 
   describe('2. Buffer Timing - Validación Exacta de Delays', () => {
-    test('debe respetar BUFFER_WINDOW_MS = 5000 para mensajes', async () => {
+    test('debe respetar BUFFER_DELAY_MS = 5000 para mensajes', async () => {
       const payload = createWebhookPayload('text');
       
       // Mock del buffer manager para capturar timing
@@ -180,7 +180,7 @@ describe('Equivalencia Funcional End-to-End', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    test('debe aplicar TYPING_EXTENDED_MS = 10000 para typing events', async () => {
+    test('debe aplicar BUFFER_DELAY_MS = 5000 para typing events', async () => {
       const typingPayload = {
         presences: [{
           contact_id: '5493815567391@c.us',

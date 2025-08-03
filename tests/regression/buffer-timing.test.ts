@@ -28,11 +28,11 @@ describe('Buffer Timing Regression Tests', () => {
         expect(mockCallback).toHaveBeenCalledWith('user1', 'Hola, necesito información', 'chat1', 'Usuario Test');
     });
 
-    test('should extend buffer to 10s when typing is detected', async () => {
+    test('should restart 5s timer when typing is detected (last event wins)', async () => {
         // Mensaje inicial (establece timer de 5s)
         bufferManager.addMessage('user1', 'Estoy escribiendo', 'chat1', 'Usuario Test');
         
-        // Simular typing a los 3s (debe cancelar timer de 5s y crear uno de 10s)
+        // Simular typing a los 3s (debe cancelar timer anterior y crear nuevo de 5s)
         jest.advanceTimersByTime(3000);
         bufferManager.setIntelligentTimer('user1', 'typing');
         
@@ -40,16 +40,16 @@ describe('Buffer Timing Regression Tests', () => {
         jest.advanceTimersByTime(2000);  // Total: 5000ms desde inicio
         expect(mockCallback).not.toHaveBeenCalled();
         
-        // Debe procesar exactamente 10s después del evento typing
-        jest.advanceTimersByTime(10000);  // 10s completos desde el typing
+        // Debe procesar exactamente 5s después del evento typing
+        jest.advanceTimersByTime(5000);  // 5s completos desde el typing
         expect(mockCallback).toHaveBeenCalledWith('user1', 'Estoy escribiendo', 'chat1', 'Usuario Test');
     });
 
-    test('should extend buffer to 10s when recording is detected', async () => {
+    test('should restart 5s timer when recording is detected (last event wins)', async () => {
         // Mensaje inicial (establece timer de 5s)
         bufferManager.addMessage('user1', 'Grabando audio', 'chat1', 'Usuario Test');
         
-        // Simular recording a los 2s (debe cancelar timer de 5s y crear uno de 10s)
+        // Simular recording a los 2s (debe cancelar timer anterior y crear nuevo de 5s)
         jest.advanceTimersByTime(2000);
         bufferManager.setIntelligentTimer('user1', 'recording');
         
@@ -57,8 +57,8 @@ describe('Buffer Timing Regression Tests', () => {
         jest.advanceTimersByTime(3000);  // Total: 5000ms desde inicio
         expect(mockCallback).not.toHaveBeenCalled();
         
-        // Debe procesar exactamente 10s después del evento recording
-        jest.advanceTimersByTime(10000);  // 10s completos desde el recording
+        // Debe procesar exactamente 5s después del evento recording
+        jest.advanceTimersByTime(5000);  // 5s completos desde el recording
         expect(mockCallback).toHaveBeenCalledWith('user1', 'Grabando audio', 'chat1', 'Usuario Test');
     });
 
@@ -70,8 +70,8 @@ describe('Buffer Timing Regression Tests', () => {
         jest.advanceTimersByTime(1000);
         bufferManager.addMessage('user1', 'Mensaje 3', 'chat1', 'Usuario Test');
         
-        // Debe combinar todos los mensajes
-        jest.advanceTimersByTime(3000);  // Total: 5000ms
-        expect(mockCallback).toHaveBeenCalledWith('user1', 'Mensaje 1\nMensaje 2\nMensaje 3', 'chat1', 'Usuario Test');
+        // Debe combinar todos los mensajes - 5s desde el último mensaje
+        jest.advanceTimersByTime(5000);  // 5s desde el último mensaje
+        expect(mockCallback).toHaveBeenCalledWith('user1', 'Mensaje 1 Mensaje 2 Mensaje 3', 'chat1', 'Usuario Test');
     });
 });
