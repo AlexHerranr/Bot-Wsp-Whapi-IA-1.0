@@ -56,9 +56,10 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 
-# Scripts locales
+# Scripts locales (mantener solo assistant-management)
 scripts/windows/
 scripts/development/
+CUsersalex-Bot-Wsp-Whapi-IAdocssystem-internals/
 
 # Archivos de backup
 *.backup.*

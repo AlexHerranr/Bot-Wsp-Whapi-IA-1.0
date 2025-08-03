@@ -25,9 +25,10 @@ RUN npm ci --ignore-scripts
 # Copiar código fuente y archivos de configuración
 COPY tsconfig.json ./
 COPY src/ ./src/
-COPY config/ ./config/
+COPY prisma/ ./prisma/
 
-# Compilar aplicación
+# Generar Prisma client y compilar aplicación
+RUN npx prisma generate
 RUN npm run build
 
 # Stage de producción - imagen mínima
@@ -45,7 +46,7 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copiar solo lo necesario
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/config ./config
+COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
 COPY --chown=nodejs:nodejs package.json ./
 
 # Crear directorios necesarios
@@ -63,4 +64,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD node -e "const port = process.env.PORT || 8080; require('http').get('http://localhost:' + port + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
 
 # Comando de inicio directo
-CMD ["node", "--max-old-space-size=768", "dist/app-unified.js"]
+CMD ["node", "--max-old-space-size=768", "dist/main.js"]
