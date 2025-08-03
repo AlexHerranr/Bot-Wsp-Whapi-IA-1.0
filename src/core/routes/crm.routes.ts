@@ -9,7 +9,7 @@ const router = Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Endpoint para N8N: Enviar seguimiento personalizado
-router.post('/send-followup', async (req: Request, res: Response): Promise<void> => {
+router.post('/send-followup', async (req: Request, res: Response) => {
   try {
     const { phoneNumber, profileStatus, proximaAccion, userName } = req.body;
 
@@ -96,7 +96,7 @@ router.post('/send-followup', async (req: Request, res: Response): Promise<void>
 });
 
 // Endpoint para N8N: Analizar conversación y actualizar CRM
-router.post('/analyze-conversation', async (req: Request, res: Response): Promise<void> => {
+router.post('/analyze-conversation', async (req: Request, res: Response) => {
   try {
     const { phoneNumber } = req.body;
 

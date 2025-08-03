@@ -80,8 +80,8 @@ export class CRMAnalysisJob {
       // También verificar que no se haya actualizado en las últimas 2 horas
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
       
-      if (this.db.connected && this.db.database) {
-        const result = await this.db.database.$queryRaw`
+      if (this.db.connected && this.db.client) {
+        const result = await this.db.client.$queryRaw`
           SELECT "phoneNumber", "chatId", "userName", "lastActivity"
           FROM "ClientView" 
           WHERE "lastActivity" < ${oneHourAgo}
