@@ -32,8 +32,6 @@ ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=512"
 EXPOSE $PORT
 
-# Health check adaptativo al puerto Railway
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=2 \
-    CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3010) + '/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+# Railway maneja su propio healthcheck en /health
 
 CMD ["node", "--max-old-space-size=512", "dist/main.js"]
