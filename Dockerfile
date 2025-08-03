@@ -1,67 +1,38 @@
-# Multi-stage Dockerfile optimizado para Railway/Cloud Run
-FROM node:18-alpine AS deps
+# Dockerfile optimizado para Railway (estándar de industria)
+FROM node:18-alpine
+
 WORKDIR /app
 
-# Copiar solo archivos de dependencias primero
+# Copiar archivos de dependencias primero (mejor cache)
 COPY package.json package-lock.json ./
 
-# Instalar dependencias de producción (sin scripts de post-install)
-RUN npm ci --only=production --ignore-scripts
+# Instalar dependencias de producción
+RUN npm ci --only=production
 
-# Stage de build
-FROM node:18-alpine AS builder
-WORKDIR /app
-
-# Instalar dependencias del sistema necesarias para compilar
-RUN apk add --no-cache python3 make g++
-
-# Copiar dependencias de producción
-COPY --from=deps /app/node_modules ./node_modules
-
-# Instalar todas las dependencias (incluidas dev)
-COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
-
-# Copiar código fuente y archivos de configuración
-COPY tsconfig.json ./
-COPY src/ ./src/
-COPY prisma/ ./prisma/
-
-# Generar Prisma client y compilar aplicación
+# Copiar schema y generar Prisma client (separado del build)
+COPY prisma ./prisma/
 RUN npx prisma generate
+
+# Copiar código fuente
+COPY src ./src/
+COPY tsconfig.json ./
+
+# Build TypeScript
 RUN npm run build
 
-# Stage de producción - imagen mínima
-FROM node:18-alpine AS runner
-WORKDIR /app
-
-# Variables de entorno para producción (Railway setea PORT dinámicamente)
-ENV NODE_ENV=production \
-    NODE_OPTIONS="--max-old-space-size=768"
-
-# Crear usuario no-root
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
-# Copiar solo lo necesario
-COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
-COPY --chown=nodejs:nodejs package.json ./
-
 # Crear directorios necesarios
-RUN mkdir -p /app/logs /app/tmp && \
-    chown -R nodejs:nodejs /app
+RUN mkdir -p logs tmp
 
-# Cambiar a usuario no-root
-USER nodejs
+# Variables de entorno optimizadas para Railway
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=512"
 
-# Exponer puerto (Railway usa el puerto de la variable PORT)
+# Exponer puerto Railway
 EXPOSE 8080
 
-# Health check usando variable PORT
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "const port = process.env.PORT || 8080; require('http').get('http://localhost:' + port + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+# Health check ligero
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=2 \
+    CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 8080) + '/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-# Comando de inicio directo
-CMD ["node", "--max-old-space-size=768", "dist/main.js"]
+# Start optimizado
+CMD ["node", "--max-old-space-size=512", "dist/main.js"]
