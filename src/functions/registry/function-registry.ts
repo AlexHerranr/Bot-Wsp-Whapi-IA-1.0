@@ -6,8 +6,8 @@
 import type { FunctionDefinition } from '../types/function-types.js';
 
 // Importar definiciones de funciones
-import { checkAvailabilityFunction } from '../availability/beds24-availability.js';
-import { escalateToHumanFunction } from '../escalation/escalate-to-human.js';
+// import { checkAvailabilityFunction } from '../availability/beds24-availability.js'; // Moved to hotel plugin
+// import { escalateToHumanFunction } from '../escalation/escalate-to-human.js'; // Moved to hotel plugin
 import { injectHistoryFunction } from '../history/inject-history.js';
 import { getConversationContextFunction } from '../context/get-conversation-context.js';
 
@@ -15,11 +15,11 @@ import { getConversationContextFunction } from '../context/get-conversation-cont
  * Registro de todas las funciones disponibles
  */
 export const FUNCTION_REGISTRY: Record<string, FunctionDefinition> = {
-  // Funciones de disponibilidad
-  check_availability: checkAvailabilityFunction,
+  // Funciones de disponibilidad moved to hotel plugin
+  // check_availability: checkAvailabilityFunction,
   
-  // Funciones de escalamiento
-  escalate_to_human: escalateToHumanFunction,
+  // Funciones de escalamiento moved to hotel plugin
+  // escalate_to_human: escalateToHumanFunction,
   
   // Funciones de contexto e historial
   // inject_history: injectHistoryFunction, // DESACTIVADO: OpenAI ya no necesita inyectar automáticamente

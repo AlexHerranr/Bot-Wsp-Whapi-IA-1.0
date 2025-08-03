@@ -8,106 +8,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// model User {
-//   id           String   @id @default(cuid())
-//   phoneNumber  String   @unique
-//   
-//   // Nombres (múltiples fuentes)
-//   name                String?   // Nombre principal/mostrar
-//   whatsappProfileName String?   // Nombre del perfil de WhatsApp (chatInfo.name)
-//   extractedName       String?   // Nombre extraído de conversaciones
-//   displayName         String?   // Nombre calculado para mostrar
-//   
-//   // Información de contacto
-//   isContact           Boolean   @default(false)
-//   isVip               Boolean   @default(false)
-//   
-//   // Timestamps
-//   createdAt           DateTime  @default(now())
-//   lastActivity        DateTime  @updatedAt
-//   firstInteraction    DateTime?
-//   
-//   // CRM y seguimiento
-//   customerStatus      String?   // 'nuevo', 'activo', 'inactivo', 'vip'
-//   totalStays          Int       @default(0)
-//   
-//   threads             Thread[]
-// }
 
-// model Thread {
-//   id           String    @id @default(cuid())
-//   openaiId     String    @unique
-//   userId       String
-//   chatId       String?
-//   userName     String?
-//   
-//   // Etiquetas y clasificación (formato WHAPI)
-//   labels       Json?     // Array de etiquetas simples ["etiqueta1", "etiqueta2"]
-//   whapiLabels  Json?     // Etiquetas completas de WHAPI [{id, name, color}, ...]
-//   primaryLabel String?   // Etiqueta principal
-//   
-//   // CRM y seguimiento comercial
-//   perfilStatus    String?   // Resumen del cliente (quién es, qué se ha hablado)
-//   proximaAccion   String?   // Próxima acción recomendada
-//   prioridad       String?   // 'ALTA', 'MEDIA', 'BAJA'
-//   estadoComercial String?   // 'prospecto', 'cotizacion', 'reserva', 'huesped', 'perdido'
-//   
-//   // Metadata y timestamps
-//   metadata        Json?
-//   createdAt       DateTime  @default(now())
-//   lastActivity    DateTime  @updatedAt
-//   
-//   // Análisis de conversación
-//   totalMessages   Int       @default(0)
-//   lastMessageRole String?   // 'user' o 'assistant'
-//   lastMessageAt   DateTime?
-//   
-//   user            User      @relation(fields: [userId], references: [id])
-//   messages        Message[]
-// }
-
-// model Message {
-//   id        String   @id @default(cuid())
-//   threadId  String
-//   role      String   // 'user' o 'assistant'
-//   content   String
-//   
-//   // Análisis del mensaje
-//   messageType String?  // 'text', 'image', 'audio', 'document', 'voice'
-//   sentiment   String?  // 'positive', 'negative', 'neutral'
-//   intent      String?  // 'consulta', 'reserva', 'queja', 'info'
-//   
-//   // Metadata y timestamps
-//   metadata    Json?
-//   createdAt   DateTime @default(now())
-//   
-//   thread      Thread   @relation(fields: [threadId], references: [id])
-// }
-
-// Vista unificada - Orden visual + nombres exactos de metadatos
 model ClientView {
-  // 🔥 PRIORIDAD VISUAL 1: IDENTIFICACIÓN BÁSICA
-  phoneNumber         String   @id  // FUENTE: webhook message.from | FRECUENCIA: Cada mensaje
-  name                String?  // FUENTE: WHAPI getChatInfo().name | FRECUENCIA: syncWhapiLabels()
-  userName            String?  // FUENTE: webhook message.from_name | FRECUENCIA: Cada mensaje
-  
-  // 🔥 PRIORIDAD VISUAL 2: ETIQUETAS
-  label1              String?  // FUENTE: WHAPI getChatInfo().labels[0].name | FRECUENCIA: syncWhapiLabels()
-  label2              String?  // FUENTE: WHAPI getChatInfo().labels[1].name | FRECUENCIA: syncWhapiLabels()
-  label3              String?  // FUENTE: WHAPI getChatInfo().labels[2].name | FRECUENCIA: syncWhapiLabels()
-  
-  // 🔥 PRIORIDAD VISUAL 3: CONTACTO
-  chatId              String?  // FUENTE: webhook message.chat_id | FRECUENCIA: Cada mensaje
-  
-  // 🔥 PRIORIDAD VISUAL 4: ACTIVIDAD RECIENTE
-  lastActivity        DateTime @updatedAt // FUENTE: @updatedAt automático Prisma | FRECUENCIA: Cada cambio
-  
-  // 🔥 PRIORIDAD VISUAL 5: THREAD TÉCNICO
-  threadId            String?  // FUENTE: OpenAI al crear thread | FRECUENCIA: Al crear/cambiar thread
-  
-  // 🔥 PRIORIDAD VISUAL 6: CRM - AUTOMATIZADO (AL FINAL)
-  profileStatus       String?   @db.Text  // Resumen del cliente (máx 300 chars) - OpenAI Assistant
-  proximaAccion       String?             // Acción sugerida - OpenAI Assistant
-  fechaProximaAccion  DateTime?           // Fecha de la acción (YYYY-MM-DD) - OpenAI Assistant
-  prioridad           Int?      @default(2)  // 1=Alta, 2=Media, 3=Baja - OpenAI Assistant
+  phoneNumber         String   @id
+  name                String?
+  userName            String?
+  label1              String?
+  label2              String?
+  label3              String?
+  chatId              String?
+  lastActivity        DateTime @updatedAt
+  threadId            String?
+  profileStatus       String?   @db.Text
+  proximaAccion       String?
+  fechaProximaAccion  DateTime?
+  prioridad           Int?      @default(2)
 }

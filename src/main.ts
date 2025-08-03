@@ -4,7 +4,7 @@ import 'dotenv/config';
 import { container } from 'tsyringe';
 import { CoreBot } from './core/bot';
 import { FunctionRegistryService } from './core/services/function-registry.service';
-import { HotelPlugin } from './plugins/hotel/hotel.plugin';
+import { HotelPlugin } from './plugins/hotel';
 import { SimpleCRMService } from './core/services/simple-crm.service';
 import { DailyActionsJob } from './core/jobs/daily-actions.job';
 import { CRMAnalysisJob } from './core/jobs/crm-analysis.job';
@@ -85,9 +85,14 @@ function setupDependencyInjection() {
     const crmAnalysisJob = new CRMAnalysisJob(databaseService, crmService);
     container.registerInstance('CRMAnalysisJob', crmAnalysisJob);
     
-    // Register and initialize plugins
-    const hotelPlugin = new HotelPlugin();
-    hotelPlugin.register(functionRegistry, 'hotel-plugin');
+    // Register plugins conditionally
+    const enabledPlugins = [];
+    
+    if (process.env.PLUGIN_HOTEL_ENABLED !== 'false') {
+        const hotelPlugin = new HotelPlugin();
+        hotelPlugin.register(functionRegistry, 'hotel-plugin');
+        enabledPlugins.push('hotel');
+    }
     
     // Log técnico consolidado
     logInfo('DI_COMPLETED', 'DI ✓ 5 services, 1 function', {
@@ -96,7 +101,7 @@ function setupDependencyInjection() {
         container: 'tsyringe'
     });
     
-    return { functionRegistry, hotelPlugin, dailyJob, crmAnalysisJob };
+    return { functionRegistry, enabledPlugins, dailyJob, crmAnalysisJob };
 }
 
 async function main() {
@@ -117,7 +122,7 @@ async function main() {
         const config = loadConfig();
         
         // Setup DI container
-        const { functionRegistry, dailyJob, crmAnalysisJob } = setupDependencyInjection();
+        const { functionRegistry, enabledPlugins, dailyJob, crmAnalysisJob } = setupDependencyInjection();
         
         // Start CRM Jobs if enabled
         if (process.env.CRM_ANALYSIS_ENABLED === 'true' && process.env.CRM_MODE === 'internal') {

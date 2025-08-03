@@ -9,15 +9,16 @@ const router = Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Endpoint para N8N: Enviar seguimiento personalizado
-router.post('/send-followup', async (req: Request, res: Response) => {
+router.post('/send-followup', async (req: Request, res: Response): Promise<void> => {
   try {
     const { phoneNumber, profileStatus, proximaAccion, userName } = req.body;
 
     if (!phoneNumber || !profileStatus || !proximaAccion) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         success: false, 
         error: 'Faltan campos requeridos: phoneNumber, profileStatus, proximaAccion' 
       });
+      return;
     }
 
     const prompt = `Genera un mensaje personalizado para seguimiento de cliente:
@@ -49,10 +50,11 @@ router.post('/send-followup', async (req: Request, res: Response) => {
     const client = await db.getClientByPhone(phoneNumber);
     
     if (!client?.chatId) {
-      return res.status(404).json({ 
+      res.status(404).json({ 
         success: false, 
         error: 'Cliente no encontrado o sin chatId' 
       });
+      return;
     }
 
     // Enviar mensaje de WhatsApp
@@ -94,15 +96,16 @@ router.post('/send-followup', async (req: Request, res: Response) => {
 });
 
 // Endpoint para N8N: Analizar conversación y actualizar CRM
-router.post('/analyze-conversation', async (req: Request, res: Response) => {
+router.post('/analyze-conversation', async (req: Request, res: Response): Promise<void> => {
   try {
     const { phoneNumber } = req.body;
 
     if (!phoneNumber) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         success: false, 
         error: 'phoneNumber es requerido' 
       });
+      return;
     }
 
     const crmService = container.resolve(SimpleCRMService);
@@ -123,7 +126,7 @@ router.post('/analyze-conversation', async (req: Request, res: Response) => {
 });
 
 // Endpoint para obtener clientes con acciones pendientes para hoy
-router.get('/today-actions', async (req: Request, res: Response) => {
+router.get('/today-actions', async (req: Request, res: Response): Promise<void> => {
   try {
     const db = container.resolve(DatabaseService);
     const clients = await db.getClientsWithActionToday();
@@ -151,7 +154,7 @@ router.get('/today-actions', async (req: Request, res: Response) => {
 });
 
 // Endpoint para ejecutar daily actions manualmente (testing)
-router.post('/execute-daily-actions', async (req: Request, res: Response) => {
+router.post('/execute-daily-actions', async (req: Request, res: Response): Promise<void> => {
   try {
     const dailyJob = container.resolve(DailyActionsJob);
     await dailyJob.executeManual();
@@ -171,7 +174,7 @@ router.post('/execute-daily-actions', async (req: Request, res: Response) => {
 });
 
 // Endpoint para obtener estado del sistema CRM
-router.get('/status', async (req: Request, res: Response) => {
+router.get('/status', async (req: Request, res: Response): Promise<void> => {
   try {
     const db = container.resolve(DatabaseService);
     const dailyJob = container.resolve(DailyActionsJob);

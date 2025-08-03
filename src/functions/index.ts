@@ -10,8 +10,8 @@ export * from './types/function-types.js';
 export * from './registry/function-registry.js';
 
 // Exportar funciones específicas
-export * from './availability/beds24-availability.js';
-export * from './escalation/escalate-to-human.js';
+// export * from './availability/beds24-availability.js'; // Moved to hotel plugin
+// export * from './escalation/escalate-to-human.js'; // Moved to hotel plugin
 export * from './context/get-conversation-context.js';
 
 // Funciones de booking (documentadas, pendientes de implementación)

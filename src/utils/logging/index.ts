@@ -1,6 +1,7 @@
 // src/utils/logging/index.ts - Updated with Voice/Image optimizations
 
-import { botDashboard } from '../monitoring/dashboard';
+// Dashboard disabled - monitoring removed
+// import { botDashboard } from '../monitoring/dashboard';
 import fs from 'fs';
 import path from 'path';
 
@@ -327,17 +328,17 @@ function enrichedLog(
         // Cloud Run: Solo logs estructurados
         console.log(JSON.stringify(detailedLogEntry));
         
-        // 🌐 DASHBOARD: Enviar log compacto al dashboard web
-        if (compactLogEntry) {
-            botDashboard.addLog(compactLogEntry);
-        }
+        // Dashboard disabled - monitoring removed
+        // if (compactLogEntry) {
+        //     botDashboard.addLog(compactLogEntry);
+        // }
     } else {
         // Desarrollo local: SOLO archivo detallado (terminal maneja terminalLog)
         // NO mostrar en console.log para evitar duplicación con terminalLog
-        if (compactLogEntry) {
-            // 🌐 DASHBOARD: Enviar al dashboard en local
-            botDashboard.addLog(compactLogEntry);
-        }
+        // Dashboard disabled - monitoring removed
+        // if (compactLogEntry) {
+        //     botDashboard.addLog(compactLogEntry);
+        // }
         
         // Escribir log detallado al archivo SIEMPRE en desarrollo local
         if (!IS_PRODUCTION) {
@@ -353,20 +354,20 @@ function enrichedLog(
         }
     }
     
-    // 🔧 NUEVO: Enviar actividad de usuario al dashboard (solo para métricas)
-    try {
-        if (details?.userName || details?.shortUserId) {
-            const userName = details.userName || details.shortUserId;
-            botDashboard.logActivity(userName, message, 
-                level === 'ERROR' ? 'error' : 
-                level === 'SUCCESS' ? 'completed' : 
-                category === 'MESSAGE_RECEIVED' ? 'received' : 'processing'
-            );
-        }
-    } catch (error) {
-        // Silenciar errores del dashboard para no afectar el logging principal
-        console.error('Dashboard activity log error:', error.message);
-    }
+    // Dashboard disabled - monitoring removed
+    // try {
+    //     if (details?.userName || details?.shortUserId) {
+    //         const userName = details.userName || details.shortUserId;
+    //         botDashboard.logActivity(userName, message, 
+    //             level === 'ERROR' ? 'error' : 
+    //             level === 'SUCCESS' ? 'completed' : 
+    //             category === 'MESSAGE_RECEIVED' ? 'received' : 'processing'
+    //         );
+    //     }
+    // } catch (error) {
+    //     // Silenciar errores del dashboard para no afectar el logging principal
+    //     console.error('Dashboard activity log error:', error.message);
+    // }
 }
 
 // 🔧 NUEVO: Utilidades de formateo compacto

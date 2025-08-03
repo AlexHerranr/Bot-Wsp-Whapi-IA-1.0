@@ -6,7 +6,7 @@
  */
 
 import OpenAI from 'openai';
-import { threadPersistence } from '../persistence/threadPersistence';
+// import { threadPersistence } from '../persistence/threadPersistence'; // Legacy removed - now uses DatabaseService
 import { getChatHistory } from '../whapi/index';
 import { 
     logInfo, 
@@ -191,7 +191,8 @@ async function checkNeedsInjection(threadId: string, shortUserId: string, isNewT
     
     // Verificar si el thread existe y tiene actividad reciente (indicador de que ya tiene contexto)
     try {
-        const threadInfo = threadPersistence.getThread(shortUserId);
+        // const threadInfo = threadPersistence.getThread(shortUserId); // Legacy - now uses DatabaseService
+        const threadInfo = null; // Disabled legacy functionality
         if (threadInfo && threadInfo.lastActivity) {
             const lastActivity = new Date(threadInfo.lastActivity);
             const now = new Date();

@@ -1,126 +1,90 @@
-# 🤖 TeAlquilamos Bot - WhatsApp AI Assistant
+# TeAlquilamos Bot - Base Reutilizable
 
-> **Bot inteligente de WhatsApp para gestión de reservas y consultas de alojamiento**
+**Bot de WhatsApp modular y extensible** construido con TypeScript, OpenAI Assistants API y PostgreSQL.
 
-Un asistente virtual avanzado que utiliza **OpenAI GPT-4** y **WhatsApp Business API** para gestionar consultas de reservas, disponibilidad y atención al cliente de manera inteligente y natural.
-
----
-
-## 🎯 **Características Principales**
-
-### **🤖 IA Avanzada**
-- **OpenAI GPT-4** con Assistants API
-- **Contexto persistente** entre conversaciones
-- **Contexto temporal optimizado** con fecha/hora AM/PM y nombres claros
-- **Respuestas naturales** y contextualizadas
-- **Función de escalamiento** a agentes humanos
-
-### **💬 WhatsApp Integration**
-- **WhatsApp Business API** (Whapi)
-- **Mensajes en tiempo real**
-- **División inteligente de mensajes** en párrafos para mejor UX
-- **Typing indicators diferenciados** (3s primer mensaje, 2s siguientes)
-- **Sistema de etiquetas** automático
-- **Buffer basado en typing** para respuestas naturales
-
-### **🎤🖼️ Capacidades Multimedia**
-- **🎤➡️📝 Audio-to-Text**: Transcripción de notas de voz con Whisper
-- **📝➡️🎤 Text-to-Audio**: Respuestas de voz naturales con TTS
-- **🖼️➡️📝 Procesamiento de Imágenes**: Análisis con GPT-4 Vision
-- **🔄 Conversaciones Voz-a-Voz**: Flujo completo de audio bidireccional
-- **🎨 Análisis Visual Contextual**: Descripción y consultas sobre imágenes
-
-### **🏨 Gestión de Reservas**
-- **Integración Beds24** para consultas de disponibilidad
-- **Sistema de reservas** automatizado
-- **Gestión de fechas** inteligente
-- **Información de propiedades** en tiempo real
-
-### **⚡ Performance Optimizada**
-- **Respuestas rápidas** (<2 segundos)
-- **Cache inteligente** de historial y contexto (TTL 1 hora)
-- **Sistema de lock** para prevenir duplicados
-- **Detección de reinicio** para contexto fresco
-- **Métricas en tiempo real**
+> **Proyecto base desarrollado para TeAlquilamos, diseñado para ser reutilizable en cualquier industria.**
 
 ---
 
-## 🚀 **Plataforma de Despliegue**
+## 🚀 Características
 
-### **Railway - Plataforma Definitiva**
-- **URL de Producción**: https://bot-wsp-whapi-ia-production.up.railway.app
-- **Despliegue Automático**: Con cada push a GitHub
-- **Configuración Simplificada**: Variables de entorno en Railway Dashboard
-- **Monitoreo Integrado**: Logs y métricas en Railway Console
+- **Arquitectura Modular**: Core genérico + sistema de plugins por industria
+- **Plugin Hotelero**: Integración completa con Beds24 y gestión de reservas
+- **OpenAI Integration**: Assistant API con function calling y threading inteligente
+- **Procesamiento Inteligente**: Buffer de mensajes con detección de typing
+- **Base de Datos**: PostgreSQL con Prisma ORM
+- **CRM Interno**: Sistema de gestión de contactos y análisis automático
+- **Logging Dual**: Terminal limpio + logs técnicos detallados
+- **Jobs Programados**: Análisis CRM y acciones diarias automatizadas
 
-### **Configuración Railway**
-- **Puerto**: 880onfiguración automática)
-- **Variables de Entorno**: Configuradas en Railway Dashboard
-- **Logs**: Integrados en Railway Console
-- **Monitoreo**: Métricas en tiempo real
+## 📦 Estructura del Proyecto
 
----
+```
+src/
+├── core/              # Núcleo reutilizable (no industry-specific)
+│   ├── services/      # Servicios base: database, openai, whatsapp
+│   ├── jobs/          # Jobs programados
+│   ├── state/         # Gestión de estado y cache
+│   └── utils/         # Utilidades comunes
+├── plugins/           # Plugins por industria
+│   └── hotel/         # Plugin hotelero (Beds24)
+├── functions/         # Functions genéricas de OpenAI
+├── utils/             # Utilidades globales (logging, persistence)
+└── main.ts           # Entry point con carga dinámica de plugins
+```
 
-## 🛠️ Tecnologías Utilizadas
+## 🔧 Instalación
 
-- **Backend**: Node.js, TypeScript
-- **IA**: OpenAI GPT-4, Assistants API
-- **WhatsApp**: WhatsApp Business API (Whapi)
-- **Alojamiento**: Railway (plataforma definitiva)
-- **Base de Datos**: Beds24API
-- **Logging**: Sistema personalizado con niveles configurables
-
----
-
-## 📦 Instalación y Configuración
-
-### **Prerrequisitos**
-- Node.js 18+ 
-- Cuenta de OpenAI con API key
-- Cuenta de WhatsApp Business API
-- Cuenta de Beds24(opcional)
-
-### **Instalación Local**
+1. **Clona el repositorio**
 ```bash
-# Clonar repositorio
-git clone <repository-url>
+git clone [repo-url]
 cd Bot-Wsp-Whapi-IA
+```
 
-# Instalar dependencias
+2. **Instala dependencias**
+```bash
 npm install
+```
 
-# Configurar variables de entorno
-cp env.example .env
-# Editar .env con tus credenciales
+3. **Configura variables de entorno**
+```bash
+cp .env.example .env
+# Edita .env con tus credenciales
+```
 
-# Ejecutar en desarrollo
+4. **Configura la base de datos**
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+5. **Inicia el bot**
+```bash
+# Desarrollo
 npm run dev
 
-# Construir para producción
+# Producción
 npm run build
+npm start
 ```
 
-### **Variables de Entorno Requeridas**
-```env
-# OpenAI
-OPENAI_API_KEY=your_openai_api_key
-ASSISTANT_ID=your_assistant_id
+## ⚙️ Variables de Entorno
 
-# WhatsApp Business API
-WHAPI_TOKEN=your_whapi_token
-WHAPI_API_URL=https://gate.whapi.cloud/
+### Obligatorias
+- `OPENAI_API_KEY`: API key de OpenAI
+- `ASSISTANT_ID`: ID del Assistant de OpenAI
+- `WHAPI_TOKEN`: Token de Whapi.cloud
+- `WHAPI_API_URL`: URL base de Whapi.cloud
+- `DATABASE_URL`: URL de conexión a PostgreSQL
 
-# Funcionalidades Multimedia
-ENABLE_VOICE_TRANSCRIPTION=true
-ENABLE_VOICE_RESPONSES=true
-ENABLE_IMAGE_PROCESSING=true
-TTS_VOICE=nova
-IMAGE_ANALYSIS_MODEL=gpt-4o-mini
+### Plugins
+- `PLUGIN_HOTEL_ENABLED`: `true|false` (default: true)
+- `BEDS24_TOKEN`: Token para Beds24 (solo si plugin hotel activo)
+- `BEDS24_API_URL`: URL de Beds24 API
 
-# Beds24 (opcional)
-BEDS24_API_KEY=your_beds24key
-BEDS24_AUTHENTICATION_TOKEN=your_auth_token
-```
+### CRM
+- `CRM_MODE`: `internal|n8n|disabled` (default: disabled)
+- `CRM_ANALYSIS_ENABLED`: `true|false` (default: false)
 
 ---
 

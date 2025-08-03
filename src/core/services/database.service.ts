@@ -12,6 +12,15 @@ interface MemoryStore {
 export class DatabaseService {
     private prisma: PrismaClient;
     private isConnected: boolean = false;
+    
+    // Getters para acceso controlado
+    public get connected(): boolean {
+        return this.isConnected;
+    }
+    
+    public get database(): PrismaClient {
+        return this.prisma;
+    }
     private memoryStore: MemoryStore;
     private connectionRetries: number = 0;
     private maxRetries: number = 3;
@@ -514,7 +523,7 @@ export class DatabaseService {
                 return;
             }
 
-            const chatInfo = await response.json();
+            const chatInfo = await response.json() as any;
             const realName = chatInfo.name || chatInfo.last_message?.from_name || null;
             const labels = chatInfo.labels || [];
 

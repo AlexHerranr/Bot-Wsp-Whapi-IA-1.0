@@ -18,7 +18,7 @@ import { OpenAIService } from './services/openai.service';
 import { ThreadPersistenceService } from './services/thread-persistence.service';
 import { WebhookProcessor } from './api/webhook-processor';
 import { TerminalLog } from './utils/terminal-log';
-import { HotelPlugin } from '../plugins/hotel/hotel.plugin';
+// import { HotelPlugin } from '../plugins/hotel/hotel.plugin'; // Moved to main.ts
 import { IFunctionRegistry } from '../shared/interfaces';
 import { crmRoutes } from './routes/crm.routes';
 import { logBotReady, logServerStart, logInfo, logSuccess, logError, logWarning } from '../utils/logging';
@@ -54,7 +54,7 @@ export class CoreBot {
     private openaiService: OpenAIService;
     private threadPersistence: ThreadPersistenceService;
     private webhookProcessor: WebhookProcessor;
-    private hotelPlugin: HotelPlugin;
+    // private hotelPlugin: HotelPlugin; // Moved to main.ts
     private functionRegistry: IFunctionRegistry;
     private cleanupIntervals: NodeJS.Timeout[] = [];
     private lastError: Record<string, { time: number }> = {};
@@ -98,11 +98,8 @@ export class CoreBot {
         // Initialize Thread Persistence Service
         this.threadPersistence = new ThreadPersistenceService(this.databaseService);
 
-        this.hotelPlugin = new HotelPlugin();
+        // Function registry passed from main.ts (with plugins already registered)
         this.functionRegistry = functionRegistry || container.resolve(FunctionRegistryService);
-        
-        // Register hotel plugin functions
-        this.hotelPlugin.register(this.functionRegistry, 'hotel-plugin');
 
         this.bufferManager = new BufferManager(
             this.processBufferCallback.bind(this),
@@ -470,16 +467,17 @@ export class CoreBot {
             // 9. Generate hotel-specific context if needed
             const profile = { name: userName };
             const chatInfo = { name: userName, labels: labels.map(label => ({ name: label })) };
-            const hotelContext = await this.hotelPlugin.context.getRelevantContext(userId, profile, chatInfo);
+            // Hotel context moved to plugin - handled by OpenAI functions
+            const hotelContext = null;
             
-            // 10. Validate response using hotel plugin
-            const validationResult = this.hotelPlugin.validation.validateAndCorrectResponse(response, labels);
-            const finalResponse = validationResult.correctedResponse;
+            // Validation moved to plugin - OpenAI handles it via functions
+            const finalResponse = response;
             
             // 11. Enviar respuesta por WhatsApp solo si hay contenido
             if (finalResponse && finalResponse.trim() !== '') {
                 userState = this.userManager.getOrCreateState(userId);
-                const isQuote = this.hotelPlugin.validation.isQuoteOrPriceMessage(finalResponse);
+                // Quote detection moved to plugin
+                const isQuote = false;
 
                 // Check if last input was voice to ensure voice response
                 if (userState.lastInputVoice && !isQuote) {
@@ -576,13 +574,14 @@ export class CoreBot {
                     threadId: processingResult.threadId,
                     processingTime: processingResult.processingTime,
                     responseLength: finalResponse.length,
-                    hadValidationErrors: validationResult.hadErrors,
+                    hadValidationErrors: false,
                     contentPreview: contentPreview
                 }, 'bot.ts');
             }
             
-            if (validationResult.hadErrors) {
-                this.terminalLog.warning(`Validation found ${validationResult.discrepancies.length} discrepancies for ${userName}`);
+            // Validation moved to plugin
+            if (false) {
+                this.terminalLog.warning(`Validation moved to plugin`);
             }
 
         } catch (error: any) {

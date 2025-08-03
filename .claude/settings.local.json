@@ -84,7 +84,8 @@
       "Bash(npx tsx:*)",
       "Bash(del test-compact-logging.js)",
       "Bash(del debug-chunks.js)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(tree:*)"
     ],
     "deny": []
   }
