@@ -16,13 +16,20 @@ export class HotelPlugin {
         this.labels = new HotelLabels();
     }
 
-    public register(registry: IFunctionRegistry): void {
-        console.log('🔌 Registrando funciones del plugin hotelero...');
-
+    public register(registry: IFunctionRegistry, source?: string): void {
+        console.log('🔌 hotel-plugin ✓ 1 function');
+        
         registry.register('check_availability', (args, context) => 
-            checkAvailability(args as { startDate: string; endDate: string; guests?: number })
+            checkAvailability(args as { startDate: string; endDate: string; guests?: number }),
+            source
         );
 
-        console.log('✅ Funciones hoteleras registradas.');
+        // Log técnico consolidado
+        const { logSuccess } = require('../../utils/logging');
+        logSuccess('PLUGIN_REGISTERED', 'hotel-plugin ✓ 1 function', {
+            plugin: 'hotel-plugin',
+            functions: ['check_availability'],
+            source: source || 'hotel-plugin'
+        });
     }
 }

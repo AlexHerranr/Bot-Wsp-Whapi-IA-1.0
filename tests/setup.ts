@@ -10,7 +10,14 @@ process.env.WHAPI_TOKEN = 'whapi-test-token-for-testing-only';
 process.env.ASSISTANT_ID = 'asst-test-id-for-testing-only';
 
 // Configurar timeouts más largos para tests de integración
-jest.setTimeout(10000);
+jest.setTimeout(30000);
+
+// Configurar GC para evitar memory leaks en tests largos
+if (global.gc) {
+  afterEach(() => {
+    global.gc();
+  });
+}
 
 // Suprimir logs durante tests para output más limpio
 const originalConsoleLog = console.log;

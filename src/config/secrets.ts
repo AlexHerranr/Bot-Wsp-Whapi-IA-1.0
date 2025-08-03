@@ -1,6 +1,6 @@
 
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-import { logError } from '../utils/logger';
+import { logError } from '../utils/logging/index';
 
 // Project ID dinámico - NO hardcodeado
 const GCLOUD_PROJECT_ID = process.env.GCLOUD_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || 'gen-lang-client-0318357688';

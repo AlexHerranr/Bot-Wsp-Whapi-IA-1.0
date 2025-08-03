@@ -3,10 +3,11 @@ export const CHAT_INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 export const CONTEXT_CACHE_TTL = 60 * 60 * 1000; // 1 hora
 export const PRECOMPUTED_CACHE_TTL = 1 * 60 * 1000; // 1 minuto
 
-// Buffer timing constants (from Etapa 1 corrections)
-export const BUFFER_WINDOW_MS = 5000; // 5 segundos para mensajes
-export const VOICE_BUFFER_MS = 8000; // 8 segundos para voice
-export const TYPING_EXTENDED_MS = 10000; // 10 segundos para typing/recording
+// Buffer timing constants - Inteligente con tiempos diferenciados
+export const BUFFER_WINDOW_MS = 2000; // 2 segundos para mensajes/audio (respuesta rápida)
+export const TYPING_ACTIVITY_MS = 5000; // 5 segundos cuando usuario está escribiendo/grabando (esperar idea completa)
+export const VOICE_BUFFER_MS = 2000; // Deprecated - usar BUFFER_WINDOW_MS
+export const TYPING_EXTENDED_MS = 5000; // Deprecated - usar TYPING_ACTIVITY_MS
 
 // Message processing limits
 export const MAX_MESSAGE_LENGTH = 5000;

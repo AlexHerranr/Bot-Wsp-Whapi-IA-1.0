@@ -8,7 +8,7 @@ export const WhatsAppMessageSchema = z.object({
     from_me: z.boolean(),
     chat_id: z.string().optional(),
     from_name: z.string().optional(),
-    type: z.enum(['text', 'image', 'voice', 'audio', 'ptt', 'document', 'video']),
+    type: z.enum(['text', 'image', 'voice', 'audio', 'ptt', 'document', 'video', 'link_preview']),
     text: z.object({
         body: z.string()
     }).optional(),
@@ -29,14 +29,19 @@ export const PresenceEventSchema = z.object({
     status: z.string()
 });
 
-// Esquema principal del webhook
+// Esquema principal del webhook - Compatible con todos los tipos de WHAPI
 export const WebhookPayloadSchema = z.object({
     messages: z.array(WhatsAppMessageSchema).optional(),
-    presences: z.array(PresenceEventSchema).optional()
+    presences: z.array(PresenceEventSchema).optional(),
+    statuses: z.array(z.any()).optional(),
+    chats: z.array(z.any()).optional(),
+    contacts: z.array(z.any()).optional(),
+    groups: z.array(z.any()).optional(),
+    labels: z.array(z.any()).optional()
 }).refine(
-    (data) => data.messages || data.presences,
+    (data) => data.messages || data.presences || data.statuses || data.chats || data.contacts || data.groups || data.labels,
     {
-        message: "Webhook debe contener al menos 'messages' o 'presences'"
+        message: "Webhook debe contener al menos un tipo de datos válido"
     }
 );
 

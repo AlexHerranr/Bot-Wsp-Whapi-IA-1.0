@@ -5,7 +5,7 @@
 
 import type { FunctionDefinition } from '../types/function-types.js';
 import { getChatHistory } from '../../utils/whapi/chatHistory.js';
-import { detailedLog } from '../../utils/logger.js';
+import { logInfo } from '../../utils/logging/index';
 
 /**
  * Formatear mensajes recientes para contexto
@@ -55,7 +55,7 @@ async function handleGetConversationContext(args: any, requestId?: string): Prom
     userId = userId + '@s.whatsapp.net';
   }
   
-  detailedLog('INFO', 'CONTEXT_FUNCTION', 'Solicitando contexto de conversación', {
+  logInfo('CONTEXT_FUNCTION', 'Solicitando contexto de conversación', {
     userId,
     contextLevel: context_level,
     requestId
@@ -93,7 +93,7 @@ async function handleGetConversationContext(args: any, requestId?: string): Prom
       context = `No hay mensajes disponibles para el nivel ${context_level}.`;
     }
     
-    detailedLog('SUCCESS', 'CONTEXT_FUNCTION', 'Contexto obtenido exitosamente', {
+    logInfo('CONTEXT_FUNCTION', 'Contexto obtenido exitosamente', {
       userId,
       contextLevel: context_level,
       messageCount,
@@ -110,7 +110,7 @@ async function handleGetConversationContext(args: any, requestId?: string): Prom
     };
     
   } catch (error) {
-    detailedLog('ERROR', 'CONTEXT_FUNCTION', 'Error obteniendo contexto de conversación', error);
+    logInfo('CONTEXT_FUNCTION', 'Error obteniendo contexto de conversación', error);
     return {
       success: false,
       error: error.message,

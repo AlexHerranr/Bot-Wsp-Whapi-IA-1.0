@@ -62,7 +62,7 @@ function escapeHtml(text: string): string {
 function getLogCssClass(log: string): string {
     let cssClass = 'log-entry';
     if (log.includes('👤')) cssClass += ' log-user';
-    else if (log.includes('🤖') || log.includes('[BOT]')) cssClass += ' log-bot';
+    else if (log.includes('🤖')) cssClass += ' log-bot';
     else if (log.includes('ERROR') || log.includes('❌')) cssClass += ' log-error';
     return cssClass;
 }

@@ -94,7 +94,7 @@ export const createEnvironmentConfig = (): EnvironmentConfig => {
     const isLocal = environment === 'local';
     
     // Puerto dinámico - SIEMPRE usar PORT de environment si está disponible
-    const port = parseInt(process.env.PORT || (isLocal ? '3008' : '8080'), 10);
+    const port = parseInt(process.env.PORT || (isLocal ? '3010' : '8080'), 10);
     
     console.log(`🔧 Puerto detectado: ${port} (process.env.PORT: ${process.env.PORT || 'not set'})`);
     
@@ -281,7 +281,7 @@ const validateConfig = (config: AppConfig): { isValid: boolean; errors: string[]
 export const developmentConfig = {
     // Configuración de ngrok
     ngrokDomain: 'actual-bobcat-handy.ngrok-free.app',
-    ngrokPort: 3008,
+    ngrokPort: 3010,
     
     // Configuración de hot reload
     enableHotReload: true,

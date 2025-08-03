@@ -1,11 +1,29 @@
 // src/main.ts
+import 'reflect-metadata';
 import 'dotenv/config';
+import { container } from 'tsyringe';
 import { CoreBot } from './core/bot';
+import { FunctionRegistryService } from './core/services/function-registry.service';
+import { HotelPlugin } from './plugins/hotel/hotel.plugin';
+import { SimpleCRMService } from './core/services/simple-crm.service';
+import { DailyActionsJob } from './core/jobs/daily-actions.job';
+import { CRMAnalysisJob } from './core/jobs/crm-analysis.job';
+import { DatabaseService } from './core/services/database.service';
+import { logInfo } from './utils/logging';
 
-function loadConfig() {
-    // Validaci�n de configuraci�n robusta ir� aqu� m�s adelante
+interface AppConfig {
+    port: number;
+    host: string;
+    secrets: {
+        OPENAI_API_KEY: string;
+        WHAPI_API_URL: string;
+        WHAPI_TOKEN: string;
+    };
+}
+
+function loadConfig(): AppConfig {
     const config = {
-        port: parseInt(process.env.PORT || '3008'),
+        port: parseInt(process.env.PORT || '3010'),
         host: process.env.HOST || '0.0.0.0',
         secrets: {
             OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
@@ -14,23 +32,193 @@ function loadConfig() {
         }
     };
 
-    if (!config.secrets.OPENAI_API_KEY || !config.secrets.WHAPI_TOKEN) {
-        console.error("Error: Faltan variables de entorno cr�ticas (OPENAI_API_KEY, WHAPI_TOKEN)");
+    // Validate critical environment variables
+    const requiredVars = {
+        OPENAI_API_KEY: config.secrets.OPENAI_API_KEY,
+        WHAPI_TOKEN: config.secrets.WHAPI_TOKEN
+    };
+
+    const missingVars = Object.entries(requiredVars)
+        .filter(([_, value]) => !value)
+        .map(([key, _]) => key);
+
+    if (missingVars.length > 0) {
+        console.error(`❌ Missing critical environment variables: ${missingVars.join(', ')}`);
+        console.error('Please check your .env file and ensure all required variables are set.');
         process.exit(1);
     }
 
+    console.log('✅ Configuration loaded successfully');
+    
+    // Log técnico de sesión
+    logInfo('CONFIG_LOADED', 'Configuración cargada exitosamente', {
+        port: config.port,
+        host: config.host,
+        hasOpenAI: !!config.secrets.OPENAI_API_KEY,
+        hasWhapi: !!config.secrets.WHAPI_TOKEN
+    });
+    console.log(`🌍 Server will start on ${config.host}:${config.port}`);
+    
     return config;
 }
 
+function setupDependencyInjection() {
+    console.log('🔧 DI ✓ 5 services, 1 function');
+    
+    // Register Function Registry as singleton
+    const functionRegistry = new FunctionRegistryService();
+    container.registerInstance('FunctionRegistry', functionRegistry);
+    
+    // Register Database Service
+    const databaseService = new DatabaseService();
+    container.registerInstance('DatabaseService', databaseService);
+    
+    // Register CRM Services
+    const crmService = new SimpleCRMService(databaseService);
+    container.registerInstance('SimpleCRMService', crmService);
+    
+    // Register Daily Actions Job
+    const dailyJob = new DailyActionsJob(databaseService);
+    container.registerInstance('DailyActionsJob', dailyJob);
+    
+    // Register CRM Analysis Job
+    const crmAnalysisJob = new CRMAnalysisJob(databaseService, crmService);
+    container.registerInstance('CRMAnalysisJob', crmAnalysisJob);
+    
+    // Register and initialize plugins
+    const hotelPlugin = new HotelPlugin();
+    hotelPlugin.register(functionRegistry, 'hotel-plugin');
+    
+    // Log técnico consolidado
+    logInfo('DI_COMPLETED', 'DI ✓ 5 services, 1 function', {
+        services: ['FunctionRegistry', 'DatabaseService', 'SimpleCRMService', 'DailyActionsJob', 'CRMAnalysisJob'],
+        functions: functionRegistry.list(),
+        container: 'tsyringe'
+    });
+    
+    return { functionRegistry, hotelPlugin, dailyJob, crmAnalysisJob };
+}
+
 async function main() {
+    let bot: CoreBot | null = null;
+    
     try {
+        console.log('🚀 Starting TeAlquilamos Bot...');
+        
+        // Log técnico de sesión - inicio de aplicación
+        logInfo('APP_START', 'Iniciando TeAlquilamos Bot', {
+            version: process.env.npm_package_version || '1.0.0',
+            nodeVersion: process.version,
+            environment: process.env.NODE_ENV || 'development',
+            pid: process.pid
+        });
+        
+        // Load configuration
         const config = loadConfig();
-        const bot = new CoreBot(config);
-        bot.start();
-    } catch (error) {
-        console.error('L Error fatal durante la inicializaci�n:', error);
+        
+        // Setup DI container
+        const { functionRegistry, dailyJob, crmAnalysisJob } = setupDependencyInjection();
+        
+        // Start CRM Jobs if enabled
+        if (process.env.CRM_ANALYSIS_ENABLED === 'true' && process.env.CRM_MODE === 'internal') {
+            dailyJob.start();
+            crmAnalysisJob.start();
+            
+            console.log('📅 2 jobs scheduled');
+            
+            // Log técnico consolidado para jobs
+            logInfo('JOBS_STARTED', '2 jobs scheduled', {
+                daily: '9AM COT',
+                crm: 'every 15min',
+                enabled: true
+            });
+        }
+        
+        // Create and start bot
+        bot = new CoreBot(config, functionRegistry);
+        
+        // Setup graceful shutdown
+        const handleShutdown = async (signal: string) => {
+            console.log(`🛑 Received ${signal}, shutting down gracefully...`);
+            
+            // Log la señal recibida
+            logInfo('SHUTDOWN_SIGNAL', `Señal de parada recibida: ${signal}`, {
+                signal,
+                timestamp: new Date().toISOString(),
+                graceful: true
+            });
+            
+            if (bot) {
+                await bot.stop();
+            }
+            process.exit(0);
+        };
+        
+        process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+        process.on('SIGINT', () => handleShutdown('SIGINT'));
+        
+        // Start the bot
+        await bot.start();
+        
+    } catch (error: any) {
+        console.error('❌ Fatal error during initialization:', error.message);
+        console.error('Stack trace:', error.stack);
+        
+        // Log del error fatal
+        logInfo('FATAL_ERROR', 'Error fatal durante inicialización', {
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString(),
+            graceful: false
+        });
+        
+        if (bot) {
+            try {
+                await bot.stop();
+            } catch (stopError) {
+                console.error('Error during emergency shutdown:', stopError);
+            }
+        }
+        
         process.exit(1);
     }
 }
 
-main();
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    
+    // Log la rejection no manejada
+    logInfo('UNHANDLED_REJECTION', 'Promise rejection no manejada', {
+        reason: String(reason),
+        promise: String(promise),
+        timestamp: new Date().toISOString(),
+        graceful: false
+    });
+    
+    process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    
+    // Log la excepción no capturada
+    logInfo('UNCAUGHT_EXCEPTION', 'Excepción no capturada', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+        graceful: false
+    });
+    
+    process.exit(1);
+});
+
+// Start the application
+main().catch((error) => {
+    console.error('Application failed to start:', error);
+    process.exit(1);
+});
+
+export default main;
+export { AppConfig, loadConfig, setupDependencyInjection };

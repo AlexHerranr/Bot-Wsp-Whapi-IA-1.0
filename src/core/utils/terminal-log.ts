@@ -43,9 +43,17 @@ export class TerminalLog {
     // Logs principales con formato limpio
     message(user: string, text: string): void {
         const truncated = text.length > 60 ? text.substring(0, 60) + '...' : text;
-        const logMsg = `👤 ${user}: "${truncated}"`;
-        console.log(logMsg);
-        this.dashboard.addLog(logMsg);
+        
+        // Detectar si es transcripción de audio
+        if (text.startsWith('(Audio):')) {
+            const audioText = text.replace('(Audio):', '').trim();
+            const audioTruncated = audioText.length > 60 ? audioText.substring(0, 60) + '...' : audioText;
+            console.log(`🎙️ ${user}: 🔊 → "${audioTruncated}"`);
+        } else {
+            console.log(`🗣️ ${user}: 💬 "${truncated}" → 🤖`);
+        }
+        // Dashboard ya maneja su propio console.log, no duplicar
+        // this.dashboard.addLog(logMsg);
     }
 
     typing(user: string): void {
@@ -59,7 +67,8 @@ export class TerminalLog {
     response(user: string, text: string, duration: number): void {
         const logMsg = `🤖 OpenAI → ${user} (${(duration/1000).toFixed(1)}s)`;
         console.log(logMsg);
-        this.dashboard.addLog(logMsg);
+        // Dashboard ya maneja su propio console.log, no duplicar
+        // this.dashboard.addLog(logMsg);
     }
 
     // Logs de errores
@@ -114,10 +123,11 @@ export class TerminalLog {
     // Logs de sistema
     startup(): void {
         console.clear();
-        console.log('\n=== Bot TeAlquilamos Iniciado ===');
+        console.log('=== Bot TeAlquilamos Iniciado ===');
         console.log(`🚀 Servidor: ${this.config?.host || 'localhost'}:${this.config?.port || 3008}`);
         console.log(`🔗 Webhook: ${this.config?.webhookUrl || 'configurando...'}`);
-        console.log('✅ Sistema listo\n');
+        console.log('✅ Sistema listo');
+        console.log('');
     }
 
     newConversation(user: string): void {
@@ -130,13 +140,28 @@ export class TerminalLog {
     }
 
     voice(user: string): void {
-        const logMsg = `🎤 ${user}: [Nota de voz recibida]`;
-        console.log(logMsg);
-        this.dashboard.addLog(logMsg);
+        // Log eliminado según especificaciones - no mostrar "Nota de voz recibida"
+        // const logMsg = `🎤 ${user}: [Nota de voz recibida]`;
+        // console.log(logMsg);
     }
 
     recording(user: string): void {
-        console.log(`🎙️ ${user} está grabando...`);
+        console.log(`${user}: 🎙️...`);
+    }
+
+    // Logs de generación de voz/TTS
+    generatingVoice(user: string, messageLength: number): void {
+        const timestamp = new Date().toISOString();
+        console.log(`${timestamp} 🔊 [${user}] Generando respuesta de voz (${messageLength} chars)...`);
+    }
+
+    voiceSent(user: string, duration?: number): void {
+        const durationStr = duration ? ` (${(duration/1000).toFixed(1)}s)` : '';
+        console.log(`🤖 OpenAI → 🔊 → ${user}${durationStr}`);
+    }
+
+    processingVoice(user: string): void {
+        console.log(`🎤 Procesando nota de voz de ${user}...`);
     }
 
     // Logs de resultados
@@ -144,7 +169,8 @@ export class TerminalLog {
         const durationStr = duration ? ` (${(duration/1000).toFixed(1)}s)` : '';
         const logMsg = `🏠 ${completas} completa${completas !== 1 ? 's' : ''} + ${splits} alternativa${splits !== 1 ? 's' : ''}${durationStr}`;
         console.log(logMsg);
-        this.dashboard.addLog(logMsg);
+        // Dashboard ya maneja su propio console.log, no duplicar
+        // this.dashboard.addLog(logMsg);
     }
 
     // Logs de APIs externas
@@ -172,12 +198,15 @@ export class TerminalLog {
     }
 
     /**
-     * 20. Log de debug (solo en desarrollo)
+     * 20. Log de debug - Solo va al sistema de logs técnicos, NO a terminal
      */
     debug(message: string): void {
-        if (process.env.NODE_ENV === 'development' || process.env.DEBUG === 'true') {
+        // Los logs DEBUG van al sistema de logs técnicos, no a terminal
+        // Solo se muestran en terminal si SHOW_DEBUG_IN_TERMINAL está activado
+        if (process.env.SHOW_DEBUG_IN_TERMINAL === 'true') {
             this.log('debug', 'MESSAGE', `🐛 DEBUG: ${message}`);
         }
+        // Aquí iría la llamada al sistema de logs técnicos
     }
 
     /**

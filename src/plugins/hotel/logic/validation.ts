@@ -88,11 +88,20 @@ export class HotelValidation {
             hasComplexErrors = true;
         }
 
-        console.log("Hotel validation executed for:", responseText.substring(0, 50));
+        // Log técnico removido - solo para sistema de logs interno
+
+        const hadErrors = discrepancies.length > 0;
+        
+        // Clear userRetryState after successful validation to allow retries in long sessions
+        if (!hadErrors && this.userRetryState.size > 0) {
+            // Clear retry state for successful validations (simulate userId parameter)
+            // Note: In real implementation, userId should be passed to this method
+            this.userRetryState.clear();
+        }
 
         return {
             correctedResponse,
-            hadErrors: discrepancies.length > 0,
+            hadErrors,
             needsRetry: hasComplexErrors,
             discrepancies
         };

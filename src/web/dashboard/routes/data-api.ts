@@ -13,44 +13,15 @@ router.get('/data', async (req, res) => {
         // Obtener estadísticas
         const stats = await dbService.getStats();
         
-        // Obtener usuarios con threads
-        const users = await dbService['prisma'].user.findMany({
-            include: {
-                threads: {
-                    include: {
-                        messages: true
-                    }
-                }
-            },
-            orderBy: { createdAt: 'desc' }
+        // Obtener clientes
+        const clients = await dbService['prisma'].clientView.findMany({
+            orderBy: { lastActivity: 'desc' }
         });
         
-        // Obtener threads con usuarios
-        const threads = await dbService['prisma'].thread.findMany({
-            include: {
-                user: true,
-                messages: true
-            },
-            orderBy: { createdAt: 'desc' }
-        });
-        
-        // Obtener mensajes con threads y usuarios
-        const messages = await dbService['prisma'].message.findMany({
-            include: {
-                thread: {
-                    include: {
-                        user: true
-                    }
-                }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 100 // Limitar a 100 mensajes más recientes
-        });
-        
-        // Calcular usuarios activos hoy
+        // Calcular clientes activos hoy
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const activeToday = await dbService['prisma'].user.count({
+        const activeToday = await dbService['prisma'].clientView.count({
             where: {
                 lastActivity: {
                     gte: today
@@ -63,37 +34,27 @@ router.get('/data', async (req, res) => {
                 ...stats,
                 activeToday
             },
-            users: users.map(user => ({
-                id: user.id,
-                phone: user.phoneNumber,
-                name: user.name || user.phoneNumber,
-                created: user.createdAt,
-                lastActivity: user.lastActivity,
-                threads: user.threads.length,
-                totalMessages: user.threads.reduce((sum, thread) => sum + thread.messages.length, 0)
+            users: clients.map(client => ({
+                id: client.phoneNumber,
+                phone: client.phoneNumber,
+                name: client.name || client.userName || client.phoneNumber,
+                created: client.lastActivity,
+                lastActivity: client.lastActivity,
+                threads: client.threadId ? 1 : 0,
+                totalMessages: 0
             })),
-            threads: threads.map(thread => ({
-                id: thread.id,
-                openaiId: thread.openaiId,
-                userPhone: thread.user.phoneNumber,
-                userName: thread.user.name || thread.user.phoneNumber,
-                chatId: thread.chatId,
-                created: thread.createdAt,
-                lastActivity: thread.lastActivity,
-                messages: thread.messages.length,
-                labels: thread.labels || []
+            threads: clients.filter(c => c.threadId).map(client => ({
+                id: client.threadId,
+                openaiId: client.threadId,
+                userPhone: client.phoneNumber,
+                userName: client.name || client.userName || client.phoneNumber,
+                chatId: client.chatId,
+                created: client.lastActivity,
+                lastActivity: client.lastActivity,
+                messages: 0,
+                labels: []
             })),
-            messages: messages.map(message => ({
-                id: message.id,
-                threadId: message.threadId,
-                threadOpenaiId: message.thread.openaiId,
-                userPhone: message.thread.user.phoneNumber,
-                userName: message.thread.user.name || message.thread.user.phoneNumber,
-                role: message.role,
-                content: message.content,
-                created: message.createdAt,
-                metadata: message.metadata
-            }))
+            messages: []
         };
         
         res.json(response);
@@ -107,7 +68,7 @@ router.get('/data', async (req, res) => {
 });
 
 // POST /api/users - Crear usuario
-router.post('/users', async (req, res) => {
+router.post('/users', async (req: any, res: any) => {
     try {
         const { phoneNumber, name } = req.body;
         
@@ -121,10 +82,10 @@ router.post('/users', async (req, res) => {
         res.json({
             success: true,
             user: {
-                id: user.id,
+                id: user.phoneNumber,
                 phone: user.phoneNumber,
                 name: user.name,
-                created: user.createdAt,
+                created: user.lastActivity,
                 lastActivity: user.lastActivity
             }
         });
@@ -138,7 +99,7 @@ router.post('/users', async (req, res) => {
 });
 
 // POST /api/messages - Crear mensaje
-router.post('/messages', async (req, res) => {
+router.post('/messages', async (req: any, res: any) => {
     try {
         const { userPhone, role, content } = req.body;
         
@@ -163,7 +124,7 @@ router.post('/messages', async (req, res) => {
             });
         }
         
-        // Guardar mensaje
+        // Guardar mensaje (implementación simplificada)
         await dbService.saveMessage(thread.threadId, role as 'user' | 'assistant', content);
         
         res.json({
@@ -186,23 +147,9 @@ router.delete('/users/:id', async (req, res) => {
         
         await dbService.connect();
         
-        // Eliminar mensajes relacionados
-        await dbService['prisma'].message.deleteMany({
-            where: {
-                thread: {
-                    userId: id
-                }
-            }
-        });
-        
-        // Eliminar threads
-        await dbService['prisma'].thread.deleteMany({
-            where: { userId: id }
-        });
-        
-        // Eliminar usuario
-        await dbService['prisma'].user.delete({
-            where: { id }
+        // Eliminar cliente
+        await dbService['prisma'].clientView.delete({
+            where: { phoneNumber: id }
         });
         
         res.json({ success: true, message: 'Usuario eliminado correctamente' });
@@ -216,7 +163,7 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 // GET /api/export/csv - Exportar a CSV
-router.get('/export/csv', async (req, res) => {
+router.get('/export/csv', async (req: any, res: any) => {
     try {
         const { table } = req.query;
         
@@ -227,24 +174,10 @@ router.get('/export/csv', async (req, res) => {
         
         switch (table) {
             case 'users':
-                data = await dbService['prisma'].user.findMany();
-                filename = 'usuarios.csv';
-                break;
             case 'threads':
-                data = await dbService['prisma'].thread.findMany({
-                    include: { user: true }
-                });
-                filename = 'threads.csv';
-                break;
             case 'messages':
-                data = await dbService['prisma'].message.findMany({
-                    include: {
-                        thread: {
-                            include: { user: true }
-                        }
-                    }
-                });
-                filename = 'mensajes.csv';
+                data = await dbService['prisma'].clientView.findMany();
+                filename = 'clientes.csv';
                 break;
             default:
                 return res.status(400).json({ error: 'Tabla no válida' });

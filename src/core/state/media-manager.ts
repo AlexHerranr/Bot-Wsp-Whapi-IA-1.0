@@ -67,6 +67,17 @@ export class MediaManager {
         // Usar un userId especial para mensajes globales del bot
         const globalBotUserId = '__bot_global__';
         this.markMessageAsSent(globalBotUserId, messageId);
+        
+        // Auto-cleanup after 10 minutes to prevent accumulation in long sessions
+        setTimeout(() => {
+            const messages = this.botSentMessages.get(globalBotUserId);
+            if (messages) {
+                messages.delete(messageId);
+                if (messages.size === 0) {
+                    this.botSentMessages.delete(globalBotUserId);
+                }
+            }
+        }, 10 * 60 * 1000);
     }
 
     public clearBotMessages(userId: string): void {

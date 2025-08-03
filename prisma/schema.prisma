@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -87,26 +87,27 @@ datasource db {
 // Vista unificada - Orden visual + nombres exactos de metadatos
 model ClientView {
   // 🔥 PRIORIDAD VISUAL 1: IDENTIFICACIÓN BÁSICA
-  phoneNumber         String   @id  // FUENTE: webhookData.message.from (WHAPI webhook) | FRECUENCIA: En cada mensaje
-  name                String?  // FUENTE: whapiLabels.getChatInfo().name | FRECUENCIA: syncWhapiLabels() - solo threads viejos
-  userName            String?  // FUENTE: threads.json.userName | FRECUENCIA: Al crear thread
+  phoneNumber         String   @id  // FUENTE: webhook message.from | FRECUENCIA: Cada mensaje
+  name                String?  // FUENTE: WHAPI getChatInfo().name | FRECUENCIA: syncWhapiLabels()
+  userName            String?  // FUENTE: webhook message.from_name | FRECUENCIA: Cada mensaje
   
-  // 🔥 PRIORIDAD VISUAL 2: CRM - LO MÁS IMPORTANTE  
-  perfilStatus        String?  // FUENTE: Calculado por bot | FRECUENCIA: En cada interacción
-  proximaAccion       String?  // FUENTE: Calculado por bot | FRECUENCIA: En cada interacción
-  prioridad           String   @default("MEDIA")  // FUENTE: Calculado | FRECUENCIA: En cada interacción
+  // 🔥 PRIORIDAD VISUAL 2: ETIQUETAS
+  label1              String?  // FUENTE: WHAPI getChatInfo().labels[0].name | FRECUENCIA: syncWhapiLabels()
+  label2              String?  // FUENTE: WHAPI getChatInfo().labels[1].name | FRECUENCIA: syncWhapiLabels()
+  label3              String?  // FUENTE: WHAPI getChatInfo().labels[2].name | FRECUENCIA: syncWhapiLabels()
   
-  // 🔥 PRIORIDAD VISUAL 3: ETIQUETAS
-  label1              String?  // FUENTE: whapiLabels.getChatInfo().labels[0].name | FRECUENCIA: syncWhapiLabels() - solo threads viejos
-  label2              String?  // FUENTE: whapiLabels.getChatInfo().labels[1].name | FRECUENCIA: syncWhapiLabels() - solo threads viejos 
-  label3              String?  // FUENTE: whapiLabels.getChatInfo().labels[2].name | FRECUENCIA: syncWhapiLabels() - solo threads viejos
+  // 🔥 PRIORIDAD VISUAL 3: CONTACTO
+  chatId              String?  // FUENTE: webhook message.chat_id | FRECUENCIA: Cada mensaje
   
-  // 🔥 PRIORIDAD VISUAL 4: CONTACTO
-  chatId              String?  // FUENTE: threads.json.chatId | FRECUENCIA: Al crear thread
+  // 🔥 PRIORIDAD VISUAL 4: ACTIVIDAD RECIENTE
+  lastActivity        DateTime @updatedAt // FUENTE: @updatedAt automático Prisma | FRECUENCIA: Cada cambio
   
-  // 🔥 PRIORIDAD VISUAL 5: ACTIVIDAD RECIENTE
-  lastActivity        DateTime @updatedAt // FUENTE: @updatedAt automático de Prisma | FRECUENCIA: En cada cambio del registro
+  // 🔥 PRIORIDAD VISUAL 5: THREAD TÉCNICO
+  threadId            String?  // FUENTE: OpenAI al crear thread | FRECUENCIA: Al crear/cambiar thread
   
-  // 🔥 PRIORIDAD VISUAL 6: THREAD TÉCNICO
-  threadId            String?  // FUENTE: threads.json.threadId (OpenAI) | FRECUENCIA: Al crear/cambiar thread
+  // 🔥 PRIORIDAD VISUAL 6: CRM - AUTOMATIZADO (AL FINAL)
+  profileStatus       String?   @db.Text  // Resumen del cliente (máx 300 chars) - OpenAI Assistant
+  proximaAccion       String?             // Acción sugerida - OpenAI Assistant
+  fechaProximaAccion  DateTime?           // Fecha de la acción (YYYY-MM-DD) - OpenAI Assistant
+  prioridad           Int?      @default(2)  // 1=Alta, 2=Media, 3=Baja - OpenAI Assistant
 }

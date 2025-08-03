@@ -219,7 +219,7 @@ class BotDashboard {
                 ${this.logBuffer.slice(0, 200).map(log => {
                     let cssClass = 'log-entry';
                     if (log.includes('👤')) cssClass += ' log-user';
-                    else if (log.includes('🤖') || log.includes('[BOT]')) cssClass += ' log-bot';
+                    else if (log.includes('🤖')) cssClass += ' log-bot';
                     else if (log.includes('ERROR') || log.includes('❌')) cssClass += ' log-error';
                     return `<div class="${cssClass}">${this.escapeHtml(log)}</div>`;
                 }).join('')}

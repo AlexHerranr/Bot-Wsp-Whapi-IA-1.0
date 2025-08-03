@@ -1,5 +1,5 @@
 // --- Sistema Híbrido de Estados de Usuario ---
-import { logDebug, logInfo, logWarning } from './logger.js';
+import { logDebug, logInfo, logWarning } from './logging/index';
 import { isLikelyFinalMessage, getRecommendedTimeout } from './messageBuffering.js';
 
 export interface UserState {
@@ -79,10 +79,10 @@ export class UserStateManager {
                 messagesInBuffer: state.messages.length
             });
             
-            // Extender timeout si hay mensajes en buffer
-            if (state.messages.length > 0 && state.bufferTimeout) {
-                this.extendBufferTimeout(state);
-            }
+            // Extender timeout si hay mensajes en buffer - DESACTIVADO
+            // if (state.messages.length > 0 && state.bufferTimeout) {
+            //     this.extendBufferTimeout(state);
+            // }
             
         } else if (!isTyping && state.isTyping) {
             // Dejó de escribir
@@ -124,80 +124,110 @@ export class UserStateManager {
         const state = this.getOrCreateState(userId, chatId, userName);
         const now = Date.now();
         
-        state.messages.push(message);
+        // DESACTIVADO - buffer-manager.ts maneja todos los mensajes
+        // state.messages.push(message);
         state.lastMessageTimestamp = now;
         
-        logDebug('MESSAGE_BUFFERED', `Mensaje agregado al buffer de ${state.userName}`, {
+        logInfo('MESSAGE_STATE_ONLY', `Estado actualizado (mensaje manejado por buffer-manager.ts)`, {
             userId,
-            messageCount: state.messages.length,
+            userName: state.userName,
             isTyping: state.isTyping,
-            messagePreview: message.substring(0, 30)
+            messagePreview: message.substring(0, 30),
+            reason: 'userstate_only_no_buffer'
         });
         
-        // Calcular timeout basado en el mensaje y estado
-        const baseTimeout = getRecommendedTimeout(state.messages, message);
-        let finalTimeout = baseTimeout;
+        // Cálculo de timeout DESACTIVADO - buffer-manager.ts maneja timeouts
+        // const baseTimeout = getRecommendedTimeout(state.messages, message);
+        // let finalTimeout = baseTimeout;
         
-        if (state.isTyping) {
-            // Si está escribiendo, dar más tiempo
-            finalTimeout = Math.max(baseTimeout, this.TYPING_EXTENSION);
-            logDebug('TIMEOUT_EXTENDED', `Timeout extendido por typing`, {
-                base: baseTimeout,
-                extended: finalTimeout
-            });
-        } else if (isLikelyFinalMessage(message)) {
-            // Si parece mensaje final, procesar rápido
-            finalTimeout = this.MIN_PROCESS_DELAY;
-            logDebug('FINAL_MESSAGE', `Mensaje final detectado, procesamiento rápido`, {
-                message,
-                timeout: finalTimeout
-            });
-        }
+        // if (state.isTyping) {
+        //     // Si está escribiendo, dar más tiempo
+        //     finalTimeout = Math.max(baseTimeout, this.TYPING_EXTENSION);
+        //     logDebug('TIMEOUT_EXTENDED', `Timeout extendido por typing`, {
+        //         base: baseTimeout,
+        //         extended: finalTimeout
+        //     });
+        // } else if (isLikelyFinalMessage(message)) {
+        //     // Si parece mensaje final, procesar rápido
+        //     finalTimeout = this.MIN_PROCESS_DELAY;
+        //     logDebug('FINAL_MESSAGE', `Mensaje final detectado, procesamiento rápido`, {
+        //         message,
+        //         timeout: finalTimeout
+        //     });
+        // }
         
-        // Programar procesamiento
-        this.scheduleProcessing(state, finalTimeout);
+        logInfo('TIMEOUT_DELEGATED', 'Cálculo de timeout delegado a buffer-manager.ts', {
+            userId,
+            userName: state.userName,
+            reason: 'timeout_calculation_disabled'
+        });
         
+        // Programar procesamiento - DESACTIVADO (manejado por buffer-manager.ts)
+        // this.scheduleProcessing(state, finalTimeout);
+        
+        // Buffer timeout DESACTIVADO - manejado por buffer-manager.ts
         // Timeout de seguridad
-        if (!state.bufferTimeout) {
-            state.bufferTimeout = setTimeout(() => {
-                logWarning('MAX_TIMEOUT', `Timeout máximo alcanzado para ${state.userName}`);
-                this.processMessages(userId);
-            }, this.MAX_BUFFER_TIME);
-        }
+        // if (!state.bufferTimeout) {
+        //     state.bufferTimeout = setTimeout(() => {
+        //         logWarning('MAX_TIMEOUT', `Timeout máximo alcanzado para ${state.userName}`);
+        //         this.processMessages(userId);
+        //     }, this.MAX_BUFFER_TIME);
+        // }
     }
     
-    // Programar procesamiento de mensajes
+    // Programar procesamiento de mensajes - DESACTIVADO
     private scheduleProcessing(state: UserState, delay: number): void {
+        // DESACTIVADO - el buffer-manager.ts maneja todo el procesamiento
         // Cancelar procesamiento anterior si existe
-        if (state.bufferTimeout) {
-            clearTimeout(state.bufferTimeout);
-        }
+        // if (state.bufferTimeout) {
+        //     clearTimeout(state.bufferTimeout);
+        // }
         
-        state.bufferTimeout = setTimeout(() => {
-            if (!state.isTyping || Date.now() - state.lastTypingTimestamp > this.TYPING_TIMEOUT) {
-                this.processMessages(state.userId);
-            } else {
-                // Si sigue escribiendo, esperar un poco más
-                this.scheduleProcessing(state, this.TYPING_EXTENSION);
-            }
-        }, delay);
+        // state.bufferTimeout = setTimeout(() => {
+        //     if (!state.isTyping || Date.now() - state.lastTypingTimestamp > this.TYPING_TIMEOUT) {
+        //         this.processMessages(state.userId);
+        //     } else {
+        //         // Si sigue escribiendo, esperar un poco más
+        //         this.scheduleProcessing(state, this.TYPING_EXTENSION);
+        //     }
+        // }, delay);
+        
+        logInfo('BUFFER_DISABLED', 'Procesamiento delegado a buffer-manager.ts', {
+            userId: state.userId,
+            userName: state.userName,
+            requestedDelay: delay,
+            reason: 'legacy_system_disabled'
+        });
     }
     
-    // Extender timeout del buffer
+    // Extender timeout del buffer - DESACTIVADO
     private extendBufferTimeout(state: UserState): void {
-        if (state.bufferTimeout) {
-            clearTimeout(state.bufferTimeout);
-            this.scheduleProcessing(state, this.TYPING_EXTENSION);
-            
-            logDebug('BUFFER_EXTENDED', `Buffer extendido por typing`, {
-                userId: state.userId,
-                extension: this.TYPING_EXTENSION
-            });
-        }
+        // DESACTIVADO - el buffer-manager.ts maneja toda la extensión
+        // if (state.bufferTimeout) {
+        //     clearTimeout(state.bufferTimeout);
+        //     this.scheduleProcessing(state, this.TYPING_EXTENSION);
+        //     
+        //     logDebug('BUFFER_EXTENDED', `Buffer extendido por typing`, {
+        //         userId: state.userId,
+        //         extension: this.TYPING_EXTENSION
+        //     });
+        // }
+        logInfo('BUFFER_EXTEND_DISABLED', 'Extensión de buffer delegada a buffer-manager.ts', {
+            userId: state.userId,
+            userName: state.userName,
+            reason: 'legacy_extension_disabled'
+        });
     }
     
-    // Procesar mensajes acumulados
+    // Procesar mensajes acumulados - DESACTIVADO
     processMessages(userId: string): void {
+        // DESACTIVADO - buffer-manager.ts maneja todo el procesamiento de mensajes
+        logInfo('PROCESS_MESSAGES_DISABLED', 'Procesamiento de mensajes delegado a buffer-manager.ts', {
+            userId,
+            reason: 'legacy_processing_disabled'
+        });
+        return; // Salir temprano - no procesar nada
+        
         const state = this.states.get(userId);
         if (!state || state.messages.length === 0) return;
         

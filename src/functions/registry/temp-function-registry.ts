@@ -4,7 +4,7 @@ import { IFunctionRegistry, ToolCallFunction } from '../../shared/interfaces';
 export class TempFunctionRegistry implements IFunctionRegistry {
     private functions: Map<string, ToolCallFunction> = new Map();
 
-    register(name: string, func: ToolCallFunction): void {
+    register(name: string, func: ToolCallFunction, source?: string): void {
         this.functions.set(name, func);
     }
 
@@ -41,5 +41,21 @@ export class TempFunctionRegistry implements IFunctionRegistry {
 
     getAllFunctions(): ToolCallFunction[] {
         return Array.from(this.functions.values());
+    }
+
+    getStats(): { totalFunctions: number; availableFunctions: string[]; registrationHistory: number } {
+        return {
+            totalFunctions: this.functions.size,
+            availableFunctions: Array.from(this.functions.keys()),
+            registrationHistory: this.functions.size
+        };
+    }
+
+    getRegistrationHistory(): Array<{ name: string; source?: string; timestamp: Date }> {
+        return Array.from(this.functions.keys()).map(name => ({
+            name,
+            timestamp: new Date(),
+            source: 'temp-registry'
+        }));
     }
 }

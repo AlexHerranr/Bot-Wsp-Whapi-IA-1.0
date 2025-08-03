@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "WebFetch(domain:docs.anthropic.com)",
@@ -62,7 +63,28 @@
       "Bash(sqlite3:*)",
       "Bash(bash:*)",
       "Bash(rg:*)",
-      "Bash(.scriptsaudit-migration.sh:*)"
+      "Bash(.scriptsaudit-migration.sh:*)",
+      "mcp__ide__executeCode",
+      "Bash(python:*)",
+      "Bash(true)",
+      "Bash(createdb:*)",
+      "Bash(npx jest:*)",
+      "Bash(set WHAPI_TOKEN=hXoVA1qcPcFPQ0uh8AZckGzbPxquj7dZ)",
+      "Bash(set WHAPI_API_URL=https://gate.whapi.cloud)",
+      "Bash(npm start)",
+      "Bash(set PORT=3010)",
+      "Bash(start http://localhost:5555)",
+      "Bash(wmic process where:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(echo:*)",
+      "Bash(echo \"CRM_MODE: $env:CRM_MODE\")",
+      "Bash(sed:*)",
+      "Bash(cat:*)",
+      "Bash(pkill:*)",
+      "Bash(npx tsx:*)",
+      "Bash(del test-compact-logging.js)",
+      "Bash(del debug-chunks.js)",
+      "Bash(del nul)"
     ],
     "deny": []
   }

@@ -72,13 +72,14 @@ describe('Equivalencia Funcional End-to-End', () => {
     process.env.OPENAI_API_KEY = 'test_key';
     
     // Importar aplicación modular
-    const { default: createApp } = await import('../../src/main');
-    app = await createApp();
+    const mainModule = await import('../../src/main');
+    app = await mainModule.default();
     
-    // Iniciar servidor en puerto libre
-    const port = 3999;
+    // Usar puerto dinámico para evitar conflictos
+    const port = 0; // Let system assign free port
     server = app.listen(port);
-    baseUrl = `http://localhost:${port}`;
+    const actualPort = server.address()?.port;
+    baseUrl = `http://localhost:${actualPort}`;
     
     // Esperar inicialización
     await new Promise(resolve => setTimeout(resolve, 1000));

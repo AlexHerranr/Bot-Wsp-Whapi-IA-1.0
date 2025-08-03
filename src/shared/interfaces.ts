@@ -6,10 +6,12 @@ export interface ToolCallFunction {
 }
 
 export interface IFunctionRegistry {
-  register(name: string, func: ToolCallFunction): void;
+  register(name: string, func: ToolCallFunction, source?: string): void;
   execute(name: string, args: any, context?: any): Promise<string>;
   has(name: string): boolean;
   list(): string[];
+  getStats(): { totalFunctions: number; availableFunctions: string[]; registrationHistory: number };
+  getRegistrationHistory(): Array<{ name: string; source?: string; timestamp: Date }>;
 }
 
 export interface ICacheManager {
@@ -35,6 +37,7 @@ export interface IBufferManager {
   setIntelligentTimer(userId: string, triggerType: 'message' | 'voice' | 'typing' | 'recording'): void;
   getBuffer(userId: string): any;
   cleanup(maxAge?: number): number;
+  getStats?(): { active: number };
 }
 
 export interface IUserManager {
@@ -42,6 +45,7 @@ export interface IUserManager {
   updateState(userId: string, updates: Partial<any>): void;
   resetState(userId: string): void;
   cleanup(maxAge?: number): number;
+  getStats?(): { active: number };
 }
 
 export interface IMediaService {

@@ -1,4 +1,4 @@
-# 🚀 Guía Completa de Migración Modular - TeAlquilamos Bot
+# 🚀 Guía Completa de Migración Modular - TeAlquilamos Bot/
 
 *Transformación de app-unified.ts (3,779 líneas) a arquitectura modular escalable*
 

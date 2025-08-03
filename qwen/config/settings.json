@@ -1,0 +1,107 @@
+{
+    "version": "1.0.0",
+    "description": "Configuración avanzada para Qwen Code CLI",
+    
+    "providers": {
+        "openrouter": {
+            "name": "OpenRouter",
+            "description": "Proveedor recomendado para pruebas gratuitas",
+            "api_key": "env:QWEN_API_KEY",
+            "base_url": "https://openrouter.ai/api/v1",
+            "model": "qwen/qwen3-coder-plus",
+            "features": ["chat", "completion", "function_calling"],
+            "limits": {
+                "requests_per_minute": 60,
+                "tokens_per_request": 65536,
+                "context_length": 262144
+            }
+        },
+        "alibaba": {
+            "name": "Alibaba Cloud",
+            "description": "Proveedor oficial directo",
+            "api_key": "env:QWEN_API_KEY",
+            "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+            "model": "qwen3-coder-plus",
+            "features": ["chat", "completion", "function_calling", "streaming"],
+            "limits": {
+                "requests_per_minute": 100,
+                "tokens_per_request": 65536,
+                "context_length": 262144
+            }
+        },
+        "huggingface": {
+            "name": "HuggingFace",
+            "description": "Proveedor gratuito con límites",
+            "api_key": "env:QWEN_API_KEY",
+            "base_url": "https://api-inference.huggingface.co/models/Qwen/Qwen3-Coder-Plus",
+            "model": "Qwen/Qwen3-Coder-Plus",
+            "features": ["completion"],
+            "limits": {
+                "requests_per_minute": 30,
+                "tokens_per_request": 32768,
+                "context_length": 131072
+            }
+        }
+    },
+    
+    "default_provider": "openrouter",
+    
+    "models": {
+        "qwen3-coder-plus": {
+            "name": "Qwen3-Coder-Plus",
+            "description": "Modelo principal de 480B parámetros",
+            "parameters": "480B",
+            "active_parameters": "35B",
+            "context_length": 262144,
+            "languages": 358,
+            "features": ["agentic_coding", "function_calling", "fill_in_middle"]
+        },
+        "qwen3-coder-30b": {
+            "name": "Qwen3-Coder-30B",
+            "description": "Modelo más pequeño de 30B parámetros",
+            "parameters": "30B",
+            "active_parameters": "3B",
+            "context_length": 262144,
+            "languages": 358,
+            "features": ["agentic_coding", "function_calling"]
+        }
+    },
+    
+    "generation": {
+        "max_tokens": 65536,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "stop_sequences": ["<|im_end|>", "<|endoftext|>"]
+    },
+    
+    "workspace": {
+        "root_dir": "./qwen/workspace",
+        "cache_dir": "./qwen/cache",
+        "logs_dir": "./qwen/logs",
+        "examples_dir": "./qwen/examples"
+    },
+    
+    "logging": {
+        "level": "info",
+        "file": "./qwen/logs/qwen-cli.log",
+        "max_size": "10MB",
+        "max_files": 5,
+        "format": "json"
+    },
+    
+    "integration": {
+        "bot_enabled": true,
+        "webhook_url": "",
+        "timeout": 300000,
+        "retry_attempts": 3,
+        "retry_delay": 1000
+    },
+    
+    "security": {
+        "api_key_encryption": false,
+        "log_sensitive_data": false,
+        "validate_ssl": true
+    }
+} 

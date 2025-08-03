@@ -20,6 +20,7 @@ export class UserManager {
             userState = {
                 userId,
                 isTyping: false,
+                isRecording: false,
                 lastTypingTimestamp: 0,
                 lastMessageTimestamp: 0,
                 messages: [],
@@ -63,5 +64,20 @@ export class UserManager {
         // Por ahora, simplemente devuelve el estado del usuario
         // En una implementación real, esto interactuaría con la base de datos
         return this.getOrCreateState(userId, undefined, userName);
+    }
+
+    public cleanup(): number {
+        const beforeSize = this.userStates.size;
+        this.userStates.clear();
+        this.activeProcessing.clear();
+        return beforeSize;
+    }
+
+    public getStats(): { totalUsers: number; activeProcessing: number; cacheSize: number } {
+        return {
+            totalUsers: this.userStates.size,
+            activeProcessing: this.activeProcessing.size,
+            cacheSize: this.userStates.size
+        };
     }
 }

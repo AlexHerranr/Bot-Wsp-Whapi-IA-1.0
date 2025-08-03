@@ -5,6 +5,7 @@ import { OpenAIRun, FunctionCall } from '../../shared/types';
 import { openAIWithRetry, withTimeout } from '../utils/retry-utils';
 import { TerminalLog } from '../utils/terminal-log';
 import { CacheManager } from '../state/cache-manager';
+import { logInfo, logSuccess, logError, logWarning, logDebug } from '../../utils/logging';
 
 export interface OpenAIServiceConfig {
     apiKey: string;
@@ -24,6 +25,7 @@ export interface ProcessingResult {
     tokensUsed?: number;
     threadId?: string;
     runId?: string;
+    threadTokenCount?: number;
 }
 
 export class OpenAIService implements IOpenAIService {
@@ -63,17 +65,77 @@ export class OpenAIService implements IOpenAIService {
         this.log.response(userName, result.response || 'Response generated', result.processingTime);
     }
 
-    async processMessage(userId: string, message: string, chatId: string, userName: string): Promise<ProcessingResult> {
+    async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string): Promise<ProcessingResult> {
         const startTime = Date.now();
 
         try {
-            this.log.info(`Starting OpenAI processing for ${userName}`);
+            // Log crítico: Inicio de procesamiento OpenAI
+            logInfo('OPENAI_PROCESSING_START', 'Iniciando procesamiento con OpenAI', {
+                userId,
+                userName,
+                chatId,
+                messageLength: message.length,
+                assistantId: this.config.assistantId,
+                existingThreadId: existingThreadId || 'none',
+                timestamp: new Date().toISOString()
+            });
 
-            // Step 1: Get or create thread
-            const threadId = await this.getOrCreateThread(userId, chatId);
+            // Step 1: Get or create thread (validate existing thread first)
+            let threadId: string;
+            let threadTokenCount: number | undefined;
+            
+            if (existingThreadId) {
+                // Validar que el thread existe y obtener token count
+                const validation = await this.validateThread(existingThreadId);
+                if (validation.isValid) {
+                    threadId = existingThreadId;
+                    threadTokenCount = validation.tokenCount;
+                    
+                    // Log crítico: Thread reutilizado desde base de datos
+                    logInfo('THREAD_REUSE', 'Thread reutilizado desde base de datos', {
+                        userId,
+                        userName, 
+                        chatId,
+                        threadId: existingThreadId,
+                        tokenCount: threadTokenCount,
+                        source: 'database'
+                    });
+                    
+                    // DEBUG: Detailed thread validation info
+                    logDebug('THREAD_VALIDATION', 'Thread validation details', {
+                        userId,
+                        threadId: existingThreadId,
+                        tokenCount: threadTokenCount,
+                        validationPassed: true,
+                        source: 'database'
+                    });
+                } else {
+                    // Thread inválido, crear uno nuevo
+                    logWarning('THREAD_INVALID', 'Thread existente inválido, creando nuevo', {
+                        userId,
+                        userName,
+                        oldThreadId: existingThreadId,
+                        reason: 'thread_validation_failed'
+                    });
+                    threadId = await this.getOrCreateThread(userId, chatId);
+                }
+            } else {
+                threadId = await this.getOrCreateThread(userId, chatId);
+            }
 
             // Step 2: Add message to thread
             await this.addMessageToThread(threadId, message);
+            
+            // Log detallado del mensaje enviado a OpenAI
+            logInfo('OPENAI_MESSAGE_SENT', 'Mensaje enviado al thread de OpenAI', {
+                userId,
+                userName,
+                threadId,
+                messagePreview: message.substring(0, 500),
+                messageLength: message.length,
+                messageType: message.includes('Audio)') ? 'transcription' : 'text',
+                hasQuotedContent: message.includes('Cliente responde a este mensaje:')
+            });
 
             // Step 3: Create and monitor run
             const runResult = await this.createAndMonitorRun(threadId, userName);
@@ -109,23 +171,109 @@ export class OpenAIService implements IOpenAIService {
 
             // Step 5: Get final response
             const response = await this.getThreadResponse(threadId);
+            
+            const processingTime = Date.now() - startTime;
+
+            // Log crítico: Procesamiento completado exitosamente
+            logSuccess('OPENAI_RUN_COMPLETED', 'Run completado exitosamente', {
+                userId,
+                userName,
+                threadId,
+                runId: runResult.runId,
+                processingTime,
+                tokensUsed: runResult.tokensUsed,
+                responseLength: response?.length || 0,
+                hasFunctionCalls: !!(runResult.functionCalls && runResult.functionCalls.length > 0)
+            });
+
+            // Log del contenido completo de respuesta de OpenAI para debugging
+            if (response && response.length > 0) {
+                const containsAudioError = response.includes('transcripción') || 
+                                         response.includes('nota de voz') || 
+                                         response.includes('audio') ||
+                                         response.includes('repetirlo') ||
+                                         response.includes('escribirlo');
+                
+                logInfo('OPENAI_RESPONSE_CONTENT', 'Respuesta completa de OpenAI', {
+                    userId,
+                    userName,
+                    threadId,
+                    runId: runResult.runId,
+                    responseLength: response.length,
+                    response: response.trim(),  // Mostrar respuesta completa
+                    containsAudioError,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Advertencia específica si OpenAI dice que no puede procesar audio
+                if (containsAudioError) {
+                    logWarning('OPENAI_AUDIO_PROCESSING_ERROR', 'OpenAI respondió que no puede procesar audio/transcripción', {
+                        userId,
+                        userName,
+                        threadId,
+                        runId: runResult.runId,
+                        response: response.trim(),
+                        assistantId: this.config.assistantId,
+                        recommendation: 'Revisar instrucciones del asistente en OpenAI Dashboard'
+                    });
+                }
+            }
+
+            // Log crítico: Token usage si disponible
+            if (runResult.tokensUsed) {
+                logInfo('TOKEN_USAGE', 'Tokens utilizados en procesamiento', {
+                    userId,
+                    userName,
+                    threadId,
+                    runId: runResult.runId,
+                    tokens: runResult.tokensUsed,
+                    processingTime
+                });
+            }
+
+            // Log crítico: High latency si es alto
+            if (processingTime > 10000) { // Más de 10 segundos
+                logWarning('HIGH_LATENCY', 'Latencia alta detectada en procesamiento', {
+                    userId,
+                    userName,
+                    threadId,
+                    runId: runResult.runId,
+                    latencyMs: processingTime,
+                    tokensUsed: runResult.tokensUsed
+                });
+            }
 
             return {
                 success: true,
                 response,
-                processingTime: Date.now() - startTime,
+                processingTime,
                 tokensUsed: runResult.tokensUsed,
                 threadId,
-                runId: runResult.runId
+                runId: runResult.runId,
+                threadTokenCount: threadTokenCount // Incluir el token count del thread
             };
 
         } catch (error) {
-            this.log.openaiError(userName, error instanceof Error ? error.message : 'Unknown error');
+            const processingTime = Date.now() - startTime;
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            
+            this.log.openaiError(userName, errorMessage);
+            
+            // Log crítico: Error en procesamiento OpenAI
+            logError('OPENAI_PROCESS_ERROR', 'Error en procesamiento con OpenAI', {
+                userId,
+                userName,
+                chatId,
+                error: errorMessage,
+                stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
+                processingTime,
+                assistantId: this.config.assistantId
+            });
             
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown processing error',
-                processingTime: Date.now() - startTime
+                error: errorMessage,
+                processingTime
             };
         }
     }
@@ -138,6 +286,24 @@ export class OpenAIService implements IOpenAIService {
             const cachedThreadId = this.cache.get<string>(cacheKey);
             if (cachedThreadId) {
                 this.log.debug(`Using cached thread ${cachedThreadId} for ${userId}`);
+                
+                // Log crítico: Thread reutilizado
+                logInfo('THREAD_REUSE', 'Thread reutilizado para usuario', {
+                    userId,
+                    chatId,
+                    threadId: cachedThreadId,
+                    source: 'cache'
+                });
+                
+                // DEBUG: Cache hit details
+                logDebug('CACHE_HIT_DETAIL', 'Thread cache hit details', {
+                    userId,
+                    chatId,
+                    threadId: cachedThreadId,
+                    cacheKey,
+                    cacheEnabled: this.config.enableThreadCache
+                });
+                
                 return cachedThreadId;
             }
         }
@@ -154,6 +320,24 @@ export class OpenAIService implements IOpenAIService {
 
         this.log.debug(`Created new thread ${thread.id} for ${userId}`);
 
+        // Log crítico: Nuevo thread creado
+        logSuccess('NEW_THREAD_CREATED', 'Nuevo thread creado para usuario', {
+            userId,
+            chatId,
+            threadId: thread.id,
+            enableCache: this.config.enableThreadCache
+        });
+        
+        // DEBUG: Thread creation details
+        logDebug('THREAD_CREATION_DETAIL', 'New thread creation details', {
+            userId,
+            chatId,
+            threadId: thread.id,
+            cacheKey,
+            cacheEnabled: this.config.enableThreadCache,
+            createdAt: new Date().toISOString()
+        });
+
         // Cache thread if enabled
         if (this.config.enableThreadCache && this.cache) {
             this.cache.set(cacheKey, thread.id, 3600000); // 1 hour cache
@@ -162,16 +346,127 @@ export class OpenAIService implements IOpenAIService {
         return thread.id;
     }
 
+    private async getThreadTokenCount(threadId: string): Promise<number> {
+        try {
+            // Obtener los mensajes del thread para calcular tokens aproximados
+            const messages = await openAIWithRetry(
+                () => this.openai.beta.threads.messages.list(threadId, { limit: 100 }),
+                {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 3000
+                }
+            );
+
+            // Aproximación de tokens: ~4 caracteres = 1 token
+            let totalCharacters = 0;
+            
+            for (const message of messages.data) {
+                if (Array.isArray(message.content)) {
+                    for (const content of message.content) {
+                        if (content.type === 'text') {
+                            totalCharacters += content.text.value.length;
+                        }
+                    }
+                }
+            }
+
+            // Estimación conservadora: 3 caracteres = 1 token
+            const estimatedTokens = Math.ceil(totalCharacters / 3);
+            
+            logInfo('THREAD_TOKEN_COUNT', 'Token count estimado para thread', {
+                threadId,
+                totalCharacters,
+                estimatedTokens,
+                messageCount: messages.data.length
+            });
+
+            return estimatedTokens;
+            
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            logWarning('THREAD_TOKEN_COUNT_ERROR', 'Error obteniendo token count', {
+                threadId,
+                error: errorMessage
+            });
+            
+            // Si no podemos obtener el count, asumir que está bien
+            return 0;
+        }
+    }
+
+    private async validateThread(threadId: string): Promise<{ isValid: boolean; tokenCount?: number }> {
+        try {
+            // Intentar obtener información del thread desde OpenAI
+            await openAIWithRetry(
+                () => this.openai.beta.threads.retrieve(threadId),
+                {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 3000
+                }
+            );
+            
+            // Si llegamos aquí, el thread existe - obtener token count
+            const tokenCount = await this.getThreadTokenCount(threadId);
+            
+            return { isValid: true, tokenCount };
+            
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            
+            // Errores que indican thread inválido
+            if (errorMessage.includes('No thread found') || 
+                errorMessage.includes('Thread not found') ||
+                errorMessage.includes('Invalid thread') ||
+                error.status === 404) {
+                
+                logWarning('THREAD_NOT_FOUND', 'Thread no encontrado en OpenAI', {
+                    threadId,
+                    error: errorMessage
+                });
+                
+                return { isValid: false };
+            }
+            
+            // Otros errores (rate limit, conexión, etc.) - asumir que el thread es válido
+            logWarning('THREAD_VALIDATION_ERROR', 'Error validando thread, asumiendo válido', {
+                threadId,
+                error: errorMessage
+            });
+            
+            return { isValid: true }; // Benefit of the doubt
+        }
+    }
+
+    async checkActiveRun(threadId: string): Promise<{ isActive: boolean }> {
+        try {
+            const runs = await this.openai.beta.threads.runs.list(threadId, { limit: 1 });
+            const latestRun = runs.data[0];
+            return { 
+                isActive: latestRun?.status === 'in_progress' || latestRun?.status === 'queued' 
+            };
+        } catch (error) {
+            logWarning('CHECK_ACTIVE_RUN_ERROR', 'Error verificando run activo', {
+                threadId,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+            return { isActive: false }; // Asumir no activo en caso de error
+        }
+    }
+
     private async addMessageToThread(threadId: string, message: string): Promise<void> {
+        // El mensaje ya viene formateado con contexto temporal desde CoreBot
         await openAIWithRetry(
             () => this.openai.beta.threads.messages.create(threadId, {
                 role: 'user',
-                content: message
+                content: message // Usar el mensaje contextual tal como viene
             }),
             {
-                maxRetries: 3,
-                baseDelay: 500,
-                maxDelay: 3000
+                maxRetries: 30, // Aumentado de 3 a 30 para race conditions
+                baseDelay: 1000, // Aumentado de 500 a 1000ms
+                maxDelay: 10000, // Aumentado de 3000 a 10000ms (10s)
+                backoffFactor: 1.5 // Backoff más suave para threads ocupados
             }
         );
     }
@@ -239,6 +534,18 @@ export class OpenAIService implements IOpenAIService {
 
                 this.log.debug(`Run ${runId} status: ${run.status} (attempt ${attempts + 1})`);
 
+                // Log crítico: Polling de run
+                if (attempts % 5 === 0 || run.status !== 'in_progress') { // Log cada 5 intentos o cuando cambia estado
+                    logInfo('OPENAI_POLLING', `Esperando respuesta - status: ${run.status}`, {
+                        threadId,
+                        runId,
+                        status: run.status,
+                        attempts: attempts + 1,
+                        maxAttempts: this.config.maxPollingAttempts,
+                        backoffDelay
+                    });
+                }
+
                 switch (run.status) {
                     case 'completed':
                         return {
@@ -247,6 +554,15 @@ export class OpenAIService implements IOpenAIService {
                         };
 
                     case 'requires_action':
+                        // Log crítico: Run requiere action (function calling)
+                        logInfo('RUN_REQUIRES_ACTION', 'Run requiere action para function calling', {
+                            threadId,
+                            runId,
+                            actionType: run.required_action?.type,
+                            toolCallsCount: run.required_action?.submit_tool_outputs?.tool_calls?.length || 0,
+                            attempts: attempts + 1
+                        });
+                        
                         if (run.required_action?.type === 'submit_tool_outputs') {
                             const functionCalls = run.required_action.submit_tool_outputs.tool_calls.map(tc => ({
                                 id: tc.id,
@@ -321,6 +637,15 @@ export class OpenAIService implements IOpenAIService {
         try {
             this.log.info(`Processing ${functionCalls.length} function calls for ${userName}`);
 
+            // Log crítico: Inicio de function calling
+            logInfo('FUNCTION_CALLING_START', `Procesando ${functionCalls.length} function calls`, {
+                threadId,
+                runId,
+                userName,
+                functionCount: functionCalls.length,
+                functionNames: functionCalls.map(fc => fc.function.name)
+            });
+
             const toolOutputs = [];
 
             for (const functionCall of functionCalls) {
@@ -328,10 +653,28 @@ export class OpenAIService implements IOpenAIService {
                     JSON.parse(functionCall.function.arguments)
                 );
 
+                // Log crítico: Ejecutando función específica
+                logInfo('FUNCTION_EXECUTING', `Ejecutando función ${functionCall.function.name}`, {
+                    threadId,
+                    runId,
+                    functionName: functionCall.function.name,
+                    functionId: functionCall.id,
+                    arguments: functionCall.function.arguments
+                });
+
                 try {
                     // Here you would integrate with your function registry
                     // For now, we'll simulate function execution
                     const result = await this.executeFunctionCall(functionCall);
+                    
+                    // Log crítico: Función ejecutada exitosamente
+                    logSuccess('FUNCTION_COMPLETED', `Función ${functionCall.function.name} completada exitosamente`, {
+                        threadId,
+                        runId,
+                        functionName: functionCall.function.name,
+                        functionId: functionCall.id,
+                        resultLength: JSON.stringify(result).length
+                    });
                     
                     toolOutputs.push({
                         tool_call_id: functionCall.id,
@@ -339,15 +682,24 @@ export class OpenAIService implements IOpenAIService {
                     });
 
                 } catch (error) {
-                    this.log.functionError(
-                        functionCall.function.name, 
-                        error instanceof Error ? error.message : 'Unknown error'
-                    );
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    
+                    this.log.functionError(functionCall.function.name, errorMessage);
+
+                    // Log crítico: Error ejecutando función
+                    logError('FUNCTION_ERROR', `Error ejecutando función ${functionCall.function.name}`, {
+                        threadId,
+                        runId,
+                        functionName: functionCall.function.name,
+                        functionId: functionCall.id,
+                        error: errorMessage,
+                        stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined
+                    });
 
                     toolOutputs.push({
                         tool_call_id: functionCall.id,
                         output: JSON.stringify({
-                            error: error instanceof Error ? error.message : 'Function execution failed'
+                            error: errorMessage
                         })
                     });
                 }
@@ -365,8 +717,27 @@ export class OpenAIService implements IOpenAIService {
                 }
             );
 
+            // Log crítico: Tool outputs enviados
+            logSuccess('TOOL_OUTPUTS_SUBMITTED', 'Tool outputs enviados a OpenAI', {
+                threadId,
+                runId,
+                toolOutputsCount: toolOutputs.length,
+                functionNames: functionCalls.map(fc => fc.function.name)
+            });
+
             // Continue monitoring the run
             const result = await this.pollRunStatus(threadId, runId, userName);
+            
+            // Log crítico: Respuesta después de function calling
+            if (result.success) {
+                logSuccess('FUNCTION_CALLING_RESPONSE', 'Respuesta recibida después de function calling', {
+                    threadId,
+                    runId,
+                    userName,
+                    functionCount: functionCalls.length,
+                    tokensUsed: result.tokensUsed
+                });
+            }
             
             return {
                 success: result.success,
@@ -414,17 +785,27 @@ export class OpenAIService implements IOpenAIService {
         const lastMessage = messages.data[0];
         
         if (!lastMessage || lastMessage.role !== 'assistant') {
-            throw new Error('No assistant response found');
+            logInfo('NO_ASSISTANT_MESSAGE', 'No assistant message found, returning empty silently');
+            return ''; // Retorna vacío como en el antiguo, para no enviar respuesta automática
         }
 
         // Extract text content from the message
         const textContent = lastMessage.content.find(content => content.type === 'text');
         
         if (!textContent) {
-            throw new Error('No text content in assistant response');
+            logInfo('NO_TEXT_CONTENT', 'No text content in assistant response, returning empty silently');
+            return ''; // Retorna vacío en lugar de lanzar error
         }
 
-        return (textContent as any).text.value;
+        const responseText = (textContent as any).text.value;
+        
+        // Si la respuesta está vacía, retornar vacío silenciosamente (como en el monolítico)
+        if (!responseText || !responseText.trim()) {
+            logInfo('EMPTY_RESPONSE_TEXT', 'Empty assistant response text, returning empty silently');
+            return '';
+        }
+
+        return responseText;
     }
 
     private sleep(ms: number): Promise<void> {
@@ -487,6 +868,54 @@ export class OpenAIService implements IOpenAIService {
         } catch (error) {
             this.log.error(`Failed to cancel run ${runId}: ${error instanceof Error ? error.message : 'Unknown'}`);
             return false;
+        }
+    }
+
+    async cleanupOldRuns(threadId: string, userId: string): Promise<number> {
+        try {
+            const runs = await openAIWithRetry(
+                () => this.openai.beta.threads.runs.list(threadId, { limit: 10 }),
+                { maxRetries: 2, baseDelay: 500 }
+            );
+            
+            let cancelledCount = 0;
+            
+            for (const run of runs.data) {
+                // Cancel runs that have been active for more than 10 minutes
+                if (['queued', 'in_progress', 'requires_action'].includes(run.status)) {
+                    // OpenAI uses Unix timestamp in seconds
+                    const runCreatedAt = typeof run.created_at === 'number' 
+                        ? run.created_at * 1000  // Convert to milliseconds
+                        : new Date(run.created_at).getTime();
+                    
+                    const runAge = Date.now() - runCreatedAt;
+                    const ageMinutes = Math.floor(runAge / 60000);
+                    
+                    // Only cancel if really old (more than 10 minutes)
+                    if (ageMinutes > 10) {
+                        try {
+                            await openAIWithRetry(
+                                () => this.openai.beta.threads.runs.cancel(threadId, run.id),
+                                { maxRetries: 2, baseDelay: 500 }
+                            );
+                            cancelledCount++;
+                            
+                            this.log.warning(`Old run cancelled automatically - Run: ${run.id}, Age: ${ageMinutes}min, User: ${userId}`);
+                        } catch (cancelError) {
+                            this.log.error(`Failed to cancel old run ${run.id}: ${cancelError instanceof Error ? cancelError.message : 'Unknown'}`);
+                        }
+                    }
+                }
+            }
+            
+            if (cancelledCount > 0) {
+                this.log.info(`Cleaned up ${cancelledCount} old runs for thread ${threadId}`);
+            }
+            
+            return cancelledCount;
+        } catch (error) {
+            this.log.error(`Error cleaning up old runs: ${error instanceof Error ? error.message : 'Unknown'}`);
+            return 0;
         }
     }
 

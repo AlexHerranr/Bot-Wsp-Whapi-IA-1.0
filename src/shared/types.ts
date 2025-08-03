@@ -27,7 +27,8 @@ export interface WHAPIError {
 export interface UserState {
     userId: string;
     isTyping: boolean;
-    lastTypingTimestamp: number;
+    isRecording: boolean; // Renombrado de isCurrentlyRecording para consistencia
+    lastActivity?: number; // Unificado de lastTyping/lastTypingTimestamp para claridad
     lastMessageTimestamp: number;
     messages: string[];
     chatId: string;
@@ -35,8 +36,9 @@ export interface UserState {
     typingEventsCount: number;
     averageTypingDuration: number;
     lastInputVoice: boolean;
+    // Legacy fields para compatibilidad
+    lastTypingTimestamp: number;
     lastTyping: number;
-    isCurrentlyRecording?: boolean;
 }
 
 // Buffer de Mensajes

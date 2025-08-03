@@ -39,7 +39,14 @@ export async function withRetry<T>(
 
     for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
         try {
-            return await operation();
+            const result = await operation();
+            
+            // Log de éxito en retries para monitoreo de race conditions
+            if (attempt > 0) {
+                console.info(`✅ Retry exitoso después de ${attempt} intentos`);
+            }
+            
+            return result;
         } catch (error) {
             lastError = error as Error;
             
@@ -52,10 +59,10 @@ export async function withRetry<T>(
                 throw lastError;
             }
 
-            // Calcular el pr�ximo delay con backoff exponencial
+            // Calcular el próximo delay con backoff exponencial
             delay = Math.min(delay * config.backoffFactor, config.maxDelay);
             
-            // Esperar antes del pr�ximo intento
+            // Esperar antes del próximo intento
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
@@ -107,6 +114,14 @@ export async function openAIWithRetry<T>(
             // Errores temporales de OpenAI
             if (error.status >= 500 || error.code === 'api_error') {
                 throw new Error(`OpenAI API error: ${error.message}`);
+            }
+            // Race condition específico: thread ocupado - RETRYABLE con delay inicial
+            if (error.status === 400 && error.message && 
+                error.message.includes("Can't add messages to thread") && 
+                error.message.includes("while a run is active")) {
+                // Delay inicial de 2s para dar tiempo natural al run anterior
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                throw new Error(`Thread busy - will retry after initial delay: ${error.message}`);
             }
             // No reintentar otros errores (400s, etc.)
             throw new NoRetryError(`Non-retryable OpenAI error: ${error.message}`, error);

@@ -44,12 +44,14 @@ export class MediaService implements IMediaService {
         const startTime = Date.now();
         
         try {
-            this.terminalLog.info(`Starting audio transcription for ${userId}`);
+            const shortUserId = userId.split('@')[0];
+            this.terminalLog.processingVoice(shortUserId);
             
             return await this.legacyTranscribeAudio(audioUrl, userId);
         } catch (error) {
             const duration = Date.now() - startTime;
-            this.terminalLog.voiceError(userId, error instanceof Error ? error.message : 'Unknown error');
+            const shortUserId = userId.split('@')[0];
+            this.terminalLog.voiceError(shortUserId, error instanceof Error ? error.message : 'Unknown error');
             
             return {
                 success: false,
