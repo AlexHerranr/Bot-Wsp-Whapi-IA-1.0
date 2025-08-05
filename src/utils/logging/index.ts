@@ -212,6 +212,19 @@ const STAGE_MAP: Record<string, string> = {
 // Lleva la cuenta de la posición que ocupa cada log dentro de un mismo flujo (messageId)
 const messageSequenceMap = new Map<string, number>();
 
+// 🔧 NUEVO: Sistema para evitar logs repetidos
+const repeatTracker = new Map<string, { count: number; lastSeen: number }>();
+
+// Cleanup old entries every 30 seconds
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of repeatTracker.entries()) {
+        if (now - value.lastSeen > 30000) { // 30s cleanup
+            repeatTracker.delete(key);
+        }
+    }
+}, 30000);
+
 // 🔧 ETAPA 10: Detección de loops mejorada
 const loopDetectionMap = new Map<string, { count: number; firstSeen: number; lastSeen: number }>();
 
@@ -276,6 +289,64 @@ function enrichedLog(
         return;
     }
     
+    // 🔧 NUEVO: Evitar logs repetidos o sin fundamento
+    if (details?.isRepeated && !DETAILED_LOGS) return;
+    
+    // Skip if length is too short and not critical
+    if (details?.length < 10 && !details?.critical && ['BUFFER_TIMER_CANCELLED', 'BUFFER_TIMER_SET'].includes(category)) {
+        return;
+    }
+    
+    // Track repeated logs - special handling for webhooks and client messages
+    const trackingKey = `${category}:${message.substring(0, 50)}`;
+    const now = Date.now();
+    const existing = repeatTracker.get(trackingKey);
+    
+    // Extended handling for cross-category messages (including AI responses)
+    if (['MESSAGE_RECEIVED', 'BUFFER_GROUPED', 'OPENAI_RESPONSE', 'WHAPI_CHUNK_SEND', 'BUFFER_PREBUFFER'].includes(category)) {
+        const msgBody = details?.body || details?.combinedPreview || details?.preview || details?.response || '';
+        const hash = `${category}:${msgBody.slice(0, 50)}`;
+        const crossExisting = repeatTracker.get(hash);
+        
+        if (crossExisting && now - crossExisting.lastSeen < 10000) { // 10s window for cross-category
+            crossExisting.count++;
+            crossExisting.lastSeen = now;
+            if (crossExisting.count > 1) {
+                const firstWord = msgBody.split(/\s+/)[0] || '';
+                message = `Mensaje repetido: '${firstWord} .......' | count: x${crossExisting.count}`;
+            }
+        } else {
+            repeatTracker.set(hash, { count: 1, lastSeen: now });
+        }
+    }
+    
+    // Special webhook repeat tracking with 2-second window
+    if (category === 'WEBHOOK_RECEIVED' || category === 'WEBHOOK_OTHER') {
+        const webhookKey = `${category}:${details?.data || details?.type || 'unknown'}`;
+        const webhookExisting = repeatTracker.get(webhookKey);
+        
+        if (webhookExisting && now - webhookExisting.lastSeen < 2000) { // Within 2 seconds
+            webhookExisting.count++;
+            webhookExisting.lastSeen = now;
+            if (webhookExisting.count > 2 && !DETAILED_LOGS) {
+                // Log summary instead of individual webhook
+                if (webhookExisting.count === 3) { // Only log once when threshold is reached
+                    enrichedLog(category, `📥 ${details?.data || details?.type || 'unknown'}: repeated x${webhookExisting.count} | last:${webhookExisting.count}`, 
+                        { suppressCount: webhookExisting.count, originalDetails: details }, level, sourceFile);
+                }
+                return; // Skip individual webhook log
+            }
+        } else {
+            repeatTracker.set(webhookKey, { count: 1, lastSeen: now });
+        }
+    } else if (existing && now - existing.lastSeen < 5000) { // Within 5 seconds for non-webhooks
+        existing.count++;
+        existing.lastSeen = now;
+        if (existing.count > 3 && !DETAILED_LOGS) return; // Skip after 3 repeats
+    } else {
+        repeatTracker.set(trackingKey, { count: 1, lastSeen: now });
+    }
+    
     // Omitir debug en prod para ciertas categorías
     if (IS_PRODUCTION && ['THREAD_DEBUG', 'BUFFER_TIMER_RESET'].includes(category)) {
         return;
@@ -315,8 +386,12 @@ function enrichedLog(
                 stage,
                 sequence,
             },
-            ...(details && Object.keys(details).length > 0 ? details : {}),
-            environment: IS_PRODUCTION ? 'cloud-run' : 'local',
+            // 🔧 NUEVO: Incluir detalles completos si DETAILED_LOGS está habilitado
+            ...(DETAILED_LOGS && details && Object.keys(details).length > 0 ? details : 
+                details && Object.keys(details).length > 0 ? 
+                Object.fromEntries(Object.entries(details).filter(([k, v]) => 
+                    !['rawResponse', 'fullStack', 'completePayload'].includes(k)
+                )) : {}),
         }
     };
 
@@ -390,7 +465,14 @@ function formatTokens(tokens: number): string {
 
 function formatCompactLog(category: string, message: string, details: any, level: LogLevel, sourceFile?: string): string {
     const now = new Date();
-    const timestamp = now.toISOString(); // Mantener timestamp completo con milisegundos
+    // Formato corto: 03-08 20:13:00.695 (ahorra ~6 chars por log, quita T)
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0'); 
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+    const timestamp = `${day}-${month} ${hours}:${minutes}:${seconds}.${milliseconds}`;
     const levelIcon = { 'SUCCESS': '✓', 'ERROR': '✗', 'WARNING': '⚠', 'INFO': 'ℹ', 'DEBUG': '🔍' }[level] || 'ℹ';
     
     // Formatear archivo fuente si está disponible
@@ -463,8 +545,14 @@ function formatCompactLog(category: string, message: string, details: any, level
             return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${userId} ${details?.status || 'unknown'}`;
             
         case 'MESSAGE_RECEIVED':
-            const preview = details?.body ? details.body.substring(0, 30) + (details.body.length > 30 ? '...' : '') : '';
-            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${userId} | ${details?.messageType || 'text'} | "${preview}"`;
+            const msgBody = details?.body || '';
+            const msgHash = `MSG:${userId}:${msgBody.split(/\s+/).slice(0, 3).join(' ')}`;
+            const isRepeat = repeatTracker.has(msgHash);
+            
+            const msgPreview = isRepeat ? 
+                msgBody.split(/\s+/).slice(0, 3).join(' ') + (msgBody.split(/\s+/).length > 3 ? ' ......' : '') :
+                msgBody.split(/\s+/).slice(0, 10).join(' ') + (msgBody.split(/\s+/).length > 10 ? '...' : '');
+            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${userId} | ${details?.messageType || 'text'} | "${msgPreview}"`;
             
         case 'BUFFER_TIMER_SET':
         case 'BUFFER_TIMER_CANCELLED':
@@ -488,8 +576,14 @@ function formatCompactLog(category: string, message: string, details: any, level
                 ).join(' + ');
                 return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${userId} | ${msgCount} messages grouped | ${totalLength}ch total | ${msgDetails}`;
             } else {
-                const preview2 = details?.combinedPreview ? details.combinedPreview.substring(0, 50) + '...' : '';
-                return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${userId} | ${msgCount}msg | ${totalLength}ch | "${preview2}"`;
+                const combinedText = details?.combinedPreview || '';
+                const textHash = `${userId}:${combinedText.substring(0, 30)}`;
+                const isRepeatCombined = repeatTracker.has(textHash);
+                
+                const previewCombined = isRepeatCombined ? 
+                    combinedText.split(/\s+/).slice(0, 3).join(' ') + (combinedText.split(/\s+/).length > 3 ? ' ......' : '') :
+                    combinedText.split(/\s+/).slice(0, 10).join(' ') + (combinedText.split(/\s+/).length > 10 ? '...' : '');
+                return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${userId} | ${msgCount}msg | ${totalLength}ch | "${previewCombined}"`;
             }
             
         case 'OPENAI_PROCESSING_START':
@@ -507,14 +601,11 @@ function formatCompactLog(category: string, message: string, details: any, level
             const fullResponse = details?.response || details?.responsePreview || '';
             const containsAudioError = details?.containsAudioError;
             
-            // Si contiene error de audio o es muy corto, mostrar completo
-            if (containsAudioError || contentLength < 200) {
-                return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${userId} | ${threadId} | ${contentLength}ch | response: "${fullResponse}"${containsAudioError ? ' [AUDIO_ERROR_DETECTED]' : ''}`;
-            } else {
-                // Para respuestas largas, mostrar preview
-                const preview = fullResponse.substring(0, 150) + '...';
-                return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${userId} | ${threadId} | ${contentLength}ch | response: "${preview}"`;
-            }
+            // Escape newlines for single-line logging
+            const escapedResponse = fullResponse.replace(/\n/g, '\\n');
+            const response20Words = escapedResponse.split(' ').slice(0, 20).join(' ') + (escapedResponse.split(' ').length > 20 ? '...' : '');
+            
+            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${userId} | ${threadId} | ${contentLength}ch | response: "${response20Words}"${containsAudioError ? ' [AUDIO_ERROR_DETECTED]' : ''}`;
             
         case 'OPENAI_POLLING':
             const status = details?.status || 'unknown';
@@ -624,6 +715,46 @@ function formatCompactLog(category: string, message: string, details: any, level
             const newThreadSource = details?.enableCache ? 'with cache' : 'no cache';
             return `[${timestamp}] [${level}] [${shortCategory}] Created new thread ${threadId} | ${newThreadSource}`;
             
+        case 'OPENAI_SEND':
+            const msgLength = details?.length || 0;
+            const openaiMsgPreview = details?.preview || 'no preview';
+            const contextSrc = details?.contextSource || 'unknown';
+            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} Mensaje aplanado a OpenAI | [U:${userId}] | ${threadId} | ${msgLength}ch | preview: "${openaiMsgPreview}" | contextSource: '${contextSrc}'`;
+            
+        case 'OPENAI_FUNC_CALL':
+            const funcName = details?.functionName || 'unknown';
+            const funcArgs = details?.argsPreview || details?.args?.substring(0, 100) + '...' || 'no args';
+            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} Llamando función | u:${userId} | ${threadId} | functionName: ${funcName} | args: ${funcArgs}`;
+            
+        case 'OPENAI_FUNC_RESULT':
+            const resultFuncName = details?.functionName || 'unknown';
+            const resultPreview = details?.preview || 'no preview';
+            const resultLen = details?.resultLength || 0;
+            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} Resultado de función formateado para OpenAI | u:${userId} | ${threadId} | functionName: ${resultFuncName} | ${resultLen}ch | preview: "${resultPreview}"`;
+            
+        case 'WHAPI_CHUNK_SEND':
+            const chunkNum = details?.chunkNumber || 1;
+            const totalChunksSend = details?.totalChunks || 1;
+            const chunkLength = details?.chunkLength || 0;
+            const chunkPreview = details?.preview || 'no preview';
+            const escapedPreview = chunkPreview.replace(/\n/g, '\\n').replace(/\r/g, '').trim();
+            const isFirst = details?.isFirstChunk ? 'first' : 'follow';
+            return `[${timestamp}] [${level}] [${shortCategory}] Chunk ${chunkNum}/${totalChunksSend} | [U:${userId}] | ${chunkLength}ch | ${isFirst} | preview: "${escapedPreview.substring(0, 100) + (escapedPreview.length > 100 ? '...' : '')}"` ;
+            
+        case 'BUFFER_STATE_ADD':
+            const currentMsgs = details?.currentMsgs || 0;
+            const msgTypes = details?.types || 'unknown';
+            const bufferPreview = details?.preview || 'no preview';
+            const totalLen = details?.totalLength || 0;
+            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} Buffer: ${currentMsgs} msgs (${msgTypes}) | [U:${userId}] | ${totalLen}ch | preview: "${bufferPreview}"`;
+            
+        case 'BUFFER_STATE_WAIT':
+            const waitMsgs = details?.currentMsgs || 0;
+            const waitTypes = details?.types || 'unknown';
+            const timeoutRemaining = details?.timeoutRemaining || '5s';
+            const waitReason = details?.reason || 'unknown';
+            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} Esperando: ${waitMsgs} msgs (${waitTypes}) | [U:${userId}] | timeout:${timeoutRemaining} | reason:${waitReason}`;
+            
         case 'TOKEN_USAGE':
             const procTime2 = duration ? formatDuration(duration) : 'unknown';
             return `[${timestamp}] [${level}] [${shortCategory}] ${userId} | ${threadId} | ${runId} | ${formatTokens(tokens || 0)} | ${procTime2}`;
@@ -658,8 +789,15 @@ function formatCompactLog(category: string, message: string, details: any, level
             
         case 'MESSAGE_PROCESS':
             const processMsgCount = details?.messageCount || 1;
-            const msgPreview = details?.preview ? details.preview.substring(0, 20) + '...' : '';
-            return `[${timestamp}] [${level}] [${shortCategory}] ${userId} | ${processMsgCount}msg | "${msgPreview}"`;
+            const previewText = details?.preview || '';
+            const previewHash = `${userId}:${previewText.substring(0, 30)}`;
+            const isRepeatPreview = repeatTracker.has(previewHash);
+            
+            const processPreview = previewText ? 
+                (isRepeatPreview ? 
+                    previewText.split(/\s+/).slice(0, 3).join(' ') + (previewText.split(/\s+/).length > 3 ? ' ......' : '') :
+                    previewText.split(/\s+/).slice(0, 10).join(' ') + (previewText.split(/\s+/).length > 10 ? '...' : '')) : '';
+            return `[${timestamp}] [${level}] [${shortCategory}] ${userId} | ${processMsgCount}msg | "${processPreview}"`;
             
         case 'FUNCTION_REGISTERED':
             const functionName = details?.functionName || 'unknown';
@@ -717,6 +855,62 @@ function formatCompactLog(category: string, message: string, details: any, level
             const typingSince = details?.timeSinceTyping ? formatDuration(details.timeSinceTyping) : 'unknown';
             return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} Buffer delayed for ${userId} | typing since:${typingSince} | remaining:${delayedTime}`;
             
+        case 'BEDS24_REQUEST':
+            const endpointUrl = details?.url || 'unknown endpoint';
+            let baseEndpoint = 'unknown endpoint';
+            let keyParams = '';
+            
+            try {
+                if (endpointUrl !== 'unknown endpoint') {
+                    const parsedUrl = new URL(endpointUrl);
+                    const pathname = parsedUrl.pathname;
+                    const params = parsedUrl.searchParams;
+                    
+                    // Solo los primeros 3 parámetros más importantes
+                    const paramEntries = Array.from(params.entries()).slice(0, 3);
+                    const paramString = paramEntries.length > 0 ? 
+                        '?' + paramEntries.map(([k, v]) => `${k}=${v}`).join('&') + '...' : '';
+                    
+                    baseEndpoint = pathname + paramString;
+                }
+            } catch (e) {
+                baseEndpoint = endpointUrl.replace(/^https?:\/\/[^\/]+/, '').split('&').slice(0, 3).join('&') + '...';
+            }
+            
+            return `[${timestamp}] [${level}] [${shortCategory}] GET ${baseEndpoint}`;
+            
+        case 'BEDS24_RESPONSE_DETAIL':
+            const rawResponse = JSON.stringify(details?.rawResponse || {}, null, 0).replace(/[\n\r]/g, '\\n').replace(/\s+/g, ' ').substring(0, 500) + '...';
+            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} Response: ${details?.status || 200} | Avail: ${details?.availableRooms?.length || 0} rooms | Prices: ${details?.pricesSummary || 'N/A'} | NumAvail: ${details?.numAvailSummary || 'N/A'} | Raw: ${rawResponse}`;
+        
+        case 'OPENAI_SEND':
+        case 'OPENAI_PAYLOAD':
+            const payloadLength = details?.length || 0;
+            const fullMessage = details?.fullMessage || details?.message || '';
+            
+            // Check for repeated messages first
+            const openaiHash = `OPENAI:${fullMessage.slice(0, 50)}`;
+            const openaiExisting = repeatTracker.get(openaiHash);
+            const now = Date.now();
+            
+            if (openaiExisting && now - openaiExisting.lastSeen < 10000) {
+                openaiExisting.count++;
+                openaiExisting.lastSeen = now;
+                if (openaiExisting.count > 1) {
+                    const tempContext = fullMessage.match(/Hora actual: [^\n]+/)?.[0] || '';
+                    return `[${timestamp}] [${level}] [${shortCategory}] Mensaje repetido OpenAI: '${tempContext} .......' | count: x${openaiExisting.count}`;
+                }
+            } else {
+                repeatTracker.set(openaiHash, { count: 1, lastSeen: now });
+            }
+            
+            // Priorizar contexto temporal y escape single-line
+            const tempContext = fullMessage.match(/Hora actual: [^\n]+/)?.[0] || '';
+            const rest = fullMessage.replace(tempContext, '').trim().split(/\s+/).slice(0, 20 - tempContext.split(/\s+/).length).join(' ');
+            const openaiPreview = (tempContext + ' ' + rest + '...').replace(/\n/g, '\\n').substring(0, 200);
+            
+            return `[${timestamp}] [${level}] [${shortCategory}] Payload to OpenAI: ${openaiPreview} | Len: ${payloadLength}ch | User: ${userId} | Thread: ${threadId}`;
+            
         default:
             // Formato genérico compacto MANTENIENDO DATOS CRÍTICOS
             const genericDetails = [];
@@ -726,21 +920,27 @@ function formatCompactLog(category: string, message: string, details: any, level
             if (tokens) genericDetails.push(formatTokens(tokens));
             if (responseLength) genericDetails.push(`${responseLength}ch`);
             
+            // 🔧 NUEVO: Truncar mensaje si es muy largo
+            const truncatedMessage = message.length > 100 ? message.substring(0, 100) + '...' : message;
+            
             // Manejar errores de forma especial - SIEMPRE mostrar detalles completos
             if (level === 'ERROR' || level === 'FATAL') {
                 const errorDetails = [];
-                if (details?.error) errorDetails.push(`error: ${details.error}`);
+                if (details?.error) {
+                    const errorMsg = details.error.length > 100 ? details.error.substring(0, 100) + '...' : details.error;
+                    errorDetails.push(`error: ${errorMsg}`);
+                }
                 if (details?.code) errorDetails.push(`code: ${details.code}`);
-                if (details?.stack && LOG_LEVEL === 'debug') {
+                if (details?.stack && (LOG_LEVEL === 'debug' || DETAILED_LOGS)) {
                     const stackLines = details.stack.split('\n').slice(0, 3).join(' | ');
                     errorDetails.push(`stack: ${stackLines}`);
                 }
                 const errorStr = errorDetails.length > 0 ? ` | ${errorDetails.join(' | ')}` : '';
-                return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${message}${errorStr}`;
+                return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${truncatedMessage}${errorStr}`;
             }
             
             const detailsStr = genericDetails.length > 0 ? ` | ${genericDetails.join(' | ')}` : '';
-            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${message}${detailsStr}`;
+            return `[${timestamp}] [${level}] [${shortCategory}]${fileInfo} ${truncatedMessage}${detailsStr}`;
     }
 }
 

@@ -4,6 +4,7 @@ import { MediaManager } from '../state/media-manager';
 import { UserManager } from '../state/user-state-manager';
 import { MediaService } from '../services/media.service';
 import { DatabaseService } from '../services/database.service';
+import { DelayedActivityService } from '../services/delayed-activity.service';
 import { TerminalLog } from '../utils/terminal-log';
 import { RateLimiter } from '../utils/rate-limiter';
 import { logInfo, logSuccess, logError, logWarning } from '../../utils/logging';
@@ -16,6 +17,7 @@ export class WebhookProcessor {
         private mediaManager: MediaManager,
         private mediaService: MediaService,
         private databaseService: DatabaseService,
+        private delayedActivityService: DelayedActivityService,
         private terminalLog: TerminalLog
     ) {}
 
@@ -215,13 +217,24 @@ export class WebhookProcessor {
         
         // Obtener nombre real del contacto desde la base de datos
         let userName = 'Usuario'; // Fallback por defecto
+        let shouldEnrichAsync = false;
+        
         try {
             const clientData = await this.databaseService.findUserByPhoneNumber(phoneNumber);
             if (clientData && clientData.name) {
                 userName = clientData.name;
+                
+                // Verificar si necesita enriquecimiento async (datos incompletos)
+                const nameEqualsPhone = clientData.name === phoneNumber;
+                const hasNoLabels = !(clientData as any).labels;
+                shouldEnrichAsync = nameEqualsPhone || hasNoLabels;
+            } else {
+                // Usuario nuevo o sin datos → programar enriquecimiento
+                shouldEnrichAsync = true;
             }
         } catch (error) {
             console.warn(`⚠️ Error obteniendo nombre del contacto ${phoneNumber}:`, error);
+            shouldEnrichAsync = true; // Por seguridad, intentar enriquecer
         }
 
         // Normalizar datos para BD: chatId con formato 
@@ -241,14 +254,18 @@ export class WebhookProcessor {
             lastActivity: Date.now()
         });
         
-        // Guardar en BD con formato correcto
+        // Programar actualización delayed de BD (10 minutos después)
+        this.delayedActivityService.scheduleUpdate(phoneNumber);
+        
+        // Mantener upsert inmediato solo para datos críticos (phoneNumber, chatId, userName)
+        // pero SIN actualizar lastActivity (se hará con delay)
         if (this.databaseService) {
-            await this.databaseService.upsertClient({
-                phoneNumber,
-                userName,
-                chatId: normalizedChatId,
-                lastActivity: new Date()
-            });
+            // Solo crear/actualizar registro básico sin lastActivity
+            const existing = await this.databaseService.findUserByPhoneNumber(phoneNumber);
+            if (!existing) {
+                // Usuario nuevo - crear registro básico
+                await this.databaseService.getOrCreateUser(phoneNumber, userName);
+            }
         }
 
         try {
@@ -342,9 +359,13 @@ export class WebhookProcessor {
                     });
                     
                     if (message.image && message.image.link) {
-                        this.mediaManager.addPendingImage(userId, message.image.link);
-                        // Añadimos un placeholder al buffer para que se procese
-                        this.bufferManager.addMessage(userId, '📷 Imagen recibida', chatId, userName);
+                        // Agregar imagen al buffer para procesamiento directo con assistant
+                        const imageMessage = {
+                            type: 'image',
+                            imageUrl: message.image.link,
+                            caption: message.image.caption || ''
+                        };
+                        this.bufferManager.addImageMessage(userId, imageMessage, chatId, userName);
                     }
                     break;
             }
@@ -352,7 +373,45 @@ export class WebhookProcessor {
             this.terminalLog.error(`Error procesando mensaje de ${userName}: ${error.message}`);
         }
 
+        // Enriquecimiento async si es necesario (no bloquea respuesta)
+        if (shouldEnrichAsync) {
+            this.queueAsyncEnrichment(phoneNumber, userName);
+        }
+
         // CRM Analysis: Se ejecuta via Daily Actions Job, no en cada webhook
         // El análisis CRM se ejecuta diariamente a las 9:00 AM para todos los clientes
+    }
+
+    /**
+     * Cola simple para enriquecimiento async (no bloquea mensaje)
+     */
+    private queueAsyncEnrichment(phoneNumber: string, currentUserName: string): void {
+        // Delay corto para permitir que el mensaje se procese primero
+        setTimeout(async () => {
+            try {
+                logInfo('ASYNC_ENRICHMENT_START', 'Iniciando enriquecimiento async', {
+                    phoneNumber,
+                    currentUserName,
+                    reason: 'incomplete_data'
+                });
+
+                // Enriquecer desde Whapi
+                await this.databaseService.enrichUserFromWhapi(phoneNumber);
+                
+                // Invalidar cache para forzar refresh en próximo mensaje
+                // (Asumo que tienes acceso al cache desde bot, sino inyectar dependency)
+                logSuccess('ASYNC_ENRICHMENT_COMPLETE', 'Enriquecimiento async completado', {
+                    phoneNumber,
+                    previousUserName: currentUserName
+                });
+
+            } catch (error) {
+                logWarning('ASYNC_ENRICHMENT_ERROR', 'Error en enriquecimiento async, continuando', {
+                    phoneNumber,
+                    currentUserName,
+                    error: error instanceof Error ? error.message : String(error)
+                });
+            }
+        }, 2000); // 2 segundos - no bloquea respuesta inmediata
     }
 }

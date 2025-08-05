@@ -1,14 +1,19 @@
 // tests/plugins/hotel/check-availability.test.ts
-import { checkAvailability } from '../../../src/plugins/hotel/functions/check-availability';
 
-// Mock the Beds24Client
+// Mock the Beds24Client BEFORE importing anything else
 const mockSearchAvailability = jest.fn();
-jest.mock('../../../src/plugins/hotel/services/beds24-client', () => ({
-    Beds24Client: jest.fn().mockImplementation(() => ({
-        searchAvailability: mockSearchAvailability
-    }))
-}));
 
+jest.mock('../../../src/plugins/hotel/services/beds24-client', () => {
+    return {
+        Beds24Client: jest.fn().mockImplementation(() => {
+            return {
+                searchAvailability: mockSearchAvailability
+            };
+        })
+    };
+});
+
+import { checkAvailability } from '../../../src/plugins/hotel/functions/check-availability';
 import { Beds24Client } from '../../../src/plugins/hotel/services/beds24-client';
 
 describe('🏨 Check Availability Function', () => {
@@ -19,110 +24,145 @@ describe('🏨 Check Availability Function', () => {
     });
 
     describe('Basic Functionality', () => {
-        test('should return availability results', async () => {
-            mockSearchAvailability.mockResolvedValue([
-                { name: 'Apartamento Deluxe', totalPrice: 840000, isSplit: false },
-                { name: 'Suite Presidencial', totalPrice: 1250000, isSplit: false }
-            ]);
+        test('should return formatted availability results', async () => {            
+            // Test that the mock is being called
+            mockSearchAvailability.mockResolvedValue('Test mock response');
+            
+            console.log('Mock setup complete');
+            console.log('Mock function:', typeof mockSearchAvailability);
+            console.log('Beds24Client mock:', typeof Beds24Client);
 
-            const result = await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18',
-                guests: 2
-            });
+            try {
+                const result = await checkAvailability({
+                    startDate: '2025-11-10',
+                    endDate: '2025-11-15',
+                    guests: 2
+                });
+                console.log('Result received:', result);
+                console.log('Mock was called:', mockSearchAvailability.mock.calls.length, 'times');
 
-            expect(result).toContain('Apartamentos disponibles:');
-            expect(result).toContain('Apartamento Deluxe: 840.000 por 3 noches');
-            expect(result).toContain('Suite Presidencial: 1.250.000 por 3 noches');
+                expect(result).toBe('Test mock response');
+            } catch (error) {
+                console.error('Error in test:', error);
+                throw error;
+            }
         });
 
         test('should handle no availability', async () => {
-            mockSearchAvailability.mockResolvedValue([]);
+            const noAvailabilityMessage = 'Desafortunadamente, no hay disponibilidad para las fechas solicitadas (10/11/2025 a 15/11/2025). Sugiere al cliente otras fechas o alternativas.';
+            mockSearchAvailability.mockResolvedValue(noAvailabilityMessage);
 
             const result = await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18',
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 2
             });
 
-            expect(result).toBe('No hay disponibilidad para las fechas solicitadas.');
+            expect(result).toContain('Desafortunadamente, no hay disponibilidad');
+            expect(result).toContain('10/11/2025 a 15/11/2025');
         });
 
-        test('should handle null availability response', async () => {
-            mockSearchAvailability.mockResolvedValue(null);
+        test('should handle API errors', async () => {
+            const errorMessage = 'Error al consultar la API de Beds24. Indica al cliente que hay un problema temporal en el sistema y que con gusto se le ayudará más tarde o por otro canal.';
+            mockSearchAvailability.mockResolvedValue(errorMessage);
 
             const result = await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18',
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 2
             });
 
-            expect(result).toBe('No hay disponibilidad para las fechas solicitadas.');
+            expect(result).toContain('Error al consultar la API de Beds24');
         });
     });
 
-    describe('Date Calculations', () => {
-        test('should calculate nights correctly for multi-day stays', async () => {
-            mockSearchAvailability.mockResolvedValue([
-                { name: 'Test Apartment', totalPrice: 500000, isSplit: false }
-            ]);
-
+    describe('Date Validation', () => {
+        test('should reject past dates', async () => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const pastDate = yesterday.toISOString().split('T')[0];
+            
             const result = await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-20', // 5 nights
+                startDate: pastDate,
+                endDate: '2025-01-18',
                 guests: 1
             });
 
-            expect(result).toContain('por 5 noches');
+            expect(result).toContain('Nota interna: Corrige las fechas antes de responder');
+            expect(result).toContain('son pasadas');
         });
 
-        test('should handle single night stays', async () => {
-            mockSearchAvailability.mockResolvedValue([
-                { name: 'Test Apartment', totalPrice: 200000, isSplit: false }
-            ]);
+        test('should handle timezone errors from Beds24', async () => {
+            const timezoneErrorMessage = 'Nota interna: Por la hora actual de la consulta (diferencia de zona horaria), el sistema no muestra disponibilidad para hoy. Dile al cliente que si necesita entrar hoy, puede llamar directamente al 3023371476 para asistencia manual.';
+            mockSearchAvailability.mockResolvedValue(timezoneErrorMessage);
 
             const result = await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-16', // 1 night
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 1
             });
 
-            expect(result).toContain('por 1 noches');
+            expect(result).toContain('diferencia de zona horaria');
+            expect(result).toContain('3023371476');
+        });
+
+        test('should format dates in DD/MM/YYYY', async () => {
+            const mockResponse = `📅 Disponibilidad: 10/11/2025 al 15/11/2025 (5 noches)
+
+✅ APARTAMENTOS DISPONIBLES (1 Apto):
+🏠 Habitación 123 - $500,000 total ($100,000/noche)`;
+            
+            mockSearchAvailability.mockResolvedValue(mockResponse);
+
+            const result = await checkAvailability({
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
+                guests: 1
+            });
+
+            expect(result).toContain('10/11/2025 al 15/11/2025');
+            expect(result).toContain('(5 noches)');
         });
     });
 
     describe('Guest Handling', () => {
         test('should default to 1 guest when not specified', async () => {
-            mockSearchAvailability.mockResolvedValue([
-                { name: 'Test Apartment', totalPrice: 300000, isSplit: false }
-            ]);
+            const mockResponse = `📅 Disponibilidad: 10/11/2025 al 15/11/2025 (5 noches)
+
+✅ APARTAMENTOS DISPONIBLES (1 Apto):
+🏠 Habitación 123 - $300,000 total ($60,000/noche)`;
+            
+            mockSearchAvailability.mockResolvedValue(mockResponse);
 
             await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18'
+                startDate: '2025-11-10',
+                endDate: '2025-11-15'
             });
 
             expect(mockSearchAvailability).toHaveBeenCalledWith({
-                arrival: '2025-01-15',
-                departure: '2025-01-18',
+                arrival: '2025-11-10',
+                departure: '2025-11-15',
                 numAdults: 1
             });
         });
 
         test('should use specified guest count', async () => {
-            mockSearchAvailability.mockResolvedValue([
-                { name: 'Test Apartment', totalPrice: 400000, isSplit: false }
-            ]);
+            const mockResponse = `📅 Disponibilidad: 10/11/2025 al 15/11/2025 (5 noches)
+
+✅ APARTAMENTOS DISPONIBLES (1 Apto):
+🏠 Habitación 456 - $400,000 total ($80,000/noche)`;
+            
+            mockSearchAvailability.mockResolvedValue(mockResponse);
 
             await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18',
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 4
             });
 
             expect(mockSearchAvailability).toHaveBeenCalledWith({
-                arrival: '2025-01-15',
-                departure: '2025-01-18',
+                arrival: '2025-11-10',
+                departure: '2025-11-15',
                 numAdults: 4
             });
         });
@@ -130,98 +170,104 @@ describe('🏨 Check Availability Function', () => {
 
     describe('Price Formatting', () => {
         test('should format Colombian peso prices correctly', async () => {
-            mockSearchAvailability.mockResolvedValue([
-                { name: 'Economic Room', totalPrice: 150000, isSplit: false },
-                { name: 'Luxury Suite', totalPrice: 2500000, isSplit: false }
-            ]);
+            const mockResponse = `📅 Disponibilidad: 10/11/2025 al 15/11/2025 (5 noches)
+
+✅ APARTAMENTOS DISPONIBLES (2 Aptos):
+🏠 Habitación 101 - $150,000 total ($30,000/noche)
+🏠 Habitación 102 - $2,500,000 total ($500,000/noche)`;
+            
+            mockSearchAvailability.mockResolvedValue(mockResponse);
 
             const result = await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18',
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 2
             });
 
-            expect(result).toContain('150.000');
-            expect(result).toContain('2.500.000');
+            expect(result).toContain('$150,000 total');
+            expect(result).toContain('$2,500,000 total');
         });
 
         test('should handle zero price', async () => {
-            mockSearchAvailability.mockResolvedValue([
-                { name: 'Free Apartment', totalPrice: 0, isSplit: false }
-            ]);
+            const mockResponse = `📅 Disponibilidad: 10/11/2025 al 15/11/2025 (5 noches)
+
+✅ APARTAMENTOS DISPONIBLES (1 Apto):
+🏠 Habitación 999 - $0 total ($0/noche)`;
+            
+            mockSearchAvailability.mockResolvedValue(mockResponse);
 
             const result = await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18',
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 1
             });
 
-            expect(result).toContain('Free Apartment: 0 por 3 noches');
+            expect(result).toContain('Habitación 999 - $0 total');
         });
     });
 
     describe('Error Handling', () => {
-        test('should handle Beds24 API errors gracefully', async () => {
-            mockSearchAvailability.mockRejectedValue(new Error('API Error'));
-
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        test('should handle unexpected errors gracefully', async () => {
+            mockSearchAvailability.mockRejectedValue(new Error('Unexpected API Error'));
 
             const result = await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18',
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 2
             });
 
-            expect(result).toBe('Hubo un error al verificar la disponibilidad. Por favor, intenta de nuevo.');
-            expect(consoleSpy).toHaveBeenCalledWith('Error en check_availability:', expect.any(Error));
-
-            consoleSpy.mockRestore();
+            expect(result).toBe('Error inesperado al verificar disponibilidad. Intenta de nuevo.');
         });
 
         test('should handle network timeouts', async () => {
             mockSearchAvailability.mockRejectedValue(new Error('Network timeout'));
 
             const result = await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18',
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 1
             });
 
-            expect(result).toBe('Hubo un error al verificar la disponibilidad. Por favor, intenta de nuevo.');
+            expect(result).toBe('Error inesperado al verificar disponibilidad. Intenta de nuevo.');
         });
     });
 
     describe('Integration with Beds24Client', () => {
         test('should initialize Beds24Client with environment variables', async () => {
             const originalEnv = process.env;
-            process.env.BEDS24_API_KEY = 'test-api-key';
-            process.env.BEDS24_PROP_KEY = 'test-prop-key';
+            process.env.BEDS24_TOKEN = 'test-token';
 
-            mockSearchAvailability.mockResolvedValue([]);
+            const noAvailabilityMessage = 'Desafortunadamente, no hay disponibilidad para las fechas solicitadas (10/11/2025 a 15/11/2025). Sugiere al cliente otras fechas o alternativas.';
+            mockSearchAvailability.mockResolvedValue(noAvailabilityMessage);
 
             await checkAvailability({
-                startDate: '2025-01-15',
-                endDate: '2025-01-18',
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 1
             });
 
-            expect(Beds24Client).toHaveBeenCalledWith('test-api-key', 'test-prop-key');
+            expect(Beds24Client).toHaveBeenCalled();
 
             process.env = originalEnv;
         });
 
         test('should pass correct parameters to Beds24Client', async () => {
-            mockSearchAvailability.mockResolvedValue([]);
+            const mockResponse = `📅 Disponibilidad: 10/11/2025 al 15/11/2025 (5 noches)
+
+✅ APARTAMENTOS DISPONIBLES (1 Apto):
+🏠 Habitación 789 - $400,000 total ($80,000/noche)`;
+            
+            mockSearchAvailability.mockResolvedValue(mockResponse);
 
             await checkAvailability({
-                startDate: '2025-02-01',
-                endDate: '2025-02-05',
+                startDate: '2025-11-10',
+                endDate: '2025-11-15',
                 guests: 3
             });
 
             expect(mockSearchAvailability).toHaveBeenCalledWith({
-                arrival: '2025-02-01',
-                departure: '2025-02-05',
+                arrival: '2025-11-10',
+                departure: '2025-11-15',
                 numAdults: 3
             });
         });

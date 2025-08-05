@@ -86,7 +86,26 @@
       "Bash(del debug-chunks.js)",
       "Bash(del nul)",
       "Bash(tree:*)",
-      "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\utils\\messageBuffering.ts\")"
+      "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\utils\\messageBuffering.ts\")",
+      "Bash(set PORT=3011)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:community.openai.com)",
+      "Bash(del test-token-accumulation.js)",
+      "Bash(del test-db-updates.js)",
+      "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\functions\\registry\\temp-function-registry.ts\")",
+      "Bash(del test-function-registry.js)",
+      "Bash(git stash:*)",
+      "Bash(del test-simple.js)",
+      "Bash(del test-integration-simple.js)",
+      "Bash(del test-check-availability.js)",
+      "Bash(set)",
+      "Bash(del test-no-capacity.js)",
+      "Bash(del test-availability.js)",
+      "Bash(del test-availability.ts)",
+      "Bash(del test-availability-direct.ts)",
+      "Bash(del check-db-data.ts)",
+      "Bash(del fix-studio-price.ts)",
+      "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\test-offers-endpoint.js\")"
     ],
     "deny": []
   }

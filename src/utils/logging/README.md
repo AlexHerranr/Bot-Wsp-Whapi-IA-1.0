@@ -132,18 +132,21 @@ logAlert('PERFORMANCE_DEGRADED', 'Tiempo de respuesta muy alto', {
 - **`WHATSAPP_SEND`** - Envío de respuestas a WhatsApp
 - **`WHATSAPP_CHUNKS_COMPLETE`** - Completado de mensajes largos
 
-### **🤖 OpenAI y Funciones (5 categorías)**
-- **`OPENAI_REQUEST`** - Solicitudes a OpenAI API
-- **`OPENAI_RESPONSE`** - Respuestas de OpenAI API
+### **🤖 OpenAI y Funciones (8 categorías)**
+- **`OPENAI_SEND`** - Mensaje exacto enviado a OpenAI (contexto + mensaje)
+- **`OPENAI_RESPONSE_CONTENT`** - Respuesta completa de OpenAI
+- **`OPENAI_FUNC_CALL`** - Argumentos exactos que OpenAI envía a funciones
+- **`OPENAI_FUNC_RESULT`** - Resultado crudo de función + formato para OpenAI
+- **`OPENAI_TOOL_OUTPUTS_SENDING`** - Payload completo enviado de vuelta a OpenAI
 - **`FUNCTION_CALLING_START`** - Inicio de ejecución de funciones
 - **`FUNCTION_EXECUTING`** - Ejecución específica de función
-- **`FUNCTION_HANDLER`** - Manejo de resultados de función
+- **`FUNCTION_COMPLETED`** - Función completada exitosamente
 
 ### **🏨 Integración Beds24 (4 categorías)**
 - **`BEDS24_REQUEST`** - Solicitudes de disponibilidad
-- **`BEDS24_API_CALL`** - Llamadas a API Beds24
-- **`BEDS24_RESPONSE_DETAIL`** - Respuestas detalladas de Beds24
-- **`BEDS24_PROCESSING`** - Procesamiento de datos de disponibilidad
+- **`BEDS24_API_CALL`** - Llamadas HTTP reales a API Beds24
+- **`BEDS24_RESPONSE_DETAIL`** - Respuestas detalladas de Beds24 (status, datos, duración)
+- **`BEDS24_PROCESSING`** - Procesamiento y transformación de datos
 
 ### **🧵 Sistema y Threads (4 categorías)**
 - **`THREAD_CREATED`** - Creación de threads OpenAI
@@ -192,6 +195,90 @@ const config = {
 };
 ```
 
+## 🔍 **Debugging Completo de Pipeline**
+
+### **📋 Rastreo Complete del Flujo de Datos:**
+
+#### **1. 📱 WhatsApp → OpenAI**
+```typescript
+// Log: OPENAI_SEND - Mensaje exacto enviado
+{
+  fullContent: "Cliente: consulta disponibilidad para 2025-01-15 a 2025-01-17",
+  flattenedContent: "Cliente:n/nconsulta disponibilidad...",
+  contextSource: "BD temporal inject" // Incluye historial de BD
+}
+```
+
+#### **2. 🤖 OpenAI → Función**
+```typescript
+// Log: OPENAI_FUNC_CALL - Argumentos exactos
+{
+  functionName: "check_availability",
+  args: '{"startDate":"2025-01-15","endDate":"2025-01-17","guests":2}',
+  functionId: "call_abc123"
+}
+```
+
+#### **3. 🏨 Función → Beds24 API**
+```typescript
+// Log: BEDS24_API_CALL - Request HTTP real
+{
+  method: "GET",
+  url: "https://api.beds24.com/v2/inventory/rooms/availability?arrival=2025-01-15&departure=2025-01-17&numAdults=2&token=***",
+  timeout: 15000
+}
+
+// Log: BEDS24_RESPONSE_DETAIL - Response HTTP
+{
+  status: 200,
+  roomsCount: 3,
+  duration: "850ms",
+  responseSize: 2456
+}
+```
+
+#### **4. 🔄 Función → OpenAI (Formato)**
+```typescript
+// Log: OPENAI_FUNC_RESULT - Datos procesados
+{
+  apiResult: '[{"name":"Suite Deluxe","totalPrice":840000,"available":true}]',
+  formattedForOpenAI: '"Apartamentos disponibles:\n- Suite Deluxe: 840,000 por 2 noches."',
+  resultLength: 89
+}
+
+// Log: OPENAI_TOOL_OUTPUTS_SENDING - Payload completo
+{
+  fullPayload: '[{"tool_call_id":"call_abc123","output":"Apartamentos disponibles:\\n- Suite Deluxe: 840,000 por 2 noches."}]'
+}
+```
+
+#### **5. 🤖 OpenAI → Cliente**
+```typescript
+// Log: OPENAI_RESPONSE_CONTENT - Respuesta final
+{
+  response: "¡Perfecto! Encontré disponibilidad para esas fechas:\n\n🏨 Suite Deluxe: $840,000 por 2 noches\n\n¿Te interesa hacer la reserva?",
+  responseLength: 125
+}
+```
+
+### **🔧 Validaciones Automáticas:**
+
+#### **📅 Fechas Pasadas:**
+```typescript
+// Log automático si OpenAI llama función con fechas pasadas
+return "Mensaje interno: llamaste a función para unas fechas pasadas, hoy es 2025-01-10, confirma con el cliente las fechas y vuelve a llamar a la función.";
+```
+
+#### **❌ Sin Datos Simulados:**
+```typescript
+// Log: BEDS24_CLIENT - Error real sin fallback
+{
+  error: "Error consultando Beds24: Connection timeout",
+  fallbackToSimulated: false, // NUNCA usa datos falsos
+  recommendation: "Verificar conectividad y token"
+}
+```
+
 ## 📊 **Métricas y Monitoreo**
 
 ### **Endpoint de Métricas:**
@@ -202,8 +289,10 @@ GET /metrics
 ### **Métricas Disponibles:**
 - **Total de logs** por nivel y categoría
 - **Performance** (latencia, throughput)
+- **Pipeline completa** (WhatsApp → OpenAI → Beds24 → OpenAI → WhatsApp)
 - **Filtros** y eficiencia de agregación
 - **Errores** y warnings
+- **Validaciones** de datos (fechas, tokens, conexiones)
 
 ## 🔒 **Seguridad y Sanitización**
 

@@ -83,8 +83,13 @@ npm start
 - `BEDS24_API_URL`: URL de Beds24 API
 
 ### CRM
-- `CRM_MODE`: `internal|n8n|disabled` (default: disabled)
+- `CRM_MODE`: `internal|n8n|disabled` (default: n8n)
 - `CRM_ANALYSIS_ENABLED`: `true|false` (default: false)
+
+**Configuración actual**: Sistema CRM inactivo configurado para N8N
+- Jobs automáticos deshabilitados (CRM_ANALYSIS_ENABLED=false)
+- Modo N8N seleccionado para integración externa
+- Sistema interno disponible pero inactivo
 
 ---
 

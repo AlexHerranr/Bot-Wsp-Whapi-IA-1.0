@@ -13,6 +13,7 @@ import { ClientDataCache } from './state/client-data-cache';
 import { MediaService } from './services/media.service';
 import { WhatsappService } from './services/whatsapp.service';
 import { DatabaseService } from './services/database.service';
+import { DelayedActivityService } from './services/delayed-activity.service';
 import { FunctionRegistryService } from './services/function-registry.service';
 import { OpenAIService } from './services/openai.service';
 import { ThreadPersistenceService } from './services/thread-persistence.service';
@@ -48,6 +49,7 @@ export class CoreBot {
     private bufferManager: BufferManager;
     private clientDataCache: ClientDataCache;
     private databaseService: DatabaseService;
+    private delayedActivityService: DelayedActivityService;
     private mediaService: MediaService;
     private whatsappService: WhatsappService;
     private openaiService: OpenAIService;
@@ -80,6 +82,10 @@ export class CoreBot {
         this.mediaManager = new MediaManager();
         this.clientDataCache = new ClientDataCache();
         this.databaseService = new DatabaseService();
+        this.delayedActivityService = new DelayedActivityService(this.databaseService);
+
+        // Inyectar cache en database service para actualizaciones BD->Cache
+        this.databaseService.setClientCache(this.clientDataCache);
 
         this.mediaService = new MediaService(this.terminalLog, {
             openaiApiKey: this.config.secrets.OPENAI_API_KEY,
@@ -88,23 +94,23 @@ export class CoreBot {
         });
         this.whatsappService = new WhatsappService(this.openai, this.terminalLog, this.config, this.databaseService);
         
-        // Initialize OpenAI Service
+        // Function registry passed from main.ts (with plugins already registered)
+        this.functionRegistry = functionRegistry || container.resolve(FunctionRegistryService);
+
+        // Initialize OpenAI Service with function registry
         this.openaiService = new OpenAIService({
             apiKey: this.config.secrets.OPENAI_API_KEY,
             assistantId: process.env.ASSISTANT_ID || process.env.OPENAI_ASSISTANT_ID || 'asst_default'
-        }, this.terminalLog);
+        }, this.terminalLog, undefined, this.functionRegistry);
 
         // Initialize Thread Persistence Service
         this.threadPersistence = new ThreadPersistenceService(this.databaseService);
-
-        // Function registry passed from main.ts (with plugins already registered)
-        this.functionRegistry = functionRegistry || container.resolve(FunctionRegistryService);
 
         this.bufferManager = new BufferManager(
             this.processBufferCallback.bind(this),
             (userId: string) => this.userManager.getState(userId)
         );
-        this.webhookProcessor = new WebhookProcessor(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.terminalLog);
+        this.webhookProcessor = new WebhookProcessor(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.terminalLog);
 
         this.setupMiddleware();
         this.setupRoutes();
@@ -164,11 +170,58 @@ export class CoreBot {
             res.status(200).send('pong');
         });
 
+        // Hook endpoint para actualizaciones externas de usuarios
+        this.app.post('/update-user', async (req: any, res: any) => {
+            try {
+                const { userId, changes } = req.body;
+                
+                if (!userId) {
+                    return res.status(400).json({ error: 'userId is required' });
+                }
+
+                logInfo('HOOK_UPDATE', `Recibido hook de actualización para usuario: ${userId}`, { 
+                    userId, 
+                    changes: changes || ['all'],
+                    source: 'external_hook'
+                });
+
+                // Invalidar cache para forzar refresh en próximo acceso
+                try {
+                    this.clientDataCache.invalidate(userId);
+                } catch (error) {
+                    logWarning('CACHE_INVALIDATE_ERROR', 'Error invalidando cache, continuando', {
+                        userId,
+                        error: error instanceof Error ? error.message : String(error),
+                        operation: 'cache_invalidate'
+                    });
+                }
+
+                // Si necesitas actualizar datos específicos, puedes hacerlo aquí
+                if (changes && changes.includes('enrichment')) {
+                    // Forzar enriquecimiento manual
+                    await this.databaseService.enrichUserFromWhapi(userId);
+                }
+
+                res.json({ 
+                    success: true, 
+                    message: `Cache invalidated for user ${userId}`,
+                    changes: changes || ['cache_invalidated']
+                });
+
+            } catch (error) {
+                logError('HOOK_ERROR', `Error procesando hook de actualización`, { 
+                    error: error instanceof Error ? error.message : error,
+                    body: req.body
+                });
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        });
+
         // CRM API routes
-        this.app.use('/api/crm', crmRoutes);
+        this.app.use('/api/crm', crmRoutes as any);
     }
 
-    private async processBufferCallback(userId: string, combinedText: string, chatId: string, userName: string): Promise<void> {
+    private async processBufferCallback(userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<void> {
         // Check for recent errors to prevent secondary buffer processing during error recovery
         if (this.lastError[userId] && Date.now() - this.lastError[userId].time < 5000) {
             logWarning('BUFFER_SKIP_RECENT_ERROR', 'Saltando procesamiento de buffer secundario por error reciente', {
@@ -191,16 +244,45 @@ export class CoreBot {
             userName,
             chatId,
             messageCount: combinedText.split('\n').length,
+            hasImage: !!imageMessage,
+            imageCaption: imageMessage?.caption || '',
             preview: combinedText.substring(0, 100)
         }, 'bot.ts');
 
         try {
-            // 1. Intentar obtener datos del cliente desde caché
-            let clientData = this.clientDataCache.get(userId);
+            // 1. Intentar obtener datos del cliente desde caché con manejo de errores
+            let clientData: any = null;
             let needsDatabaseQuery = false;
+            
+            try {
+                clientData = this.clientDataCache.get(userId);
+            } catch (error) {
+                logWarning('CACHE_ACCESS_ERROR', 'Error accediendo al cache, consultando BD directamente', {
+                    userId,
+                    userName,
+                    error: error instanceof Error ? error.message : String(error),
+                    operation: 'cache_get',
+                    fallback: 'database_query'
+                });
+                clientData = null; // Forzar consulta BD
+            }
 
             // 2. Verificar si necesitamos consultar la BD (caché vacío o datos desactualizados)
-            if (!clientData || this.clientDataCache.needsUpdate(userId, userName)) {
+            let needsUpdate = false;
+            try {
+                needsUpdate = clientData ? this.clientDataCache.needsUpdate(userId, userName) : false;
+            } catch (error) {
+                logWarning('CACHE_NEEDS_UPDATE_ERROR', 'Error verificando si cache necesita actualización, asumiendo que sí', {
+                    userId,
+                    userName,
+                    error: error instanceof Error ? error.message : String(error),
+                    operation: 'cache_needsUpdate',
+                    fallback: 'assume_needs_update'
+                });
+                needsUpdate = true; // Forzar actualización por seguridad
+            }
+            
+            if (!clientData || needsUpdate) {
                 needsDatabaseQuery = true;
                 
                 logInfo('CACHE_MISS', 'Consultando BD por caché vacío o datos desactualizados', {
@@ -210,28 +292,69 @@ export class CoreBot {
                     reason: !clientData ? 'no_cache' : 'data_mismatch'
                 });
 
-                // Consultar BD solo cuando sea necesario
-                const existingUser = await this.databaseService.findUserByPhoneNumber(userId);
-                let user = existingUser;
-                if (!existingUser) {
-                    user = await this.databaseService.getOrCreateUser(userId, userName);
-                }
-                await this.userManager.getOrCreateUser(userId, userName);
+                // Consultar BD solo cuando sea necesario - con manejo de errores
+                let user = null;
+                let dbClientData = null;
                 
-                // Obtener datos completos del cliente desde BD
-                const dbClientData = await this.databaseService.getThread(userId);
+                try {
+                    const existingUser = await this.databaseService.findUserByPhoneNumber(userId);
+                    user = existingUser;
+                    if (!existingUser) {
+                        user = await this.databaseService.getOrCreateUser(userId, userName);
+                    }
+                    await this.userManager.getOrCreateUser(userId, userName);
+                } catch (error) {
+                    logWarning('BD_USER_ERROR', 'Error consultando/creando usuario en BD, continuando sin datos BD', {
+                        userId,
+                        userName,
+                        error: error instanceof Error ? error.message : String(error),
+                        operation: 'findUserByPhoneNumber_or_getOrCreateUser'
+                    });
+                    // Continuar sin datos de usuario BD
+                }
+                
+                try {
+                    // Obtener datos completos del cliente desde BD
+                    dbClientData = await this.databaseService.getThread(userId);
+                } catch (error) {
+                    logWarning('BD_THREAD_ERROR', 'Error consultando thread en BD, continuando sin datos BD', {
+                        userId,
+                        userName,
+                        error: error instanceof Error ? error.message : String(error),
+                        operation: 'getThread'
+                    });
+                    // Continuar sin datos de thread BD
+                }
                 
                 if (dbClientData) {
-                    // Actualizar caché con datos frescos de BD
-                    this.clientDataCache.updateFromDatabase(userId, {
-                        name: user?.name || null,
-                        userName: user?.userName || userName || null,
-                        labels: dbClientData.labels || [],
-                        chatId: dbClientData.chatId,
-                        lastActivity: dbClientData.lastActivity
+                    try {
+                        // Actualizar caché con datos frescos de BD
+                        this.clientDataCache.updateFromDatabase(userId, {
+                            name: user?.name || null,
+                            userName: user?.userName || userName || null,
+                            labels: dbClientData.labels || [],
+                            chatId: dbClientData.chatId,
+                            lastActivity: dbClientData.lastActivity,
+                            threadTokenCount: dbClientData.threadTokenCount || 0
+                        });
+                        
+                        clientData = this.clientDataCache.get(userId);
+                    } catch (error) {
+                        logWarning('CACHE_UPDATE_ERROR', 'Error actualizando cache desde BD, continuando con datos mínimos', {
+                            userId,
+                            userName,
+                            error: error instanceof Error ? error.message : String(error),
+                            operation: 'updateFromDatabase'
+                        });
+                        // Continuar sin actualizar cache
+                    }
+                } else {
+                    // Si no hay datos de BD, crear datos mínimos para continuar
+                    logInfo('BD_NO_DATA', 'Sin datos en BD, creando datos mínimos para continuar', {
+                        userId,
+                        userName,
+                        reason: 'no_db_data_found'
                     });
-                    
-                    clientData = this.clientDataCache.get(userId);
                 }
             } else {
                 logInfo('CACHE_HIT', 'Usando datos del cliente desde caché', {
@@ -409,7 +532,8 @@ export class CoreBot {
                 processedMessage, 
                 chatId, 
                 userName,
-                existingThreadId
+                existingThreadId,
+                imageMessage
             );
 
             // Log técnico: fin de run OpenAI
@@ -455,9 +579,11 @@ export class CoreBot {
                 if (!existingThreadId || existingThreadId !== processingResult.threadId) {
                     // Thread nuevo - crear registro completo
                     await this.threadPersistence.setThread(userId, processingResult.threadId, chatId, userName);
+                    // También programar tokens para thread nuevo (empezará desde 0)
+                    this.delayedActivityService.updateTokenCount(userId, processingResult.tokensUsed || 0, processingResult.threadId);
                 } else {
-                    // Thread existente - actualizar lastActivity
-                    await this.threadPersistence.updateThreadActivity(userId);
+                    // Thread existente - programar actualización delayed con tokens (sumará con BD)
+                    this.delayedActivityService.updateTokenCount(userId, processingResult.tokensUsed || 0, processingResult.threadId);
                 }
             }
 
@@ -657,20 +783,35 @@ export class CoreBot {
             hour12: true
         }).format(now);
 
-        // Construir nombre completo
-        const fullName = displayName && displayName !== userName 
-            ? `${displayName} / ${userName}` 
-            : userName;
+        // Detectar si no hay registro en BD
+        const hasDBRecord = displayName && displayName !== userName && displayName !== 'Usuario';
+        const hasLabels = labels.length > 0;
+        
+        // Si no hay datos de BD, usar formato especial
+        if (!hasDBRecord && !hasLabels) {
+            const contextualMessage = `Cliente: NOHAYREGISTRO
+Tags: NOHAYREGISTRO
+Hora actual: ${colombianTime}
 
-        // Construir etiquetas
-        const labelsText = labels.length > 0 
+${message.includes('Cliente responde a este mensaje:') ? message : `Mensaje del cliente:
+${message}`}`;
+            return contextualMessage;
+        }
+
+        // Construir nombre del cliente (formato compacto)
+        const clientName = hasDBRecord 
+            ? `${displayName} / ${userName}`  // Tiene nombre real guardado
+            : userName;                       // Solo username
+
+        // Construir etiquetas (formato compacto)
+        const tagsText = labels.length > 0 
             ? labels.join(', ') 
-            : 'Sin etiquetas';
+            : 'Sin tags';
 
-        // Formatear el mensaje contextual
-        const contextualMessage = `Nombre y username del contacto: ${fullName}
-Etiquetas internas actuales: ${labelsText}
-Fecha y hora actual: ${colombianTime}
+        // Formatear el mensaje contextual (formato compacto)
+        const contextualMessage = `Cliente: ${clientName}
+Tags: ${tagsText}
+Hora actual: ${colombianTime}
 
 ${message.includes('Cliente responde a este mensaje:') ? message : `Mensaje del cliente:
 ${message}`}`;
@@ -721,6 +862,14 @@ ${message}`}`;
         this.cleanupIntervals.forEach(interval => clearInterval(interval));
         this.cleanupIntervals = [];
         
+        // Flush delayed updates before shutdown
+        try {
+            await this.delayedActivityService.flushAllUpdates();
+            this.delayedActivityService.shutdown();
+        } catch (error) {
+            console.warn('Warning: DelayedActivityService shutdown failed:', error);
+        }
+        
         // Close server
         if (this.server) {
             await new Promise<void>((resolve) => {
@@ -770,9 +919,13 @@ ${message}`}`;
 
         // Client data cache cleanup every 15 minutes
         const cacheCleanup = setInterval(() => {
-            const cleanedCache = this.clientDataCache.cleanup();
-            if (cleanedCache > 0) {
-                console.log(`🧹 Cleaned up ${cleanedCache} stale client cache entries`);
+            try {
+                const cleanedCache = this.clientDataCache.cleanup();
+                if (cleanedCache > 0) {
+                    console.log(`🧹 Cleaned up ${cleanedCache} stale client cache entries`);
+                }
+            } catch (error) {
+                console.warn(`⚠️ Error in cache cleanup: ${error instanceof Error ? error.message : error}`);
             }
         }, 15 * 60 * 1000);
         
@@ -790,7 +943,14 @@ ${message}`}`;
             functions: this.functionRegistry.getStats(),
             buffers: this.bufferManager.getStats?.() || { active: 0 },
             users: this.userManager.getStats?.() || { active: 0 },
-            clientCache: this.clientDataCache.getStats()
+            clientCache: (() => {
+                try {
+                    return this.clientDataCache.getStats();
+                } catch (error) {
+                    return { error: 'Failed to get cache stats', active: 0 };
+                }
+            })(),
+            delayedUpdates: this.delayedActivityService.getStats()
         };
     }
 }

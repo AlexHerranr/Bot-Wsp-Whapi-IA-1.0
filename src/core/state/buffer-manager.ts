@@ -9,7 +9,7 @@ export class BufferManager implements IBufferManager {
     private activeRuns: Map<string, boolean> = new Map(); // Flag simple para evitar concurrent runs per user/thread
 
     constructor(
-        private processCallback: (userId: string, combinedText: string, chatId: string, userName: string) => Promise<void>,
+        private processCallback: (userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }) => Promise<void>,
         private getUserState?: (userId: string) => { isTyping: boolean; isRecording: boolean; lastActivity?: number } | undefined
     ) {}
 
@@ -38,17 +38,56 @@ export class BufferManager implements IBufferManager {
         buffer.messages.push(messageText);
         buffer.lastActivity = Date.now();
         
-        // Log técnico para adición de mensaje
-        logInfo('BUFFER_ADD', 'Mensaje agregado al buffer', {
+        // Analizar tipos de mensajes en el buffer
+        const textCount = buffer.messages.filter(msg => !msg.includes('(Audio)')).length;
+        const voiceCount = buffer.messages.filter(msg => msg.includes('(Audio)')).length;
+        const currentCombined = this.smartCombineMessages(buffer.messages);
+        const preview20Words = currentCombined.split(' ').slice(0, 20).join(' ') + (currentCombined.split(' ').length > 20 ? '...' : '');
+        
+        // Log técnico para adición de mensaje con estado actual del buffer
+        logInfo('BUFFER_STATE_ADD', 'Mensaje agregado, estado actual buffer', {
             userId,
             userName: buffer.userName || 'Usuario',
-            messagePreview: messageText.substring(0, 50),
-            messageCount: buffer.messages.length,
+            currentMsgs: buffer.messages.length,
+            types: `Text:${textCount} Voz:${voiceCount}`,
+            preview: preview20Words,
+            totalLength: currentCombined.length,
             reason: 'new_message'
         });
         
         // Sistema unificado: siempre usar timer de 5s
         this.setOrExtendTimer(userId, 'message');
+    }
+
+    public addImageMessage(userId: string, imageMessage: { type: 'image', imageUrl: string, caption: string }, chatId: string, userName: string): void {
+        let buffer = this.buffers.get(userId);
+        if (!buffer) {
+            buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null, pendingImage: null };
+            this.buffers.set(userId, buffer);
+            logInfo('BUFFER_CREATED', 'Buffer creado para imagen', { userId, userName, reason: 'image_message' });
+        } else {
+            if (userName && userName !== 'Usuario') buffer.userName = userName;
+            if (chatId && !buffer.chatId) buffer.chatId = chatId;
+        }
+
+        // Agregar imagen al buffer (se procesará junto con el siguiente texto o inmediatamente)
+        buffer.pendingImage = imageMessage;
+        buffer.lastActivity = Date.now();
+        
+        // Si hay mensajes de texto esperando, procesar inmediatamente
+        if (buffer.messages.length > 0) {
+            this.processBuffer(userId);
+        } else {
+            // Si no hay texto, esperar un poco por si llega texto
+            this.setOrExtendTimer(userId, 'image');
+        }
+
+        logInfo('BUFFER_IMAGE_ADDED', 'Imagen agregada al buffer', {
+            userId,
+            userName: buffer.userName || 'Usuario',
+            hasCaption: !!imageMessage.caption,
+            pendingMessages: buffer.messages.length
+        });
     }
 
     public onTypingOrRecording(userId: string): void {
@@ -90,22 +129,28 @@ export class BufferManager implements IBufferManager {
 
         buffer.lastActivity = Date.now();
 
-        logInfo('BUFFER_TIMER_SET', 'Nuevo timer iniciado', {
+        // Estado del buffer para visibilidad progresiva
+        const textCount = buffer.messages.filter(msg => !msg.includes('(Audio)')).length;
+        const voiceCount = buffer.messages.filter(msg => msg.includes('(Audio)')).length;
+        
+        logInfo('BUFFER_STATE_WAIT', 'Buffer esperando agrupación', {
             userId,
             userName: buffer.userName || 'Usuario',
-            delay,
+            currentMsgs: buffer.messages.length,
+            types: `Text:${textCount} Voz:${voiceCount}`,
+            timeoutRemaining: `${delay/1000}s`,
             reason,
-            messageCount: buffer.messages.length
+            delayMs: delay
         });
     }
 
     private async processBuffer(userId: string): Promise<void> {
         const buffer = this.buffers.get(userId);
-        if (!buffer || buffer.messages.length === 0) {
+        if (!buffer || (buffer.messages.length === 0 && !buffer.pendingImage)) {
             logInfo('BUFFER_EMPTY_SKIP', 'Buffer vacío, limpiando', {
                 userId,
                 userName: buffer?.userName || 'unknown',
-                reason: 'no_messages'
+                reason: 'no_messages_or_images'
             });
             this.clearBuffer(userId);
             return;
@@ -114,7 +159,7 @@ export class BufferManager implements IBufferManager {
         // Chequeo anti-concurrent: Si run activo, retrasar (en producción, poll OpenAI run status)
         if (this.activeRuns.get(userId)) {
             logWarning('BUFFER_DELAYED_ACTIVE_RUN', 'Retrasando por run activo', { userId });
-            this.setTimer(userId, 'activity'); // Re-extender
+            this.setOrExtendTimer(userId, 'activity'); // Re-extender
             return;
         }
         
@@ -129,7 +174,7 @@ export class BufferManager implements IBufferManager {
                     isRecording: userState.isRecording,
                     messageCount: buffer.messages.length
                 });
-                this.setTimer(userId, 'activity'); // Re-extender mientras activo
+                this.setOrExtendTimer(userId, 'activity'); // Re-extender mientras activo
                 return;
             }
         }
@@ -138,8 +183,10 @@ export class BufferManager implements IBufferManager {
 
         const messagesToProcess = [...buffer.messages];
         const { chatId, userName } = buffer;
+        const pendingImage = buffer.pendingImage;
         
         buffer.messages = [];
+        buffer.pendingImage = null;
         if (buffer.timer) {
             clearTimeout(buffer.timer);
             buffer.timer = null;
@@ -151,6 +198,7 @@ export class BufferManager implements IBufferManager {
             userId,
             userName,
             messageCount: messagesToProcess.length,
+            hasImage: !!pendingImage,
             totalLength: combinedText.length,
             messages: messagesToProcess.map((msg, idx) => ({
                 index: idx + 1,
@@ -162,7 +210,7 @@ export class BufferManager implements IBufferManager {
         });
 
         try {
-            await this.processCallback(userId, combinedText, chatId, userName);
+            await this.processCallback(userId, combinedText || '📷 Imagen recibida', chatId, userName, pendingImage || undefined);
         } catch (error) {
             logWarning('BUFFER_PROCESS_ERROR', 'Error procesando buffer', {
                 userId,
@@ -235,11 +283,11 @@ export class BufferManager implements IBufferManager {
                 logInfo('BUFFER_VOICE_WAIT', 'Esperando transcripción de voz', { 
                     userId, 
                     userName: buffer.userName,
-                    delay: TYPING_ACTIVITY_MS
+                    delay: BUFFER_DELAY_MS
                 });
             }
             
-            this.setTimer(userId, type);
+            this.setOrExtendTimer(userId, type);
         }
     }
 

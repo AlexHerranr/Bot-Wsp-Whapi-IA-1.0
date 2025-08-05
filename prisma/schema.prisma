@@ -11,16 +11,26 @@ datasource db {
 
 model ClientView {
   phoneNumber         String   @id
-  name                String?
+  name                String?  // Mantener como viene de Whapi
   userName            String?
-  label1              String?
-  label2              String?
-  label3              String?
-  chatId              String?
+  labels              String?  // Labels concatenados con "/" (ej: "VIP/Hotel/Premium")
+  chatId              String?  @unique  // CLAVE: Evita duplicados por chatId
   lastActivity        DateTime @updatedAt
   threadId            String?
+  threadTokenCount    Int?     @default(0)  // Tokens del thread actual
   profileStatus       String?   @db.Text
   proximaAccion       String?
   fechaProximaAccion  DateTime?
   prioridad           Int?      @default(2)
+}
+
+// Tabla simplificada para datos estáticos de apartamentos
+model HotelApartment {
+  id           Int     @id @default(autoincrement())
+  propertyId   Int     @map("property_id")
+  roomId       Int     @unique @map("room_id")  
+  roomName     String  @map("room_name")
+  extraCharge  Json    @default("{\"description\": \"Cargo adicional:\", \"amount\": 70000}") @map("extra_charge")
+  
+  @@map("hotel_apartments")
 }

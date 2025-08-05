@@ -48,6 +48,7 @@ export interface MessageBuffer {
     userName: string;
     lastActivity: number;
     timer: NodeJS.Timeout | null;
+    pendingImage?: { type: 'image', imageUrl: string, caption: string } | null;
 }
 
 // Registro de Threads en Persistencia

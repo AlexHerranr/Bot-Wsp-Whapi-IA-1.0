@@ -299,41 +299,14 @@
                 // const response = await fetch('/api/data');
                 // currentData = await response.json();
                 
-                // Por ahora, simulamos datos
-                simulateDataLoad();
+                // Datos reales desde API
+                console.error('API endpoint /api/data not implemented - no data will be loaded');
                 
             } catch (error) {
                 console.error('Error cargando datos:', error);
             }
         }
         
-        // Simular carga de datos
-        function simulateDataLoad() {
-            currentData = {
-                stats: {
-                    totalUsers: 3,
-                    totalThreads: 3,
-                    totalMessages: 2,
-                    activeToday: 1
-                },
-                users: [
-                    { id: '1', phone: '573001111111@s.whatsapp.net', name: 'Usuario Test', created: new Date(), lastActivity: new Date(), threads: 1 },
-                    { id: '2', phone: '573009876543@s.whatsapp.net', name: 'Usuario Prueba', created: new Date(), lastActivity: new Date(), threads: 1 },
-                    { id: '3', phone: '573001234567@s.whatsapp.net', name: 'Usuario Demo', created: new Date(), lastActivity: new Date(), threads: 1 }
-                ],
-                threads: [
-                    { id: 'thread_1', openaiId: 'thread_1753831774796_mo8ggdx1d', userPhone: '573001111111@s.whatsapp.net', created: new Date(), lastActivity: new Date(), messages: 2, labels: [] },
-                    { id: 'thread_2', openaiId: 'thread_1753831571764_oem60q1wi', userPhone: '573009876543@s.whatsapp.net', created: new Date(), lastActivity: new Date(), messages: 0, labels: [] }
-                ],
-                messages: [
-                    { id: '1', userPhone: '573001111111@s.whatsapp.net', role: 'user', content: 'Mensaje final para probar persistencia completa', created: new Date() },
-                    { id: '2', userPhone: '573001111111@s.whatsapp.net', role: 'assistant', content: '✅ Respuesta de TeAlquilamos para el mensaje...', created: new Date() }
-                ]
-            };
-            
-            updateStats();
-            updateTables();
-        }
         
         // Actualizar estadísticas
         function updateStats() {

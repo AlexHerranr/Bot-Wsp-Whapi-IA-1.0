@@ -2,6 +2,8 @@
 import { PrismaClient } from '@prisma/client';
 import { ThreadRecord } from '../../shared/types';
 import { fetchWithRetry } from '../utils/retry-utils';
+import { logError, logInfo, logWarning } from '../../utils/logging';
+import type { ClientDataCache } from '../state/client-data-cache';
 
 interface MemoryStore {
     threads: Map<string, ThreadRecord>;
@@ -15,6 +17,7 @@ export class DatabaseService {
     private memoryStore: MemoryStore;
     private connectionRetries: number = 0;
     private maxRetries: number = 3;
+    private clientCache?: ClientDataCache;
 
     constructor() {
         this.prisma = new PrismaClient({
@@ -43,7 +46,7 @@ export class DatabaseService {
             await this.prisma.$connect();
             this.isConnected = true;
             this.connectionRetries = 0;
-            console.log('🗄️ Conectado a la base de datos PostgreSQL.');
+            logInfo('DATABASE_CONNECTION', '🗄️ Conectado a la base de datos PostgreSQL.');
             
             // Log técnico de sesión
             const { logSuccess } = require('../../utils/logging');
@@ -59,15 +62,20 @@ export class DatabaseService {
         } catch (error) {
             this.isConnected = false;
             this.connectionRetries++;
-            console.warn(`⚠️ Error conectando a PostgreSQL (intento ${this.connectionRetries}/${this.maxRetries}):`, error instanceof Error ? error.message : error);
+            logWarning('DATABASE_CONNECTION', `⚠️ Error conectando a PostgreSQL (intento ${this.connectionRetries}/${this.maxRetries})`, { error: error instanceof Error ? error.message : error });
             
             if (this.connectionRetries >= this.maxRetries) {
-                console.log('🔄 Activando modo fallback a memoria...');
+                logInfo('DATABASE_FALLBACK', '🔄 Activando modo fallback a memoria...');
                 // Don't throw error, continue in memory mode
             } else {
                 throw error;
             }
         }
+    }
+
+    // Método para inyectar el cache (evita dependencias circulares)
+    public setClientCache(cache: ClientDataCache): void {
+        this.clientCache = cache;
     }
 
     public async disconnect(): Promise<void> {
@@ -86,8 +94,10 @@ export class DatabaseService {
 
         if (this.isConnected) {
             try {
-                // Map labels array to individual label fields
+                // Map labels array to concatenated string
                 const labels = threadData.labels || [];
+                const labelsString = labels.length > 0 ? labels.join('/') : null;
+                
                 const clientViewData = {
                     threadId: threadData.threadId,
                     chatId: threadData.chatId,
@@ -95,9 +105,7 @@ export class DatabaseService {
                     profileStatus: (threadData as any).profileStatus,
                     proximaAccion: (threadData as any).proximaAccion,
                     prioridad: (threadData as any).prioridad || 2,
-                    label1: labels[0] || null,
-                    label2: labels[1] || null,
-                    label3: labels[2] || null,
+                    labels: labelsString,
                     lastActivity: new Date(),
                 };
 
@@ -110,9 +118,9 @@ export class DatabaseService {
                     }
                 });
                 
-                console.log(`✅ Thread guardado en PostgreSQL: ${userId}`);
+                logInfo('THREAD_SAVED', `✅ Thread guardado en PostgreSQL: ${userId}`, { userId });
             } catch (error) {
-                console.warn(`⚠️ Error guardando en PostgreSQL, usando memoria: ${error instanceof Error ? error.message : error}`);
+                logWarning('THREAD_SAVE_ERROR', `⚠️ Error guardando en PostgreSQL, usando memoria`, { error: error instanceof Error ? error.message : error });
                 this.isConnected = false;
                 // Fallback to memory
                 this.memoryStore.threads.set(userId, threadRecord);
@@ -120,25 +128,111 @@ export class DatabaseService {
         } else {
             // Store in memory
             this.memoryStore.threads.set(userId, threadRecord);
-            console.log(`💾 Thread guardado en memoria (fallback): ${userId}`);
+            logInfo('THREAD_MEMORY_SAVE', `💾 Thread guardado en memoria (fallback): ${userId}`, { userId });
         }
 
         return threadRecord;
     }
 
     // Método optimizado para actualizar solo lastActivity
-    public async updateThreadActivity(userId: string): Promise<boolean> {
+    // NOTA: El lastActivity se debe actualizar 10 minutos DESPUÉS del último mensaje
+    // Esta función actualiza inmediatamente, el delay se maneja por un job separado
+    public async updateThreadActivity(userId: string, tokenCount?: number, currentThreadId?: string): Promise<boolean> {
         if (this.isConnected) {
             try {
-                await this.prisma.clientView.update({
+                const updateData: any = { lastActivity: new Date() };
+                
+                // Si se proporciona token count válido, manejar según thread nuevo vs reusado
+                if (tokenCount !== undefined && tokenCount > 0 && currentThreadId) {
+                    // Obtener datos actuales para verificar si es el mismo thread
+                    const current = await this.prisma.clientView.findUnique({
+                        where: { phoneNumber: userId },
+                        select: { threadTokenCount: true, threadId: true }
+                    });
+                    
+                    if (current && current.threadId === currentThreadId) {
+                        // THREAD REUSADO: Sumar tokens BD + acumulados
+                        const currentTokens = current.threadTokenCount || 0;
+                        updateData.threadTokenCount = currentTokens + tokenCount;
+                        logInfo('THREAD_TOKENS_ACCUMULATED', `Thread reusado: ${currentTokens} + ${tokenCount} = ${currentTokens + tokenCount}`, {
+                            userId, threadId: currentThreadId, previousTokens: currentTokens, newTokens: tokenCount
+                        });
+                    } else {
+                        // THREAD NUEVO: Empezar desde 0, ignorar BD
+                        updateData.threadTokenCount = tokenCount;
+                        updateData.threadId = currentThreadId; // Actualizar threadId también
+                        
+                        // Log detallado para monitoreo - distinguir casos
+                        const resetReason = !current ? 'user_not_found' : 
+                                          !current.threadId ? 'first_thread' : 
+                                          'thread_changed';
+                        
+                        logInfo('THREAD_TOKENS_RESET', `Thread nuevo: empezando desde ${tokenCount} tokens`, {
+                            userId, 
+                            threadId: currentThreadId, 
+                            oldThreadId: current?.threadId || null,
+                            oldTokenCount: current?.threadTokenCount || 0,
+                            newTokens: tokenCount,
+                            resetReason: resetReason,
+                            tokensLost: current?.threadTokenCount || 0
+                        });
+                    }
+                } else if (tokenCount !== undefined && tokenCount <= 0) {
+                    // Log cuando se skip por tokens inválidos
+                    logInfo('TOKEN_COUNT_SKIPPED', 'Token count inválido - solo actualiza lastActivity', {
+                        userId,
+                        tokenCount,
+                        threadId: currentThreadId,
+                        reason: 'invalid_token_count'
+                    });
+                }
+                
+                await this.prisma.clientView.upsert({
                     where: { phoneNumber: userId },
-                    data: { lastActivity: new Date() }
+                    update: updateData,
+                    create: {
+                        phoneNumber: userId,
+                        prioridad: 2, // Valor por defecto (MEDIA)
+                        ...updateData
+                    }
                 });
                 
-                console.log(`✅ Thread activity actualizada: ${userId}`);
+                // Actualizar cache si está disponible con manejo de errores
+                if (this.clientCache) {
+                    try {
+                        if (this.clientCache.has(userId)) {
+                            const cached = this.clientCache.get(userId);
+                            if (cached) {
+                                // Actualizar los datos en cache
+                                cached.lastActivity = updateData.lastActivity;
+                                if (updateData.threadTokenCount !== undefined) {
+                                    cached.threadTokenCount = updateData.threadTokenCount;
+                                }
+                                // Re-guardar en cache
+                                this.clientCache.set(userId, cached);
+                            }
+                        }
+                    } catch (error) {
+                        logWarning('CACHE_UPDATE_FROM_BD_ERROR', 'Error actualizando cache desde BD, continuando', {
+                            userId,
+                            error: error instanceof Error ? error.message : String(error),
+                            operation: 'cache_update_from_bd',
+                            hasTokenCount: updateData.threadTokenCount !== undefined
+                        });
+                    }
+                }
+                
+                const logMessage = tokenCount !== undefined 
+                    ? `Thread activity + tokens actualizados: ${userId} (${tokenCount} tokens)`
+                    : `Thread activity actualizada: ${userId}`;
+                logInfo('THREAD_ACTIVITY_UPDATED', logMessage, { 
+                    userId, 
+                    tokenCount,
+                    cacheUpdated: !!this.clientCache?.has(userId)
+                });
                 return true;
             } catch (error) {
-                console.warn(`⚠️ Error actualizando activity, usando memoria: ${error instanceof Error ? error.message : error}`);
+                logError('DATABASE_ERROR', `Error actualizando activity, usando memoria: ${error instanceof Error ? error.message : error}`, { userId, operation: 'updateThreadActivity' });
                 this.isConnected = false;
                 
                 // Fallback: actualizar en memoria
@@ -169,15 +263,17 @@ export class DatabaseService {
 
                 if (!client) return null;
 
+                // OPTIMIZADO: Enriquecimiento automático deshabilitado - se hace via hook externo
+                // Solo usar datos del cliente actual sin enriquecer automáticamente
                 return {
                     threadId: client.threadId || '',
                     chatId: client.chatId || '',
                     userName: client.userName,
                     lastActivity: client.lastActivity,
-                    labels: [client.label1, client.label2, client.label3].filter(Boolean) as string[],
+                    labels: client.labels ? client.labels.split('/') : [],
                 };
             } catch (error) {
-                console.warn(`⚠️ Error leyendo de PostgreSQL, usando memoria: ${error instanceof Error ? error.message : error}`);
+                logError('DATABASE_ERROR', `Error leyendo de PostgreSQL, usando memoria: ${error instanceof Error ? error.message : error}`, { userId, operation: 'getThread' });
                 this.isConnected = false;
                 // Fallback to memory
                 return this.memoryStore.threads.get(userId) || null;
@@ -201,7 +297,7 @@ export class DatabaseService {
                 });
                 return true;
             } catch (error) {
-                console.warn(`⚠️ Error eliminando thread de PostgreSQL, usando memoria: ${error instanceof Error ? error.message : error}`);
+                logWarning('THREAD_DELETE_ERROR', `⚠️ Error eliminando thread de PostgreSQL, usando memoria`, { error: error instanceof Error ? error.message : error });
                 this.isConnected = false;
                 // Fallback to memory deletion
                 this.memoryStore.threads.delete(userId);
@@ -220,7 +316,7 @@ export class DatabaseService {
             return;
         }
 
-        console.log(`🔄 Sincronizando ${this.memoryStore.threads.size} threads de memoria a PostgreSQL...`);
+        logInfo('SYNC_START', `🔄 Sincronizando ${this.memoryStore.threads.size} threads de memoria a PostgreSQL...`, { threadsCount: this.memoryStore.threads.size });
         let syncedCount = 0;
 
         for (const [userId, threadData] of this.memoryStore.threads.entries()) {
@@ -243,12 +339,12 @@ export class DatabaseService {
                 });
                 syncedCount++;
             } catch (error) {
-                console.warn(`⚠️ Error sincronizando thread ${userId}:`, error instanceof Error ? error.message : error);
+                logWarning('SYNC_ERROR', `⚠️ Error sincronizando thread ${userId}`, { userId, error: error instanceof Error ? error.message : error });
             }
         }
 
         if (syncedCount > 0) {
-            console.log(`✅ ${syncedCount} threads sincronizados a PostgreSQL`);
+            logInfo('SYNC_COMPLETE', `✅ ${syncedCount} threads sincronizados a PostgreSQL`, { syncedCount });
             // Clear synced data from memory
             this.memoryStore.threads.clear();
             this.memoryStore.lastSync = new Date();
@@ -273,7 +369,7 @@ export class DatabaseService {
             try {
                 return await this.prisma.clientView.findUnique({ where: { phoneNumber } });
             } catch (error) {
-                console.warn(`⚠️ Error buscando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`);
+                logError('DATABASE_ERROR', `Error buscando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'findUserByPhoneNumber' });
                 this.isConnected = false;
                 return null;
             }
@@ -307,7 +403,7 @@ export class DatabaseService {
 
                 return user;
             } catch (error) {
-                console.warn(`⚠️ Error creando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`);
+                logError('DATABASE_ERROR', `Error creando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'createUser' });
                 this.isConnected = false;
             }
         }
@@ -335,35 +431,44 @@ export class DatabaseService {
     }) {
         if (this.isConnected) {
             try {
-                // Verificar si el cliente ya existe
+                // Primero obtener datos existentes para comparar discrepancias
                 const existingClient = await this.prisma.clientView.findUnique({
                     where: { phoneNumber: clientData.phoneNumber }
                 });
                 
+                // Preparar datos de actualización
+                const updateData: any = {
+                    phoneNumber: clientData.phoneNumber,
+                    chatId: clientData.chatId,
+                    // lastActivity se actualiza 10 minutos DESPUÉS del último mensaje
+                    // Por ahora solo actualizamos inmediatamente, el delay se maneja en otro job
+                    lastActivity: clientData.lastActivity
+                };
+                
+                // USERNAME: Solo actualizar si hay discrepancia o está vacío
+                if (!existingClient || 
+                    !existingClient.userName || 
+                    existingClient.userName !== clientData.userName) {
+                    updateData.userName = clientData.userName;
+                }
+                
+                // Usar upsert por phoneNumber (PK)
                 const result = await this.prisma.clientView.upsert({
                     where: { phoneNumber: clientData.phoneNumber },
-                    update: {
-                        userName: clientData.userName,
-                        chatId: clientData.chatId,
-                        lastActivity: clientData.lastActivity
-                    },
+                    update: updateData,
                     create: {
                         phoneNumber: clientData.phoneNumber,
                         userName: clientData.userName,
                         chatId: clientData.chatId,
                         lastActivity: clientData.lastActivity,
-                        prioridad: 2 // Valor por defecto (MEDIA)
+                        prioridad: 2, // Valor por defecto (MEDIA)
+                        threadTokenCount: 0 // Inicializar contador tokens
                     }
                 });
                 
-                // Solo loggear si es un cliente nuevo
-                if (!existingClient) {
-                    console.log(`✅ Nuevo cliente registrado: ${clientData.phoneNumber}`);
-                }
-                
                 return result;
             } catch (error) {
-                console.error(`❌ Error guardando cliente en BD: ${error instanceof Error ? error.message : error}`);
+                logError('DATABASE_ERROR', `Error guardando cliente en BD: ${error instanceof Error ? error.message : error}`, { phoneNumber: clientData.phoneNumber, operation: 'saveClient' });
                 this.isConnected = false;
                 // Fallback to memory
                 this.memoryStore.users.set(clientData.phoneNumber, clientData);
@@ -371,7 +476,7 @@ export class DatabaseService {
         } else {
             // Fallback to memory
             this.memoryStore.users.set(clientData.phoneNumber, clientData);
-            console.log(`💾 Cliente guardado en memoria: ${clientData.phoneNumber}`);
+            logInfo('CLIENT_MEMORY_SAVE', `💾 Cliente guardado en memoria: ${clientData.phoneNumber}`, { phoneNumber: clientData.phoneNumber });
         }
     }
 
@@ -412,7 +517,7 @@ export class DatabaseService {
                     memoryFallback: this.memoryStore.threads.size
                 };
             } catch (error) {
-                console.warn(`⚠️ Error obteniendo estadísticas de PostgreSQL: ${error instanceof Error ? error.message : error}`);
+                logWarning('STATS_ERROR', `⚠️ Error obteniendo estadísticas de PostgreSQL`, { error: error instanceof Error ? error.message : error });
                 this.isConnected = false;
             }
         }
@@ -440,9 +545,9 @@ export class DatabaseService {
                     where: { phoneNumber },
                     data
                 });
-                console.log(`✅ Cliente actualizado: ${phoneNumber}`);
+                logInfo('DATABASE_UPDATE', `Cliente actualizado: ${phoneNumber}`, { phoneNumber, operation: 'updateClient' });
             } catch (error) {
-                console.error(`❌ Error actualizando cliente ${phoneNumber}:`, error);
+                logError('DATABASE_ERROR', `Error actualizando cliente ${phoneNumber}`, { phoneNumber, operation: 'updateClient', error: error instanceof Error ? error.message : error });
                 throw error;
             }
         } else {
@@ -471,12 +576,27 @@ export class DatabaseService {
                     }
                 });
             } catch (error) {
-                console.error('Error obteniendo clientes para hoy:', error);
+                logError('DATABASE_ERROR', 'Error obteniendo clientes para hoy', { operation: 'getClientsToday', error: error instanceof Error ? error.message : error });
                 return [];
             }
         } else {
             // Fallback to memory - simple implementation
             return [];
+        }
+    }
+
+    // --- Thread Token Management ---
+    public async updateThreadTokenCount(phoneNumber: string, tokenCount: number): Promise<void> {
+        if (this.isConnected) {
+            try {
+                await this.prisma.clientView.update({
+                    where: { phoneNumber },
+                    data: { threadTokenCount: tokenCount }
+                });
+                logInfo('TOKEN_COUNT_UPDATE', `📊 Token count actualizado: ${phoneNumber} = ${tokenCount} tokens`, { phoneNumber, tokenCount });
+            } catch (error) {
+                logWarning('TOKEN_COUNT_ERROR', `⚠️ Error actualizando token count para ${phoneNumber}`, { phoneNumber, error });
+            }
         }
     }
 
@@ -495,18 +615,18 @@ export class DatabaseService {
     private shouldEnrichUser(user: any): boolean {
         // Enriquecer si el nombre es igual al teléfono (datos incompletos) o no hay etiquetas
         const nameEqualsPhone = user.name === user.phoneNumber;
-        const hasNoLabels = !user.label1 && !user.label2 && !user.label3;
+        const hasNoLabels = !user.labels;
         return nameEqualsPhone || hasNoLabels;
     }
 
-    private async enrichUserFromWhapi(phoneNumber: string): Promise<void> {
+    public async enrichUserFromWhapi(phoneNumber: string): Promise<void> {
         try {
             const chatId = `${phoneNumber}@s.whatsapp.net`;
             const whapiUrl = process.env.WHAPI_API_URL || 'https://gate.whapi.cloud';
             const whapiToken = process.env.WHAPI_TOKEN;
 
             if (!whapiToken) {
-                console.warn('⚠️ WHAPI_TOKEN no disponible para enriquecimiento');
+                logWarning('WHAPI_ENRICHMENT', 'WHAPI_TOKEN no disponible para enriquecimiento', { phoneNumber, operation: 'enrichUserFromWhapi' });
                 return;
             }
 
@@ -519,7 +639,7 @@ export class DatabaseService {
             });
 
             if (!response.ok) {
-                console.warn(`⚠️ Error ${response.status} enriqueciendo usuario ${phoneNumber}`);
+                logWarning('WHAPI_ENRICHMENT', `Error ${response.status} enriqueciendo usuario ${phoneNumber}`, { phoneNumber, statusCode: response.status, operation: 'enrichUserFromWhapi' });
                 return;
             }
 
@@ -530,26 +650,44 @@ export class DatabaseService {
             if (realName || labels.length > 0) {
                 const updateData: any = {};
                 
-                if (realName && realName !== phoneNumber) {
-                    updateData.name = realName;
-                    updateData.userName = realName;
-                }
-
-                if (labels.length > 0) {
-                    updateData.label1 = labels[0]?.name || labels[0] || null;
-                    updateData.label2 = labels[1]?.name || labels[1] || null;
-                    updateData.label3 = labels[2]?.name || labels[2] || null;
-                }
-
-                await this.prisma.clientView.update({
-                    where: { phoneNumber },
-                    data: updateData
+                // NAME: Solo actualizar si hay discrepancia o está vacío
+                const existingClient = await this.prisma.clientView.findUnique({
+                    where: { phoneNumber }
                 });
+                
+                if (realName && realName !== phoneNumber) {
+                    // Solo actualizar name si es diferente del actual
+                    if (!existingClient?.name || existingClient.name !== realName) {
+                        updateData.name = realName;
+                    }
+                    // Solo actualizar userName si es diferente del actual
+                    if (!existingClient?.userName || existingClient.userName !== realName) {
+                        updateData.userName = realName;
+                    }
+                }
 
-                console.log(`✅ Usuario enriquecido automáticamente: ${phoneNumber} → ${realName || 'sin nombre'}, ${labels.length} etiquetas`);
+                // LABELS: Solo actualizar si están vacíos o hay discrepancia
+                if (labels.length > 0) {
+                    const labelsArray = labels.map((label: any) => label?.name || label).filter(Boolean);
+                    const newLabelsString = labelsArray.join('/');
+                    
+                    if (!existingClient?.labels || existingClient.labels !== newLabelsString) {
+                        updateData.labels = newLabelsString;
+                    }
+                }
+                
+                // Solo hacer update si hay cambios
+                if (Object.keys(updateData).length > 0) {
+                    await this.prisma.clientView.update({
+                        where: { phoneNumber },
+                        data: updateData
+                    });
+
+                    logInfo('USER_ENRICHMENT', `Usuario enriquecido automáticamente: ${phoneNumber} → ${realName || 'sin nombre'}, ${labels.length} etiquetas`, { phoneNumber, realName, labelsCount: labels.length, operation: 'enrichUserFromWhapi' });
+                }
             }
         } catch (error) {
-            console.warn(`⚠️ Error enriqueciendo usuario ${phoneNumber}:`, error);
+            logError('WHAPI_ENRICHMENT', `Error enriqueciendo usuario ${phoneNumber}`, { phoneNumber, operation: 'enrichUserFromWhapi', error: error instanceof Error ? error.message : error });
         }
     }
 }

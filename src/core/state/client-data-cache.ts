@@ -8,6 +8,7 @@ export interface ClientData {
     labels: string[];
     chatId: string | null;
     lastActivity: Date;
+    threadTokenCount?: number;  // Conteo de tokens del thread
     // Metadata del caché
     cachedAt: Date;
     needsSync: boolean;
@@ -16,7 +17,7 @@ export interface ClientData {
 export class ClientDataCache {
     private cache: LRUCache<string, ClientData>;
 
-    constructor(maxClients: number = 1000, clientTTL: number = 30 * 60 * 1000 /* 30 minutos */) {
+    constructor(maxClients: number = 1000, clientTTL: number = 12 * 60 * 60 * 1000 /* 12 horas */) {
         this.cache = new LRUCache({
             max: maxClients,
             ttl: clientTTL,
@@ -68,9 +69,9 @@ export class ClientDataCache {
             }
         }
 
-        // Verificar si los datos están "stale" (más de 30 minutos)
-        const thirtyMinutes = 30 * 60 * 1000;
-        if (Date.now() - cached.cachedAt.getTime() > thirtyMinutes) {
+        // Verificar si los datos están "stale" (más de 12 horas)
+        const twelveHours = 12 * 60 * 60 * 1000;
+        if (Date.now() - cached.cachedAt.getTime() > twelveHours) {
             return true; // Datos antiguos, refrescar
         }
 
@@ -97,6 +98,7 @@ export class ClientDataCache {
         labels: string[];
         chatId: string | null;
         lastActivity: Date;
+        threadTokenCount?: number;
     }): void {
         this.set(phoneNumber, {
             phoneNumber,
@@ -109,6 +111,21 @@ export class ClientDataCache {
      */
     public delete(phoneNumber: string): void {
         this.cache.delete(phoneNumber);
+    }
+
+    /**
+     * Invalidar entrada del caché (fuerza actualización en próximo acceso)
+     * Para usar con hooks externos
+     */
+    public invalidate(phoneNumber: string): void {
+        this.cache.delete(phoneNumber);
+    }
+
+    /**
+     * Verificar si existe en caché
+     */
+    public has(phoneNumber: string): boolean {
+        return this.cache.has(phoneNumber);
     }
 
     /**

@@ -65,11 +65,7 @@ export class DailyActionsJob {
     const clientName = client.name || client.userName || 'Cliente';
     
     // Obtener etiquetas del cliente si están disponibles
-    const clientLabels = [];
-    if (client.label1) clientLabels.push(client.label1);
-    if (client.label2) clientLabels.push(client.label2);
-    if (client.label3) clientLabels.push(client.label3);
-    
+    const clientLabels = client.labels ? client.labels.split('/') : [];
     const labelsText = clientLabels.length > 0 ? clientLabels.join(' y ') : 'sin etiquetas específicas';
     
     const prompt = `(Disparador Interno para Hacer Seguimiento)

@@ -180,6 +180,18 @@ export class WhatsappService {
         for (let i = 0; i < chunks.length; i++) {
             const chunk = chunks[i];
             
+            // Log detallado de cada chunk individual con preview de 20 palabras
+            const chunk20Words = chunk.split(' ').slice(0, 20).join(' ') + (chunk.split(' ').length > 20 ? '...' : '');
+            logInfo('WHAPI_CHUNK_SEND', `Enviando chunk ${i+1}/${chunks.length}`, {
+                userId: chatId,
+                chunkNumber: i + 1,
+                totalChunks: chunks.length,
+                chunkLength: chunk.length,
+                preview: chunk20Words,
+                isFirstChunk: i === 0,
+                hasQuoted: i === 0 && !!quotedMessageId
+            });
+            
             // Si no es el primer chunk, mostrar indicador de escritura
             if (i > 0) {
                 await this.sendTypingIndicator(chatId);

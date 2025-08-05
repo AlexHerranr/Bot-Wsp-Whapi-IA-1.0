@@ -1,6 +1,6 @@
 // src/core/services/openai.service.ts
 import OpenAI from 'openai';
-import { IOpenAIService } from '../../shared/interfaces';
+import { IOpenAIService, IFunctionRegistry } from '../../shared/interfaces';
 import { OpenAIRun, FunctionCall } from '../../shared/types';
 import { openAIWithRetry, withTimeout } from '../utils/retry-utils';
 import { TerminalLog } from '../utils/terminal-log';
@@ -33,11 +33,13 @@ export class OpenAIService implements IOpenAIService {
     private config: Required<OpenAIServiceConfig>;
     private log: TerminalLog;
     private cache?: CacheManager;
+    private functionRegistry?: IFunctionRegistry;
 
     constructor(
         config: OpenAIServiceConfig,
         terminalLog: TerminalLog,
-        cacheManager?: CacheManager
+        cacheManager?: CacheManager,
+        functionRegistry?: IFunctionRegistry
     ) {
         this.config = {
             apiKey: config.apiKey,
@@ -51,21 +53,11 @@ export class OpenAIService implements IOpenAIService {
         this.openai = new OpenAI({ apiKey: this.config.apiKey });
         this.log = terminalLog;
         this.cache = cacheManager;
+        this.functionRegistry = functionRegistry;
     }
 
-    async processWithOpenAI(userId: string, combinedText: string, chatId: string, userName: string): Promise<void> {
-        const result = await this.processMessage(userId, combinedText, chatId, userName);
-        
-        if (!result.success) {
-            this.log.openaiError(userName, result.error || 'Unknown processing error');
-            throw new Error(result.error || 'OpenAI processing failed');
-        }
 
-        // Log successful processing
-        this.log.response(userName, result.response || 'Response generated', result.processingTime);
-    }
-
-    async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string): Promise<ProcessingResult> {
+    async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<ProcessingResult> {
         const startTime = Date.now();
 
         try {
@@ -75,6 +67,8 @@ export class OpenAIService implements IOpenAIService {
                 userName,
                 chatId,
                 messageLength: message.length,
+                hasImage: !!imageMessage,
+                imageCaption: imageMessage?.caption || '',
                 assistantId: this.config.assistantId,
                 existingThreadId: existingThreadId || 'none',
                 timestamp: new Date().toISOString()
@@ -123,10 +117,24 @@ export class OpenAIService implements IOpenAIService {
                 threadId = await this.getOrCreateThread(userId, chatId);
             }
 
-            // Step 2: Add message to thread
-            await this.addMessageToThread(threadId, message);
+            // Step 2: Add message to thread (with optional image)
+            await this.addMessageToThread(threadId, message, imageMessage);
             
-            // Log detallado del mensaje enviado a OpenAI
+            // Log exacto del mensaje aplanado enviado a OpenAI (incluyendo contexto temporal BD)
+            const flattenedMessage = message.replace(/\n/g, 'n/n/').replace(/\t/g, 't/t/');
+            const preview20Words = flattenedMessage.split(' ').slice(0, 20).join(' ') + '...';
+            logInfo('OPENAI_SEND', 'Mensaje exacto enviado a OpenAI', {
+                userId,
+                userName,
+                threadId,
+                fullContent: message, // Mensaje completo original
+                flattenedContent: flattenedMessage, // Mensaje aplanado con refs
+                preview: preview20Words, // Solo 20 palabras
+                length: message.length,
+                contextSource: 'BD temporal inject' // Indica que incluye contexto de BD
+            });
+            
+            // Mantener el log anterior para compatibilidad  
             logInfo('OPENAI_MESSAGE_SENT', 'Mensaje enviado al thread de OpenAI', {
                 userId,
                 userName,
@@ -137,8 +145,10 @@ export class OpenAIService implements IOpenAIService {
                 hasQuotedContent: message.includes('Cliente responde a este mensaje:')
             });
 
-            // Step 3: Create and monitor run
-            const runResult = await this.createAndMonitorRun(threadId, userName);
+            // Step 3: Check if thread has image history and create run
+            const hasImageHistory = await this.checkThreadForImages(threadId);
+            const needsImageModel = !!imageMessage || hasImageHistory;
+            const runResult = await this.createAndMonitorRun(threadId, userName, needsImageModel, !!imageMessage, hasImageHistory);
 
             if (!runResult.success) {
                 return {
@@ -395,6 +405,45 @@ export class OpenAIService implements IOpenAIService {
         }
     }
 
+    private async checkThreadForImages(threadId: string): Promise<boolean> {
+        try {
+            // Get recent messages to check for image content
+            const messages = await openAIWithRetry(
+                () => this.openai.beta.threads.messages.list(threadId, { limit: 20 }),
+                {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 3000
+                }
+            );
+
+            // Check if any message contains image content
+            for (const message of messages.data) {
+                if (Array.isArray(message.content)) {
+                    for (const content of message.content) {
+                        if (content.type === 'image_url' || content.type === 'image_file') {
+                            logInfo('THREAD_HAS_IMAGE_HISTORY', 'Thread contiene historial de imágenes', {
+                                threadId,
+                                messageId: message.id,
+                                imageType: content.type
+                            });
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        } catch (error) {
+            logWarning('CHECK_THREAD_IMAGES_ERROR', 'Error verificando imágenes en thread', {
+                threadId,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+            // Si hay error, asumir que NO hay imágenes para evitar forzar gpt-4o innecesariamente
+            return false;
+        }
+    }
+
     private async validateThread(threadId: string): Promise<{ isValid: boolean; tokenCount?: number }> {
         try {
             // Intentar obtener información del thread desde OpenAI
@@ -455,12 +504,34 @@ export class OpenAIService implements IOpenAIService {
         }
     }
 
-    private async addMessageToThread(threadId: string, message: string): Promise<void> {
-        // El mensaje ya viene formateado con contexto temporal desde CoreBot
+    private async addMessageToThread(threadId: string, message: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<void> {
+        // Crear contenido multimodal si hay imagen
+        let content: any;
+        
+        if (imageMessage) {
+            // Formato multimodal para assistant
+            content = [
+                {
+                    type: 'text',
+                    text: imageMessage.caption || message || 'Analiza esta imagen en el contexto de nuestros servicios hoteleros'
+                },
+                {
+                    type: 'image_url',
+                    image_url: {
+                        url: imageMessage.imageUrl,
+                        detail: 'high'
+                    }
+                }
+            ];
+        } else {
+            // Solo texto como antes
+            content = message;
+        }
+
         await openAIWithRetry(
             () => this.openai.beta.threads.messages.create(threadId, {
                 role: 'user',
-                content: message // Usar el mensaje contextual tal como viene
+                content: content
             }),
             {
                 maxRetries: 30, // Aumentado de 3 a 30 para race conditions
@@ -471,7 +542,8 @@ export class OpenAIService implements IOpenAIService {
         );
     }
 
-    private async createAndMonitorRun(threadId: string, userName: string): Promise<{
+
+    private async createAndMonitorRun(threadId: string, userName: string, hasImage: boolean = false, hasCurrentImage: boolean = false, hasImageHistory: boolean = false): Promise<{
         success: boolean;
         error?: string;
         runId?: string;
@@ -479,11 +551,27 @@ export class OpenAIService implements IOpenAIService {
         tokensUsed?: number;
     }> {
         try {
-            // Create run
+            // Create run with model override for images
+            const runParams: any = {
+                assistant_id: this.config.assistantId
+            };
+            
+            if (hasImage) {
+                // Override to gpt-4o for images or threads with image history
+                runParams.model = 'gpt-4o';
+                runParams.reasoning_effort = null; // Explicitly disable reasoning_effort for gpt-4o
+                logInfo('MODEL_OVERRIDE', 'Usando gpt-4o para thread con contenido visual', {
+                    threadId,
+                    assistantId: this.config.assistantId,
+                    overrideModel: 'gpt-4o',
+                    reasoningEffort: 'null (disabled)',
+                    hasCurrentImage,
+                    hasImageHistory
+                });
+            }
+            
             const run = await openAIWithRetry(
-                () => this.openai.beta.threads.runs.create(threadId, {
-                    assistant_id: this.config.assistantId
-                }),
+                () => this.openai.beta.threads.runs.create(threadId, runParams),
                 {
                     maxRetries: 3,
                     baseDelay: 1000,
@@ -653,6 +741,16 @@ export class OpenAIService implements IOpenAIService {
                     JSON.parse(functionCall.function.arguments)
                 );
 
+                // Log crítico: Llamada a función con argumentos exactos  
+                logInfo('OPENAI_FUNC_CALL', `Llamando función desde OpenAI`, {
+                    threadId,
+                    runId,
+                    functionName: functionCall.function.name,
+                    functionId: functionCall.id,
+                    args: functionCall.function.arguments, // Argumentos exactos enviados por OpenAI
+                    argsPreview: functionCall.function.arguments.substring(0, 100) + '...'
+                });
+                
                 // Log crítico: Ejecutando función específica
                 logInfo('FUNCTION_EXECUTING', `Ejecutando función ${functionCall.function.name}`, {
                     threadId,
@@ -663,9 +761,23 @@ export class OpenAIService implements IOpenAIService {
                 });
 
                 try {
-                    // Here you would integrate with your function registry
-                    // For now, we'll simulate function execution
+                    // Execute function using the real registry
                     const result = await this.executeFunctionCall(functionCall);
+                    
+                    // Formatear respuesta para envío a OpenAI
+                    const formattedForOpenAI = JSON.stringify(result);
+                    
+                    // Log crítico: Resultado de función formateado para OpenAI
+                    logInfo('OPENAI_FUNC_RESULT', `Resultado de función formateado para OpenAI`, {
+                        threadId,
+                        runId,
+                        functionName: functionCall.function.name,
+                        functionId: functionCall.id,
+                        apiResult: JSON.stringify(result), // Resultado exacto de la API/función
+                        formattedForOpenAI: formattedForOpenAI, // Cómo se envía de vuelta a OpenAI
+                        preview: formattedForOpenAI.substring(0, 100) + '...',
+                        resultLength: formattedForOpenAI.length
+                    });
                     
                     // Log crítico: Función ejecutada exitosamente
                     logSuccess('FUNCTION_COMPLETED', `Función ${functionCall.function.name} completada exitosamente`, {
@@ -678,7 +790,7 @@ export class OpenAIService implements IOpenAIService {
                     
                     toolOutputs.push({
                         tool_call_id: functionCall.id,
-                        output: JSON.stringify(result)
+                        output: formattedForOpenAI
                     });
 
                 } catch (error) {
@@ -704,6 +816,20 @@ export class OpenAIService implements IOpenAIService {
                     });
                 }
             }
+
+            // Log crítico: Datos exactos enviados de vuelta a OpenAI
+            logInfo('OPENAI_TOOL_OUTPUTS_SENDING', 'Enviando tool outputs exactos a OpenAI', {
+                threadId,
+                runId,
+                toolOutputsCount: toolOutputs.length,
+                toolOutputsData: toolOutputs.map(output => ({
+                    tool_call_id: output.tool_call_id,
+                    output: output.output,
+                    outputPreview: output.output.substring(0, 200) + '...',
+                    outputLength: output.output.length
+                })),
+                fullPayload: JSON.stringify(toolOutputs, null, 2) // Payload completo formateado
+            });
 
             // Submit tool outputs
             await openAIWithRetry(
@@ -753,20 +879,33 @@ export class OpenAIService implements IOpenAIService {
     }
 
     private async executeFunctionCall(functionCall: FunctionCall): Promise<any> {
-        // This is a placeholder for function execution
-        // In a real implementation, you would integrate with your function registry
-        // and execute the actual function
+        if (!this.functionRegistry) {
+            throw new Error('Function registry not configured');
+        }
+
+        const functionName = functionCall.function.name;
         
-        this.log.debug(`Executing function: ${functionCall.function.name}`);
+        this.log.debug(`Executing function: ${functionName}`);
         
-        // Simulate function execution with some delay
-        await this.sleep(100);
-        
-        return {
-            success: true,
-            message: `Function ${functionCall.function.name} executed successfully`,
-            timestamp: new Date().toISOString()
-        };
+        try {
+            // Parse arguments
+            const args = JSON.parse(functionCall.function.arguments);
+            
+            // Execute function using the real registry
+            const result = await this.functionRegistry.execute(functionName, args);
+            
+            // Return the result directly for OpenAI to see the actual data
+            return result;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            this.log.error(`Function ${functionName} failed: ${errorMessage}`);
+            
+            return {
+                success: false,
+                error: errorMessage,
+                timestamp: new Date().toISOString()
+            };
+        }
     }
 
     private async getThreadResponse(threadId: string): Promise<string> {

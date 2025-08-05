@@ -22,6 +22,7 @@ prisma/migrations/
 logs/sessions/current/*.log
 logs/sessions/archived/
 logs/railway/downloads/*.txt
+logs/bot-session-*.log
 *.log
 
 # Temporary files (organized structure)

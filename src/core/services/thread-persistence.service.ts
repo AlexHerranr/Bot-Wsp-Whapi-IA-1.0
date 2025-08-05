@@ -57,7 +57,7 @@ export class ThreadPersistenceService {
         return await this.updateThreadMetadata(userId, { labels });
     }
 
-    async updateThreadActivity(userId: string): Promise<boolean> {
+    async updateThreadActivity(userId: string, tokenCount?: number): Promise<boolean> {
         const existing = await this.databaseService.getThread(userId);
         if (existing) {
             const now = new Date();
@@ -68,7 +68,7 @@ export class ThreadPersistenceService {
                 return true; // Skip update - too recent
             }
         }
-        return await this.databaseService.updateThreadActivity(userId);
+        return await this.databaseService.updateThreadActivity(userId, tokenCount);
     }
 
     async shouldRenewThread(userId: string, currentTokens?: number): Promise<{ shouldRenew: boolean; reason?: string }> {
