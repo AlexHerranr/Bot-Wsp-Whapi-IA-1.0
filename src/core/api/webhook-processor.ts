@@ -361,7 +361,7 @@ export class WebhookProcessor {
                     if (message.image && message.image.link) {
                         // Agregar imagen al buffer para procesamiento directo con assistant
                         const imageMessage = {
-                            type: 'image',
+                            type: 'image' as const,
                             imageUrl: message.image.link,
                             caption: message.image.caption || ''
                         };

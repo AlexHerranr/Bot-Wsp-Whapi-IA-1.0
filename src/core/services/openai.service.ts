@@ -1096,6 +1096,18 @@ export class OpenAIService implements IOpenAIService {
         }
     }
 
+    async processWithOpenAI(userId: string, combinedText: string, chatId: string, userName: string): Promise<void> {
+        // Delegate to the main processMessage method
+        const result = await this.processMessage(userId, combinedText, chatId, userName);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'OpenAI processing failed');
+        }
+        
+        // This method doesn't return the response directly - the calling code should handle responses
+        // This maintains compatibility with the interface while using the full functionality
+    }
+
     getConfig(): Required<OpenAIServiceConfig> {
         return { ...this.config };
     }

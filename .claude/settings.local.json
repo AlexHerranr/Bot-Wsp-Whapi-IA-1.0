@@ -105,7 +105,8 @@
       "Bash(del test-availability-direct.ts)",
       "Bash(del check-db-data.ts)",
       "Bash(del fix-studio-price.ts)",
-      "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\test-offers-endpoint.js\")"
+      "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\test-offers-endpoint.js\")",
+      "Bash(git rm:*)"
     ],
     "deny": []
   }
