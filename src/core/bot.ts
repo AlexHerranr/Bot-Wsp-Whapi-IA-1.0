@@ -234,16 +234,18 @@ export class CoreBot {
             return;
         }
 
-        // Limpiar buffers vacíos automáticamente
-        const buffer = this.bufferManager.getBuffer(userId);
-        if (buffer && buffer.messages.length === 0 && !imageMessage) {
-            logInfo('BUFFER_EMPTY_CLEANUP', 'Limpiando buffer vacío automáticamente', {
+        // NOTA: NO verificar si el buffer está vacío aquí - BufferManager ya lo maneja
+        // El buffer ya fue procesado y vaciado en BufferManager antes de llamar este callback
+        // Los mensajes ya vienen en combinedText
+        
+        // Si no hay contenido para procesar, salir temprano
+        if (!combinedText && !imageMessage) {
+            logInfo('BUFFER_NO_CONTENT', 'No hay contenido para procesar', {
                 userId,
                 userName,
                 chatId,
-                reason: 'no_content'
+                reason: 'empty_callback'
             });
-            this.bufferManager.clearBuffer(userId);
             return;
         }
 

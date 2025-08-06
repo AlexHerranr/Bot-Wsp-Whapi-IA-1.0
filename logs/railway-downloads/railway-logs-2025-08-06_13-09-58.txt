@@ -1,0 +1,158 @@
+Starting Container
+
+> tealquilamos-bot@1.0.0 start
+> node dist/main.js
+
+🚀 Starting TeAlquilamos Bot...
+2025-08-06T18:04:41Z [APP_STAR:unknown] sys: Iniciando TeAlquilamos Bot
+✅ Configuration loaded successfully
+2025-08-06T18:04:41Z [CONFIG_L:unknown] sys: Configuración cargada exitosamente
+🌍 Server will start on 0.0.0.0:8080
+🔧 DI ✓ 5 services, 1 function
+🔌 hotel-plugin ✓ 1 function
+✅ check_availability registered
+2025-08-06T18:04:41Z [PLUGIN_R:unknown] sys: hotel-plugin ✓ 1 function
+2025-08-06T18:04:41Z [DI_COMPL:unknown] sys: DI ✓ 5 services, 1 function
+2025-08-06T18:04:41Z [DATABASE:database] sys: 🗄️ Conectado a la base de datos Postgre...
+2025-08-06T18:04:41Z [DATABASE:unknown] sys: Conexión exitosa a PostgreSQL
+🔧 Cleanup tasks configured
+2025-08-06T18:04:42Z [SERVER_S:unknown] sys: Servidor HTTP iniciado
+=== Bot TeAlquilamos Iniciado ===
+🚀 Servidor: 0.0.0.0:8080
+🔗 Webhook: configurando...
+✅ Sistema listo
+
+🚀 CoreBot started successfully on 0.0.0.0:8080
+📊 Functions registered: 1
+2025-08-06T18:04:42Z [BOT_READ:unknown] sys: Bot completamente inicializado
+2025-08-06T18:05:41Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h1m activeUsers:0
+2025-08-06T18:05:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:05:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:05:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:06:41Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h2m activeUsers:0
+2025-08-06T18:06:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:06:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:06:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:07:41Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h3m activeUsers:0
+2025-08-06T18:07:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:07:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:07:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:08:41Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h4m activeUsers:0
+2025-08-06T18:08:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:08:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:08:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:09:41Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h5m activeUsers:0
+2025-08-06T18:09:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:09:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:09:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:10:41Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h6m activeUsers:0
+2025-08-06T18:10:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:10:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:10:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:11:41Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h7m activeUsers:0
+2025-08-06T18:11:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:11:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:11:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:11:55Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T18:11:55Z [WEBHOOK:webhook] pres:1
+2025-08-06T18:11:55Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T18:11:55Z [BUFFER_C:unknown] 57300...251: Buffer creado por actividad
+2025-08-06T18:11:55Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+✍️ Usuario está escribiendo...
+2025-08-06T18:11:57Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T18:11:57Z [WEBHOOK:webhook] msg:1
+2025-08-06T18:11:57Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T18:11:57Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T18:11:57Z [WEBHOOK:webhook] pres:1
+2025-08-06T18:11:57Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T18:11:57Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T18:11:57Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T18:11:57Z [MSG_RX:webhook] 57300...251: text "Hola..."
+🗣️ Sr Alex: 💬 "Hola" → 🤖
+2025-08-06T18:11:57Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T18:11:57Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T18:11:57Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T18:11:58Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T18:11:58Z [WEBHOOK:webhook] msg:1
+2025-08-06T18:11:58Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-06T18:11:58Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T18:11:58Z [MSG_RX:webhook] 57300...251: text "Que tal..."
+🗣️ Sr Alex: 💬 "Que tal" → 🤖
+2025-08-06T18:11:58Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T18:11:58Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T18:11:58Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T18:11:58Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T18:11:58Z [WEBHOOK:webhook] pres:1
+2025-08-06T18:11:58Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T18:11:58Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T18:11:58Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T18:12:01Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T18:12:01Z [WEBHOOK:webhook] msg:1
+2025-08-06T18:12:01Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-06T18:12:01Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T18:12:01Z [MSG_RX:webhook] 57300...251: text "Como no va todo..."
+🗣️ Sr Alex: 💬 "Como no va todo" → 🤖
+2025-08-06T18:12:01Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T18:12:01Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T18:12:01Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T18:12:02Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T18:12:02Z [WEBHOOK:webhook] pres:1
+2025-08-06T18:12:02Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T18:12:02Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T18:12:02Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+Sr Alex: 🎙️...
+2025-08-06T18:12:05Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T18:12:05Z [WEBHOOK:webhook] pres:1
+2025-08-06T18:12:05Z [PRESENCE:unknown] 57300...251: Usuario dejó de grabar
+2025-08-06T18:12:05Z [BUFFER_G:unknown] 57300...251: Extendiendo buffer por fin de grabación
+2025-08-06T18:12:05Z [BUFFER_V:unknown] 57300...251: Esperando transcripción de voz
+2025-08-06T18:12:05Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T18:12:05Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T18:12:06Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T18:12:06Z [WEBHOOK:webhook] msg:1
+2025-08-06T18:12:06Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-06T18:12:06Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T18:12:06Z [MSG_RX:webhook] 57300...251: voice 
+2025-08-06T18:12:06Z [BUFFER_V:unknown] 57300...251: Esperando transcripción de voz
+2025-08-06T18:12:06Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T18:12:06Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+[6:12:08 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Que me cuentan por allá cómo va todo. | Usuario: 573003913251 | Duración: 2322ms | Tamaño: 7302 bytes
+🎙️ Sr Alex: 🔊 → "Que me cuentan por allá cómo va todo."
+2025-08-06T18:12:08Z [AUDIO:unknown] 57300...251: "Que me cuentan por allá cómo v..."
+2025-08-06T18:12:08Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T18:12:08Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T18:12:08Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T18:12:13Z [BUFFER:buffer] 57300...251: 4msg, 66ch
+2025-08-06T18:12:13Z [BUFFER_E:unknown] 57300...251: Limpiando buffer vacío automáticamente
+2025-08-06T18:12:41Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h8m activeUsers:0
+2025-08-06T18:12:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:12:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:12:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:13:41Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h9m activeUsers:0
+2025-08-06T18:13:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:13:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:13:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:14:41Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h10m activeUsers:0
+2025-08-06T18:14:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:14:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:14:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:15:41Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h11m activeUsers:0
+2025-08-06T18:15:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:15:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:15:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:16:41Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h12m activeUsers:0
+2025-08-06T18:16:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:16:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:16:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:17:41Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h13m activeUsers:0
+2025-08-06T18:17:41Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:17:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:17:41Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:18:42Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h14m activeUsers:0
+2025-08-06T18:18:42Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:18:42Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:18:42Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T18:19:42Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h15m activeUsers:0
+2025-08-06T18:19:42Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T18:19:42Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T18:19:42Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0

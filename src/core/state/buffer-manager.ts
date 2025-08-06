@@ -98,6 +98,7 @@ export class BufferManager implements IBufferManager {
     public onTypingOrRecording(userId: string): void {
         let buffer = this.buffers.get(userId);
         if (!buffer) {
+            // Solo crear buffer si no existe, pero NO establecer timer si está vacío
             buffer = { messages: [], chatId: '', userName: '', lastActivity: Date.now(), timer: null };
             this.buffers.set(userId, buffer);
             logInfo('BUFFER_CREATED', 'Buffer creado por actividad', { userId, reason: 'typing_or_recording' });
@@ -105,8 +106,17 @@ export class BufferManager implements IBufferManager {
         
         buffer.lastActivity = Date.now();
         
-        // Sistema unificado: usar timer de 5s
-        this.setOrExtendTimer(userId, 'typing_recording');
+        // CRÍTICO: Solo establecer timer si hay contenido en el buffer
+        // Esto evita el cleanup prematuro de buffers vacíos creados por presence
+        if (buffer.messages.length > 0 || buffer.pendingImage) {
+            // Sistema unificado: usar timer de 5s para extender mientras hay actividad
+            this.setOrExtendTimer(userId, 'typing_recording');
+        } else {
+            logInfo('BUFFER_TIMER_SKIP', 'Timer no establecido - buffer sin contenido', { 
+                userId,
+                reason: 'empty_buffer_on_presence'
+            });
+        }
     }
 
     // Método unificado: "Last event wins" - cancela timer anterior y establece nuevo timer de 5s
@@ -321,7 +331,7 @@ export class BufferManager implements IBufferManager {
         // - message = message (2s)
         const type = (triggerType === 'typing' || triggerType === 'recording' || triggerType === 'voice') ? 'activity' : 'message';
         
-        // Para typing/recording, usar onTypingOrRecording que actualiza lastActivity
+        // Para typing/recording, usar onTypingOrRecording que ahora maneja buffers vacíos correctamente
         if (triggerType === 'typing' || triggerType === 'recording') {
             this.onTypingOrRecording(userId);
         } else {
@@ -340,9 +350,20 @@ export class BufferManager implements IBufferManager {
                     userName: buffer.userName,
                     delay: BUFFER_DELAY_MS
                 });
+                // Voice siempre debe establecer timer para esperar transcripción
+                this.setOrExtendTimer(userId, type);
+            } else {
+                // Para otros tipos, solo establecer timer si hay contenido
+                if (buffer.messages.length > 0 || buffer.pendingImage) {
+                    this.setOrExtendTimer(userId, type);
+                } else {
+                    logInfo('BUFFER_TIMER_SKIP', 'Timer no establecido en setIntelligentTimer', { 
+                        userId,
+                        triggerType,
+                        reason: 'empty_buffer'
+                    });
+                }
             }
-            
-            this.setOrExtendTimer(userId, type);
         }
     }
 
