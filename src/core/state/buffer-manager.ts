@@ -38,6 +38,11 @@ export class BufferManager implements IBufferManager {
         buffer.messages.push(messageText);
         buffer.lastActivity = Date.now();
         
+        // Marcar como voice si el mensaje contiene audio
+        if (messageText.includes('(Audio)')) {
+            buffer.isVoice = true;
+        }
+        
         // Analizar tipos de mensajes en el buffer
         const textCount = buffer.messages.filter(msg => !msg.includes('(Audio)')).length;
         const voiceCount = buffer.messages.filter(msg => msg.includes('(Audio)')).length;
@@ -200,19 +205,31 @@ export class BufferManager implements IBufferManager {
             return;
         }
         
-        // Chequeo de actividad: Si usuario está activamente escribiendo/grabando, esperar
-        if (this.getUserState) {
-            const userState = this.getUserState(userId);
-            if (userState?.isTyping || userState?.isRecording) {
-                logInfo('BUFFER_DELAYED_USER_ACTIVE', 'Usuario activo, extendiendo buffer', {
-                    userId,
-                    userName: buffer.userName,
-                    isTyping: userState.isTyping,
-                    isRecording: userState.isRecording,
-                    messageCount: buffer.messages.length
-                });
-                this.setOrExtendTimer(userId, 'activity'); // Re-extender mientras activo
-                return;
+        // Fast path para buffers de voice después de 3s sin actividad
+        if (buffer.isVoice && (Date.now() - buffer.lastActivity > 3000)) {
+            logInfo('BUFFER_VOICE_FAST_PATH', 'Procesando buffer de voz tras 3s de inactividad', {
+                userId,
+                userName: buffer.userName,
+                messageCount: buffer.messages.length,
+                timeSinceLastActivity: Date.now() - buffer.lastActivity,
+                reason: 'voice_timeout_3s'
+            });
+            // Proceder directamente al procesamiento - saltear checks de actividad
+        } else {
+            // Chequeo de actividad: Si usuario está activamente escribiendo/grabando, esperar
+            if (this.getUserState) {
+                const userState = this.getUserState(userId);
+                if (userState?.isTyping || userState?.isRecording) {
+                    logInfo('BUFFER_DELAYED_USER_ACTIVE', 'Usuario activo, extendiendo buffer', {
+                        userId,
+                        userName: buffer.userName,
+                        isTyping: userState.isTyping,
+                        isRecording: userState.isRecording,
+                        messageCount: buffer.messages.length
+                    });
+                    this.setOrExtendTimer(userId, 'activity'); // Re-extender mientras activo
+                    return;
+                }
             }
         }
 
@@ -224,6 +241,7 @@ export class BufferManager implements IBufferManager {
         
         buffer.messages = [];
         buffer.pendingImage = null;
+        buffer.isVoice = false; // Reset voice flag
         if (buffer.timer) {
             clearTimeout(buffer.timer);
             buffer.timer = null;

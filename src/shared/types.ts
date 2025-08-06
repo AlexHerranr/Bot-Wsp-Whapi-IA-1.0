@@ -48,6 +48,7 @@ export interface MessageBuffer {
     userName: string;
     lastActivity: number;
     timer: NodeJS.Timeout | null;
+    isVoice?: boolean;
     pendingImage?: { type: 'image', imageUrl: string, caption: string } | null;
 }
 
