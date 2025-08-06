@@ -9,15 +9,87 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.K_S
 const DETAILED_LOGS = process.env.ENABLE_DETAILED_LOGS === 'true' || !IS_PRODUCTION;
 const LOG_LEVEL = process.env.LOG_LEVEL || (IS_PRODUCTION ? 'info' : 'debug'); // debug, info, warn, error
 
+// Contador de líneas solo para Railway (producción)
+let railwayLogCounter = 0;
+let railwayLogBuffer: string[] = [];
+
+// Configuración de verbosidad para Railway
+const RAILWAY_COMPACT_MODE = process.env.RAILWAY_COMPACT_LOGS !== 'false'; // true por defecto
+
 // Configuración de archivos de log para desarrollo local
-const LOG_DIR = 'logs';
+const LOG_DIR = IS_PRODUCTION ? 'logs' : 'logs/Local';
 const SESSION_TIMESTAMP = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const LOG_FILE = path.join(LOG_DIR, `bot-session-${SESSION_TIMESTAMP}.log`);
 const MAX_SESSIONS = 5; // Máximo número de sesiones a mantener
 
+// Función para escribir logs Railway a archivo cada 500 líneas
+const writeRailwayLogChunk = (): void => {
+    if (!IS_PRODUCTION || railwayLogBuffer.length === 0) return;
+    
+    try {
+        // Crear directorio si no existe
+        if (!fs.existsSync(LOG_DIR)) {
+            fs.mkdirSync(LOG_DIR, { recursive: true });
+        }
+        
+        const chunkNumber = Math.ceil(railwayLogCounter / 500);
+        const railwayLogFile = path.join(LOG_DIR, `railway-logs-chunk-${chunkNumber}-${SESSION_TIMESTAMP}.log`);
+        
+        // Header del chunk
+        const chunkHeader = `
+=============================
+📊 Railway Logs Chunk ${chunkNumber} - ${new Date().toLocaleString('es-CO')}
+=============================
+Líneas: ${(chunkNumber - 1) * 500 + 1} - ${railwayLogCounter}
+Sesión: ${SESSION_TIMESTAMP}
+PID: ${process.pid}
+Environment: Railway Production
+=============================
+
+`;
+        
+        // Escribir chunk con header
+        const chunkContent = chunkHeader + railwayLogBuffer.join('\n') + '\n';
+        fs.writeFileSync(railwayLogFile, chunkContent);
+        
+        console.log(JSON.stringify({
+            timestamp: new Date().toISOString(),
+            severity: 'INFO',
+            message: `[LOG_FILE_CREATED] Chunk ${chunkNumber} guardado: ${railwayLogFile}`,
+            labels: {
+                app: 'whatsapp-bot',
+                category: 'LOG_FILE_CREATED',
+                level: 'INFO',
+                chunkNumber,
+                fileName: railwayLogFile
+            }
+        }));
+        
+        // Limpiar buffer
+        railwayLogBuffer = [];
+        
+    } catch (error) {
+        console.error(JSON.stringify({
+            timestamp: new Date().toISOString(),
+            severity: 'ERROR',
+            message: `[LOG_FILE_ERROR] Error escribiendo chunk Railway: ${error.message}`,
+            labels: {
+                app: 'whatsapp-bot',
+                category: 'LOG_FILE_ERROR',
+                level: 'ERROR'
+            }
+        }));
+    }
+};
+
 // Función para limpiar sesiones antiguas
 const cleanupOldSessions = (): void => {
     try {
+        // Asegurar que el directorio existe
+        if (!fs.existsSync(LOG_DIR)) {
+            fs.mkdirSync(LOG_DIR, { recursive: true });
+        }
+        
         // Obtener todos los archivos de sesión
         const files = fs.readdirSync(LOG_DIR)
             .filter(file => file.startsWith('bot-session-') && file.endsWith('.log'))
@@ -297,9 +369,29 @@ function enrichedLog(
         return;
     }
     
+    // 🔧 NUEVO: Rate limiting para eventos repetitivos de buffer
+    const now = Date.now();
+    const bufferEvents = ['BUFFER_TIMER_CANCEL', 'BUFFER_TIMER_CANCELLED', 'BUFFER_STATE_WAIT', 'BUFFER_DELAYED_USER_ACTIVE'];
+    if (bufferEvents.includes(category)) {
+        const userId = details?.userId || 'unknown';
+        const bufferKey = `${category}:${userId}`;
+        const bufferExisting = repeatTracker.get(bufferKey);
+        
+        if (bufferExisting && now - bufferExisting.lastSeen < 5000) { // 5 seconds window
+            bufferExisting.count++;
+            bufferExisting.lastSeen = now;
+            
+            // Solo mostrar cada 5 repeticiones para eventos de buffer
+            if (bufferExisting.count % 5 !== 0 && !DETAILED_LOGS) {
+                return;
+            }
+        } else {
+            repeatTracker.set(bufferKey, { count: 1, lastSeen: now });
+        }
+    }
+    
     // Track repeated logs - special handling for webhooks and client messages
     const trackingKey = `${category}:${message.substring(0, 50)}`;
-    const now = Date.now();
     const existing = repeatTracker.get(trackingKey);
     
     // Extended handling for cross-category messages (including AI responses)
@@ -400,8 +492,55 @@ function enrichedLog(
 
     // 🔧 NUEVO: Sistema dual separado
     if (IS_PRODUCTION) {
-        // Cloud Run: Solo logs estructurados
-        console.log(JSON.stringify(detailedLogEntry));
+        // Cloud Run: Logs compactos o detallados según configuración
+        if (RAILWAY_COMPACT_MODE) {
+            const compactRailwayLog = formatCompactRailwayLog(category, message, details, level);
+            console.log(compactRailwayLog);
+            // Agregar al buffer para archivo
+            railwayLogBuffer.push(compactRailwayLog);
+        } else {
+            // Modo detallado (JSON completo)
+            console.log(JSON.stringify(detailedLogEntry));
+            // Agregar al buffer para archivo
+            const compactLogForRailway = formatCompactLog(category, message, details, level, sourceFile);
+            railwayLogBuffer.push(compactLogForRailway);
+        }
+        
+        // Incrementar contador y escribir archivo cada 500 líneas
+        railwayLogCounter++;
+        if (railwayLogCounter % 500 === 0) {
+            // Milestone en console (usar formato compacto si está habilitado)
+            if (RAILWAY_COMPACT_MODE) {
+                const milestoneLog = formatCompactRailwayLog('LOG_MILESTONE', 
+                    `Línea ${railwayLogCounter} de logs técnicos alcanzada`, 
+                    { logCount: railwayLogCounter, milestone: 500, environment: 'railway' }, 
+                    'INFO');
+                console.log(milestoneLog);
+            } else {
+                console.log(JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    severity: 'INFO',
+                    message: `[LOG_MILESTONE] Línea ${railwayLogCounter} de logs técnicos alcanzada`,
+                    labels: {
+                        app: 'whatsapp-bot',
+                        category: 'LOG_MILESTONE',
+                        level: 'INFO',
+                        milestone: railwayLogCounter
+                    },
+                    jsonPayload: {
+                        category: 'LOG_MILESTONE',
+                        level: 'INFO',
+                        timestamp: new Date().toISOString(),
+                        logCount: railwayLogCounter,
+                        milestone: 500,
+                        environment: 'railway'
+                    }
+                }));
+            }
+            
+            // Escribir chunk a archivo
+            writeRailwayLogChunk();
+        }
         
         // Dashboard disabled - monitoring removed
         // if (compactLogEntry) {
@@ -443,6 +582,102 @@ function enrichedLog(
     //     // Silenciar errores del dashboard para no afectar el logging principal
     //     console.error('Dashboard activity log error:', error.message);
     // }
+}
+
+// 🔧 NUEVO: Formato compacto para Railway (solo lo esencial)
+function formatCompactRailwayLog(category: string, message: string, details: any, level: LogLevel): string {
+    if (!RAILWAY_COMPACT_MODE) {
+        return JSON.stringify({
+            timestamp: new Date().toISOString(),
+            severity: level,
+            message: `[${category}] ${message}`,
+            labels: {
+                app: 'whatsapp-bot',
+                category,
+                level,
+                ...(details.userId && { user_id: String(details.userId) }),
+            },
+            jsonPayload: details
+        });
+    }
+    
+    // Formato ultra-compacto para Railway
+    const timestamp = new Date().toISOString().slice(0, 19) + 'Z';
+    const userId = details?.userId ? truncateId(details.userId) : null;
+    const threadId = details?.threadId ? truncateId(details.threadId, 'th_') : null;
+    const messageId = details?.messageId ? truncateId(details.messageId, 'msg_') : null;
+    
+    // Formateo específico por categoría (solo lo VITAL)
+    switch (category) {
+        case 'MESSAGE_RECEIVED':
+            const msgType = details?.messageType || 'text';
+            const preview = details?.body ? `"${details.body.substring(0, 20)}..."` : 
+                           details?.transcription ? `🔊"${details.transcription.substring(0, 20)}..."` : '';
+            return `${timestamp} [MSG_RX] ${userId}: ${msgType} ${preview}`;
+            
+        case 'AUDIO_TRANSCRIBED':
+            const transcription = details?.transcription ? `"${details.transcription.substring(0, 30)}..."` : '';
+            return `${timestamp} [AUDIO] ${userId}: ${transcription}`;
+            
+        case 'BUFFER_GROUPED':
+            const msgCount = details?.messageCount || 1;
+            const totalLen = details?.totalLength || 0;
+            return `${timestamp} [BUFFER] ${userId}: ${msgCount}msg, ${totalLen}ch`;
+            
+        case 'OPENAI_PROCESSING_START':
+            return `${timestamp} [AI_START] ${userId} | ${threadId}`;
+            
+        case 'OPENAI_RUN_COMPLETED':
+            const duration = details?.processingTime ? `${Math.round(details.processingTime/1000)}s` : '';
+            const tokens = details?.tokensUsed ? `${details.tokensUsed}t` : '';
+            return `${timestamp} [AI_DONE] ${userId} | ${threadId} | ${duration} | ${tokens}`;
+            
+        case 'MESSAGE_SENT':
+            const respLen = details?.responseLength || 0;
+            const procTime = details?.processingTime ? `${Math.round(details.processingTime/1000)}s` : '';
+            return `${timestamp} [SENT] ${userId} | ${respLen}ch | ${procTime}`;
+            
+        case 'WEBHOOK_RECEIVED':
+            return `${timestamp} [WEBHOOK] ${details?.data || 'unknown'}`;
+            
+        case 'BEDS24_REQUEST':
+            return `${timestamp} [BEDS24] API request`;
+            
+        case 'BEDS24_RESPONSE_DETAIL':
+            const rooms = details?.availableRooms?.length || 0;
+            return `${timestamp} [BEDS24] ${rooms} rooms found`;
+            
+        case 'MESSAGE_CHUNKS':
+            const chunks = details?.totalChunks || 1;
+            return `${timestamp} [CHUNKS] ${userId}: ${chunks} parts`;
+            
+        case 'FUNCTION_CALLING_START':
+            const funcName = details?.functionName || 'unknown';
+            return `${timestamp} [FUNC] ${funcName}()`;
+            
+        case 'CACHE_HIT':
+        case 'CACHE_MISS':
+            const cacheResult = category === 'CACHE_HIT' ? 'HIT' : 'MISS';
+            return `${timestamp} [CACHE_${cacheResult}] ${userId}`;
+            
+        case 'THREAD_REUSE':
+        case 'NEW_THREAD_CREATED':
+            const action = category === 'THREAD_REUSE' ? 'REUSE' : 'NEW';
+            return `${timestamp} [THR_${action}] ${threadId}`;
+            
+        case 'LOG_MILESTONE':
+            const milestone = details?.logCount || railwayLogCounter;
+            return `${timestamp} [MILESTONE] Line ${milestone} reached`;
+            
+        case 'ERROR':
+            const errorMsg = details?.error ? details.error.substring(0, 50) + '...' : message;
+            return `${timestamp} [ERROR] ${userId || 'system'}: ${errorMsg}`;
+            
+        default:
+            // Formato genérico ultra-compacto
+            const genericMsg = message.length > 40 ? message.substring(0, 40) + '...' : message;
+            return `${timestamp} [${category.substring(0, 8)}] ${userId || 'sys'}: ${genericMsg}`;
+    }
 }
 
 // 🔧 NUEVO: Utilidades de formateo compacto
