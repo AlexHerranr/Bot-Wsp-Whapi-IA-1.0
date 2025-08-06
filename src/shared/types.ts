@@ -57,6 +57,7 @@ export interface ThreadRecord {
     chatId: string;
     userName?: string;
     lastActivity: Date;
+    tokenCount?: number;
     labels?: string[];
 }
 
