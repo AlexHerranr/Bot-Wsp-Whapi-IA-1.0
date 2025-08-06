@@ -20,7 +20,7 @@ export class HotelPlugin {
         console.log('🔌 hotel-plugin ✓ 1 function');
         
         registry.register('check_availability', (args, context) => 
-            checkAvailability(args as { startDate: string; endDate: string; guests?: number }),
+            checkAvailability(args as { startDate: string; endDate: string; numAdults: number }),
             source
         );
 

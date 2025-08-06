@@ -7,7 +7,7 @@ import { DatabaseService } from '../services/database.service';
 import { DelayedActivityService } from '../services/delayed-activity.service';
 import { TerminalLog } from '../utils/terminal-log';
 import { RateLimiter } from '../utils/rate-limiter';
-import { logInfo, logSuccess, logError, logWarning } from '../../utils/logging';
+import { logInfo, logSuccess, logError, logWarning, logDebug } from '../../utils/logging';
 
 export class WebhookProcessor {
     
@@ -25,7 +25,22 @@ export class WebhookProcessor {
         const body = payload as any;
         const { messages, presences, statuses, chats, contacts, groups, labels } = body;
         
-        // Log técnico de sesión para todos los webhooks (compacto)
+        // MEJORA: Filtrado temprano de eventos de canal para reducir ruido
+        const isChannelEvent = body.event_type === 'channel' || body.event?.type === 'channel';
+        const hasChannelId = body.channel_id && body.channel_id.includes('PUNISH-');
+        
+        if (isChannelEvent || hasChannelId) {
+            // Solo log debug para eventos de canal - no generar ruido en Railway
+            logDebug('CHANNEL_EVENT_IGNORED', 'Webhook de estado del canal ignorado', {
+                channel_id: body.channel_id,
+                event_name: body.event?.event || body.event_name,
+                event_type: body.event_type,
+                health_status: body.health?.status?.text || body.health_status
+            });
+            return; // Salir temprano
+        }
+        
+        // Log técnico de sesión para todos los webhooks válidos (compacto)
         const type = messages?.length ? `msg:${messages.length}` : 
                     presences?.length ? `pres:${presences.length}` :
                     statuses?.length ? `stat:${statuses.length}` : 'other';
@@ -321,7 +336,7 @@ export class WebhookProcessor {
                     if (audioLink) {
                         const result = await this.mediaService.legacyTranscribeAudio(audioLink, userId, userName, message.id);
                         if (result.success && result.result) {
-                            this.terminalLog.message(userName, `(Audio): ${result.result}`);
+                            this.terminalLog.message(userName, `(Nota de Voz Transcrita por Whisper)\n🎤 ${result.result}`);
                             
                             // Log técnico de sesión - transcripción exitosa
                             logSuccess('AUDIO_TRANSCRIBED', 'Audio transcrito exitosamente', {

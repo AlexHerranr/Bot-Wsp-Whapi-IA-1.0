@@ -764,7 +764,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const tokensIn = details?.tokensIn || details?.inputTokens || 0;
             const tokensOut = details?.tokensOut || details?.outputTokens || details?.tokensUsed || 0;
             const tokensTotal = details?.totalTokens || (tokensIn + tokensOut);
-            const model = details?.model || 'gpt-4';
+            const model = details?.model || 'unknown';
             const threadIdToken = details?.threadId ? truncateId(details.threadId, 'th_') : 'none';
             return `${timestamp} [TOKENS_METRIC:${source}] ${userId}: in:${tokensIn} out:${tokensOut} total:${tokensTotal} model:${model} thread:${threadIdToken}`;
 

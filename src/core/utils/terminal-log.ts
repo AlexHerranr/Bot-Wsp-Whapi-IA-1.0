@@ -45,8 +45,8 @@ export class TerminalLog {
         const truncated = text.length > 60 ? text.substring(0, 60) + '...' : text;
         
         // Detectar si es transcripción de audio
-        if (text.startsWith('(Audio):')) {
-            const audioText = text.replace('(Audio):', '').trim();
+        if (text.startsWith('(Nota de Voz Transcrita por Whisper)')) {
+            const audioText = text.replace('(Nota de Voz Transcrita por Whisper)\n🎤 ', '').trim();
             const audioTruncated = audioText.length > 60 ? audioText.substring(0, 60) + '...' : audioText;
             console.log(`🎙️ ${user}: 🔊 → "${audioTruncated}"`);
         } else {

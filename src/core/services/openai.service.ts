@@ -135,18 +135,24 @@ export class OpenAIService implements IOpenAIService {
             // Step 2: Add message to thread (with optional image)
             await this.addMessageToThread(threadId, message, imageMessage);
             
-            // Log exacto del mensaje aplanado enviado a OpenAI (incluyendo contexto temporal BD)
-            const flattenedMessage = message.replace(/\n/g, 'n/n/').replace(/\t/g, 't/t/');
-            const preview20Words = flattenedMessage.split(' ').slice(0, 20).join(' ') + '...';
-            logInfo('OPENAI_SEND', 'Mensaje exacto enviado a OpenAI', {
+            // 📤 NUEVO: Log completo del prompt enviado a OpenAI (compactado en una línea)
+            const flattenedMessage = message
+                .replace(/\n/g, '\\n')  // Compacta saltos de línea como \n
+                .replace(/\t/g, '\\t')  // Compacta tabs
+                .replace(/\s+/g, ' ')   // Compacta múltiples espacios a uno solo
+                .trim();  // Elimina espacios extras
+            
+            logInfo('OPENAI_PROMPT_FULL', 'Prompt completo compactado enviado a OpenAI', {
                 userId,
                 userName,
                 threadId,
-                fullContent: message, // Mensaje completo original
-                flattenedContent: flattenedMessage, // Mensaje aplanado con refs
-                preview: preview20Words, // Solo 20 palabras
-                length: message.length,
-                contextSource: 'BD temporal inject' // Indica que incluye contexto de BD
+                fullCompactContent: flattenedMessage,  // Completo, sin truncar
+                originalLength: message.length,
+                compactLength: flattenedMessage.length,
+                hasTranscription: message.includes('(Nota de Voz Transcrita por Whisper)'),  // Flag transcripción
+                hasBeds24Data: message.includes('Datos de Beds24:') || message.includes('Disponibilidad:'),  // Flag Beds24
+                hasImage: !!imageMessage,
+                timestamp: new Date().toISOString()
             });
             
             // Mantener el log anterior para compatibilidad  
@@ -156,7 +162,7 @@ export class OpenAIService implements IOpenAIService {
                 threadId,
                 messagePreview: message.substring(0, 500),
                 messageLength: message.length,
-                messageType: message.includes('Audio)') ? 'transcription' : 'text',
+                messageType: message.includes('(Nota de Voz Transcrita por Whisper)') ? 'transcription' : 'text',
                 hasQuotedContent: message.includes('Cliente responde a este mensaje:')
             });
 
@@ -246,7 +252,7 @@ export class OpenAIService implements IOpenAIService {
 
             // 🔧 NUEVO: Log compacto de tokens y flow completo
             if (runResult.tokensUsed) {
-                logTokenUsage(userId, threadId, 0, runResult.tokensUsed, 'gpt-4'); // Sin input tokens separados
+                logTokenUsage(userId, threadId, 0, runResult.tokensUsed, runResult.modelUsed || 'unknown'); // Usar modelo real del run
             }
             
             logMessageFlowComplete(
@@ -578,6 +584,7 @@ export class OpenAIService implements IOpenAIService {
         runId?: string;
         functionCalls?: FunctionCall[];
         tokensUsed?: number;
+        modelUsed?: string;
     }> {
         try {
             // Create run with model override for images
@@ -586,16 +593,24 @@ export class OpenAIService implements IOpenAIService {
             };
             
             if (hasImage) {
-                // Override to gpt-4o for images or threads with image history
-                runParams.model = 'gpt-4o';
-                runParams.reasoning_effort = null; // Explicitly disable reasoning_effort for gpt-4o
-                logInfo('MODEL_OVERRIDE', 'Usando gpt-4o para thread con contenido visual', {
+                // Override to o4-mini for images or threads with image history (más barato)
+                runParams.model = 'o4-mini';
+                runParams.reasoning_effort = null; // Explicitly disable reasoning_effort for o4-mini
+                logInfo('MODEL_OVERRIDE', 'Usando o4-mini para thread con contenido visual', {
                     threadId,
                     assistantId: this.config.assistantId,
-                    overrideModel: 'gpt-4o',
+                    overrideModel: 'o4-mini',
                     reasoningEffort: 'null (disabled)',
                     hasCurrentImage,
                     hasImageHistory
+                });
+            } else {
+                // Usar modelo por defecto del Assistant (configurado en OpenAI Dashboard)
+                logInfo('MODEL_DEFAULT', 'Usando modelo por defecto del Assistant', {
+                    threadId,
+                    assistantId: this.config.assistantId,
+                    hasCurrentImage: hasCurrentImage,
+                    hasImageHistory: hasImageHistory
                 });
             }
             
@@ -618,7 +633,8 @@ export class OpenAIService implements IOpenAIService {
                 error: result.error,
                 runId: run.id,
                 functionCalls: result.functionCalls,
-                tokensUsed: result.tokensUsed
+                tokensUsed: result.tokensUsed,
+                modelUsed: result.modelUsed || 'unknown'
             };
 
         } catch (error) {
@@ -634,6 +650,7 @@ export class OpenAIService implements IOpenAIService {
         error?: string;
         functionCalls?: FunctionCall[];
         tokensUsed?: number;
+        modelUsed?: string;
     }> {
         let attempts = 0;
         let backoffDelay = this.config.pollingInterval;
@@ -679,7 +696,8 @@ export class OpenAIService implements IOpenAIService {
                     case 'completed':
                         return {
                             success: true,
-                            tokensUsed: run.usage?.total_tokens
+                            tokensUsed: run.usage?.total_tokens,
+                            modelUsed: run.model || 'unknown'
                         };
 
                     case 'requires_action':
@@ -703,7 +721,8 @@ export class OpenAIService implements IOpenAIService {
 
                             return {
                                 success: true,
-                                functionCalls
+                                functionCalls,
+                                modelUsed: run.model || 'unknown'
                             };
                         }
                         break;
@@ -808,16 +827,23 @@ export class OpenAIService implements IOpenAIService {
                     // Formatear respuesta para envío a OpenAI
                     const formattedForOpenAI = JSON.stringify(result);
                     
-                    // Log crítico: Resultado de función formateado para OpenAI
-                    logInfo('OPENAI_FUNC_RESULT', `Resultado de función formateado para OpenAI`, {
+                    // 📤 NUEVO: Respuesta completa compactada de función enviada a OpenAI
+                    const compactFunctionResult = formattedForOpenAI
+                        .replace(/\n/g, '\\n')
+                        .replace(/\t/g, '\\t')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    
+                    logInfo('PLUGIN_RESPONSE_FULL', 'Respuesta completa de función enviada a OpenAI', {
                         threadId,
                         runId,
                         functionName: functionCall.function.name,
                         functionId: functionCall.id,
-                        apiResult: JSON.stringify(result), // Resultado exacto de la API/función
-                        formattedForOpenAI: formattedForOpenAI, // Cómo se envía de vuelta a OpenAI
-                        preview: formattedForOpenAI.substring(0, 100) + '...',
-                        resultLength: formattedForOpenAI.length
+                        fullCompactOutput: compactFunctionResult,  // Completo compactado
+                        originalLength: formattedForOpenAI.length,
+                        compactLength: compactFunctionResult.length,
+                        isBeds24: functionCall.function.name === 'check_availability',
+                        sentToOpenAI: true
                     });
                     
                     // Log crítico: Función ejecutada exitosamente

@@ -9,7 +9,7 @@ import { logFunctionPerformance } from '../../../utils/logging/integrations';
 export async function checkAvailability(args: {
     startDate: string;
     endDate: string;
-    numAdults?: number;
+    numAdults: number;
 }): Promise<string> {
     const startTime = Date.now(); // 🔧 NUEVO: Mover startTime al scope de función
     
@@ -27,8 +27,12 @@ export async function checkAvailability(args: {
             return `Nota interna: Corrige las fechas antes de responder. Hoy es ${formattedToday}, y las fechas consultadas (${formattedStart} a ${formattedEnd}) son pasadas. Verifica con el cliente si quiso decir fechas futuras o confirma las correctas.`;
         }
 
-        // Validar número de adultos (hasta 50 para grupos grandes con múltiples aptos)
-        const numAdults = args.numAdults ?? 1; // Usar nullish coalescing para manejar 0 correctamente
+        // Validar número de adultos (OBLIGATORIO)
+        if (!args.numAdults) {
+            return `Nota interna: Falta el número de adultos. Pregunta al cliente cuántas personas se hospedarán antes de consultar disponibilidad.`;
+        }
+        
+        const numAdults = args.numAdults;
         if (numAdults < 1) {
             return `Nota interna: Número de adultos inválido (debe ser al menos 1). Pregunta al cliente cuántos adultos.`;
         }

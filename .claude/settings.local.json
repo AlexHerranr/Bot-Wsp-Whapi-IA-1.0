@@ -106,7 +106,10 @@
       "Bash(del check-db-data.ts)",
       "Bash(del fix-studio-price.ts)",
       "Bash(del \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\test-offers-endpoint.js\")",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(del test-railway-logs.js)",
+      "Bash(del:*)",
+      "Bash(RAILWAY_COMPACT_LOGS=true node test-logging-sources.js)"
     ],
     "deny": []
   }

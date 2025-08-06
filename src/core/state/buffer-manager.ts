@@ -39,13 +39,13 @@ export class BufferManager implements IBufferManager {
         buffer.lastActivity = Date.now();
         
         // Marcar como voice si el mensaje contiene audio
-        if (messageText.includes('(Audio)')) {
+        if (messageText.includes('(Nota de Voz Transcrita por Whisper)')) {
             buffer.isVoice = true;
         }
         
         // Analizar tipos de mensajes en el buffer
-        const textCount = buffer.messages.filter(msg => !msg.includes('(Audio)')).length;
-        const voiceCount = buffer.messages.filter(msg => msg.includes('(Audio)')).length;
+        const textCount = buffer.messages.filter(msg => !msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
+        const voiceCount = buffer.messages.filter(msg => msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
         const currentCombined = this.smartCombineMessages(buffer.messages);
         const preview20Words = currentCombined.split(' ').slice(0, 20).join(' ') + (currentCombined.split(' ').length > 20 ? '...' : '');
         
@@ -135,8 +135,8 @@ export class BufferManager implements IBufferManager {
         buffer.lastActivity = Date.now();
 
         // Estado del buffer para visibilidad progresiva
-        const textCount = buffer.messages.filter(msg => !msg.includes('(Audio)')).length;
-        const voiceCount = buffer.messages.filter(msg => msg.includes('(Audio)')).length;
+        const textCount = buffer.messages.filter(msg => !msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
+        const voiceCount = buffer.messages.filter(msg => msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
         
         logInfo('BUFFER_STATE_WAIT', 'Buffer esperando agrupación', {
             userId,
@@ -259,7 +259,7 @@ export class BufferManager implements IBufferManager {
                 index: idx + 1,
                 content: msg.substring(0, 100),
                 length: msg.length,
-                type: msg.includes('(Audio)') ? 'voice_transcription' : 'text'
+                type: msg.includes('(Nota de Voz Transcrita por Whisper)') ? 'voice_transcription' : 'text'
             })),
             combinedPreview: combinedText.substring(0, 200)
         });

@@ -124,6 +124,16 @@ export class MediaService implements IMediaService {
                 const duration = Date.now() - startTime;
                 const text = transcription.text || 'No se pudo transcribir el audio';
                 
+                // 📤 NUEVO: Log completo de transcripción de audio
+                const compactTranscription = text
+                    .replace(/\n/g, '\\n')
+                    .replace(/\t/g, '\\t')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                
+                const shortUserId = userId.split('@')[0];
+                this.terminalLog.info(`[AUDIO_TRANSCRIPTION_FULL] Transcripción completa: ${compactTranscription} | Usuario: ${shortUserId} | Duración: ${duration}ms | Tamaño: ${audioBuffer.byteLength} bytes`);
+                
                 return {
                     success: true,
                     type: 'audio' as MediaType,

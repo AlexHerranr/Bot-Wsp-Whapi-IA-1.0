@@ -8,6 +8,24 @@ import { DailyActionsJob } from '../jobs/daily-actions.job';
 const router = Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Cache del modelo del assistant para evitar llamadas repetitivas
+let cachedAssistantModel: string | null = null;
+
+async function getAssistantModel(): Promise<string> {
+  if (cachedAssistantModel) {
+    return cachedAssistantModel;
+  }
+  
+  try {
+    const assistant = await openai.beta.assistants.retrieve(process.env.ASSISTANT_ID!);
+    cachedAssistantModel = assistant.model;
+    return assistant.model;
+  } catch (error) {
+    console.warn('Error obteniendo modelo del Assistant, usando fallback:', error);
+    return 'gpt-4o-mini'; // Fallback seguro
+  }
+}
+
 // Endpoint para N8N: Enviar seguimiento personalizado
 router.post('/send-followup', async (req: Request, res: Response) => {
   try {
@@ -32,8 +50,11 @@ router.post('/send-followup', async (req: Request, res: Response) => {
     El mensaje debe ser directo, útil y motivar una respuesta del cliente.
     Máximo 200 palabras.`;
 
+    // Obtener modelo del Assistant configurado
+    const assistantModel = await getAssistantModel();
+    
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: assistantModel,
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 300,
       temperature: 0.7

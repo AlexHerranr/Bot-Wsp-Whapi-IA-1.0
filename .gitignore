@@ -23,6 +23,7 @@ logs/sessions/current/*.log
 logs/sessions/archived/
 logs/railway/downloads/*.txt
 logs/bot-session-*.log
+logs/Local/
 *.log
 
 # Temporary files (organized structure)

@@ -39,7 +39,7 @@ export function logOpenAIPromptSent(userId: string, threadId: string, fullConten
 }
 
 // 🔢 Integración para tokens - Capturar uso detallado
-export function logTokenUsage(userId: string, threadId: string, tokensIn: number, tokensOut: number, model: string = 'gpt-4') {
+export function logTokenUsage(userId: string, threadId: string, tokensIn: number, tokensOut: number, model: string = 'unknown') {
     const details = {
         userId,
         threadId,

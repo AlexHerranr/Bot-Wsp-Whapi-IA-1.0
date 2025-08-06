@@ -53,47 +53,62 @@ try {
     exit 1
 }
 
-# Crear directorio de salida si no existe
+# Crear directorio
 if (-not (Test-Path $OutputDir)) {
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
     Write-Host "Creado directorio: $OutputDir" -ForegroundColor Green
 }
 
-# Generar timestamp para el archivo
+# Buscar archivos
+$existingFiles = Get-ChildItem -Path $OutputDir -Filter "railway-logs-*.txt" -ErrorAction SilentlyContinue
+
+# Eliminar archivos si existen
+if ($existingFiles) {
+    Write-Host "Eliminando archivos anteriores..." -ForegroundColor Yellow
+    
+    foreach ($file in $existingFiles) {
+        Write-Host "  Procesando: $($file.Name)" -ForegroundColor Gray
+        
+        # Eliminacion normal
+        Remove-Item -Path $file.FullName -Force -ErrorAction SilentlyContinue
+        
+        # Verificar si se elimino
+        if (Test-Path $file.FullName) {
+            # Eliminacion forzada con CMD
+            Write-Host "  Intentando eliminacion forzada..." -ForegroundColor Yellow
+            $cmd = "del /f /q `"$($file.FullName)`""
+            cmd /c $cmd 2>$null
+            
+            if (Test-Path $file.FullName) {
+                Write-Host "  ERROR: BLOQUEADO - $($file.Name)" -ForegroundColor Red
+            } else {
+                Write-Host "  OK: FORZADO - $($file.Name)" -ForegroundColor Green
+            }
+        } else {
+            Write-Host "  OK: Eliminado - $($file.Name)" -ForegroundColor Green
+        }
+    }
+}
+
+# Generar archivo nuevo
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $logFile = "$OutputDir\railway-logs-$timestamp.txt"
 
 Write-Host ""
-Write-Host "Descargando logs..." -ForegroundColor Yellow
-Write-Host "   Archivo: $logFile" -ForegroundColor Gray
+Write-Host "Descargando logs por 5 minutos..." -ForegroundColor Cyan
+Write-Host "Archivo: $logFile" -ForegroundColor Gray
 
-# Descargar logs usando un método más simple
-Write-Host "Capturando logs por 30 segundos..." -ForegroundColor Cyan
-try {
-    # Usar cmd para ejecutar railway logs y redirigir la salida
-    $cmd = "railway logs > `"$logFile`" 2>&1"
-    
-    # Crear un proceso que ejecute el comando
-    $process = Start-Process -FilePath "cmd" -ArgumentList "/c", $cmd -NoNewWindow -PassThru
-    
-    # Esperar 30 segundos
-    Start-Sleep -Seconds 30
-    
-    # Terminar el proceso
-    if (-not $process.HasExited) {
-        $process.Kill()
-        $process.WaitForExit()
-    }
-    
-    if (Test-Path $logFile) {
-        $txtSize = (Get-Item $logFile).Length
-        $lineCount = (Get-Content $logFile).Count
-        Write-Host "Logs descargados: $lineCount líneas ($txtSize bytes)" -ForegroundColor Green
-    } else {
-        Write-Host "ERROR: No se pudo crear el archivo de logs" -ForegroundColor Red
-    }
-} catch {
-    Write-Host "ERROR al descargar logs: $($_.Exception.Message)" -ForegroundColor Red
+# Ejecutar railway logs
+$cmd = "railway logs > `"$logFile`" 2>&1"
+$process = Start-Process -FilePath "cmd" -ArgumentList "/c", $cmd -NoNewWindow -PassThru
+
+# Esperar 5 minutos
+Start-Sleep -Seconds 300
+
+# Terminar proceso
+if (-not $process.HasExited) {
+    $process.Kill()
+    $process.WaitForExit()
 }
 
 # Mostrar resumen
@@ -118,9 +133,9 @@ if (Test-Path $logFile) {
 
 Write-Host ""
 Write-Host "Comandos útiles:" -ForegroundColor Cyan
-Write-Host "   Get-Content $logFile | Select-String 'ERROR|WARN|FATAL'" -ForegroundColor Gray
-Write-Host "   Get-Content $logFile | Select-String 'MESSAGE_RECEIVED|MESSAGE_SENT'" -ForegroundColor Gray
-Write-Host "   Get-Content $logFile | Select-String 'OPENAI_REQUEST|OPENAI_RESPONSE'" -ForegroundColor Gray
+Write-Host "   Get-Content '$logFile' | Select-String 'ERROR|WARN|FATAL'" -ForegroundColor Gray
+Write-Host "   Get-Content '$logFile' | Select-String 'MESSAGE_RECEIVED|MESSAGE_SENT'" -ForegroundColor Gray
+Write-Host "   Get-Content '$logFile' | Select-String 'OPENAI_REQUEST|OPENAI_RESPONSE'" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Para filtrar logs específicos:" -ForegroundColor Yellow
 Write-Host "   .\enterprise-logs.ps1 50" -ForegroundColor Gray
@@ -129,4 +144,4 @@ Write-Host ""
 Write-Host "Configuración inicial:" -ForegroundColor Yellow
 Write-Host "   npm install -g @railway/cli" -ForegroundColor Gray
 Write-Host "   railway login" -ForegroundColor Gray
-Write-Host "   railway link" -ForegroundColor Gray 
+Write-Host "   railway link" -ForegroundColor Gray
