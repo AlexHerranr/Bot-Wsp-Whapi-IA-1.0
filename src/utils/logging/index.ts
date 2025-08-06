@@ -584,6 +584,74 @@ function enrichedLog(
     // }
 }
 
+// 🔧 MAPEO: Categorías a archivos fuente para debugging rápido
+const CATEGORY_TO_SOURCE: Record<string, string> = {
+    // Core Services
+    'OPENAI_PROCESSING_START': 'openai',
+    'OPENAI_RUN_COMPLETED': 'openai', 
+    'OPENAI_MESSAGE_SENT': 'openai',
+    'OPENAI_RESPONSE_CONTENT': 'openai',
+    'OPENAI_PROMPT': 'openai',
+    'TOKENS_METRIC': 'openai',
+    
+    // Database
+    'DB_QUERY': 'database',
+    'DATABASE_CONNECTION': 'database',
+    'THREAD_SAVED': 'database',
+    'THREAD_REUSE': 'database',
+    'THREAD_METRIC': 'database',
+    'USER_ENRICHMENT': 'database',
+    
+    // Beds24 API
+    'BEDS24_RAW': 'beds24',
+    'BEDS24_REQUEST': 'beds24',
+    'BEDS24_RESPONSE_DETAIL': 'beds24',
+    'BEDS24_CLIENT': 'beds24',
+    'HOTEL_AVAILABILITY': 'beds24',
+    
+    // Cache System
+    'CACHE_HIT': 'cache',
+    'CACHE_MISS': 'cache', 
+    'CACHE_METRIC': 'cache',
+    
+    // Buffer System
+    'BUFFER_GROUPED': 'buffer',
+    'BUFFER_STATE_ADD': 'buffer',
+    'BUFFER_TIMER_CANCEL': 'buffer',
+    'BUFFER_METRIC': 'buffer',
+    
+    // Function System
+    'FUNCTION_CALLING_START': 'functions',
+    'FUNCTION_COMPLETED': 'functions',
+    'FUNC_PERF': 'functions',
+    'CHECK_AVAILABILITY_ERROR': 'functions',
+    
+    // Webhook Processing
+    'WEBHOOK_RECEIVED': 'webhook',
+    'MESSAGE_RECEIVED': 'webhook',
+    'MESSAGE_PROCESS': 'webhook',
+    'MESSAGE_SENT': 'webhook',
+    
+    // System Metrics
+    'SYS_METRIC': 'system',
+    'USAGE_STATS': 'system',
+    'RATE_WARN': 'system',
+    'LATENCY_METRIC': 'system',
+    
+    // WhatsApp API
+    'WHAPI_CHUNK_SEND': 'whapi',
+    'INDICATOR_SENT': 'whapi',
+    'TYPING_FLAG_RESET': 'whapi',
+    
+    // Error Handling
+    'FALLBACK': 'error-handler',
+    'HIGH_LATENCY': 'performance'
+};
+
+function getSourceFromCategory(category: string): string {
+    return CATEGORY_TO_SOURCE[category] || 'unknown';
+}
+
 // 🔧 NUEVO: Formato compacto para Railway (solo lo esencial)
 function formatCompactRailwayLog(category: string, message: string, details: any, level: LogLevel): string {
     if (!RAILWAY_COMPACT_MODE) {
@@ -607,53 +675,57 @@ function formatCompactRailwayLog(category: string, message: string, details: any
     const threadId = details?.threadId ? truncateId(details.threadId, 'th_') : null;
     const messageId = details?.messageId ? truncateId(details.messageId, 'msg_') : null;
     
+    // 🔧 NUEVO: Agregar fuente del archivo para debugging rápido
+    const source = getSourceFromCategory(category);
+    const categoryWithSource = `${category}:${source}`;
+    
     // Formateo específico por categoría (solo lo VITAL)
     switch (category) {
         case 'MESSAGE_RECEIVED':
             const msgType = details?.messageType || 'text';
             const preview = details?.body ? `"${details.body.substring(0, 20)}..."` : 
                            details?.transcription ? `🔊"${details.transcription.substring(0, 20)}..."` : '';
-            return `${timestamp} [MSG_RX] ${userId}: ${msgType} ${preview}`;
+            return `${timestamp} [MSG_RX:${source}] ${userId}: ${msgType} ${preview}`;
             
         case 'AUDIO_TRANSCRIBED':
             const transcription = details?.transcription ? `"${details.transcription.substring(0, 30)}..."` : '';
-            return `${timestamp} [AUDIO] ${userId}: ${transcription}`;
+            return `${timestamp} [AUDIO:${source}] ${userId}: ${transcription}`;
             
         case 'BUFFER_GROUPED':
             const msgCount = details?.messageCount || 1;
             const totalLen = details?.totalLength || 0;
-            return `${timestamp} [BUFFER] ${userId}: ${msgCount}msg, ${totalLen}ch`;
+            return `${timestamp} [BUFFER:${source}] ${userId}: ${msgCount}msg, ${totalLen}ch`;
             
         case 'OPENAI_PROCESSING_START':
-            return `${timestamp} [AI_START] ${userId} | ${threadId}`;
+            return `${timestamp} [AI_START:${source}] ${userId} | ${threadId}`;
             
         case 'OPENAI_RUN_COMPLETED':
             const aiDuration = details?.processingTime ? `${Math.round(details.processingTime/1000)}s` : '';
             const tokens = details?.tokensUsed ? `${details.tokensUsed}t` : '';
-            return `${timestamp} [AI_DONE] ${userId} | ${threadId} | ${aiDuration} | ${tokens}`;
+            return `${timestamp} [AI_DONE:${source}] ${userId} | ${threadId} | ${aiDuration} | ${tokens}`;
             
         case 'MESSAGE_SENT':
             const respLen = details?.responseLength || 0;
             const procTime = details?.processingTime ? `${Math.round(details.processingTime/1000)}s` : '';
-            return `${timestamp} [SENT] ${userId} | ${respLen}ch | ${procTime}`;
+            return `${timestamp} [SENT:${source}] ${userId} | ${respLen}ch | ${procTime}`;
             
         case 'WEBHOOK_RECEIVED':
-            return `${timestamp} [WEBHOOK] ${details?.data || 'unknown'}`;
+            return `${timestamp} [WEBHOOK:${source}] ${details?.data || 'unknown'}`;
             
         case 'BEDS24_REQUEST':
-            return `${timestamp} [BEDS24] API request`;
+            return `${timestamp} [BEDS24:${source}] API request`;
             
         case 'BEDS24_RESPONSE_DETAIL':
             const rooms = details?.availableRooms?.length || 0;
-            return `${timestamp} [BEDS24] ${rooms} rooms found`;
+            return `${timestamp} [BEDS24:${source}] ${rooms} rooms found`;
             
         case 'MESSAGE_CHUNKS':
             const chunks = details?.totalChunks || 1;
-            return `${timestamp} [CHUNKS] ${userId}: ${chunks} parts`;
+            return `${timestamp} [CHUNKS:${source}] ${userId}: ${chunks} parts`;
             
         case 'FUNCTION_CALLING_START':
             const funcName = details?.functionName || 'unknown';
-            return `${timestamp} [FUNC] ${funcName}()`;
+            return `${timestamp} [FUNC:${source}] ${funcName}()`;
             
         // 🔧 NUEVOS: Logs técnicos compactos específicos
         case 'BEDS24_RAW':
@@ -667,7 +739,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const beds24Duration = details?.duration || '0ms';
             const success = details?.success || false;
             const roomCount = rawData.length || 0;
-            return `${timestamp} [BEDS24_RAW] ${userId}: success:${success} rooms:${roomCount} offers:${roomCount} data:[${roomsData}] status:${status} dur:${beds24Duration} err:${success ? 0 : 1}`;
+            return `${timestamp} [BEDS24_RAW:${source}] ${userId}: success:${success} rooms:${roomCount} offers:${roomCount} data:[${roomsData}] status:${status} dur:${beds24Duration} err:${success ? 0 : 1}`;
 
         case 'OPENAI_PROMPT':
             const promptLen = details?.length || 0;
@@ -686,7 +758,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
                 msgMatch[0].replace('Mensaje del cliente:', '').trim().substring(0, 60)
             ].filter(Boolean).join('|').replace(/\n/g, ' ');
             
-            return `${timestamp} [OPENAI_PROMPT] ${userId}: thread:${threadIdPrompt} len:${promptLen} content:"${compactContent}"`;
+            return `${timestamp} [OPENAI_PROMPT:${source}] ${userId}: thread:${threadIdPrompt} len:${promptLen} content:"${compactContent}"`;
 
         case 'TOKENS_METRIC':
             const tokensIn = details?.tokensIn || details?.inputTokens || 0;
@@ -694,7 +766,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const tokensTotal = details?.totalTokens || (tokensIn + tokensOut);
             const model = details?.model || 'gpt-4';
             const threadIdToken = details?.threadId ? truncateId(details.threadId, 'th_') : 'none';
-            return `${timestamp} [TOKENS_METRIC] ${userId}: in:${tokensIn} out:${tokensOut} total:${tokensTotal} model:${model} thread:${threadIdToken}`;
+            return `${timestamp} [TOKENS_METRIC:${source}] ${userId}: in:${tokensIn} out:${tokensOut} total:${tokensTotal} model:${model} thread:${threadIdToken}`;
 
         case 'LATENCY_METRIC':
             const openaiLat = details?.openaiLatency || details?.openaiTime || 0;
@@ -702,7 +774,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const whapiLat = details?.whapiLatency || details?.whapiTime || 0;
             const dbLat = details?.dbLatency || details?.dbTime || 0;
             const totalLat = details?.totalLatency || (openaiLat + beds24Lat + whapiLat + dbLat);
-            return `${timestamp} [LATENCY_METRIC] ${userId}: openai:${openaiLat}ms beds24:${beds24Lat}ms whapi:${whapiLat}ms db:${dbLat}ms total:${totalLat}ms`;
+            return `${timestamp} [LATENCY_METRIC:${source}] ${userId}: openai:${openaiLat}ms beds24:${beds24Lat}ms whapi:${whapiLat}ms db:${dbLat}ms total:${totalLat}ms`;
 
         case 'USAGE_STATS':
             const msgsPerHour = details?.messagesPerHour || 0;
@@ -710,14 +782,14 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const avgLen = details?.averageLength || 0;
             const funcsCount = details?.functionsExecuted || 0;
             const errorsCount = details?.errors || 0;
-            return `${timestamp} [USAGE_STATS] sys: msgs:${msgsPerHour}/hr chunks:${chunksTotal} avgLen:${avgLen}ch funcs:${funcsCount} errs:${errorsCount}`;
+            return `${timestamp} [USAGE_STATS:${source}] sys: msgs:${msgsPerHour}/hr chunks:${chunksTotal} avgLen:${avgLen}ch funcs:${funcsCount} errs:${errorsCount}`;
 
         case 'DB_QUERY':
             const queryType = details?.type || details?.operation || 'unknown';
             const queryTime = details?.time || details?.duration || 0;
             const queryResult = details?.result || details?.affected || 'unknown';
             const cacheUpdated = details?.cacheUpdated ? 'updated' : 'no_change';
-            return `${timestamp} [DB_QUERY] ${userId}: type:${queryType} time:${queryTime}ms res:${queryResult} cache:${cacheUpdated}`;
+            return `${timestamp} [DB_QUERY:${source}] ${userId}: type:${queryType} time:${queryTime}ms res:${queryResult} cache:${cacheUpdated}`;
 
         case 'CACHE_METRIC':
             const hitRate = details?.hitRate || details?.hits / (details?.hits + details?.misses) * 100 || 0;
@@ -725,7 +797,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const cacheSize = details?.size || details?.sizeBytes || 0;
             const users = details?.users || details?.userCount || 0;
             const evictions = details?.evictions || details?.evicted || 0;
-            return `${timestamp} [CACHE_METRIC] sys: hits:${Math.round(hitRate)}% misses:${Math.round(missRate)}% size:${Math.round(cacheSize/1024/1024)}MB users:${users} evicts:${evictions}`;
+            return `${timestamp} [CACHE_METRIC:${source}] sys: hits:${Math.round(hitRate)}% misses:${Math.round(missRate)}% size:${Math.round(cacheSize/1024/1024)}MB users:${users} evicts:${evictions}`;
 
         case 'BUFFER_METRIC':
             const activeBuffers = details?.active || details?.activeBuffers || 0;
@@ -733,7 +805,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const abandonedBuffers = details?.abandoned || details?.abandonedBuffers || 0;
             const voiceMessages = details?.voice || details?.voiceCount || 0;
             const textMessages = details?.text || details?.textCount || 0;
-            return `${timestamp} [BUFFER_METRIC] sys: active:${activeBuffers} merged:${mergedBuffers} abandoned:${abandonedBuffers} voice:${voiceMessages} text:${textMessages}`;
+            return `${timestamp} [BUFFER_METRIC:${source}] sys: active:${activeBuffers} merged:${mergedBuffers} abandoned:${abandonedBuffers} voice:${voiceMessages} text:${textMessages}`;
 
         case 'THREAD_METRIC':
             const threadIdMetric = details?.threadId ? truncateId(details.threadId, 'th_') : 'none';
@@ -741,7 +813,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const tokenCountThread = details?.tokenCount || details?.tokens || 0;
             const reused = details?.reused || details?.wasReused || false;
             const ageMinutes = details?.age || details?.ageMinutes || 0;
-            return `${timestamp} [THREAD_METRIC] ${userId}: id:${threadIdMetric} msgs:${msgCountThread} tokens:${tokenCountThread} reused:${reused} age:${ageMinutes}m`;
+            return `${timestamp} [THREAD_METRIC:${source}] ${userId}: id:${threadIdMetric} msgs:${msgCountThread} tokens:${tokenCountThread} reused:${reused} age:${ageMinutes}m`;
 
         case 'FUNC_PERF':
             const funcNamePerf = details?.functionName || 'unknown';
@@ -750,7 +822,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const dbTime = details?.dbTime || details?.databaseTime || 0;
             const callsCount = details?.calls || details?.callsCount || 1;
             const funcErrors = details?.errors || details?.errorCount || 0;
-            return `${timestamp} [FUNC_PERF] ${userId}: ${funcNamePerf}:${funcDuration}ms api:${apiTime}ms db:${dbTime}ms calls:${callsCount} errs:${funcErrors}`;
+            return `${timestamp} [FUNC_PERF:${source}] ${userId}: ${funcNamePerf}:${funcDuration}ms api:${apiTime}ms db:${dbTime}ms calls:${callsCount} errs:${funcErrors}`;
 
         case 'SYS_METRIC':
             const memUsed = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
@@ -760,7 +832,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const uptimeHours = Math.floor(process.uptime() / 3600);
             const uptimeMinutes = Math.floor((process.uptime() % 3600) / 60);
             const activeUsers = details?.activeUsers || details?.users || 0;
-            return `${timestamp} [SYS_METRIC] sys: mem:${memUsed}/${memTotal}MB cpu:${cpuUsage}% conn:${connections} uptime:${uptimeHours}h${uptimeMinutes}m activeUsers:${activeUsers}`;
+            return `${timestamp} [SYS_METRIC:${source}] sys: mem:${memUsed}/${memTotal}MB cpu:${cpuUsage}% conn:${connections} uptime:${uptimeHours}h${uptimeMinutes}m activeUsers:${activeUsers}`;
 
         case 'RATE_WARN':
             const openaiRate = details?.openaiRate || 0;
@@ -768,36 +840,36 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const whapiRate = details?.whapiRate || 0;
             const whapiLimit = details?.whapiLimit || 1000;
             const beds24Status = details?.beds24Status || 'ok';
-            return `${timestamp} [RATE_WARN] sys: openai:${Math.round(openaiRate/openaiLimit*100)}%(${openaiRate}/${openaiLimit}rpm) whapi:${Math.round(whapiRate/whapiLimit*100)}%(${whapiRate}/${whapiLimit}rpm) beds24:${beds24Status}`;
+            return `${timestamp} [RATE_WARN:${source}] sys: openai:${Math.round(openaiRate/openaiLimit*100)}%(${openaiRate}/${openaiLimit}rpm) whapi:${Math.round(whapiRate/whapiLimit*100)}%(${whapiRate}/${whapiLimit}rpm) beds24:${beds24Status}`;
 
         case 'FALLBACK':
             const fallbackReason = details?.reason || details?.trigger || 'unknown';
             const fallbackAction = details?.action || details?.recovery || 'unknown';
             const retryCount = details?.retry || details?.retries || 0;
-            return `${timestamp} [FALLBACK] ${userId}: reason:${fallbackReason} action:${fallbackAction} retry:${retryCount}`;
+            return `${timestamp} [FALLBACK:${source}] ${userId}: reason:${fallbackReason} action:${fallbackAction} retry:${retryCount}`;
             
         case 'CACHE_HIT':
         case 'CACHE_MISS':
             const cacheResult = category === 'CACHE_HIT' ? 'HIT' : 'MISS';
-            return `${timestamp} [CACHE_${cacheResult}] ${userId}`;
+            return `${timestamp} [CACHE_${cacheResult}:${source}] ${userId}`;
             
         case 'THREAD_REUSE':
         case 'NEW_THREAD_CREATED':
             const action = category === 'THREAD_REUSE' ? 'REUSE' : 'NEW';
-            return `${timestamp} [THR_${action}] ${threadId}`;
+            return `${timestamp} [THR_${action}:${source}] ${threadId}`;
             
         case 'LOG_MILESTONE':
             const milestone = details?.logCount || railwayLogCounter;
-            return `${timestamp} [MILESTONE] Line ${milestone} reached`;
+            return `${timestamp} [MILESTONE:${source}] Line ${milestone} reached`;
             
         case 'ERROR':
             const errorMsg = details?.error ? details.error.substring(0, 50) + '...' : message;
-            return `${timestamp} [ERROR] ${userId || 'system'}: ${errorMsg}`;
+            return `${timestamp} [ERROR:${source}] ${userId || 'system'}: ${errorMsg}`;
             
         default:
             // Formato genérico ultra-compacto
             const genericMsg = message.length > 40 ? message.substring(0, 40) + '...' : message;
-            return `${timestamp} [${category.substring(0, 8)}] ${userId || 'sys'}: ${genericMsg}`;
+            return `${timestamp} [${category.substring(0, 8)}:${source}] ${userId || 'sys'}: ${genericMsg}`;
     }
 }
 
