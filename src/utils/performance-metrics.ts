@@ -216,6 +216,25 @@ export class PerformanceMonitor {
         }
     }
     
+    // Registrar cleanup de memoria
+    recordCleanup(cleanedCount: number, type: 'buffers' | 'users' | 'cache' = 'users') {
+        if (cleanedCount > 5) {
+            logWarning('HIGH_CLEANUP_DETECTED', `Alto número de ${type} limpiados`, {
+                count: cleanedCount,
+                type,
+                recommendation: 'Verificar patrones de uso y memory leaks'
+            });
+        }
+        
+        if (cleanedCount > 0) {
+            logInfo('MEMORY_CLEANUP', `Cleanup de ${type} ejecutado`, {
+                count: cleanedCount,
+                type,
+                reason: 'scheduled_cleanup'
+            });
+        }
+    }
+
     // Reiniciar métricas
     reset() {
         this.metrics = {

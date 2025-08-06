@@ -940,6 +940,10 @@ ${message}`}`;
                     reason: 'memory_optimization_100plus_users',
                     totalActiveUsers: this.userManager.getStats().totalUsers
                 });
+                
+                // Integrar con métricas de performance
+                const { performanceMonitor } = require('../utils/performance-metrics');
+                performanceMonitor.recordCleanup(cleaned, 'users');
             }
         }, 10 * 60 * 1000);
 

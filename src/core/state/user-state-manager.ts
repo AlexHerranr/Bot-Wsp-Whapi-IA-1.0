@@ -1,6 +1,7 @@
 // src/core/state/user-state-manager.ts
 import { UserState } from '../../shared/types';
 import { LRUCache } from 'lru-cache';
+import { logInfo, logWarning } from '../../utils/logging';
 
 export class UserManager {
     // Usamos un LRUCache para limitar la memoria y auto-limpiar usuarios inactivos.
@@ -83,9 +84,6 @@ export class UserManager {
         for (const userId of usersToDelete) {
             const state = this.userStates.get(userId);
             if (state) {
-                // Usar sistema de logging del bot para consistencia
-                const { logInfo } = require('../../utils/logging');
-                
                 // Log explícito del state que se va a limpiar
                 logInfo('STATE_CLEANED', 'Limpiando user state inactivo optimizado', {
                     userId,
