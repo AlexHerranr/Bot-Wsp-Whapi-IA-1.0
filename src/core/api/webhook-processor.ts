@@ -30,10 +30,16 @@ export class WebhookProcessor {
             event_type: body.event_type,
             channel_id: body.channel_id,
             has_messages: !!body.messages,
+            messages_count: body.messages?.length || 0,
             has_presences: !!body.presences,
+            presences_count: body.presences?.length || 0,
             has_statuses: !!body.statuses,
             has_health: !!body.health,
-            body_keys: Object.keys(body || {}).slice(0, 10)
+            body_keys: Object.keys(body || {}).slice(0, 15),
+            // Muestra una muestra del primer mensaje si existe
+            first_message_type: body.messages?.[0]?.type,
+            first_message_from: body.messages?.[0]?.from,
+            first_message_from_me: body.messages?.[0]?.from_me
         });
         
         // FILTRO MUY ESPECÍFICO: Solo ignorar webhooks de salud sin datos útiles
