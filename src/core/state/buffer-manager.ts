@@ -133,12 +133,14 @@ export class BufferManager implements IBufferManager {
         // Si buffer existe pero está vacío, no hacer nada (no logs para reducir ruido)
     }
 
-    // Método unificado: "Last event wins" - cancela timer anterior y establece nuevo timer de 5s
+    // Método unificado: "Last event wins" - cancela timer anterior y establece nuevo timer
     private setOrExtendTimer(userId: string, reason: string = 'message'): void {
         const buffer = this.buffers.get(userId);
         if (!buffer) return;
 
-        const delay = BUFFER_DELAY_MS; // Siempre 5s unificado
+        // Ajustar delay según contexto: voice más rápido (3s), resto 5s
+        const isVoiceContext = buffer.isVoice || reason === 'voice' || reason === 'activity';
+        const delay = isVoiceContext ? 3000 : BUFFER_DELAY_MS; // 3s para voz, 5s para texto
 
         // Cancelar timer anterior si existe (last event wins)
         if (buffer.timer) {
@@ -209,8 +211,18 @@ export class BufferManager implements IBufferManager {
 
         // Chequeo anti-concurrent: Si run activo, retrasar (en producción, poll OpenAI run status)
         if (this.activeRuns.get(userId)) {
-            logWarning('BUFFER_DELAYED_ACTIVE_RUN', 'Retrasando por run activo', { userId });
-            this.setOrExtendTimer(userId, 'activity'); // Re-extender
+            logWarning('BUFFER_DELAYED_ACTIVE_RUN', 'Retrasando por run activo', { 
+                userId,
+                userName: buffer.userName,
+                pendingMessages: buffer.messages.length 
+            });
+            // Usar timer más corto (1.5s) cuando hay run activo para verificar más frecuentemente
+            if (buffer.timer) {
+                clearTimeout(buffer.timer);
+            }
+            buffer.timer = setTimeout(() => {
+                this.processBuffer(userId);
+            }, 1500); // Solo 1.5s cuando esperando que termine un run
             return;
         }
         
@@ -283,7 +295,27 @@ export class BufferManager implements IBufferManager {
             });
         } finally {
             this.activeRuns.delete(userId); // Liberar
-            this.clearBuffer(userId);
+            
+            // CRÍTICO: Verificar si llegaron mensajes nuevos mientras procesábamos
+            const currentBuffer = this.buffers.get(userId);
+            if (currentBuffer && currentBuffer.messages.length > 0) {
+                // Hay mensajes pendientes que llegaron durante el procesamiento
+                logInfo('BUFFER_PENDING_AFTER_RUN', 'Mensajes pendientes detectados después del run', {
+                    userId,
+                    userName: currentBuffer.userName || 'Usuario',
+                    pendingCount: currentBuffer.messages.length,
+                    preview: currentBuffer.messages[0]?.substring(0, 50)
+                });
+                
+                // Re-establecer timer para procesar los mensajes pendientes
+                // Usar un delay pequeño para evitar procesar inmediatamente
+                setTimeout(() => {
+                    this.setOrExtendTimer(userId, 'pending_after_run');
+                }, 1000);
+            } else {
+                // No hay mensajes pendientes, limpiar buffer normalmente
+                this.clearBuffer(userId);
+            }
         }
     }
 
