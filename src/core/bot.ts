@@ -745,6 +745,17 @@ export class CoreBot {
             // Also mark error in buffer manager for timer extension
             this.bufferManager.markRecentError(userId);
             
+            // Verificar orphan processing states después de error
+            if (this.userManager.getStats().activeProcessing > this.userManager.getStats().totalUsers) {
+                logWarning('ORPHAN_PROCESSING_DETECTED', 'Estados de procesamiento huérfanos detectados post-error', {
+                    activeProcessing: this.userManager.getStats().activeProcessing,
+                    totalUsers: this.userManager.getStats().totalUsers,
+                    orphans: this.userManager.getStats().activeProcessing - this.userManager.getStats().totalUsers,
+                    userId,
+                    reason: 'error_cleanup_check'
+                });
+            }
+            
             this.terminalLog.error(`Error en el callback del buffer para ${userName}: ${error.message}`);
             
             // Limpiar buffer si es error de 'Run Active' para evitar acumulación
