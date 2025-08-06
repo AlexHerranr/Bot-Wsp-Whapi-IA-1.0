@@ -337,7 +337,8 @@ export class WebhookProcessor {
                         userName,
                         chatId,
                         messageType: 'voice',
-                        messageId: message.id
+                        messageId: message.id,
+                        hasQuoted: !!(message.context && message.context.quoted_id)
                     });
                     
                     // Configurar timer de 8s para voice
@@ -346,6 +347,21 @@ export class WebhookProcessor {
                     if (audioLink) {
                         const result = await this.mediaService.legacyTranscribeAudio(audioLink, userId, userName, message.id);
                         if (result.success && result.result) {
+                            let finalMessage = result.result;
+                            
+                            // CRÍTICO: Detectar si es una respuesta/quote y formatear para OpenAI (igual que con texto)
+                            if (message.context && message.context.quoted_id) {
+                                const quotedContent = message.context.quoted_content?.body || '[mensaje citado]';
+                                finalMessage = `Cliente responde con nota de voz a este mensaje: ${quotedContent}\n\nTranscripción de la nota de voz: ${result.result}`;
+                                
+                                logInfo('VOICE_QUOTED_CONTEXT', 'Nota de voz con contexto quoted', {
+                                    userId,
+                                    userName,
+                                    quotedId: message.context.quoted_id,
+                                    quotedPreview: quotedContent.substring(0, 50)
+                                });
+                            }
+                            
                             this.terminalLog.message(userName, `(Nota de Voz Transcrita por Whisper)\n🎤 ${result.result}`);
                             
                             // Log técnico de sesión - transcripción exitosa
@@ -353,10 +369,11 @@ export class WebhookProcessor {
                                 userId,
                                 userName,
                                 messageId: message.id,
-                                transcription: result.result.substring(0, 100)
+                                transcription: result.result.substring(0, 100),
+                                hasQuoted: !!(message.context && message.context.quoted_id)
                             });
                             
-                            this.bufferManager.addMessage(userId, result.result, chatId, userName);
+                            this.bufferManager.addMessage(userId, finalMessage, chatId, userName);
                         } else {
                             this.terminalLog.voiceError(userName, result.error || 'Transcription failed');
                             

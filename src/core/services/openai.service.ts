@@ -260,11 +260,16 @@ export class OpenAIService implements IOpenAIService {
 
             // Log del contenido completo de respuesta de OpenAI para debugging
             if (response && response.length > 0) {
-                const containsAudioError = response.includes('transcripción') || 
-                                         response.includes('nota de voz') || 
-                                         response.includes('audio') ||
-                                         response.includes('repetirlo') ||
-                                         response.includes('escribirlo');
+                // Detección más específica de errores reales de audio
+                // Solo detectar cuando OpenAI específicamente dice que no puede procesar
+                const lowerResponse = response.toLowerCase();
+                const containsAudioError = (
+                    (lowerResponse.includes('no puedo procesar') && (lowerResponse.includes('audio') || lowerResponse.includes('nota de voz'))) ||
+                    (lowerResponse.includes('no puedo escuchar') && lowerResponse.includes('audio')) ||
+                    (lowerResponse.includes('no tengo la capacidad') && lowerResponse.includes('audio')) ||
+                    (lowerResponse.includes('soy un asistente de texto') && lowerResponse.includes('audio')) ||
+                    (lowerResponse.includes('por favor envía') && lowerResponse.includes('transcripción'))
+                );
                 
                 logInfo('OPENAI_RESPONSE_CONTENT', 'Respuesta completa de OpenAI', {
                     userId,
@@ -277,7 +282,7 @@ export class OpenAIService implements IOpenAIService {
                     timestamp: new Date().toISOString()
                 });
                 
-                // Advertencia específica si OpenAI dice que no puede procesar audio
+                // Advertencia específica solo si realmente es un error de procesamiento de audio
                 if (containsAudioError) {
                     logWarning('OPENAI_AUDIO_PROCESSING_ERROR', 'OpenAI respondió que no puede procesar audio/transcripción', {
                         userId,
