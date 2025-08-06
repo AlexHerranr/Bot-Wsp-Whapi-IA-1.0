@@ -1550,8 +1550,9 @@ function formatSimpleConsoleLog(category: string, message: string, details: any,
 
 // Exportar funciones de logging específicas y genéricas
 export const logInfo = (cat: string, msg: string, details?: Record<string, any>, sourceFile?: string) => {
-    if (cat === 'MESSAGE_BUFFERED' && details?.bufferCount <= 1 && IS_PRODUCTION) return;  // Omitir si bufferCount <=1 en prod
-    if (cat === 'BUFFER_TIMER_RESET' && IS_PRODUCTION) return;  // Omitir resets en prod
+    // IMPORTANTE: No omitir logs críticos en Railway - se necesitan para monitoreo
+    // Solo omitir logs muy verbosos específicos
+    if (cat === 'BUFFER_TIMER_EXTEND' && IS_PRODUCTION) return;  // Solo omitir extensiones de timer
     enrichedLog(cat, msg, details, 'INFO', sourceFile);
 };
 export const logSuccess = (cat: string, msg: string, details?: Record<string, any>, sourceFile?: string) => enrichedLog(cat, msg, details, 'SUCCESS', sourceFile);
