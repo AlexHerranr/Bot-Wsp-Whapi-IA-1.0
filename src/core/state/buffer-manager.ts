@@ -2,7 +2,7 @@
 import { MessageBuffer } from '../../shared/types';
 import { IBufferManager } from '../../shared/interfaces';
 import { BUFFER_DELAY_MS, MAX_BUFFER_MESSAGES } from '../utils/constants';
-import { logInfo, logSuccess, logWarning } from '../../utils/logging';
+import { logInfo, logSuccess, logWarning, logDebug } from '../../utils/logging';
 
 export class BufferManager implements IBufferManager {
     private buffers: Map<string, MessageBuffer> = new Map();
