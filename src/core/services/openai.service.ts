@@ -72,7 +72,15 @@ export class OpenAIService implements IOpenAIService {
         this.currentChatId = chatId;
 
         // Control de concurrencia para escalabilidad
-        while (OpenAIService.activeOpenAICalls > OpenAIService.MAX_CONCURRENT_CALLS) {
+        while (OpenAIService.activeOpenAICalls >= OpenAIService.MAX_CONCURRENT_CALLS) {
+            logWarning('CONCURRENCY_LIMIT', 'Límite de concurrencia OpenAI alcanzado', {
+                userId,
+                userName,
+                activeCalls: OpenAIService.activeOpenAICalls,
+                maxCalls: OpenAIService.MAX_CONCURRENT_CALLS,
+                waitingUsers: OpenAIService.activeOpenAICalls - OpenAIService.MAX_CONCURRENT_CALLS + 1
+            });
+            
             logWarning('OPENAI_CONCURRENCY_WAIT', 'Esperando por límite de concurrencia OpenAI', {
                 userId,
                 userName,
@@ -83,6 +91,16 @@ export class OpenAIService implements IOpenAIService {
         }
         
         OpenAIService.activeOpenAICalls++;
+
+        // Log de debugging para monitorear concurrencia
+        logInfo('OPENAI_CONCURRENCY_STATUS', 'Estado de concurrencia OpenAI', {
+            userId,
+            userName,
+            activeCalls: OpenAIService.activeOpenAICalls,
+            maxCalls: OpenAIService.MAX_CONCURRENT_CALLS,
+            utilizationPercent: Math.round((OpenAIService.activeOpenAICalls / OpenAIService.MAX_CONCURRENT_CALLS) * 100),
+            queuePosition: OpenAIService.activeOpenAICalls <= OpenAIService.MAX_CONCURRENT_CALLS ? 'processing' : 'queued'
+        });
 
         try {
             // Log crítico: Inicio de procesamiento OpenAI
@@ -95,7 +113,8 @@ export class OpenAIService implements IOpenAIService {
                 imageCaption: imageMessage?.caption || '',
                 assistantId: this.config.assistantId,
                 existingThreadId: existingThreadId || 'none',
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                concurrencyUtilization: Math.round((OpenAIService.activeOpenAICalls / OpenAIService.MAX_CONCURRENT_CALLS) * 100)
             });
 
             // Step 1: Get or create thread (validate existing thread first)
@@ -738,23 +757,42 @@ export class OpenAIService implements IOpenAIService {
                         if (run.required_action?.type === 'submit_tool_outputs') {
                             const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
                             
-                            // Enviar mensaje interino si detectamos check_availability
-                            if (toolCalls.some(tc => tc.function.name === 'check_availability') && this.currentChatId) {
+                            // Lista de funciones que requieren mensajes interinos
+                            const slowFunctions = ['check_availability', 'search_rooms', 'calculate_pricing', 'process_booking'];
+                            const functionInterimMessages = {
+                                'check_availability': "Permíteme y consulto en nuestro sistema...",
+                                'search_rooms': "Buscando habitaciones disponibles...",
+                                'calculate_pricing': "Calculando precios y ofertas...",
+                                'process_booking': "Procesando tu reserva..."
+                            };
+                            
+                            // Enviar mensaje interino para funciones lentas
+                            const slowFunction = toolCalls.find(tc => slowFunctions.includes(tc.function.name));
+                            if (slowFunction && this.currentChatId) {
                                 try {
                                     // Solo enviar si hay un WhatsappService disponible
                                     if (this.whatsappService) {
+                                        const interimMessage = functionInterimMessages[slowFunction.function.name] || "Un momento por favor...";
                                         await this.whatsappService.sendWhatsAppMessage(
                                             this.currentChatId, 
-                                            "Permíteme y consulto en nuestro sistema...", 
+                                            interimMessage, 
                                             { lastInputVoice: false }, 
                                             false
                                         );
+                                        
+                                        logInfo('INTERIM_MESSAGE_SENT', 'Mensaje interino enviado automáticamente', {
+                                            threadId,
+                                            runId,
+                                            functionName: slowFunction.function.name,
+                                            message: interimMessage
+                                        });
                                     }
                                 } catch (error) {
                                     // No bloquear por error en mensaje interino
                                     logWarning('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje interino', {
                                         threadId,
                                         runId,
+                                        functionName: slowFunction?.function.name,
                                         error: error instanceof Error ? error.message : String(error)
                                     });
                                 }

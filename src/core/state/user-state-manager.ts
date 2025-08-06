@@ -66,11 +66,68 @@ export class UserManager {
         return this.getOrCreateState(userId, undefined, userName);
     }
 
-    public cleanup(): number {
-        const beforeSize = this.userStates.size;
-        this.userStates.clear();
-        this.activeProcessing.clear();
-        return beforeSize;
+    public cleanup(maxAge: number = 15 * 60 * 1000): number {
+        // Para LRUCache, implementar cleanup manual si es necesario
+        const now = Date.now();
+        let cleaned = 0;
+        const usersToDelete: string[] = [];
+
+        // Iterar sobre todas las entradas para encontrar las expiradas
+        this.userStates.forEach((state, userId) => {
+            if (state.lastActivity && now - state.lastActivity > maxAge) {
+                usersToDelete.push(userId);
+            }
+        });
+
+        // Limpiar usuarios expirados con logs explícitos
+        for (const userId of usersToDelete) {
+            const state = this.userStates.get(userId);
+            if (state) {
+                // Usar sistema de logging del bot para consistencia
+                const { logInfo } = require('../../utils/logging');
+                
+                // Log explícito del state que se va a limpiar
+                logInfo('STATE_CLEANED', 'Limpiando user state inactivo optimizado', {
+                    userId,
+                    age: now - (state.lastActivity || 0),
+                    hadVoiceFlag: state.lastInputVoice || false,
+                    hadTypingFlag: state.lastTyping > 0,
+                    lastActivity: state.lastActivity ? new Date(state.lastActivity).toISOString() : 'unknown',
+                    reason: 'expired_inactivity_optimized',
+                    cleanupInterval: '10min_for_100plus_users'
+                });
+                
+                // Reset explícito de flags antes de borrar con logging mejorado
+                if (state.lastInputVoice) {
+                    logInfo('VOICE_FLAG_CLEANUP', 'Reset flag de voz en cleanup optimizado', {
+                        userId,
+                        reason: 'state_cleanup_memory_optimization',
+                        previousVoiceState: true
+                    });
+                }
+                
+                if (state.lastTyping > 0) {
+                    logInfo('TYPING_FLAG_CLEANUP', 'Reset flag de typing en cleanup optimizado', {
+                        userId,
+                        lastTyping: state.lastTyping,
+                        reason: 'state_cleanup_memory_optimization',
+                        previousTypingState: state.lastTyping
+                    });
+                }
+            }
+            
+            this.userStates.delete(userId);
+            cleaned++;
+        }
+
+        // También limpiar activeProcessing de usuarios no existentes
+        this.activeProcessing.forEach(userId => {
+            if (!this.userStates.has(userId)) {
+                this.activeProcessing.delete(userId);
+            }
+        });
+
+        return cleaned;
     }
 
     public getStats(): { totalUsers: number; activeProcessing: number; cacheSize: number } {

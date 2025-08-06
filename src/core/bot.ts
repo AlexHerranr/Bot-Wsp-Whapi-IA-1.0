@@ -917,18 +917,20 @@ ${message}`}`;
             }
         }, 5 * 60 * 1000);
         
-        // User state cleanup every 15 minutes
+        // User state cleanup every 10 minutes (más frecuente para 100+ usuarios)
         const userCleanup = setInterval(() => {
-            const cleaned = this.userManager.cleanup();
+            const cleaned = this.userManager.cleanup(10 * 60 * 1000); // 10 minutos para 100+ usuarios
             if (cleaned > 0) {
-                console.log(`🧹 Cleaned up ${cleaned} old user states`);
+                console.log(`🧹 Cleaned up ${cleaned} old user states (optimized for 100+ users)`);
                 // Reset flags de voz persistentes en estados limpiados
-                logInfo('VOICE_FLAGS_RESET', 'Flags de voz reseteados en cleanup', {
+                logInfo('MEMORY_OPTIMIZATION', 'Estados de usuario limpiados para optimizar memoria', {
                     cleanedStates: cleaned,
-                    reason: 'expired_user_states'
+                    cleanupInterval: '10min',
+                    reason: 'memory_optimization_100plus_users',
+                    totalActiveUsers: this.userManager.getStats().totalUsers
                 });
             }
-        }, 15 * 60 * 1000);
+        }, 10 * 60 * 1000);
 
         // Client data cache cleanup every 15 minutes
         const cacheCleanup = setInterval(() => {

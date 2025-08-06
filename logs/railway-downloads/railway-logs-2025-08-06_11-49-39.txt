@@ -1,0 +1,566 @@
+Starting Container
+
+> tealquilamos-bot@1.0.0 start
+> node dist/main.js
+
+🚀 Starting TeAlquilamos Bot...
+2025-08-06T16:13:38Z [APP_STAR:unknown] sys: Iniciando TeAlquilamos Bot
+✅ Configuration loaded successfully
+2025-08-06T16:13:38Z [CONFIG_L:unknown] sys: Configuración cargada exitosamente
+🌍 Server will start on 0.0.0.0:8080
+🔧 DI ✓ 5 services, 1 function
+🔌 hotel-plugin ✓ 1 function
+✅ check_availability registered
+2025-08-06T16:13:38Z [PLUGIN_R:unknown] sys: hotel-plugin ✓ 1 function
+2025-08-06T16:13:38Z [DI_COMPL:unknown] sys: DI ✓ 5 services, 1 function
+2025-08-06T16:13:39Z [DATABASE:database] sys: 🗄️ Conectado a la base de datos Postgre...
+2025-08-06T16:13:39Z [DATABASE:unknown] sys: Conexión exitosa a PostgreSQL
+🔧 Cleanup tasks configured
+2025-08-06T16:13:39Z [SERVER_S:unknown] sys: Servidor HTTP iniciado
+=== Bot TeAlquilamos Iniciado ===
+🚀 Servidor: 0.0.0.0:8080
+🔗 Webhook: configurando...
+✅ Sistema listo
+
+🚀 CoreBot started successfully on 0.0.0.0:8080
+📊 Functions registered: 1
+2025-08-06T16:13:39Z [BOT_READ:unknown] sys: Bot completamente inicializado
+2025-08-06T16:14:38Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h1m activeUsers:0
+2025-08-06T16:14:38Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:14:38Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:14:38Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:15:38Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h2m activeUsers:0
+2025-08-06T16:15:38Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:15:38Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:15:38Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:16:38Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h3m activeUsers:0
+2025-08-06T16:16:38Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:16:38Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:16:38Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:17:38Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h4m activeUsers:0
+2025-08-06T16:17:38Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:17:38Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:17:38Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:18:38Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h5m activeUsers:0
+2025-08-06T16:18:38Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:18:38Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:18:38Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:19:38Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h6m activeUsers:0
+2025-08-06T16:19:38Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:19:38Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:19:38Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:20:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h7m activeUsers:0
+2025-08-06T16:20:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:20:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:20:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:21:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h8m activeUsers:0
+2025-08-06T16:21:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:21:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:21:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:22:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h9m activeUsers:0
+2025-08-06T16:22:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:22:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:22:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:23:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h10m activeUsers:0
+2025-08-06T16:23:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:23:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:23:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:24:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h11m activeUsers:0
+2025-08-06T16:24:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:24:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:24:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:25:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h12m activeUsers:0
+2025-08-06T16:25:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:25:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:25:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:26:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h13m activeUsers:0
+2025-08-06T16:26:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:26:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:26:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:27:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h14m activeUsers:0
+2025-08-06T16:27:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:27:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:27:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:28:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h15m activeUsers:0
+2025-08-06T16:28:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:28:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:28:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:29:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h16m activeUsers:0
+2025-08-06T16:29:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:29:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:29:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:30:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h17m activeUsers:0
+2025-08-06T16:30:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:30:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:30:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:31:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h18m activeUsers:0
+2025-08-06T16:31:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:31:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:31:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:32:39Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h19m activeUsers:0
+2025-08-06T16:32:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:32:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:32:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:33:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h20m activeUsers:0
+2025-08-06T16:33:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:33:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:33:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:34:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h21m activeUsers:0
+2025-08-06T16:34:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:34:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:34:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:35:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h22m activeUsers:0
+2025-08-06T16:35:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:35:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:35:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:36:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h23m activeUsers:0
+2025-08-06T16:36:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:36:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:36:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:37:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h24m activeUsers:0
+2025-08-06T16:37:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:37:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:37:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:38:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h25m activeUsers:0
+2025-08-06T16:38:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:38:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:38:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:39:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h26m activeUsers:0
+2025-08-06T16:39:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:39:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:39:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:40:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h27m activeUsers:0
+2025-08-06T16:40:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:40:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:40:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:41:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h28m activeUsers:0
+2025-08-06T16:41:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:41:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:41:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:42:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h29m activeUsers:0
+2025-08-06T16:42:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:42:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:42:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:43:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h30m activeUsers:0
+2025-08-06T16:43:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:43:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:43:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:44:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h31m activeUsers:0
+2025-08-06T16:44:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:44:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:44:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:45:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h32m activeUsers:0
+2025-08-06T16:45:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:45:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:45:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:46:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h33m activeUsers:0
+2025-08-06T16:46:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:46:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:46:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:47:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h34m activeUsers:0
+2025-08-06T16:47:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:47:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:47:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:48:39Z [SYS_METRIC:system] sys: mem:15/512MB cpu:0% conn:0 uptime:0h35m activeUsers:0
+2025-08-06T16:48:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-06T16:48:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:48:39Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-06T16:49:02Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:49:02Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:49:02Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T16:49:02Z [BUFFER_C:unknown] 57300...251: Buffer creado por actividad
+2025-08-06T16:49:02Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+✍️ Usuario está escribiendo...
+2025-08-06T16:49:04Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:49:04Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:49:04Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T16:49:04Z [MSG_RX:webhook] 57300...251: text "Hola..."
+🗣️ Sr Alex: 💬 "Hola" → 🤖
+2025-08-06T16:49:04Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T16:49:04Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:49:04Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:49:06Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-06T16:49:06Z [USER_ENR:database] sys: Usuario enriquecido automáticamente: 573...
+2025-08-06T16:49:06Z [DB_QUERY:database] 57300...251: type:enrich time:783ms res:labels=2 name="Sr Alex" cache:updated
+2025-08-06T16:49:06Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-06T16:49:09Z [BUFFER_F:unknown] 57300...251: Processing single message immediately
+2025-08-06T16:49:09Z [MESSAGE_:webhook] 57300...251: Iniciando procesamiento de buffer
+2025-08-06T16:49:09Z [CACHE_MISS:cache] 57300...251
+2025-08-06T16:49:09Z [DB_QUERY:database] 57300...251: type:thread_fetch time:6ms res:thread:thread_w... cache:no_change
+2025-08-06T16:49:09Z [OPENAI_M:unknown] 57300...251: Mensaje preparado para OpenAI
+2025-08-06T16:49:09Z [DB_QUERY:database] 57300...251: type:thread_fetch time:7ms res:thread:thread_w... cache:no_change
+2025-08-06T16:49:09Z [DB_QUERY:database] 57300...251: type:thread_fetch time:6ms res:thread:thread_w... cache:no_change
+2025-08-06T16:49:10Z [INDICATO:whapi] 57300...251: Indicador de escritura enviado exitosame...
+2025-08-06T16:49:10Z [OPENAI_R:unknown] 57300...251: Iniciando run de OpenAI
+2025-08-06T16:49:10Z [AI_START:openai] 57300...251 | null
+2025-08-06T16:49:11Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-06T16:49:11Z [THR_REUSE:database] th_threa...S9h
+2025-08-06T16:49:12Z [OPENAI_P:unknown] 57300...251: Prompt completo compactado enviado a Ope...
+2025-08-06T16:49:12Z [OPENAI_M:openai] 57300...251: Mensaje enviado al thread de OpenAI
+2025-08-06T16:49:12Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-06T16:49:14Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-06T16:49:27Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-06T16:49:27Z [AI_DONE:openai] 57300...251 | th_threa...S9h | 17s | 3391t
+2025-08-06T16:49:27Z [OPENAI_R:openai] 57300...251: Respuesta completa de OpenAI
+2025-08-06T16:49:27Z [TOKENS_METRIC:openai] 57300...251: in:0 out:3391 total:3391 model:o3-mini-2025-01-31 thread:th_threa...S9h
+2025-08-06T16:49:27Z [TOKEN_US:unknown] 57300...251: Tokens utilizados en procesamiento
+2025-08-06T16:49:27Z [HIGH_LAT:performance] 57300...251: Latencia alta detectada en procesamiento
+2025-08-06T16:49:27Z [OPENAI_R:unknown] 57300...251: Run de OpenAI completado
+2025-08-06T16:49:27Z [TOKEN_CO:unknown] 57300...251: Token count actualizado en memoria
+2025-08-06T16:49:27Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 1/1
+🤖 OpenAI → Sr Alex (17.0s)
+2025-08-06T16:49:30Z [TYPING_F:whapi] 57300...251: Flag de typing reseteado post-procesamie...
+2025-08-06T16:49:30Z [SENT:webhook] 57300...251 | 69ch | 17s
+2025-08-06T16:49:31Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:49:31Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:49:32Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:49:32Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:49:32Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:49:32Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:49:32Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:49:32Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:49:39Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h36m activeUsers:1
+2025-08-06T16:49:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:49:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:49:39Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:116ch funcs:0 errs:0
+2025-08-06T16:49:39Z [LATENCY_METRIC:system] null: openai:16972ms beds24:0ms whapi:0ms db:0ms total:16972ms
+2025-08-06T16:49:57Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:49:57Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:49:57Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T16:49:57Z [BUFFER_C:unknown] 57300...251: Buffer creado por actividad
+2025-08-06T16:49:57Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+✍️ Sr Alex está escribiendo...
+2025-08-06T16:50:00Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:50:00Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:50:00Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-06T16:50:00Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T16:50:00Z [MSG_RX:webhook] 57300...251: text "Como estas por alla..."
+🗣️ Sr Alex: 💬 "Como estas por alla" → 🤖
+2025-08-06T16:50:00Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T16:50:00Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:50:00Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:50:00Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:50:00Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:50:00Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T16:50:00Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:50:00Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:50:02Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:50:02Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:50:02Z [PRESENCE:unknown] 57300...251: Usuario dejó de grabar
+2025-08-06T16:50:02Z [BUFFER_G:unknown] 57300...251: Extendiendo buffer por fin de grabación
+2025-08-06T16:50:02Z [BUFFER_V:unknown] 57300...251: Esperando transcripción de voz
+2025-08-06T16:50:02Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:50:02Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:50:04Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:50:04Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:50:04Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-06T16:50:04Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T16:50:04Z [MSG_RX:webhook] 57300...251: voice 
+2025-08-06T16:50:04Z [BUFFER_V:unknown] 57300...251: Esperando transcripción de voz
+2025-08-06T16:50:04Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:50:04Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+[4:50:06 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Que me cuentan de nuevo. | Usuario: 573003913251 | Duración: 1908ms | Tamaño: 4309 bytes
+🎙️ Sr Alex: 🔊 → "Que me cuentan de nuevo."
+2025-08-06T16:50:06Z [AUDIO:unknown] 57300...251: "Que me cuentan de nuevo...."
+2025-08-06T16:50:06Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T16:50:06Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:50:06Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:50:11Z [BUFFER:buffer] 57300...251: 2msg, 44ch
+2025-08-06T16:50:11Z [MESSAGE_:webhook] 57300...251: Iniciando procesamiento de buffer
+2025-08-06T16:50:11Z [CACHE_HIT:cache] 57300...251
+2025-08-06T16:50:11Z [OPENAI_M:unknown] 57300...251: Mensaje preparado para OpenAI
+2025-08-06T16:50:11Z [DB_QUERY:database] 57300...251: type:thread_fetch time:5ms res:thread:thread_w... cache:no_change
+2025-08-06T16:50:11Z [DB_QUERY:database] 57300...251: type:thread_fetch time:7ms res:thread:thread_w... cache:no_change
+2025-08-06T16:50:12Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-06T16:50:12Z [OPENAI_R:unknown] 57300...251: Iniciando run de OpenAI
+2025-08-06T16:50:12Z [AI_START:openai] 57300...251 | null
+2025-08-06T16:50:12Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-06T16:50:12Z [THR_REUSE:database] th_threa...S9h
+2025-08-06T16:50:14Z [OPENAI_P:unknown] 57300...251: Prompt completo compactado enviado a Ope...
+2025-08-06T16:50:14Z [OPENAI_M:openai] 57300...251: Mensaje enviado al thread de OpenAI
+2025-08-06T16:50:14Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-06T16:50:15Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-06T16:50:38Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-06T16:50:38Z [AI_DONE:openai] 57300...251 | th_threa...S9h | 26s | 4520t
+2025-08-06T16:50:38Z [OPENAI_R:openai] 57300...251: Respuesta completa de OpenAI
+2025-08-06T16:50:38Z [TOKENS_METRIC:openai] 57300...251: in:0 out:4520 total:4520 model:o3-mini-2025-01-31 thread:th_threa...S9h
+2025-08-06T16:50:38Z [TOKEN_US:unknown] 57300...251: Tokens utilizados en procesamiento
+2025-08-06T16:50:38Z [HIGH_LAT:performance] 57300...251: Latencia alta detectada en procesamiento
+2025-08-06T16:50:38Z [OPENAI_R:unknown] 57300...251: Run de OpenAI completado
+2025-08-06T16:50:39Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h37m activeUsers:1
+2025-08-06T16:50:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:50:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:50:39Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:136ch funcs:0 errs:0
+2025-08-06T16:50:39Z [LATENCY_METRIC:system] null: openai:21593ms beds24:0ms whapi:0ms db:0ms total:21593ms
+2025-08-06T16:50:39Z [VOICE_CO:unknown] 57300...251: Delay aplicado para agrupar voces consec...
+2025-08-06T16:50:39Z [TOKEN_CO:unknown] 57300...251: Token count actualizado en memoria
+2025-08-06T16:50:39Z [VOICE_FO:unknown] 57300...251: Forzando texto por respuesta larga
+2025-08-06T16:50:39Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 1/1
+🤖 OpenAI → Sr Alex (26.2s)
+2025-08-06T16:50:43Z [TYPING_F:whapi] 57300...251: Flag de typing reseteado post-procesamie...
+2025-08-06T16:50:43Z [SENT:webhook] 57300...251 | 224ch | 26s
+2025-08-06T16:50:44Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:50:44Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:50:45Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:50:45Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:50:45Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:51:06Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:51:06Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:51:06Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T16:51:06Z [BUFFER_C:unknown] 57300...251: Buffer creado por actividad
+2025-08-06T16:51:06Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+Sr Alex: 🎙️...
+2025-08-06T16:51:09Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:51:09Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:51:09Z [PRESENCE:unknown] 57300...251: Usuario dejó de grabar
+2025-08-06T16:51:10Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:51:10Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:51:10Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T16:51:10Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:51:10Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:51:10Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:51:10Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:51:10Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-06T16:51:10Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T16:51:10Z [MSG_RX:webhook] 57300...251: voice 
+2025-08-06T16:51:10Z [BUFFER_V:unknown] 57300...251: Esperando transcripción de voz
+2025-08-06T16:51:10Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:51:10Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+[4:51:12 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Me gustaría consultar para noviembre. | Usuario: 573003913251 | Duración: 1697ms | Tamaño: 6874 bytes
+🎙️ Sr Alex: 🔊 → "Me gustaría consultar para noviembre."
+2025-08-06T16:51:12Z [AUDIO:unknown] 57300...251: "Me gustaría consultar para nov..."
+2025-08-06T16:51:12Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T16:51:12Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:51:12Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:51:15Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:51:15Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:51:15Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-06T16:51:15Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T16:51:15Z [MSG_RX:webhook] 57300...251: text "Para 3 personas..."
+🗣️ Sr Alex: 💬 "Para 3 personas" → 🤖
+2025-08-06T16:51:15Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T16:51:15Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:51:15Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:51:20Z [BUFFER:buffer] 57300...251: 2msg, 53ch
+2025-08-06T16:51:20Z [MESSAGE_:webhook] 57300...251: Iniciando procesamiento de buffer
+2025-08-06T16:51:20Z [CACHE_HIT:cache] 57300...251
+2025-08-06T16:51:20Z [OPENAI_M:unknown] 57300...251: Mensaje preparado para OpenAI
+2025-08-06T16:51:20Z [DB_QUERY:database] 57300...251: type:thread_fetch time:7ms res:thread:thread_w... cache:no_change
+2025-08-06T16:51:20Z [DB_QUERY:database] 57300...251: type:thread_fetch time:6ms res:thread:thread_w... cache:no_change
+2025-08-06T16:51:21Z [INDICATO:whapi] 57300...251: Indicador de escritura enviado exitosame...
+2025-08-06T16:51:21Z [OPENAI_R:unknown] 57300...251: Iniciando run de OpenAI
+2025-08-06T16:51:21Z [AI_START:openai] 57300...251 | null
+2025-08-06T16:51:22Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-06T16:51:22Z [THR_REUSE:database] th_threa...S9h
+2025-08-06T16:51:23Z [OPENAI_P:unknown] 57300...251: Prompt completo compactado enviado a Ope...
+2025-08-06T16:51:23Z [OPENAI_M:openai] 57300...251: Mensaje enviado al thread de OpenAI
+2025-08-06T16:51:23Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-06T16:51:24Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-06T16:51:38Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-06T16:51:38Z [AI_DONE:openai] 57300...251 | th_threa...S9h | 17s | 3812t
+2025-08-06T16:51:38Z [OPENAI_R:openai] 57300...251: Respuesta completa de OpenAI
+2025-08-06T16:51:38Z [TOKENS_METRIC:openai] 57300...251: in:0 out:3812 total:3812 model:o3-mini-2025-01-31 thread:th_threa...S9h
+2025-08-06T16:51:38Z [TOKEN_US:unknown] 57300...251: Tokens utilizados en procesamiento
+2025-08-06T16:51:38Z [HIGH_LAT:performance] 57300...251: Latencia alta detectada en procesamiento
+2025-08-06T16:51:38Z [OPENAI_R:unknown] 57300...251: Run de OpenAI completado
+2025-08-06T16:51:38Z [TOKEN_CO:unknown] 57300...251: Token count actualizado en memoria
+2025-08-06T16:51:38Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 1/1
+2025-08-06T16:51:39Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h38m activeUsers:1
+2025-08-06T16:51:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:51:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:51:39Z [USAGE_STATS:system] sys: msgs:3/hr chunks:0 avgLen:146ch funcs:0 errs:0
+2025-08-06T16:51:39Z [LATENCY_METRIC:system] null: openai:20133ms beds24:0ms whapi:0ms db:0ms total:20133ms
+🤖 OpenAI → Sr Alex (17.2s)
+2025-08-06T16:51:42Z [TYPING_F:whapi] 57300...251: Flag de typing reseteado post-procesamie...
+2025-08-06T16:51:42Z [SENT:webhook] 57300...251 | 237ch | 17s
+2025-08-06T16:51:43Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:51:43Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:51:44Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:51:44Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:51:44Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:52:39Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h39m activeUsers:1
+2025-08-06T16:52:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:52:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:52:39Z [USAGE_STATS:system] sys: msgs:3/hr chunks:0 avgLen:146ch funcs:0 errs:0
+2025-08-06T16:52:39Z [LATENCY_METRIC:system] null: openai:20133ms beds24:0ms whapi:0ms db:0ms total:20133ms
+2025-08-06T16:53:39Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h40m activeUsers:1
+2025-08-06T16:53:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:53:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:53:39Z [USAGE_STATS:system] sys: msgs:3/hr chunks:0 avgLen:146ch funcs:0 errs:0
+2025-08-06T16:53:39Z [LATENCY_METRIC:system] null: openai:20133ms beds24:0ms whapi:0ms db:0ms total:20133ms
+2025-08-06T16:54:31Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:54:31Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:54:31Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T16:54:31Z [BUFFER_C:unknown] 57300...251: Buffer creado por actividad
+2025-08-06T16:54:31Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+✍️ Sr Alex está escribiendo...
+2025-08-06T16:54:32Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:54:32Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:54:32Z [PRESENCE:unknown] 57300...251: Usuario dejó de escribir
+2025-08-06T16:54:32Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:54:32Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:54:32Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T16:54:32Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:54:32Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:54:37Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:54:37Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:54:37Z [PRESENCE:unknown] 57300...251: Usuario dejó de grabar
+2025-08-06T16:54:37Z [BUFFER_E:unknown] 57300...251: Buffer vacío, limpiando
+2025-08-06T16:54:39Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:54:39Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:54:39Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:54:39Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:54:39Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T16:54:39Z [BUFFER_C:unknown] 57300...251: Buffer creado por actividad
+2025-08-06T16:54:39Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+✍️ Sr Alex está escribiendo...
+2025-08-06T16:54:39Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-06T16:54:39Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T16:54:39Z [MSG_RX:webhook] 57300...251: voice 
+2025-08-06T16:54:39Z [BUFFER_V:unknown] 57300...251: Esperando transcripción de voz
+2025-08-06T16:54:39Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:54:39Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:54:39Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h41m activeUsers:1
+2025-08-06T16:54:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:54:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:54:39Z [USAGE_STATS:system] sys: msgs:3/hr chunks:0 avgLen:146ch funcs:0 errs:0
+2025-08-06T16:54:39Z [LATENCY_METRIC:system] null: openai:20133ms beds24:0ms whapi:0ms db:0ms total:20133ms
+2025-08-06T16:54:40Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:54:40Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:54:41Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:54:41Z [WEBHOOK:webhook] pres:1
+2025-08-06T16:54:41Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-06T16:54:41Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:54:41Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+[4:54:42 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: sería del 3 de noviembre al 7 | Usuario: 573003913251 | Duración: 3454ms | Tamaño: 11467 bytes
+🎙️ Sr Alex: 🔊 → "sería del 3 de noviembre al 7"
+2025-08-06T16:54:42Z [AUDIO:unknown] 57300...251: "sería del 3 de noviembre al 7..."
+2025-08-06T16:54:42Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T16:54:42Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:54:42Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:54:43Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:54:43Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:54:43Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-06T16:54:43Z [DELAYED_:unknown] 57300...251: Update programado para 10min
+2025-08-06T16:54:43Z [MSG_RX:webhook] 57300...251: text "4 personas..."
+🗣️ Sr Alex: 💬 "4 personas" → 🤖
+2025-08-06T16:54:43Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-06T16:54:43Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-06T16:54:43Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-06T16:54:48Z [BUFFER:buffer] 57300...251: 2msg, 40ch
+2025-08-06T16:54:48Z [MESSAGE_:webhook] 57300...251: Iniciando procesamiento de buffer
+2025-08-06T16:54:48Z [CACHE_HIT:cache] 57300...251
+2025-08-06T16:54:48Z [OPENAI_M:unknown] 57300...251: Mensaje preparado para OpenAI
+2025-08-06T16:54:48Z [DB_QUERY:database] 57300...251: type:thread_fetch time:7ms res:thread:thread_w... cache:no_change
+2025-08-06T16:54:49Z [DB_QUERY:database] 57300...251: type:thread_fetch time:5ms res:thread:thread_w... cache:no_change
+2025-08-06T16:54:52Z [INDICATO:whapi] 57300...251: Indicador de escritura enviado exitosame...
+2025-08-06T16:54:52Z [OPENAI_R:unknown] 57300...251: Iniciando run de OpenAI
+2025-08-06T16:54:52Z [AI_START:openai] 57300...251 | null
+2025-08-06T16:54:53Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-06T16:54:53Z [THR_REUSE:database] th_threa...S9h
+2025-08-06T16:54:53Z [OPENAI_P:unknown] 57300...251: Prompt completo compactado enviado a Ope...
+2025-08-06T16:54:53Z [OPENAI_M:openai] 57300...251: Mensaje enviado al thread de OpenAI
+2025-08-06T16:54:54Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-06T16:54:56Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-06T16:55:15Z [OPENAI_P:unknown] sys: Esperando respuesta - status: requires_a...
+2025-08-06T16:55:15Z [RUN_REQU:unknown] sys: Run requiere action para function callin...
+[4:55:15 PM] ℹ️ Processing 1 function calls for Sr Alex
+2025-08-06T16:55:15Z [FUNC:functions] unknown()
+[4:55:15 PM] ⚙️ check_availability(11/03-11/07, 4 noches)
+2025-08-06T16:55:15Z [OPENAI_F:unknown] sys: Llamando función desde OpenAI
+2025-08-06T16:55:15Z [FUNCTION:unknown] sys: Ejecutando función check_availability
+🔧 Executing function: check_availability
+2025-08-06T16:55:15Z [BEDS24:beds24] API request
+2025-08-06T16:55:15Z [BEDS24_A:unknown] sys: GET https://api.beds24.com/v2/inventory/...
+2025-08-06T16:55:16Z [BEDS24:beds24] 0 rooms found
+2025-08-06T16:55:16Z [BEDS24_RAW:beds24] system: success:true rooms:7 offers:7 data:[173207:0:0|173307:840000:1|173308:840000:1|173309:680000:1|173311:0:0|173312:840000:1|240061:840000:1] status:200 dur:656ms err:0
+2025-08-06T16:55:16Z [APARTMEN:unknown] sys: Apartment details loaded
+2025-08-06T16:55:16Z [BEDS24_C:beds24] sys: Disponibilidad obtenida exitosamente
+2025-08-06T16:55:16Z [HOTEL_AV:unknown] sys: Texto enviado a OpenAI: 5 Apartamentos D...
+2025-08-06T16:55:16Z [HOTEL_AV:beds24] sys: 2025-11-03_2025-11-07_4adl | 5apts | 656...
+2025-08-06T16:55:16Z [FUNC_PERF:functions] system: check_availability:803ms api:562ms db:161ms calls:1 errs:0
+2025-08-06T16:55:16Z [HOTEL_AV:beds24] sys: 2025-11-03_2025-11-07_4adl | 5apts | 803...
+✅ Function check_availability completed in 803ms
+2025-08-06T16:55:16Z [PLUGIN_R:unknown] sys: Respuesta completa de función enviada a ...
+2025-08-06T16:55:16Z [FUNCTION:functions] sys: Función check_availability completada ex...
+2025-08-06T16:55:16Z [OPENAI_T:unknown] sys: Enviando tool outputs exactos a OpenAI
+2025-08-06T16:55:18Z [TOOL_OUT:unknown] sys: Tool outputs enviados a OpenAI
+2025-08-06T16:55:18Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-06T16:55:39Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:0h42m activeUsers:1
+2025-08-06T16:55:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:55:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:55:39Z [USAGE_STATS:system] sys: msgs:3/hr chunks:0 avgLen:146ch funcs:1 errs:0
+2025-08-06T16:55:39Z [LATENCY_METRIC:system] null: openai:15100ms beds24:141ms whapi:0ms db:40ms total:15300ms
+2025-08-06T16:55:45Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-06T16:55:50Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-06T16:55:50Z [FUNCTION:unknown] sys: Respuesta recibida después de function c...
+2025-08-06T16:55:51Z [AI_DONE:openai] 57300...251 | th_threa...S9h | 59s | 
+2025-08-06T16:55:51Z [OPENAI_R:openai] 57300...251: Respuesta completa de OpenAI
+2025-08-06T16:55:51Z [HIGH_LAT:performance] 57300...251: Latencia alta detectada en procesamiento
+2025-08-06T16:55:51Z [OPENAI_R:unknown] 57300...251: Run de OpenAI completado
+2025-08-06T16:55:51Z [TOKEN_CO:unknown] 57300...251: Token count actualizado en memoria
+2025-08-06T16:55:51Z [CHUNKS:unknown] 57300...251: 7 parts
+2025-08-06T16:55:51Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 1/7
+2025-08-06T16:55:54Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 2/7
+2025-08-06T16:55:55Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:55:55Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:55:56Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:55:56Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:55:56Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:56:05Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 3/7
+2025-08-06T16:56:06Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:06Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:56:06Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:06Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:56:06Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:56:16Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 4/7
+2025-08-06T16:56:17Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:17Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:56:18Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:18Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:56:18Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:56:27Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 5/7
+2025-08-06T16:56:28Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:28Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:56:28Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:28Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:56:28Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:56:39Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 6/7
+2025-08-06T16:56:39Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h43m activeUsers:1
+2025-08-06T16:56:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:56:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:56:39Z [USAGE_STATS:system] sys: msgs:4/hr chunks:0 avgLen:147ch funcs:1 errs:0
+2025-08-06T16:56:39Z [LATENCY_METRIC:system] null: openai:23872ms beds24:112ms whapi:0ms db:32ms total:24033ms
+2025-08-06T16:56:39Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:39Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:56:40Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:40Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:56:40Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:56:50Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 7/7
+2025-08-06T16:56:50Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:50Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:56:50Z [MILESTONE:unknown] Line 500 reached
+2025-08-06T16:56:50.669840229Z [INFO] [LOG_FILE_CREATED] Chunk 1 guardado: logs/railway-logs-chunk-1-2025-08-06T16-13-38.log labels={"app":"whatsapp-bot","category":"LOG_FILE_CREATED","chunkNumber":1,"fileName":"logs/railway-logs-chunk-1-2025-08-06T16-13-38.log","level":"INFO"} timestamp="2025-08-06T16:56:50.668Z"
+2025-08-06T16:56:50Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:56:50Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:56:50Z [WEBHOOK_:unknown] sys: 📥 stat:1
+🤖 OpenAI → Sr Alex (59.0s)
+2025-08-06T16:57:01Z [TYPING_F:whapi] 57300...251: Flag de typing reseteado post-procesamie...
+2025-08-06T16:57:01Z [SENT:webhook] 57300...251 | 772ch | 59s
+2025-08-06T16:57:01Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:57:01Z [WEBHOOK:webhook] msg:1
+2025-08-06T16:57:03Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-06T16:57:03Z [WEBHOOK:webhook] stat:1
+2025-08-06T16:57:03Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-06T16:57:39Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h44m activeUsers:1
+2025-08-06T16:57:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:57:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:57:39Z [USAGE_STATS:system] sys: msgs:4/hr chunks:0 avgLen:147ch funcs:1 errs:0
+2025-08-06T16:57:39Z [LATENCY_METRIC:system] null: openai:23872ms beds24:112ms whapi:0ms db:32ms total:24033ms
+🧹 Cleaned up 1 old user states
+2025-08-06T16:58:39Z [VOICE_FL:unknown] sys: Flags de voz reseteados en cleanup
+2025-08-06T16:58:39Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h45m activeUsers:1
+2025-08-06T16:58:39Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-06T16:58:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-06T16:58:39Z [USAGE_STATS:system] sys: msgs:4/hr chunks:0 avgLen:147ch funcs:1 errs:0
+2025-08-06T16:58:39Z [LATENCY_METRIC:system] null: openai:23872ms beds24:112ms whapi:0ms db:32ms total:24033ms
