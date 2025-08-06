@@ -83,10 +83,21 @@ export class DelayedActivityService {
         }
 
         try {
-            // 1 SOLA LLAMADA A BD con ambos datos, incluyendo threadId
+            // Obtener tokens existentes de BD para acumular
+            const existing = await this.databaseService.getThread(userId);
+            const accumulatedTokens = (existing?.tokenCount || 0) + (pending.tokenCount || 0);
+            
+            logInfo('TOKENS_SUMMED', 'Tokens acumulados', { 
+                userId, 
+                existing: existing?.tokenCount || 0,
+                new: pending.tokenCount || 0,
+                accumulated: accumulatedTokens 
+            });
+
+            // 1 SOLA LLAMADA A BD con tokens acumulados
             const success = await this.databaseService.updateThreadActivity(
                 userId, 
-                pending.tokenCount,
+                accumulatedTokens,
                 pending.threadId
             );
 
@@ -94,7 +105,7 @@ export class DelayedActivityService {
                 logSuccess('DELAYED_UPDATE_EXECUTED', 'lastActivity + tokens actualizados', {
                     userId,
                     lastActivity: pending.lastActivity,
-                    tokenCount: pending.tokenCount,
+                    tokenCount: accumulatedTokens,
                     delayMinutes: 10
                 });
             } else {

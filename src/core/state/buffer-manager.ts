@@ -156,6 +156,43 @@ export class BufferManager implements IBufferManager {
             return;
         }
 
+        // Fast path para mensajes únicos sin typing/recording
+        if (buffer.messages.length === 1 && !buffer.pendingImage && this.getUserState) {
+            const userState = this.getUserState(userId);
+            if (!userState?.isTyping && !userState?.isRecording) {
+                logInfo('BUFFER_FAST_PATH', 'Processing single message immediately', { 
+                    userId, 
+                    message: buffer.messages[0].substring(0, 50) 
+                });
+                // Procede directamente al procesamiento
+                this.activeRuns.set(userId, true);
+                const messagesToProcess = [...buffer.messages];
+                const { chatId, userName } = buffer;
+                
+                buffer.messages = [];
+                if (buffer.timer) {
+                    clearTimeout(buffer.timer);
+                    buffer.timer = null;
+                }
+                
+                const combinedText = this.smartCombineMessages(messagesToProcess).trim();
+                
+                try {
+                    await this.processCallback(userId, combinedText, chatId, userName);
+                } catch (error) {
+                    logWarning('BUFFER_PROCESS_ERROR', 'Error procesando buffer', {
+                        userId,
+                        userName,
+                        error: error instanceof Error ? error.message : String(error)
+                    });
+                } finally {
+                    this.activeRuns.delete(userId);
+                    this.clearBuffer(userId);
+                }
+                return;
+            }
+        }
+
         // Chequeo anti-concurrent: Si run activo, retrasar (en producción, poll OpenAI run status)
         if (this.activeRuns.get(userId)) {
             logWarning('BUFFER_DELAYED_ACTIVE_RUN', 'Retrasando por run activo', { userId });

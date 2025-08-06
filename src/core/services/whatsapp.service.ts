@@ -98,7 +98,7 @@ export class WhatsappService {
         const ttsResponse = await this.openai.audio.speech.create({
             model: 'tts-1',
             voice: 'nova',
-            input: message.substring(0, 4000), // Límite de TTS
+            input: message.substring(0, 8000), // Aumentado a 8000
             response_format: 'mp3'
         });
         const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());

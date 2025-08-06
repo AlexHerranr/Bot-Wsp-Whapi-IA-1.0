@@ -46,7 +46,7 @@ export class OpenAIService implements IOpenAIService {
             assistantId: config.assistantId,
             maxRunTime: config.maxRunTime ?? 120000, // 2 minutes
             pollingInterval: config.pollingInterval ?? 1000, // 1 second
-            maxPollingAttempts: config.maxPollingAttempts ?? 120, // 2 minutes max
+            maxPollingAttempts: config.maxPollingAttempts ?? 60, // 1 minute max
             enableThreadCache: config.enableThreadCache ?? true
         };
 
