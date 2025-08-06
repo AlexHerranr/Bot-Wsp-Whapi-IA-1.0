@@ -524,6 +524,21 @@ export class OpenAIService implements IOpenAIService {
     }
 
     private async validateThread(threadId: string): Promise<{ isValid: boolean; tokenCount?: number }> {
+        // Cache de validación para reducir llamadas a OpenAI
+        const validationCacheKey = `thread_valid:${threadId}`;
+        
+        if (this.cache) {
+            const cachedValidation = this.cache.get<{ isValid: boolean; tokenCount?: number }>(validationCacheKey);
+            if (cachedValidation) {
+                logDebug('THREAD_VALIDATION_CACHE_HIT', 'Validación de thread desde cache', {
+                    threadId,
+                    isValid: cachedValidation.isValid,
+                    tokenCount: cachedValidation.tokenCount
+                });
+                return cachedValidation;
+            }
+        }
+        
         try {
             // Intentar obtener información del thread desde OpenAI
             await openAIWithRetry(
@@ -538,7 +553,20 @@ export class OpenAIService implements IOpenAIService {
             // Si llegamos aquí, el thread existe - obtener token count
             const tokenCount = await this.getThreadTokenCount(threadId);
             
-            return { isValid: true, tokenCount };
+            const result = { isValid: true, tokenCount };
+            
+            // Cachear resultado válido por 30 minutos
+            if (this.cache) {
+                this.cache.set(validationCacheKey, result, 1800000); // 30 min
+                logDebug('THREAD_VALIDATION_CACHED', 'Validación de thread cacheada', {
+                    threadId,
+                    isValid: true,
+                    tokenCount,
+                    ttl: '30min'
+                });
+            }
+            
+            return result;
             
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -554,7 +582,14 @@ export class OpenAIService implements IOpenAIService {
                     error: errorMessage
                 });
                 
-                return { isValid: false };
+                const result = { isValid: false };
+                
+                // Cachear resultado inválido por 5 minutos
+                if (this.cache) {
+                    this.cache.set(validationCacheKey, result, 300000); // 5 min
+                }
+                
+                return result;
             }
             
             // Otros errores (rate limit, conexión, etc.) - asumir que el thread es válido
@@ -563,7 +598,7 @@ export class OpenAIService implements IOpenAIService {
                 error: errorMessage
             });
             
-            return { isValid: true }; // Benefit of the doubt
+            return { isValid: true }; // Benefit of the doubt - no cachear errores temporales
         }
     }
 
@@ -697,7 +732,9 @@ export class OpenAIService implements IOpenAIService {
         modelUsed?: string;
     }> {
         let attempts = 0;
-        let backoffDelay = this.config.pollingInterval;
+        // Polling dinámico: más rápido para estados iniciales (queued), más lento para procesamiento
+        let backoffDelay = 500; // Empezar con 500ms para respuestas rápidas
+        const pollingStartTime = Date.now();
 
         while (attempts < this.config.maxPollingAttempts) {
             try {
@@ -724,7 +761,19 @@ export class OpenAIService implements IOpenAIService {
                     break;
                 }
 
-                // Log crítico: Polling de run
+                // Ajustar delay dinámicamente basado en el estado y tiempo transcurrido
+                if (run.status === 'queued') {
+                    // Para estado queued, usar polling más agresivo los primeros 5 segundos
+                    backoffDelay = (Date.now() - pollingStartTime < 5000) ? 500 : 1000;
+                } else if (run.status === 'in_progress') {
+                    // Para in_progress, aumentar gradualmente el delay
+                    backoffDelay = Math.min(2000, 1000 + (attempts * 100)); // Max 2s
+                } else {
+                    // Para otros estados, usar delay normal
+                    backoffDelay = this.config.pollingInterval;
+                }
+
+                // Log crítico: Polling de run con delay dinámico
                 if (attempts % 5 === 0 || run.status !== 'in_progress') { // Log cada 5 intentos o cuando cambia estado
                     logInfo('OPENAI_POLLING', `Esperando respuesta - status: ${run.status}`, {
                         threadId,
@@ -732,7 +781,8 @@ export class OpenAIService implements IOpenAIService {
                         status: run.status,
                         attempts: attempts + 1,
                         maxAttempts: this.config.maxPollingAttempts,
-                        backoffDelay
+                        backoffDelay,
+                        elapsedTime: Date.now() - pollingStartTime
                     });
                 }
 

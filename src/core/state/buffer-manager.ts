@@ -57,7 +57,18 @@ export class BufferManager implements IBufferManager {
             types: `Text:${textCount} Voz:${voiceCount}`,
             preview: preview20Words,
             totalLength: currentCombined.length,
-            reason: 'new_message'
+            reason: 'new_message',
+            messageOrder: buffer.messages.map((msg, idx) => `[${idx}]:${msg.substring(0, 30)}...`).slice(-3) // Últimos 3 mensajes para ver orden
+        });
+        
+        // Log detallado para debug de orden de mensajes
+        logDebug('MESSAGE_ORDER_TRACKING', 'Orden de mensajes en buffer', {
+            userId,
+            messageIndex: buffer.messages.length - 1,
+            messagePreview: messageText.substring(0, 50),
+            bufferSequence: buffer.messages.map((_, idx) => idx).join(','),
+            timerActive: !!buffer.timer,
+            timeInBuffer: buffer.timer ? 'waiting' : 'no_timer'
         });
         
         // Sistema unificado: siempre usar timer de 5s
@@ -97,26 +108,29 @@ export class BufferManager implements IBufferManager {
 
     public onTypingOrRecording(userId: string): void {
         let buffer = this.buffers.get(userId);
+        
+        // Optimización para escalabilidad: NO crear buffers vacíos por typing/recording
+        // Solo procesar si ya existe un buffer con contenido previo
         if (!buffer) {
-            // Solo crear buffer si no existe, pero NO establecer timer si está vacío
-            buffer = { messages: [], chatId: '', userName: '', lastActivity: Date.now(), timer: null };
-            this.buffers.set(userId, buffer);
-            logInfo('BUFFER_CREATED', 'Buffer creado por actividad', { userId, reason: 'typing_or_recording' });
+            // Skip silencioso - no crear buffer vacío innecesariamente
+            // Con 100+ usuarios, esto reduce significativamente el overhead de memoria
+            return;
         }
         
         buffer.lastActivity = Date.now();
         
-        // CRÍTICO: Solo establecer timer si hay contenido en el buffer
-        // Esto evita el cleanup prematuro de buffers vacíos creados por presence
+        // Solo establecer/extender timer si hay contenido real en el buffer
         if (buffer.messages.length > 0 || buffer.pendingImage) {
             // Sistema unificado: usar timer de 5s para extender mientras hay actividad
             this.setOrExtendTimer(userId, 'typing_recording');
-        } else {
-            logInfo('BUFFER_TIMER_SKIP', 'Timer no establecido - buffer sin contenido', { 
+            logDebug('BUFFER_EXTEND_ACTIVITY', 'Timer extendido por actividad', {
                 userId,
-                reason: 'empty_buffer_on_presence'
+                userName: buffer.userName || 'Usuario',
+                messageCount: buffer.messages.length,
+                reason: 'typing_or_recording'
             });
         }
+        // Si buffer existe pero está vacío, no hacer nada (no logs para reducir ruido)
     }
 
     // Método unificado: "Last event wins" - cancela timer anterior y establece nuevo timer de 5s
@@ -171,42 +185,27 @@ export class BufferManager implements IBufferManager {
             return;
         }
 
-        // Fast path para mensajes únicos sin typing/recording
+        // Fast path deshabilitado temporalmente para mantener orden de mensajes
+        // Con múltiples usuarios enviando mensajes rápidamente, el fast path puede
+        // causar que mensajes se procesen fuera de orden. Mejor esperar siempre el buffer.
+        /*
         if (buffer.messages.length === 1 && !buffer.pendingImage && this.getUserState) {
             const userState = this.getUserState(userId);
             if (!userState?.isTyping && !userState?.isRecording) {
-                logInfo('BUFFER_FAST_PATH', 'Processing single message immediately', { 
-                    userId, 
-                    message: buffer.messages[0].substring(0, 50) 
-                });
-                // Procede directamente al procesamiento
-                this.activeRuns.set(userId, true);
-                const messagesToProcess = [...buffer.messages];
-                const { chatId, userName } = buffer;
-                
-                buffer.messages = [];
-                if (buffer.timer) {
-                    clearTimeout(buffer.timer);
-                    buffer.timer = null;
-                }
-                
-                const combinedText = this.smartCombineMessages(messagesToProcess).trim();
-                
-                try {
-                    await this.processCallback(userId, combinedText, chatId, userName);
-                } catch (error) {
-                    logWarning('BUFFER_PROCESS_ERROR', 'Error procesando buffer', {
-                        userId,
-                        userName,
-                        error: error instanceof Error ? error.message : String(error)
-                    });
-                } finally {
-                    this.activeRuns.delete(userId);
-                    this.clearBuffer(userId);
-                }
-                return;
+                // Este fast path puede causar problemas de orden con mensajes rápidos
+                // Deshabilitado para mantener consistencia
             }
         }
+        */
+        
+        // Siempre respetar el timer del buffer para mantener orden correcto
+        // Esto asegura que mensajes que llegan rápidamente se agrupen apropiadamente
+        logDebug('BUFFER_RESPECTING_TIMER', 'Respetando timer de buffer para mantener orden', {
+            userId,
+            messageCount: buffer.messages.length,
+            hasImage: !!buffer.pendingImage,
+            reason: 'order_preservation'
+        });
 
         // Chequeo anti-concurrent: Si run activo, retrasar (en producción, poll OpenAI run status)
         if (this.activeRuns.get(userId)) {

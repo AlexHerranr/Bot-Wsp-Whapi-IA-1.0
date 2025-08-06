@@ -420,24 +420,9 @@ export class CoreBot {
             const existingThread = await this.threadPersistence.getThread(userId);
             let existingThreadId = existingThread?.threadId;
 
-            // Verificar si el thread existe en OpenAI antes de usarlo
-            if (existingThreadId) {
-                try {
-                    await this.openai.beta.threads.retrieve(existingThreadId);
-                } catch (error: any) {
-                    if (error.status === 404) {
-                        // Thread no existe en OpenAI, limpiar de BD
-                        logWarning('THREAD_404_CLEANUP', 'Thread no existe en OpenAI, eliminando de BD', {
-                            userId,
-                            userName,
-                            invalidThreadId: existingThreadId,
-                            error: error.message
-                        });
-                        await this.threadPersistence.removeThread(userId, 'thread_not_found_openai');
-                        existingThreadId = undefined; // Forzar nuevo thread
-                    }
-                }
-            }
+            // Verificación removida - OpenAIService.processMessage ya valida el thread
+            // con cache, evitando llamadas duplicadas a OpenAI
+            // La validación se hace dentro de OpenAIService.validateThread() con cache de 30min
 
             // Verificar si el thread necesita renovación por edad (después de validación)
             if (existingThreadId) {
