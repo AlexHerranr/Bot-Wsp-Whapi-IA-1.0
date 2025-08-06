@@ -655,6 +655,127 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             const funcName = details?.functionName || 'unknown';
             return `${timestamp} [FUNC] ${funcName}()`;
             
+        // 🔧 NUEVOS: Logs técnicos compactos específicos
+        case 'BEDS24_RAW':
+            const rawData = details?.rawResponse?.data || [];
+            const roomsData = rawData.map((r: any) => {
+                const offers = r.offers || [];
+                const offer = offers[0] || {};
+                return `${r.propertyId || r.roomId}:${offer.price || 0}:${offer.unitsAvailable || 0}`;
+            }).join('|');
+            const status = details?.status || 200;
+            const duration = details?.duration || '0ms';
+            const success = details?.success || false;
+            const roomCount = rawData.length || 0;
+            return `${timestamp} [BEDS24_RAW] ${userId}: success:${success} rooms:${roomCount} offers:${roomCount} data:[${roomsData}] status:${status} dur:${duration} err:${success ? 0 : 1}`;
+
+        case 'OPENAI_PROMPT':
+            const promptLen = details?.length || 0;
+            const threadIdPrompt = details?.threadId ? truncateId(details.threadId, 'th_') : 'none';
+            let content = details?.fullContent || details?.preview || '';
+            // Extraer contexto clave y compactar
+            const horaMatch = content.match(/Hora actual: [^\n]+/) || [''];
+            const clienteMatch = content.match(/Cliente: [^\n]+/) || [''];
+            const tagsMatch = content.match(/Tags: [^\n]+/) || [''];
+            const msgMatch = content.match(/Mensaje del cliente:[\s\S]+$/) || [''];
+            
+            const compactContent = [
+                clienteMatch[0].replace('Cliente: ', '').replace(/\s+/g, ''),
+                tagsMatch[0].replace('Tags: ', '').replace(/\s+/g, ''),
+                horaMatch[0].replace('Hora actual: ', '').substring(0, 16),
+                msgMatch[0].replace('Mensaje del cliente:', '').trim().substring(0, 60)
+            ].filter(Boolean).join('|').replace(/\n/g, ' ');
+            
+            return `${timestamp} [OPENAI_PROMPT] ${userId}: thread:${threadIdPrompt} len:${promptLen} content:"${compactContent}"`;
+
+        case 'TOKENS_METRIC':
+            const tokensIn = details?.tokensIn || details?.inputTokens || 0;
+            const tokensOut = details?.tokensOut || details?.outputTokens || details?.tokensUsed || 0;
+            const tokensTotal = details?.totalTokens || (tokensIn + tokensOut);
+            const model = details?.model || 'gpt-4';
+            const threadIdToken = details?.threadId ? truncateId(details.threadId, 'th_') : 'none';
+            return `${timestamp} [TOKENS_METRIC] ${userId}: in:${tokensIn} out:${tokensOut} total:${tokensTotal} model:${model} thread:${threadIdToken}`;
+
+        case 'LATENCY_METRIC':
+            const openaiLat = details?.openaiLatency || details?.openaiTime || 0;
+            const beds24Lat = details?.beds24Latency || details?.beds24Time || 0;
+            const whapiLat = details?.whapiLatency || details?.whapiTime || 0;
+            const dbLat = details?.dbLatency || details?.dbTime || 0;
+            const totalLat = details?.totalLatency || (openaiLat + beds24Lat + whapiLat + dbLat);
+            return `${timestamp} [LATENCY_METRIC] ${userId}: openai:${openaiLat}ms beds24:${beds24Lat}ms whapi:${whapiLat}ms db:${dbLat}ms total:${totalLat}ms`;
+
+        case 'USAGE_STATS':
+            const msgsPerHour = details?.messagesPerHour || 0;
+            const chunksTotal = details?.totalChunks || 0;
+            const avgLen = details?.averageLength || 0;
+            const funcsCount = details?.functionsExecuted || 0;
+            const errorsCount = details?.errors || 0;
+            return `${timestamp} [USAGE_STATS] sys: msgs:${msgsPerHour}/hr chunks:${chunksTotal} avgLen:${avgLen}ch funcs:${funcsCount} errs:${errorsCount}`;
+
+        case 'DB_QUERY':
+            const queryType = details?.type || details?.operation || 'unknown';
+            const queryTime = details?.time || details?.duration || 0;
+            const queryResult = details?.result || details?.affected || 'unknown';
+            const cacheUpdated = details?.cacheUpdated ? 'updated' : 'no_change';
+            return `${timestamp} [DB_QUERY] ${userId}: type:${queryType} time:${queryTime}ms res:${queryResult} cache:${cacheUpdated}`;
+
+        case 'CACHE_METRIC':
+            const hitRate = details?.hitRate || details?.hits / (details?.hits + details?.misses) * 100 || 0;
+            const missRate = 100 - hitRate;
+            const cacheSize = details?.size || details?.sizeBytes || 0;
+            const users = details?.users || details?.userCount || 0;
+            const evictions = details?.evictions || details?.evicted || 0;
+            return `${timestamp} [CACHE_METRIC] sys: hits:${Math.round(hitRate)}% misses:${Math.round(missRate)}% size:${Math.round(cacheSize/1024/1024)}MB users:${users} evicts:${evictions}`;
+
+        case 'BUFFER_METRIC':
+            const activeBuffers = details?.active || details?.activeBuffers || 0;
+            const mergedBuffers = details?.merged || details?.mergedMessages || 0;
+            const abandonedBuffers = details?.abandoned || details?.abandonedBuffers || 0;
+            const voiceMessages = details?.voice || details?.voiceCount || 0;
+            const textMessages = details?.text || details?.textCount || 0;
+            return `${timestamp} [BUFFER_METRIC] sys: active:${activeBuffers} merged:${mergedBuffers} abandoned:${abandonedBuffers} voice:${voiceMessages} text:${textMessages}`;
+
+        case 'THREAD_METRIC':
+            const threadIdMetric = details?.threadId ? truncateId(details.threadId, 'th_') : 'none';
+            const msgCountThread = details?.messageCount || details?.messages || 0;
+            const tokenCountThread = details?.tokenCount || details?.tokens || 0;
+            const reused = details?.reused || details?.wasReused || false;
+            const ageMinutes = details?.age || details?.ageMinutes || 0;
+            return `${timestamp} [THREAD_METRIC] ${userId}: id:${threadIdMetric} msgs:${msgCountThread} tokens:${tokenCountThread} reused:${reused} age:${ageMinutes}m`;
+
+        case 'FUNC_PERF':
+            const funcNamePerf = details?.functionName || 'unknown';
+            const funcDuration = details?.duration || details?.totalTime || 0;
+            const apiTime = details?.apiTime || details?.externalTime || 0;
+            const dbTime = details?.dbTime || details?.databaseTime || 0;
+            const callsCount = details?.calls || details?.callsCount || 1;
+            const funcErrors = details?.errors || details?.errorCount || 0;
+            return `${timestamp} [FUNC_PERF] ${userId}: ${funcNamePerf}:${funcDuration}ms api:${apiTime}ms db:${dbTime}ms calls:${callsCount} errs:${funcErrors}`;
+
+        case 'SYS_METRIC':
+            const memUsed = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+            const memTotal = details?.memTotal || 512;
+            const cpuUsage = details?.cpu || details?.cpuPercent || 0;
+            const connections = details?.connections || details?.activeConnections || 0;
+            const uptimeHours = Math.floor(process.uptime() / 3600);
+            const uptimeMinutes = Math.floor((process.uptime() % 3600) / 60);
+            const activeUsers = details?.activeUsers || details?.users || 0;
+            return `${timestamp} [SYS_METRIC] sys: mem:${memUsed}/${memTotal}MB cpu:${cpuUsage}% conn:${connections} uptime:${uptimeHours}h${uptimeMinutes}m activeUsers:${activeUsers}`;
+
+        case 'RATE_WARN':
+            const openaiRate = details?.openaiRate || 0;
+            const openaiLimit = details?.openaiLimit || 25;
+            const whapiRate = details?.whapiRate || 0;
+            const whapiLimit = details?.whapiLimit || 1000;
+            const beds24Status = details?.beds24Status || 'ok';
+            return `${timestamp} [RATE_WARN] sys: openai:${Math.round(openaiRate/openaiLimit*100)}%(${openaiRate}/${openaiLimit}rpm) whapi:${Math.round(whapiRate/whapiLimit*100)}%(${whapiRate}/${whapiLimit}rpm) beds24:${beds24Status}`;
+
+        case 'FALLBACK':
+            const fallbackReason = details?.reason || details?.trigger || 'unknown';
+            const fallbackAction = details?.action || details?.recovery || 'unknown';
+            const retryCount = details?.retry || details?.retries || 0;
+            return `${timestamp} [FALLBACK] ${userId}: reason:${fallbackReason} action:${fallbackAction} retry:${retryCount}`;
+            
         case 'CACHE_HIT':
         case 'CACHE_MISS':
             const cacheResult = category === 'CACHE_HIT' ? 'HIT' : 'MISS';
@@ -1404,6 +1525,21 @@ export const logRequestTracing = (msg: string, details?: Record<string, any>) =>
 export const logToolOutputsSubmitted = (msg: string, details?: Record<string, any>) => enrichedLog('TOOL_OUTPUTS_SUBMITTED', msg, details);
 export const logAssistantNoResponse = (msg: string, details?: Record<string, any>) => enrichedLog('ASSISTANT_NO_RESPONSE', msg, details);
 export const logFlowStageUpdate = (msg: string, details?: Record<string, any>) => enrichedLog('FLOW_STAGE_UPDATE', msg, details);
+
+// 🚀 NUEVAS: Funciones de logging técnico compacto específicas
+export const logBeds24Raw = (msg: string, details?: Record<string, any>) => enrichedLog('BEDS24_RAW', msg, details);
+export const logOpenAIPrompt = (msg: string, details?: Record<string, any>) => enrichedLog('OPENAI_PROMPT', msg, details);
+export const logTokensMetric = (msg: string, details?: Record<string, any>) => enrichedLog('TOKENS_METRIC', msg, details);
+export const logLatencyMetric = (msg: string, details?: Record<string, any>) => enrichedLog('LATENCY_METRIC', msg, details);
+export const logUsageStats = (msg: string, details?: Record<string, any>) => enrichedLog('USAGE_STATS', msg, details);
+export const logDbQuery = (msg: string, details?: Record<string, any>) => enrichedLog('DB_QUERY', msg, details);
+export const logCacheMetric = (msg: string, details?: Record<string, any>) => enrichedLog('CACHE_METRIC', msg, details);
+export const logBufferMetric = (msg: string, details?: Record<string, any>) => enrichedLog('BUFFER_METRIC', msg, details);
+export const logThreadMetric = (msg: string, details?: Record<string, any>) => enrichedLog('THREAD_METRIC', msg, details);
+export const logFuncPerf = (msg: string, details?: Record<string, any>) => enrichedLog('FUNC_PERF', msg, details);
+export const logSysMetric = (msg: string, details?: Record<string, any>) => enrichedLog('SYS_METRIC', msg, details);
+export const logRateWarn = (msg: string, details?: Record<string, any>) => enrichedLog('RATE_WARN', msg, details);
+export const logFallback = (msg: string, details?: Record<string, any>) => enrichedLog('FALLBACK', msg, details);
 
 // 🚀 NUEVO: Funciones de conveniencia para nuevos niveles
 export const logTrace = (cat: string, msg: string, details?: Record<string, any>) => enrichedLog(cat, msg, details, 'TRACE');

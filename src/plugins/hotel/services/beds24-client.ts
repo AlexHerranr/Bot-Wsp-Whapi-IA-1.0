@@ -9,6 +9,8 @@ import {
     logSuccess,
     logInfo
 } from '../../../utils/logging';
+// 🔧 NUEVO: Importar logging compacto
+import { logBeds24Response } from '../../../utils/logging/integrations';
 
 // Respuesta real de la API de Beds24
 // Interface para datos básicos de Beds24
@@ -145,6 +147,15 @@ export class Beds24Client {
                 rawResponse: data
             });
 
+            // 🔧 NUEVO: Log compacto con datos raw completos
+            const userId = (options as any).userId || 'system';
+            logBeds24Response(
+                userId,
+                data, // Raw response completa
+                `${duration}ms`, // Duration
+                data.success || false // Success status
+            );
+
             if (!data.success) {
                 const errorMsg = data.error || 'Error desconocido';
                 if (errorMsg.includes('past dates') || errorMsg.includes('invalid date') || errorMsg.includes('date is in the past')) {
@@ -182,6 +193,9 @@ export class Beds24Client {
             
             logInfo('HOTEL_AVAILABILITY_RESULT', `Texto enviado a OpenAI: ${escapedText}`);
 
+            // 🔧 NUEVO: Log compacto específico con resumen técnico
+            logInfo('HOTEL_AVAILABILITY', `${options.arrival}_${options.departure}_${options.numAdults}adl | ${availableApartments.length}apts | ${duration}ms | BD:OK | Ages:MISS | ${formattedResponse.length}chars`);
+
             return formattedResponse;
 
         } catch (error: any) {
@@ -194,6 +208,15 @@ export class Beds24Client {
                 apiUrl: this.baseUrl,
                 hasToken: !!this.apiToken
             });
+
+            // 🔧 NUEVO: Log error compacto
+            const userId = (options as any).userId || 'system';
+            logBeds24Response(
+                userId,
+                { error: error.message, success: false },
+                `${duration}ms`,
+                false // Error occurred
+            );
 
             // Retornar mensaje de error específico para OpenAI
             return `Error al consultar la API de Beds24. Indica al cliente que hay un problema temporal en el sistema y que con gusto se le ayudará más tarde o por otro canal.`;

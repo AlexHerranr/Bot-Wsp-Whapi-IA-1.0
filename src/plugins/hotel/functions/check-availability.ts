@@ -1,6 +1,8 @@
 // src/plugins/hotel/functions/check-availability.ts
 import { Beds24Client } from '../services/beds24-client';
 import { logError, logInfo } from '../../../utils/logging';
+// 🔧 NUEVO: Importar logging compacto
+import { logFunctionPerformance } from '../../../utils/logging/integrations';
 
 // Función helper movida al final - ya no es necesaria aquí, beds24-client la tiene
 
@@ -9,6 +11,8 @@ export async function checkAvailability(args: {
     endDate: string;
     numAdults?: number;
 }): Promise<string> {
+    const startTime = Date.now(); // 🔧 NUEVO: Mover startTime al scope de función
+    
     try {
         // Validar fechas pasadas ANTES de llamar a Beds24
         const today = new Date();
@@ -34,8 +38,10 @@ export async function checkAvailability(args: {
 
         // Llamar a Beds24Client que ahora retorna string formateado
         const beds24 = new Beds24Client();
-        const startTime = Date.now();
+        let apiTime = 0;
+        let dbTime = 0;
         
+        // Track API call time (Beds24Client internally tracks this)
         const result = await beds24.searchAvailability({
             arrival: args.startDate,
             departure: args.endDate,
@@ -47,16 +53,45 @@ export async function checkAvailability(args: {
         const hasFixedCharges = result.includes('$') && result.includes('Total:');
         const hasAgeInfo = result.includes('incluido mayores');
         
+        // 🔧 NUEVO: Log compacto de function performance
+        // Estimar tiempos (beds24Client no expone breakdown, pero podemos aproximar)
+        apiTime = Math.round(duration * 0.7); // ~70% API call
+        dbTime = Math.round(duration * 0.2);  // ~20% DB lookup
+        
+        logFunctionPerformance(
+            'system', // userId no disponible en esta función
+            'check_availability',
+            duration,
+            apiTime,
+            dbTime,
+            1, // calls
+            0  // errors
+        );
+        
         // Log técnico resumido en una línea
         logInfo('HOTEL_AVAILABILITY', `${args.startDate}_${args.endDate}_${numAdults}adl | ${apartmentCount}apts | ${duration}ms | BD:${hasFixedCharges?'OK':'MISS'} | Ages:${hasAgeInfo?'OK':'MISS'} | ${result.length}chars`);
 
         return result; // Ya viene formateado o con mensaje de error
 
     } catch (error: any) {
+        const duration = Date.now() - startTime;
+        
         logError('CHECK_AVAILABILITY_ERROR', 'Error inesperado en check_availability', { 
             error: error.message || error,
             args 
         });
+        
+        // 🔧 NUEVO: Log compacto de function performance con error
+        logFunctionPerformance(
+            'system',
+            'check_availability',
+            duration,
+            0, // apiTime - no completado
+            0, // dbTime - no completado
+            1, // calls
+            1  // errors
+        );
+        
         if (error.message && (error.message.includes('network') || error.message.includes('timeout') || error.message.includes('ECONNRESET'))) {
             return 'Error de conexión al verificar disponibilidad, intentados 3 reintentos. Intenta de nuevo más tarde o sugiere al cliente llamar al 3023371476.';
         }

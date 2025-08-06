@@ -4,6 +4,8 @@ import { ThreadRecord } from '../../shared/types';
 import { fetchWithRetry } from '../utils/retry-utils';
 import { logError, logInfo, logWarning } from '../../utils/logging';
 import type { ClientDataCache } from '../state/client-data-cache';
+// 🔧 NUEVO: Importar logging compacto
+import { logDatabaseOperation, logThreadUsage } from '../../utils/logging/integrations';
 
 interface MemoryStore {
     threads: Map<string, ThreadRecord>;
@@ -119,6 +121,18 @@ export class DatabaseService {
                 });
                 
                 logInfo('THREAD_SAVED', `✅ Thread guardado en PostgreSQL: ${userId}`, { userId });
+                
+                // 🔧 NUEVO: Log compacto de thread usage
+                if (threadData.threadId) {
+                    logThreadUsage(
+                        userId,
+                        threadData.threadId,
+                        0, // messageCount - no disponible aquí
+                        0, // tokenCount - no disponible aquí
+                        false, // reused - es un save, no reuse
+                        0 // ageMinutes - no disponible aquí
+                    );
+                }
             } catch (error) {
                 logWarning('THREAD_SAVE_ERROR', `⚠️ Error guardando en PostgreSQL, usando memoria`, { error: error instanceof Error ? error.message : error });
                 this.isConnected = false;
@@ -255,6 +269,7 @@ export class DatabaseService {
     }
 
     public async getThread(userId: string): Promise<ThreadRecord | null> {
+        const getStart = Date.now(); // 🔧 NUEVO: Capturar tiempo inicio
         if (this.isConnected) {
             try {
                 const client = await this.prisma.clientView.findUnique({
@@ -272,6 +287,17 @@ export class DatabaseService {
                     lastActivity: client.lastActivity,
                     labels: client.labels ? client.labels.split('/') : [],
                 };
+                
+                // 🔧 NUEVO: Log compacto de operación DB
+                logDatabaseOperation(
+                    userId,
+                    'thread_fetch',
+                    Date.now() - getStart,
+                    result ? `thread:${result.threadId?.substring(0, 8)}...` : 'not_found',
+                    false // no cache update
+                );
+                
+                return result;
             } catch (error) {
                 logError('DATABASE_ERROR', `Error leyendo de PostgreSQL, usando memoria: ${error instanceof Error ? error.message : error}`, { userId, operation: 'getThread' });
                 this.isConnected = false;
@@ -620,6 +646,7 @@ export class DatabaseService {
     }
 
     public async enrichUserFromWhapi(phoneNumber: string): Promise<void> {
+        const enrichStart = Date.now(); // 🔧 NUEVO: Capturar tiempo inicio
         try {
             const chatId = `${phoneNumber}@s.whatsapp.net`;
             const whapiUrl = process.env.WHAPI_API_URL || 'https://gate.whapi.cloud';
@@ -684,6 +711,15 @@ export class DatabaseService {
                     });
 
                     logInfo('USER_ENRICHMENT', `Usuario enriquecido automáticamente: ${phoneNumber} → ${realName || 'sin nombre'}, ${labels.length} etiquetas`, { phoneNumber, realName, labelsCount: labels.length, operation: 'enrichUserFromWhapi' });
+
+                    // 🔧 NUEVO: Log compacto de operación DB
+                    logDatabaseOperation(
+                        phoneNumber,
+                        'enrich',
+                        Date.now() - enrichStart,
+                        `labels=${labels.length} name="${realName || 'unknown'}"`,
+                        true // cache updated
+                    );
                 }
             }
         } catch (error) {

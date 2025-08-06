@@ -242,6 +242,20 @@ export class OpenAIService implements IOpenAIService {
                 }
             }
 
+            // 🔧 NUEVO: Log compacto de tokens y flow completo
+            if (runResult.tokensUsed) {
+                logTokenUsage(userId, threadId, 0, runResult.tokensUsed, 'gpt-4'); // Sin input tokens separados
+            }
+            
+            logMessageFlowComplete(
+                userId,
+                message.length,
+                processingTime,
+                0, // beds24Latency - no aplica aquí
+                0, // whapiLatency - no aplica aquí
+                0  // dbLatency - no aplica aquí
+            );
+
             // Log crítico: Token usage si disponible
             if (runResult.tokensUsed) {
                 logInfo('TOKEN_USAGE', 'Tokens utilizados en procesamiento', {
