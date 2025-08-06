@@ -45,7 +45,7 @@ export class OpenAIService implements IOpenAIService {
             apiKey: config.apiKey,
             assistantId: config.assistantId,
             maxRunTime: config.maxRunTime ?? 120000, // 2 minutes
-            pollingInterval: config.pollingInterval ?? 1000, // 1 second
+            pollingInterval: config.pollingInterval ?? 2000, // 2 seconds
             maxPollingAttempts: config.maxPollingAttempts ?? 60, // 1 minute max
             enableThreadCache: config.enableThreadCache ?? true
         };
@@ -621,6 +621,18 @@ export class OpenAIService implements IOpenAIService {
                 );
 
                 this.log.debug(`Run ${runId} status: ${run.status} (attempt ${attempts + 1})`);
+
+                // Límite especial para runs largos sin function calling
+                if (attempts > 30 && run.status !== 'requires_action') {
+                    logInfo('OPENAI_POLLING_TIMEOUT', 'Cortando polling por límite de 30 intentos', {
+                        threadId,
+                        runId,
+                        status: run.status,
+                        attempts: attempts + 1,
+                        reason: 'max_attempts_reached'
+                    });
+                    break;
+                }
 
                 // Log crítico: Polling de run
                 if (attempts % 5 === 0 || run.status !== 'in_progress') { // Log cada 5 intentos o cuando cambia estado
