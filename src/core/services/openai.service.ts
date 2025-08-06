@@ -82,27 +82,40 @@ export class OpenAIService implements IOpenAIService {
                 // Validar que el thread existe y obtener token count
                 const validation = await this.validateThread(existingThreadId);
                 if (validation.isValid) {
-                    threadId = existingThreadId;
-                    threadTokenCount = validation.tokenCount;
-                    
-                    // Log crítico: Thread reutilizado desde base de datos
-                    logInfo('THREAD_REUSE', 'Thread reutilizado desde base de datos', {
-                        userId,
-                        userName, 
-                        chatId,
-                        threadId: existingThreadId,
-                        tokenCount: threadTokenCount,
-                        source: 'database'
-                    });
-                    
-                    // DEBUG: Detailed thread validation info
-                    logDebug('THREAD_VALIDATION', 'Thread validation details', {
-                        userId,
-                        threadId: existingThreadId,
-                        tokenCount: threadTokenCount,
-                        validationPassed: true,
-                        source: 'database'
-                    });
+                    // Verificar si token count es muy alto para crear nuevo thread
+                    if (validation.tokenCount && validation.tokenCount > 5000) {
+                        logInfo('THREAD_HIGH_TOKEN_COUNT', 'Thread con muchos tokens, creando nuevo', {
+                            userId,
+                            userName,
+                            oldThreadId: existingThreadId,
+                            tokenCount: validation.tokenCount,
+                            reason: 'token_limit_exceeded'
+                        });
+                        // Crear nuevo thread en lugar de reutilizar
+                        threadId = await this.getOrCreateThread(userId, chatId);
+                    } else {
+                        threadId = existingThreadId;
+                        threadTokenCount = validation.tokenCount;
+                        
+                        // Log crítico: Thread reutilizado desde base de datos
+                        logInfo('THREAD_REUSE', 'Thread reutilizado desde base de datos', {
+                            userId,
+                            userName, 
+                            chatId,
+                            threadId: existingThreadId,
+                            tokenCount: threadTokenCount,
+                            source: 'database'
+                        });
+                        
+                        // DEBUG: Detailed thread validation info
+                        logDebug('THREAD_VALIDATION', 'Thread validation details', {
+                            userId,
+                            threadId: existingThreadId,
+                            tokenCount: threadTokenCount,
+                            validationPassed: true,
+                            source: 'database'
+                        });
+                    }
                 } else {
                     // Thread inválido, crear uno nuevo
                     logWarning('THREAD_INVALID', 'Thread existente inválido, creando nuevo', {

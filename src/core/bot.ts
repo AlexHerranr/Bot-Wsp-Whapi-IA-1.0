@@ -904,7 +904,7 @@ ${message}`}`;
             }
         }, 5 * 60 * 1000);
         
-        // User state cleanup every 10 minutes
+        // User state cleanup every 15 minutes
         const userCleanup = setInterval(() => {
             const cleaned = this.userManager.cleanup();
             if (cleaned > 0) {
@@ -915,7 +915,7 @@ ${message}`}`;
                     reason: 'expired_user_states'
                 });
             }
-        }, 10 * 60 * 1000);
+        }, 15 * 60 * 1000);
 
         // Client data cache cleanup every 15 minutes
         const cacheCleanup = setInterval(() => {
