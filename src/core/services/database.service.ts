@@ -276,11 +276,21 @@ export class DatabaseService {
                     where: { phoneNumber: userId }
                 });
 
-                if (!client) return null;
+                if (!client) {
+                    // 🔧 NUEVO: Log compacto de operación DB para not found
+                    logDatabaseOperation(
+                        userId,
+                        'thread_fetch',
+                        Date.now() - getStart,
+                        'not_found',
+                        false // no cache update
+                    );
+                    return null;
+                }
 
                 // OPTIMIZADO: Enriquecimiento automático deshabilitado - se hace via hook externo
                 // Solo usar datos del cliente actual sin enriquecer automáticamente
-                return {
+                const result = {
                     threadId: client.threadId || '',
                     chatId: client.chatId || '',
                     userName: client.userName,
@@ -293,7 +303,7 @@ export class DatabaseService {
                     userId,
                     'thread_fetch',
                     Date.now() - getStart,
-                    result ? `thread:${result.threadId?.substring(0, 8)}...` : 'not_found',
+                    `thread:${result.threadId?.substring(0, 8)}...`,
                     false // no cache update
                 );
                 

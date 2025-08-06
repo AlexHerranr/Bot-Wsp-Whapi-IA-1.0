@@ -628,9 +628,9 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             return `${timestamp} [AI_START] ${userId} | ${threadId}`;
             
         case 'OPENAI_RUN_COMPLETED':
-            const duration = details?.processingTime ? `${Math.round(details.processingTime/1000)}s` : '';
+            const aiDuration = details?.processingTime ? `${Math.round(details.processingTime/1000)}s` : '';
             const tokens = details?.tokensUsed ? `${details.tokensUsed}t` : '';
-            return `${timestamp} [AI_DONE] ${userId} | ${threadId} | ${duration} | ${tokens}`;
+            return `${timestamp} [AI_DONE] ${userId} | ${threadId} | ${aiDuration} | ${tokens}`;
             
         case 'MESSAGE_SENT':
             const respLen = details?.responseLength || 0;
@@ -664,10 +664,10 @@ function formatCompactRailwayLog(category: string, message: string, details: any
                 return `${r.propertyId || r.roomId}:${offer.price || 0}:${offer.unitsAvailable || 0}`;
             }).join('|');
             const status = details?.status || 200;
-            const duration = details?.duration || '0ms';
+            const beds24Duration = details?.duration || '0ms';
             const success = details?.success || false;
             const roomCount = rawData.length || 0;
-            return `${timestamp} [BEDS24_RAW] ${userId}: success:${success} rooms:${roomCount} offers:${roomCount} data:[${roomsData}] status:${status} dur:${duration} err:${success ? 0 : 1}`;
+            return `${timestamp} [BEDS24_RAW] ${userId}: success:${success} rooms:${roomCount} offers:${roomCount} data:[${roomsData}] status:${status} dur:${beds24Duration} err:${success ? 0 : 1}`;
 
         case 'OPENAI_PROMPT':
             const promptLen = details?.length || 0;

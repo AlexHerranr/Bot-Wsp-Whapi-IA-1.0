@@ -6,6 +6,8 @@ import { openAIWithRetry, withTimeout } from '../utils/retry-utils';
 import { TerminalLog } from '../utils/terminal-log';
 import { CacheManager } from '../state/cache-manager';
 import { logInfo, logSuccess, logError, logWarning, logDebug } from '../../utils/logging';
+// 🔧 NUEVO: Importar logging compacto
+import { logOpenAIPromptSent, logTokenUsage, logMessageFlowComplete } from '../../utils/logging/integrations';
 
 export interface OpenAIServiceConfig {
     apiKey: string;
