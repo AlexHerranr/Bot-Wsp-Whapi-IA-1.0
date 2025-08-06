@@ -25,31 +25,24 @@ export class WebhookProcessor {
         const body = payload as any;
         const { messages, presences, statuses, chats, contacts, groups, labels } = body;
         
-        // MEJORA: Filtrado temprano SOLO de eventos de canal específicos de salud
-        const isHealthChannelEvent = body.event_type === 'channel' && body.health?.status;
-        const isPunishChannelEvent = body.channel_id && body.channel_id.includes('PUNISH-');
-        
-        // SOLO ignorar eventos de salud del canal, NO todos los eventos de canal
-        if (isHealthChannelEvent || isPunishChannelEvent) {
-            // Solo log debug para eventos de canal de salud - no generar ruido en Railway
-            logDebug('CHANNEL_EVENT_IGNORED', 'Webhook de estado del canal ignorado', {
-                channel_id: body.channel_id,
-                event_name: body.event?.event || body.event_name,
-                event_type: body.event_type,
-                health_status: body.health?.status?.text || body.health_status
-            });
-            return; // Salir temprano
-        }
-        
-        // LOG TEMPORAL: Ver todos los webhooks que NO son de canal para debug
+        // LOG TEMPORAL: Ver TODOS los webhooks para debug
         logInfo('WEBHOOK_DEBUG', 'Procesando webhook', {
             event_type: body.event_type,
             channel_id: body.channel_id,
             has_messages: !!body.messages,
             has_presences: !!body.presences,
+            has_statuses: !!body.statuses,
             has_health: !!body.health,
             body_keys: Object.keys(body || {}).slice(0, 10)
         });
+        
+        // FILTRO MUY ESPECÍFICO: Solo ignorar webhooks de salud sin datos útiles
+        if (body.health && !body.messages && !body.presences && !body.statuses && !body.chats) {
+            logDebug('HEALTH_WEBHOOK_IGNORED', 'Webhook solo de salud ignorado', {
+                health_status: body.health?.status?.text || body.health_status
+            });
+            return;
+        }
         
         // Log técnico de sesión para todos los webhooks válidos (compacto)
         const type = messages?.length ? `msg:${messages.length}` : 
