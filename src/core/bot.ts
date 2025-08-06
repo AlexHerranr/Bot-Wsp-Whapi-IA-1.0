@@ -234,6 +234,19 @@ export class CoreBot {
             return;
         }
 
+        // Limpiar buffers vacíos automáticamente
+        const buffer = this.bufferManager.getBuffer(userId);
+        if (buffer && buffer.messages.length === 0 && !imageMessage) {
+            logInfo('BUFFER_EMPTY_CLEANUP', 'Limpiando buffer vacío automáticamente', {
+                userId,
+                userName,
+                chatId,
+                reason: 'no_content'
+            });
+            this.bufferManager.clearBuffer(userId);
+            return;
+        }
+
         // NOTA: Verificación de typing removida - el BufferManager ya maneja los delays correctamente
         // No necesitamos delays adicionales aquí ya que el buffer espera el tiempo apropiado
         const userState = this.userManager.getState(userId);

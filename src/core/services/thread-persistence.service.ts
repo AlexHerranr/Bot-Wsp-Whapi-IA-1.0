@@ -28,6 +28,9 @@ export class ThreadPersistenceService {
             chatId,
             userName
         });
+        
+        // Reset token count para thread nuevo
+        await this.databaseService.updateThreadTokenCount(userId, 0);
     }
 
     async updateThreadMetadata(userId: string, updates: {

@@ -36,19 +36,24 @@ export class OpenAIService implements IOpenAIService {
     private log: TerminalLog;
     private cache?: CacheManager;
     private functionRegistry?: IFunctionRegistry;
+    private whatsappService?: any; // Referencia opcional para mensajes interinos
+    private currentChatId?: string; // Chat ID actual para mensajes interinos
+    private static activeOpenAICalls: number = 0; // Contador global de llamadas concurrentes
+    private static readonly MAX_CONCURRENT_CALLS = 50; // Límite para 100 usuarios
 
     constructor(
         config: OpenAIServiceConfig,
         terminalLog: TerminalLog,
         cacheManager?: CacheManager,
-        functionRegistry?: IFunctionRegistry
+        functionRegistry?: IFunctionRegistry,
+        whatsappService?: any
     ) {
         this.config = {
             apiKey: config.apiKey,
             assistantId: config.assistantId,
             maxRunTime: config.maxRunTime ?? 120000, // 2 minutes
-            pollingInterval: config.pollingInterval ?? 2000, // 2 seconds
-            maxPollingAttempts: config.maxPollingAttempts ?? 60, // 1 minute max
+            pollingInterval: config.pollingInterval ?? 1500, // 1.5 seconds (reducido de 2s)
+            maxPollingAttempts: config.maxPollingAttempts ?? 40, // 40 intentos (reducido de 60)
             enableThreadCache: config.enableThreadCache ?? true
         };
 
@@ -56,11 +61,28 @@ export class OpenAIService implements IOpenAIService {
         this.log = terminalLog;
         this.cache = cacheManager;
         this.functionRegistry = functionRegistry;
+        this.whatsappService = whatsappService;
     }
 
 
     async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<ProcessingResult> {
         const startTime = Date.now();
+        
+        // Guardar chatId para posibles mensajes interinos
+        this.currentChatId = chatId;
+
+        // Control de concurrencia para escalabilidad
+        while (OpenAIService.activeOpenAICalls > OpenAIService.MAX_CONCURRENT_CALLS) {
+            logWarning('OPENAI_CONCURRENCY_WAIT', 'Esperando por límite de concurrencia OpenAI', {
+                userId,
+                userName,
+                activeCalls: OpenAIService.activeOpenAICalls,
+                maxCalls: OpenAIService.MAX_CONCURRENT_CALLS
+            });
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        OpenAIService.activeOpenAICalls++;
 
         try {
             // Log crítico: Inicio de procesamiento OpenAI
@@ -320,6 +342,9 @@ export class OpenAIService implements IOpenAIService {
                 error: errorMessage,
                 processingTime
             };
+        } finally {
+            // Decrementar contador de concurrencia siempre
+            OpenAIService.activeOpenAICalls--;
         }
     }
 
@@ -711,7 +736,31 @@ export class OpenAIService implements IOpenAIService {
                         });
                         
                         if (run.required_action?.type === 'submit_tool_outputs') {
-                            const functionCalls = run.required_action.submit_tool_outputs.tool_calls.map(tc => ({
+                            const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
+                            
+                            // Enviar mensaje interino si detectamos check_availability
+                            if (toolCalls.some(tc => tc.function.name === 'check_availability') && this.currentChatId) {
+                                try {
+                                    // Solo enviar si hay un WhatsappService disponible
+                                    if (this.whatsappService) {
+                                        await this.whatsappService.sendWhatsAppMessage(
+                                            this.currentChatId, 
+                                            "Permíteme y consulto en nuestro sistema...", 
+                                            { lastInputVoice: false }, 
+                                            false
+                                        );
+                                    }
+                                } catch (error) {
+                                    // No bloquear por error en mensaje interino
+                                    logWarning('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje interino', {
+                                        threadId,
+                                        runId,
+                                        error: error instanceof Error ? error.message : String(error)
+                                    });
+                                }
+                            }
+                            
+                            const functionCalls = toolCalls.map(tc => ({
                                 id: tc.id,
                                 function: {
                                     name: tc.function.name,

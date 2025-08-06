@@ -36,10 +36,20 @@ export class FunctionRegistryService implements IFunctionRegistry {
             console.log(`🔧 Executing function: ${name}`);
             const startTime = Date.now();
             
+            // Log detallado de function args/result si variable de entorno está activa
+            if (process.env.DETAILED_FUNCTION_LOGS === 'true') {
+                console.log(`🔍 Function ${name} args:`, JSON.stringify(args, null, 2));
+            }
+            
             const result = await func(args, context);
             
             const executionTime = Date.now() - startTime;
             console.log(`✅ Function ${name} completed in ${executionTime}ms`);
+            
+            // Log detallado del resultado si variable de entorno está activa
+            if (process.env.DETAILED_FUNCTION_LOGS === 'true') {
+                console.log(`🔍 Function ${name} result:`, JSON.stringify(result, null, 2));
+            }
             
             return result;
         } catch (error: any) {
