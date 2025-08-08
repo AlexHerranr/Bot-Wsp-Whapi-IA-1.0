@@ -23,6 +23,7 @@ import { TerminalLog } from './utils/terminal-log';
 import { IFunctionRegistry } from '../shared/interfaces';
 import { crmRoutes } from './routes/crm.routes';
 import { logBotReady, logServerStart, logInfo, logSuccess, logError, logWarning } from '../utils/logging';
+import { HotelValidation } from '../plugins/hotel/logic/validation';
 
 // Simulación de la configuración
 interface AppConfig {
@@ -59,6 +60,7 @@ export class CoreBot {
     private functionRegistry: IFunctionRegistry;
     private cleanupIntervals: NodeJS.Timeout[] = [];
     private lastError: Record<string, { time: number }> = {};
+    private hotelValidation: HotelValidation;
 
     constructor(
         config: AppConfig,
@@ -111,6 +113,7 @@ export class CoreBot {
             (userId: string) => this.userManager.getState(userId)
         );
         this.webhookProcessor = new WebhookProcessor(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.terminalLog);
+        this.hotelValidation = new HotelValidation();
 
         this.setupMiddleware();
         this.setupRoutes();
@@ -247,6 +250,32 @@ export class CoreBot {
                 reason: 'empty_callback'
             });
             return;
+        }
+
+        // Manejo simple: si el contenido proviene de un agente humano (marcador de webhook),
+        // sincronizar al thread existente como mensaje manual y NO generar respuesta automática.
+        if (combinedText.includes('[Mensaje manual del agente')) {
+            try {
+                const existingThread = await this.threadPersistence.getThread(userId);
+                const threadId = existingThread?.threadId;
+                if (!threadId) {
+                    logWarning('MANUAL_NO_THREAD', 'Sin thread activo para sincronizar mensaje manual', { userId, userName });
+                    return; // cliente debe haber iniciado la conversación
+                }
+
+                const agentNameMatch = combinedText.match(/\[Mensaje manual del agente\s(.+?)\s-\sNO RESPONDER\]/);
+                const agentName = agentNameMatch?.[1] || 'Agente';
+                const manualBody = combinedText.replace(/\[Mensaje manual del agente.+?\]\n?/, '').trim();
+
+                const ok = await this.openaiService.appendManualAgentMessage(threadId, agentName, manualBody);
+                if (ok) {
+                    this.terminalLog.manualSynced(agentName, userName);
+                    logSuccess('MANUAL_SYNCED', 'Mensaje manual sincronizado y flujo detenido', { userId, agentName, length: manualBody.length });
+                }
+            } catch (e) {
+                logError('MANUAL_SYNC_EXCEPTION', 'Excepción sincronizando mensaje manual', { userId, error: e instanceof Error ? e.message : String(e) });
+            }
+            return; // no continuar a procesamiento normal
         }
 
         // NOTA: Verificación de typing removida - el BufferManager ya maneja los delays correctamente
@@ -452,6 +481,15 @@ export class CoreBot {
                 });
             }
 
+            // Enfatizar quoted en el prompt a OpenAI si aplica (simple y no invasivo)
+            try {
+                const buf = this.bufferManager.getBuffer(userId);
+                const quotedId = buf?.quotedMessageId;
+                if (quotedId) {
+                    processedMessage = `El cliente cita un mensaje previo [${quotedId}]. Responde refiriéndolo si aplica.\n${processedMessage}`;
+                }
+            } catch {}
+
             // 5. Verificar si hay un run activo antes de procesar
             if (existingThreadId) {
                 const maxWaitAttempts = 5;
@@ -474,10 +512,26 @@ export class CoreBot {
                 }
                 
                 if (waitAttempts >= maxWaitAttempts) {
-                    logWarning('RUN_WAIT_TIMEOUT', 'Timeout esperando run activo, saltando procesamiento', { 
+                    logWarning('RUN_WAIT_TIMEOUT', 'Timeout esperando run activo; reencolando mensaje para no perderlo', { 
                         userId,
-                        threadId: existingThreadId
+                        threadId: existingThreadId,
+                        combinedLength: processedMessage.length
                     });
+                    // Reencolar el mensaje para procesarlo después y no perderlo
+                    try {
+                        this.bufferManager.addMessage(userId, combinedText, chatId, userName);
+                        this.bufferManager.setIntelligentTimer(userId, 'message');
+                        logInfo('BUFFER_REQUEUED', 'Mensaje reencolado por run activo', {
+                            userId,
+                            userName,
+                            length: combinedText.length
+                        });
+                    } catch (requeueError) {
+                        logWarning('BUFFER_REQUEUE_FAILED', 'Fallo reencolando mensaje tras timeout de run', {
+                            userId,
+                            error: requeueError instanceof Error ? requeueError.message : String(requeueError)
+                        });
+                    }
                     return;
                 }
             }
@@ -620,28 +674,27 @@ export class CoreBot {
                 // Quote detection moved to plugin
                 const isQuote = false;
 
-                // Check if last input was voice to ensure voice response
-                if (userState.lastInputVoice && !isQuote) {
-                    // Evitar envío de voz para respuestas largas (mejora UX)
-                    if (finalResponse.length > 200) {
-                        logInfo('VOICE_FORCED_TO_TEXT_LONG', 'Forzando texto por respuesta larga', {
-                            userId,
-                            userName,
-                            responseLength: finalResponse.length
-                        });
-                        userState.lastInputVoice = false;  // Forzar texto
-                        this.userManager.updateState(userId, { lastInputVoice: false });
-                    } else {
-                        logInfo('VOICE_RESPONSE_MODE', 'Enviando respuesta en voz por input de audio', {
-                            userId,
-                            userName,
-                            chatId,
-                            responseLength: finalResponse.length
-                        }, 'bot.ts');
-                    }
+                // Mantener modo voz si el último input fue voz, salvo que el contenido sea cotización/precios/links.
+                const isQuoteOrPrice = this.hotelValidation.isQuoteOrPriceMessage(finalResponse);
+                if (userState.lastInputVoice && !isQuote && !isQuoteOrPrice) {
+                    logInfo('VOICE_RESPONSE_MODE', 'Enviando respuesta en voz por input de audio', {
+                        userId,
+                        userName,
+                        chatId,
+                        responseLength: finalResponse.length
+                    }, 'bot.ts');
                 }
 
-                const messageResult = await this.whatsappService.sendWhatsAppMessage(chatId, finalResponse, userState, isQuote);
+                // Si el burst venía con quoted, citar en el primer chunk de respuesta
+                const currentBuffer = this.bufferManager.getBuffer(userId);
+                const quotedMessageId = currentBuffer?.quotedMessageId;
+                const messageResult = await this.whatsappService.sendWhatsAppMessage(
+                    chatId,
+                    finalResponse,
+                    userState,
+                    isQuoteOrPrice,
+                    quotedMessageId
+                );
                 
                 if (messageResult.success) {
                     this.mediaManager.addBotSentMessage(`msg_${Date.now()}`);
@@ -820,11 +873,12 @@ ${message}`}`;
             : 'Sin tags';
 
         // Formatear el mensaje contextual (formato compacto)
+        const hasQuoted = message.includes('Cliente responde a este mensaje');
         const contextualMessage = `Cliente: ${clientName}
 Tags: ${tagsText}
 Hora actual: ${colombianTime}
 
-${message.includes('Cliente responde a este mensaje:') ? message : `Mensaje del cliente:
+${hasQuoted ? message : `Mensaje del cliente:
 ${message}`}`;
 
         return contextualMessage;

@@ -73,7 +73,7 @@ export class WhatsappService {
 
         if (shouldUseVoice) {
             try {
-                const voiceSuccess = await this.sendVoiceMessage(chatId, message);
+                const voiceSuccess = await this.sendVoiceMessage(chatId, message, quotedMessageId);
                 if (voiceSuccess) {
                     return { success: true, sentAsVoice: true }; // Indica que se envió exitosamente en voz
                 }
@@ -89,70 +89,89 @@ export class WhatsappService {
         return { success: textSuccess, sentAsVoice: false }; // false indica que NO se envió como voz
     }
 
-    private async sendVoiceMessage(chatId: string, message: string): Promise<boolean> {
+    private async sendVoiceMessage(chatId: string, message: string, quotedMessageId?: string): Promise<boolean> {
         const shortUserId = getShortUserId(chatId);
-        const messageLength = message.length;
-        const startTime = Date.now();
+        const startTimeTotal = Date.now();
 
-        
-        const ttsResponse = await this.openai.audio.speech.create({
-            model: 'tts-1',
-            voice: 'nova',
-            input: message.substring(0, 8000), // Aumentado a 8000
-            response_format: 'mp3'
-        });
-        const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-        const base64Audio = audioBuffer.toString('base64');
-        const audioDataUrl = `data:audio/mp3;base64,${base64Audio}`;
-        const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/voice`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.config.secrets.WHAPI_TOKEN}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ to: chatId, media: audioDataUrl })
-        });
+        // 1) Dividir inteligentemente por párrafos y oraciones (para notas múltiples)
+        const voiceChunks = this.splitMessageForVoice(message);
+        let totalSizeKb = 0;
 
-        // Verificar si la respuesta es exitosa
-        if (!response.ok) {
-            const errorText = await response.text();
-            logInfo('VOICE_SEND_ERROR', 'Error en respuesta de WHAPI para voz, pero mensaje podría haberse enviado', {
-                userId: shortUserId,
-                status: response.status,
-                statusText: response.statusText,
-                errorText: errorText.substring(0, 200),
-                chatId
+        for (let i = 0; i < voiceChunks.length; i++) {
+            const chunk = voiceChunks[i].slice(0, 8000); // límite seguro para TTS
+
+            // Presencia de grabando antes de cada nota
+            await this.sendRecordingIndicator(chatId);
+
+            const startTime = Date.now();
+            const ttsResponse = await this.openai.audio.speech.create({
+                model: 'tts-1',
+                voice: 'nova',
+                input: chunk,
+                response_format: 'mp3'
             });
-            
-            // WHAPI a veces devuelve errores pero el mensaje se envía exitosamente
-            // Solo fallar en errores críticos (5xx o timeouts)
-            if (response.status >= 500) {
-                throw new Error(`WHAPI critical error: ${response.status} ${response.statusText}`);
-            } else {
-                // Para errores 4xx, asumir que el mensaje se envió (common WHAPI behavior)
-                logInfo('VOICE_IGNORE_ERROR', 'Ignorando error WHAPI 4xx, asumiendo envío exitoso', {
+
+            const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+            const base64Audio = audioBuffer.toString('base64');
+            const audioDataUrl = `data:audio/mp3;base64,${base64Audio}`;
+
+            const payload: any = { to: chatId, media: audioDataUrl };
+            if (i === 0 && quotedMessageId) {
+                payload.quoted = quotedMessageId;
+            }
+
+            const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/voice`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.config.secrets.WHAPI_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                logInfo('VOICE_SEND_ERROR', 'Error en respuesta de WHAPI para voz, pero mensaje podría haberse enviado', {
                     userId: shortUserId,
                     status: response.status,
+                    statusText: response.statusText,
+                    errorText: errorText.substring(0, 200),
                     chatId
                 });
+                if (response.status >= 500) {
+                    throw new Error(`WHAPI critical error: ${response.status} ${response.statusText}`);
+                }
             }
+
+            const duration = Date.now() - startTime;
+            totalSizeKb += Math.round(audioBuffer.length / 1024);
+
+            // Log por cada nota
+            logInfo('VOICE_SENT_PART', 'Nota de voz enviada', {
+                userId: shortUserId,
+                chatId,
+                part: i + 1,
+                totalParts: voiceChunks.length,
+                duration,
+                audioSizeKB: Math.round(audioBuffer.length / 1024),
+                chunkLength: chunk.length
+            });
+
+            // Pausa humana corta entre notas
+            await new Promise(resolve => setTimeout(resolve, 800));
         }
 
-        const duration = Date.now() - startTime;
-        
-        // Obtener nombre del contacto de la base de datos
+        // Log final consolidado
+        const totalDuration = Date.now() - startTimeTotal;
         const threadData = await this.databaseService.getThread(shortUserId);
         const contactName = threadData?.userName || shortUserId;
-        
-        // Log: Voz enviada exitosamente
-        this.terminalLog.voiceSent(contactName, duration);
-        
-        // Log estructurado para voz enviada
-        logInfo('VOICE_SENT', 'Nota de voz enviada exitosamente', {
+        this.terminalLog.voiceSent(contactName, totalDuration);
+        logInfo('VOICE_SENT', 'Notas de voz enviadas exitosamente', {
             userId: shortUserId,
             chatId,
-            duration,
-            audioSizeKB: Math.round(audioBuffer.length / 1024),
+            totalDuration,
+            totalAudioSizeKB: totalSizeKb,
+            parts: voiceChunks.length,
             messageLength: message.length,
             success: true
         });
@@ -225,6 +244,44 @@ export class WhatsappService {
             });
         }
         return true;
+    }
+
+    // División específica para voz: primero párrafos, luego frases por puntuación.
+    private splitMessageForVoice(message: string): string[] {
+        const paragraphs = message
+            .split(/\n\n+/)
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+
+        const chunks: string[] = [];
+        const sources = paragraphs.length > 0 ? paragraphs : [message];
+
+        for (const block of sources) {
+            // Dividir por fin de oración sin perder signos
+            const sentences = block.match(/[^.!?\n]+[.!?]?/g) || [block];
+            let current = '';
+            for (const s of sentences) {
+                const candidate = (current + ' ' + s).trim();
+                // Limitar cada nota a ~700 caracteres para notas concisas
+                if (candidate.length > 700 && current) {
+                    chunks.push(current.trim());
+                    current = s.trim();
+                } else {
+                    current = candidate;
+                }
+            }
+            if (current.trim()) chunks.push(current.trim());
+        }
+
+        // Evitar exceso de partes: máximo 7 notas por mensaje
+        const MAX_PARTS = 7;
+        if (chunks.length > MAX_PARTS) {
+            // Consolidar últimas en una sola
+            const head = chunks.slice(0, MAX_PARTS - 1);
+            const tail = chunks.slice(MAX_PARTS - 1).join(' ');
+            return [...head, tail];
+        }
+        return chunks.length > 0 ? chunks : [message];
     }
 
     private splitMessageIntelligently(message: string): string[] {

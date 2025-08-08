@@ -188,6 +188,16 @@ export class TerminalLog {
         console.log(`⚠️ Advertencia: ${message}`);
     }
 
+    // === Logs específicos para entradas manuales de agentes ===
+    manualMessage(agentName: string, clientName: string, text: string): void {
+        const truncated = text.length > 60 ? text.substring(0, 60) + '...' : text;
+        console.log(`🧑‍💼 ${agentName} → ${clientName}: "${truncated}" (manual)`);
+    }
+
+    manualSynced(agentName: string, clientName: string): void {
+        console.log(`✅ Contexto actualizado con mensaje manual de ${agentName} → ${clientName}`);
+    }
+
     // Métodos adicionales para completar exactamente 20 métodos públicos
 
     /**

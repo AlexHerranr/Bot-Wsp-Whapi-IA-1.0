@@ -226,12 +226,13 @@ export class WebhookProcessor {
     }
 
     private async handleMessage(message: any): Promise<void> {
-        // Ignorar mensajes enviados por el bot para evitar loops
-        if (message.from_me || this.mediaManager.isBotSentMessage(message.id)) {
+        // Ignorar eco de mensajes enviados por el bot (desde WHAPI) para evitar loops
+        if (this.mediaManager.isBotSentMessage(message.id)) {
             return;
         }
 
-        const userId = message.from;
+        // Para mensajes normales, userId es el remitente; para from_me usaremos chat_id
+        let userId = message.from;
         const chatId = message.chat_id || message.from; // Fallback si no hay chat_id
         
         // Extraer número de teléfono para buscar en BD
@@ -270,6 +271,29 @@ export class WebhookProcessor {
             normalizedChatId = normalizedChatId + '@s.whatsapp.net';
         }
 
+        // Si es un mensaje manual (from_me), procesarlo ANTES de tocar el estado del usuario
+        if (message.from_me && message.type === 'text' && message.text?.body) {
+            // Reinterpretar userId como el cliente (desde chat_id) para hilo correcto
+            let clientUserId = message.chat_id || message.from;
+            if (clientUserId && typeof clientUserId === 'string' && clientUserId.includes('@')) {
+                clientUserId = clientUserId.split('@')[0];
+            }
+
+            const agentName = message.from_name || 'Agente';
+            const manualText = `[Mensaje manual del agente ${agentName} - NO RESPONDER]\n${message.text.body}`;
+
+            logInfo('MANUAL_DETECTED', 'Mensaje manual del agente detectado', {
+                userId: clientUserId,
+                agentName,
+                chatId: normalizedChatId,
+                preview: message.text.body.substring(0, 100)
+            });
+
+            this.terminalLog.manualMessage(agentName, userName, message.text.body);
+            this.bufferManager.addMessage(clientUserId, manualText, normalizedChatId, agentName);
+            return; // No actualizar estado ni procesar como input de cliente
+        }
+
         // Actualizar estado del usuario y resetear typing/recording (ya envió el mensaje)
         this.userManager.updateState(userId, { 
             userName, 
@@ -294,6 +318,32 @@ export class WebhookProcessor {
         }
 
         try {
+            // Manejo de mensajes manuales (from_me) simples: texto del agente desde el móvil
+            if (message.from_me && message.type === 'text' && message.text?.body) {
+                // Reinterpretar userId como el cliente (desde chat_id) para hilo correcto
+                if (message.chat_id && typeof message.chat_id === 'string') {
+                    userId = message.chat_id.includes('@') ? message.chat_id.split('@')[0] : message.chat_id;
+                }
+
+                const agentName = message.from_name || 'Agente';
+                const manualText = `[Mensaje manual del agente ${agentName} - NO RESPONDER]\n${message.text.body}`;
+
+                // Log técnico
+                logInfo('MANUAL_DETECTED', 'Mensaje manual del agente detectado', {
+                    userId,
+                    agentName,
+                    chatId: normalizedChatId,
+                    preview: message.text.body.substring(0, 100)
+                });
+
+                // Mostrar en terminal (formato manual)
+                this.terminalLog.manualMessage(agentName, userName, message.text.body);
+
+                // Usar el buffer unificado para agrupar si llegan varios seguidos
+                this.bufferManager.addMessage(userId, manualText, normalizedChatId, agentName);
+                return; // No procesar como input del cliente
+            }
+
             switch (message.type) {
                 case 'text':
                     if (message.text && message.text.body) {
@@ -319,7 +369,9 @@ export class WebhookProcessor {
                         });
                         
                         this.terminalLog.message(userName, message.text.body);
-                        this.bufferManager.addMessage(userId, messageContent, chatId, userName);
+                        // Propagar quotedId al buffer si existe
+                        const quotedId = message.context?.quoted_id;
+                        this.bufferManager.addMessage(userId, messageContent, chatId, userName, quotedId);
                     }
                     break;
 
@@ -373,7 +425,8 @@ export class WebhookProcessor {
                                 hasQuoted: !!(message.context && message.context.quoted_id)
                             });
                             
-                            this.bufferManager.addMessage(userId, finalMessage, chatId, userName);
+                            const quotedId = message.context?.quoted_id;
+                            this.bufferManager.addMessage(userId, finalMessage, chatId, userName, quotedId);
                         } else {
                             this.terminalLog.voiceError(userName, result.error || 'Transcription failed');
                             

@@ -50,6 +50,7 @@ export interface MessageBuffer {
     timer: NodeJS.Timeout | null;
     isVoice?: boolean;
     pendingImage?: { type: 'image', imageUrl: string, caption: string } | null;
+    quotedMessageId?: string;
 }
 
 // Registro de Threads en Persistencia

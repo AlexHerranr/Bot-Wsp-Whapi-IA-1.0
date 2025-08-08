@@ -372,6 +372,43 @@ export class OpenAIService implements IOpenAIService {
         }
     }
 
+    // Añadido: método simple para anexar mensajes manuales al thread existente
+    public async appendManualAgentMessage(threadId: string, agentName: string, message: string): Promise<boolean> {
+        try {
+            // Nota de sistema para que el assistant no responda a esto
+            await openAIWithRetry(
+                () => this.openai.beta.threads.messages.create(threadId, {
+                    role: 'user',
+                    content: `[Mensaje manual escrito por agente ${agentName} - NO RESPONDER]`
+                }),
+                { maxRetries: 2, baseDelay: 500 }
+            );
+
+            // Registrar el contenido del agente como si ya fuera la respuesta dada
+            await openAIWithRetry(
+                () => this.openai.beta.threads.messages.create(threadId, {
+                    role: 'assistant',
+                    content: message
+                }),
+                { maxRetries: 2, baseDelay: 500 }
+            );
+
+            logSuccess('MANUAL_SYNC_SUCCESS', 'Mensajes manuales sincronizados exitosamente', {
+                threadId,
+                agentName,
+                length: message.length
+            });
+            return true;
+        } catch (error) {
+            logError('MANUAL_SYNC_ERROR', 'Error sincronizando mensaje manual', {
+                threadId,
+                agentName,
+                error: error instanceof Error ? error.message : String(error)
+            });
+            return false;
+        }
+    }
+
     private async getOrCreateThread(userId: string, chatId: string): Promise<string> {
         const cacheKey = `thread:${userId}:${chatId}`;
         

@@ -48,8 +48,8 @@ Write-Host ""
 Write-Host "Descargando logs por 5 minutos..." -ForegroundColor Cyan
 Write-Host "Archivo: $logFile" -ForegroundColor Gray
 
-# Ejecutar railway logs
-$cmd = "railway logs > `"$logFile`" 2>&1"
+# Ejecutar railway logs con servicio especifico
+$cmd = "railway logs --service Bot-Wsp-Whapi-IA-1.0 > `"$logFile`" 2>&1"
 $process = Start-Process -FilePath "cmd" -ArgumentList "/c", $cmd -NoNewWindow -PassThru
 
 # Esperar 5 minutos

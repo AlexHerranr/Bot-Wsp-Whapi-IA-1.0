@@ -13,15 +13,16 @@ export class BufferManager implements IBufferManager {
         private getUserState?: (userId: string) => { isTyping: boolean; isRecording: boolean; lastActivity?: number } | undefined
     ) {}
 
-    public addMessage(userId: string, messageText: string, chatId: string, userName: string): void {
+    public addMessage(userId: string, messageText: string, chatId: string, userName: string, quotedMessageId?: string): void {
         let buffer = this.buffers.get(userId);
         if (!buffer) {
-            buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null };
+            buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null, quotedMessageId } as any;
             this.buffers.set(userId, buffer);
             logInfo('BUFFER_CREATED', 'Buffer creado para mensaje', { userId, userName, reason: 'new_message' });
         } else {
             if (userName && userName !== 'Usuario') buffer.userName = userName;
             if (chatId && !buffer.chatId) buffer.chatId = chatId;
+            if (quotedMessageId) buffer.quotedMessageId = quotedMessageId;
         }
 
         if (buffer.messages.length >= MAX_BUFFER_MESSAGES) {
@@ -46,7 +47,7 @@ export class BufferManager implements IBufferManager {
         // Analizar tipos de mensajes en el buffer
         const textCount = buffer.messages.filter(msg => !msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
         const voiceCount = buffer.messages.filter(msg => msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
-        const currentCombined = this.smartCombineMessages(buffer.messages);
+        const currentCombined = this.smartCombineMessages(buffer.messages, buffer.quotedMessageId);
         const preview20Words = currentCombined.split(' ').slice(0, 20).join(' ') + (currentCombined.split(' ').length > 20 ? '...' : '');
         
         // Log técnico para adición de mensaje con estado actual del buffer
@@ -268,7 +269,7 @@ export class BufferManager implements IBufferManager {
             buffer.timer = null;
         }
 
-        const combinedText = this.smartCombineMessages(messagesToProcess).trim();
+        const combinedText = this.smartCombineMessages(messagesToProcess, buffer.quotedMessageId).trim();
 
         logSuccess('BUFFER_GROUPED', 'Procesando idea completa agrupada', {
             userId,
@@ -319,9 +320,15 @@ export class BufferManager implements IBufferManager {
         }
     }
 
-    private smartCombineMessages(messages: string[]): string {
-        if (messages.length <= 1) return messages[0] || '';
-        return messages.map(msg => msg.trim()).filter(msg => msg).join(' ');
+    private smartCombineMessages(messages: string[], quotedMessageId?: string): string {
+        if (messages.length <= 1) {
+            const base = messages[0] || '';
+            return quotedMessageId ? `Cliente responde a este mensaje [${quotedMessageId}]: ${base}` : base;
+        }
+        return messages
+            .map((msg, idx) => (idx === 0 && quotedMessageId ? `Cliente responde a este mensaje [${quotedMessageId}]: ${msg.trim()}` : msg.trim()))
+            .filter(msg => msg)
+            .join(' ');
     }
 
     public clearBuffer(userId: string): void {
