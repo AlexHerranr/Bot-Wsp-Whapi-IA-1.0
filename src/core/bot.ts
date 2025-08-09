@@ -697,7 +697,15 @@ export class CoreBot {
                 );
                 
                 if (messageResult.success) {
-                    this.mediaManager.addBotSentMessage(`msg_${Date.now()}`);
+                    // Registrar IDs reales devueltos por WHAPI para evitar eco/loops
+                    if (messageResult.messageIds && messageResult.messageIds.length > 0) {
+                        for (const id of messageResult.messageIds) {
+                            this.mediaManager.addBotSentMessage(id);
+                        }
+                    } else {
+                        // Fallback: marcar un id temporal (menos fiable)
+                        this.mediaManager.addBotSentMessage(`msg_${Date.now()}`);
+                    }
                     
                     // Reset voice flag ONLY if message was actually sent as voice
                     if (messageResult.sentAsVoice) {

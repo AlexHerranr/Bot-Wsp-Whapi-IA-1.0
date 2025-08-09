@@ -111,14 +111,33 @@ export class DatabaseService {
                     lastActivity: new Date(),
                 };
 
-                await this.prisma.clientView.upsert({
-                    where: { phoneNumber: userId },
-                    update: clientViewData,
-                    create: {
-                        phoneNumber: userId,
-                        ...clientViewData
+                try {
+                    await this.prisma.clientView.upsert({
+                        where: { phoneNumber: userId },
+                        update: clientViewData,
+                        create: {
+                            phoneNumber: userId,
+                            ...clientViewData
+                        }
+                    });
+                } catch (error: any) {
+                    // Manejo simple: si falla por unique en chatId, rehacer sin tocar chatId
+                    const msg = typeof error?.message === 'string' ? error.message : String(error);
+                    if (msg.includes('Unique constraint') && msg.includes('chatId')) {
+                        const { chatId, ...rest } = clientViewData as any;
+                        await this.prisma.clientView.upsert({
+                            where: { phoneNumber: userId },
+                            update: rest, // evitar sobrescribir chatId existente
+                            create: {
+                                phoneNumber: userId,
+                                ...rest,
+                                chatId: threadData.chatId || chatId || undefined
+                            }
+                        });
+                    } else {
+                        throw error;
                     }
-                });
+                }
                 
                 logInfo('THREAD_SAVED', `✅ Thread guardado en PostgreSQL: ${userId}`, { userId });
                 

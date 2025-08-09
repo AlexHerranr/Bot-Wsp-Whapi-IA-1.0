@@ -227,12 +227,12 @@ export class WebhookProcessor {
 
     private async handleMessage(message: any): Promise<void> {
         // Ignorar eco de mensajes enviados por el bot (desde WHAPI) para evitar loops
-        if (this.mediaManager.isBotSentMessage(message.id)) {
+        if (message && message.id && this.mediaManager.isBotSentMessage(message.id)) {
             return;
         }
 
         // Para mensajes normales, userId es el remitente; para from_me usaremos chat_id
-        let userId = message.from;
+        let userId = message.from || message.contact_id || message.author || message.sender || '';
         const chatId = message.chat_id || message.from; // Fallback si no hay chat_id
         
         // Extraer número de teléfono para buscar en BD
@@ -271,8 +271,10 @@ export class WebhookProcessor {
             normalizedChatId = normalizedChatId + '@s.whatsapp.net';
         }
 
-        // Si es un mensaje manual (from_me), procesarlo ANTES de tocar el estado del usuario
-        if (message.from_me && message.type === 'text' && message.text?.body) {
+        // Si es un mensaje manual (from_me=true) del agente: sincronizar y NO enviar a OpenAI
+        // Nota: algunos webhooks usan from_me, otros from_me/fromMe. Normalizamos ambos.
+        const fromMe = message.from_me === true || message.fromMe === true;
+        if (fromMe && message.type === 'text' && message.text?.body) {
             // Reinterpretar userId como el cliente (desde chat_id) para hilo correcto
             let clientUserId = message.chat_id || message.from;
             if (clientUserId && typeof clientUserId === 'string' && clientUserId.includes('@')) {
@@ -290,7 +292,9 @@ export class WebhookProcessor {
             });
 
             this.terminalLog.manualMessage(agentName, userName, message.text.body);
-            this.bufferManager.addMessage(clientUserId, manualText, normalizedChatId, agentName);
+            // Importante: conservar el nombre del cliente en el buffer para logs y sincronización correctos
+            // En lugar de encolar a OpenAI, enviamos al buffer para que el callback lo sincronice y detenga flujo
+            this.bufferManager.addMessage(clientUserId, manualText, normalizedChatId, userName);
             return; // No actualizar estado ni procesar como input de cliente
         }
 
@@ -318,31 +322,6 @@ export class WebhookProcessor {
         }
 
         try {
-            // Manejo de mensajes manuales (from_me) simples: texto del agente desde el móvil
-            if (message.from_me && message.type === 'text' && message.text?.body) {
-                // Reinterpretar userId como el cliente (desde chat_id) para hilo correcto
-                if (message.chat_id && typeof message.chat_id === 'string') {
-                    userId = message.chat_id.includes('@') ? message.chat_id.split('@')[0] : message.chat_id;
-                }
-
-                const agentName = message.from_name || 'Agente';
-                const manualText = `[Mensaje manual del agente ${agentName} - NO RESPONDER]\n${message.text.body}`;
-
-                // Log técnico
-                logInfo('MANUAL_DETECTED', 'Mensaje manual del agente detectado', {
-                    userId,
-                    agentName,
-                    chatId: normalizedChatId,
-                    preview: message.text.body.substring(0, 100)
-                });
-
-                // Mostrar en terminal (formato manual)
-                this.terminalLog.manualMessage(agentName, userName, message.text.body);
-
-                // Usar el buffer unificado para agrupar si llegan varios seguidos
-                this.bufferManager.addMessage(userId, manualText, normalizedChatId, agentName);
-                return; // No procesar como input del cliente
-            }
 
             switch (message.type) {
                 case 'text':

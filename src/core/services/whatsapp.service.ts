@@ -63,7 +63,7 @@ export class WhatsappService {
         userState: UserState,
         isQuoteOrPrice: boolean, // Lógica de validación que vendrá del plugin
         quotedMessageId?: string // ID del mensaje a citar/responder
-    ): Promise<{ success: boolean; sentAsVoice: boolean }> {
+    ): Promise<{ success: boolean; sentAsVoice: boolean; messageIds?: string[] }> {
         if (!message || message.trim() === '') {
             this.terminalLog.error(`Intento de enviar mensaje vacío a ${chatId}`);
             return { success: false, sentAsVoice: false }; // No se envió nada
@@ -73,23 +73,23 @@ export class WhatsappService {
 
         if (shouldUseVoice) {
             try {
-                const voiceSuccess = await this.sendVoiceMessage(chatId, message, quotedMessageId);
-                if (voiceSuccess) {
-                    return { success: true, sentAsVoice: true }; // Indica que se envió exitosamente en voz
+                const voiceResult = await this.sendVoiceMessage(chatId, message, quotedMessageId);
+                if (voiceResult.success) {
+                    return { success: true, sentAsVoice: true, messageIds: voiceResult.messageIds };
                 }
             } catch (error) {
                 this.terminalLog.warning(`Fallo al enviar voz a ${getShortUserId(chatId)}, no se envía texto para evitar duplicado.`);
                 // NO hacer fallback automático - retornar fallo para que bot.ts maneje
-                return { success: false, sentAsVoice: false }; // Indica que falló el envío de voz
+                return { success: false, sentAsVoice: false };
             }
         }
 
         // Si llega aquí, se envía como texto (no resetea flag de voz)
-        const textSuccess = await this.sendTextMessage(chatId, message, isQuoteOrPrice, quotedMessageId);
-        return { success: textSuccess, sentAsVoice: false }; // false indica que NO se envió como voz
+        const textResult = await this.sendTextMessage(chatId, message, isQuoteOrPrice, quotedMessageId);
+        return { success: textResult.success, sentAsVoice: false, messageIds: textResult.messageIds };
     }
 
-    private async sendVoiceMessage(chatId: string, message: string, quotedMessageId?: string): Promise<boolean> {
+    private async sendVoiceMessage(chatId: string, message: string, quotedMessageId?: string): Promise<{ success: boolean; messageIds: string[] }> {
         const shortUserId = getShortUserId(chatId);
         const startTimeTotal = Date.now();
 
@@ -97,6 +97,7 @@ export class WhatsappService {
         const voiceChunks = this.splitMessageForVoice(message);
         let totalSizeKb = 0;
 
+        const collectedIds: string[] = [];
         for (let i = 0; i < voiceChunks.length; i++) {
             const chunk = voiceChunks[i].slice(0, 8000); // límite seguro para TTS
 
@@ -141,6 +142,23 @@ export class WhatsappService {
                 if (response.status >= 500) {
                     throw new Error(`WHAPI critical error: ${response.status} ${response.statusText}`);
                 }
+            } else {
+                // Intentar extraer ID(s) del mensaje
+                try {
+                    const data: any = await response.clone().json();
+                    // Formatos comunes: { id }, { messages: [{ id }, ...] }
+                    if (data) {
+                        if (Array.isArray(data.messages)) {
+                            for (const m of data.messages) {
+                                if (m?.id) collectedIds.push(String(m.id));
+                            }
+                        } else if (data.id) {
+                            collectedIds.push(String(data.id));
+                        }
+                    }
+                } catch {
+                    // Ignorar si no es JSON
+                }
             }
 
             const duration = Date.now() - startTime;
@@ -176,10 +194,10 @@ export class WhatsappService {
             success: true
         });
 
-        return true;
+        return { success: true, messageIds: collectedIds };
     }
 
-    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string): Promise<boolean> {
+    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string): Promise<{ success: boolean; messageIds: string[] }> {
         // Don't chunk quotes/prices, but allow chunking by paragraphs regardless of length
         const chunks = isQuoteOrPrice ? [message] : this.splitMessageIntelligently(message);
         
@@ -196,6 +214,7 @@ export class WhatsappService {
             });
         }
 
+        const collectedIds: string[] = [];
         for (let i = 0; i < chunks.length; i++) {
             const chunk = chunks[i];
             
@@ -234,7 +253,7 @@ export class WhatsappService {
                 messageBody.quoted = quotedMessageId;
             }
 
-            await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/text`, {
+            const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/text`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.config.secrets.WHAPI_TOKEN}`,
@@ -242,8 +261,23 @@ export class WhatsappService {
                 },
                 body: JSON.stringify(messageBody)
             });
+            // Intentar capturar ID del mensaje enviado por WHAPI
+            try {
+                const data: any = await response.clone().json();
+                if (data) {
+                    if (Array.isArray(data.messages)) {
+                        for (const m of data.messages) {
+                            if (m?.id) collectedIds.push(String(m.id));
+                        }
+                    } else if (data.id) {
+                        collectedIds.push(String(data.id));
+                    }
+                }
+            } catch {
+                // Ignorar si no hay JSON o formato distinto
+            }
         }
-        return true;
+        return { success: true, messageIds: collectedIds };
     }
 
     // División específica para voz: primero párrafos, luego frases por puntuación.
