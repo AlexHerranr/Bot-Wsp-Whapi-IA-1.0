@@ -103,6 +103,13 @@ export class WhatsappService {
 
             // Presencia de grabando antes de cada nota
             await this.sendRecordingIndicator(chatId);
+            logInfo('INDICATOR_SENT', 'Indicador de grabación enviado exitosamente', {
+                userId: shortUserId,
+                chatId,
+                indicatorType: 'recording',
+                part: i + 1,
+                totalParts: voiceChunks.length
+            });
 
             const startTime = Date.now();
             const ttsResponse = await this.openai.audio.speech.create({
@@ -198,8 +205,17 @@ export class WhatsappService {
     }
 
     private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string): Promise<{ success: boolean; messageIds: string[] }> {
-        // Don't chunk quotes/prices, but allow chunking by paragraphs regardless of length
-        const chunks = isQuoteOrPrice ? [message] : this.splitMessageIntelligently(message);
+        // Regla simple: si hay párrafos separados por doble salto de línea, SIEMPRE enviar por párrafos.
+        // Si no hay párrafos y es cotización/precio/link, enviar en un solo bloque.
+        // En otros casos, usar división inteligente existente.
+        const paragraphsFirst = message
+            .split(/\n\n+/)
+            .map(chunk => chunk.trim())
+            .filter(chunk => chunk.length > 0);
+
+        const chunks = paragraphsFirst.length > 1
+            ? paragraphsFirst
+            : (isQuoteOrPrice ? [message] : this.splitMessageIntelligently(message));
         
         // Log división en chunks
         if (chunks.length > 1) {
@@ -230,16 +246,21 @@ export class WhatsappService {
                 hasQuoted: i === 0 && !!quotedMessageId
             });
             
-            // Si no es el primer chunk, mostrar indicador de escritura
-            if (i > 0) {
-                await this.sendTypingIndicator(chatId);
-                
-                // Calcular delay humano basado en velocidad de escritura real
-                const humanDelay = this.calculateHumanTypingDelay(chunk.length);
-                await new Promise(resolve => setTimeout(resolve, humanDelay));
-            }
+            // Mostrar indicador de escritura antes de cada chunk (incluido el primero)
+            await this.sendTypingIndicator(chatId);
+            logInfo('INDICATOR_SENT', 'Indicador de escritura enviado exitosamente', {
+                userId: getShortUserId(chatId),
+                chatId,
+                indicatorType: 'typing',
+                chunkNumber: i + 1,
+                totalChunks: chunks.length
+            });
+            
+            // Delay humano simple antes de enviar el chunk
+            const humanDelay = this.calculateHumanTypingDelay(chunk.length);
+            await new Promise(resolve => setTimeout(resolve, humanDelay));
 
-            const typingTime = i === 0 ? 3 : 2; // 3s para el primer mensaje, 2s para los siguientes
+            const typingTime = 0; // Evitar doble espera: ya simulamos typing con presencia + delay
 
             // Construir el cuerpo del mensaje
             const messageBody: any = { 
@@ -386,27 +407,8 @@ export class WhatsappService {
      * - Escritura lenta/pensando: 15-25 WPM = ~75-125 chars/min
      */
     private calculateHumanTypingDelay(textLength: number): number {
-        // Configuración de velocidades (caracteres por segundo)
-        const TYPING_SPEEDS = {
-            FAST: 4.2,      // ~250 chars/min
-            NORMAL: 2.9,    // ~175 chars/min  
-            SLOW: 2.1       // ~125 chars/min
-        };
-
-        // Usar velocidad normal como base
-        const baseTypingTime = (textLength / TYPING_SPEEDS.NORMAL) * 1000;
-        
-        // Agregar variabilidad humana (+/- 20%)
-        const variability = 0.2;
-        const randomFactor = 1 + (Math.random() - 0.5) * variability;
-        
-        // Agregar pausas por complejidad del texto
-        const pauseTime = this.calculateThinkingPauses(textLength);
-        
-        const totalDelay = (baseTypingTime * randomFactor) + pauseTime;
-        
-        // Límites razonables: mínimo 1s, máximo 8s
-        return Math.max(1000, Math.min(8000, Math.round(totalDelay)));
+        // Versión simple: 1s para textos cortos, 2s para textos largos
+        return textLength <= 160 ? 1000 : 2000;
     }
 
     /**

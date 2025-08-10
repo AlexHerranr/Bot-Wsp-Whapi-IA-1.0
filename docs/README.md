@@ -48,6 +48,11 @@ DATABASE_URL=postgresql://...
 - `npm test` - Tests
 - `railway logs` - Ver logs Railway
 
+## 📚 Documentación relacionada
+- Deployment: `docs/deployment/`
+- Esquema hotel: `docs/hotel-apartment-schema.md`
+- Pruebas E2E reales (local): `scripts/real-e2e/README.md`
+
 ## 🏨 Plugin Hotel
 
 El sistema es modular. El plugin hotel está en `src/plugins/hotel/` y se activa con `PLUGIN_HOTEL_ENABLED=true`.
