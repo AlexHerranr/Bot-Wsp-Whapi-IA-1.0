@@ -651,7 +651,9 @@ export class CoreBot {
                 // ✅ Decidir si citar usando heurística
                 const currentBuffer = this.bufferManager.getBuffer(userId);
                 const quotedFromUser = currentBuffer?.quotedMessageId;
-                const shouldQuote = this.shouldQuoteResponse(combinedText, pendingImages.length > 0);
+                // Normalizar texto para evitar sesgo de longitud por encabezados
+                const normalized = combinedText.replace(/Cliente responde a este mensaje:.*?\n+Mensaje del cliente:\s*/is, '').trim();
+                const shouldQuote = this.shouldQuoteResponse(normalized, pendingImages.length > 0);
                 
                 // Detectar si la IA hace referencia a "este/esa" (refuerzo adicional)
                 const aiRefersToIt = /\b(este|esta|ese|esa|eso|aquel)\b/i.test(finalResponse);
@@ -679,6 +681,16 @@ export class CoreBot {
                 );
                 
                 if (messageResult.success) {
+                    // Limpiar quotedMessageId después de uso exitoso para evitar rebotes
+                    if (quotedToSend) {
+                        try {
+                            const buffer = this.bufferManager.getBuffer(userId);
+                            if (buffer) {
+                                buffer.quotedMessageId = undefined as any;
+                            }
+                        } catch {}
+                    }
+                    
                     // Registrar IDs reales devueltos por WHAPI para evitar eco/loops
                     if (messageResult.messageIds && messageResult.messageIds.length > 0) {
                         for (const id of messageResult.messageIds) {
