@@ -6,8 +6,8 @@ const path = require('path');
 
 console.log('📥 Descargando logs de Railway...');
 
-// Crear directorio logs/railway si no existe
-const logsDir = path.join(__dirname, '..', 'logs', 'railway');
+// Crear directorio logs/railway si no existe (archivo vive en scripts/logs)
+const logsDir = path.join(__dirname, '..', '..', 'logs', 'railway');
 if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
     console.log('📁 Directorio logs/railway creado');

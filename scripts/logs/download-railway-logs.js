@@ -2,7 +2,7 @@
 
 /**
  * Script para descargar logs de Railway y organizarlos localmente
- * Uso: node scripts/download-railway-logs.js [opciones]
+ * Uso: node scripts/logs/download-railway-logs.js [opciones]
  */
 
 const { execSync } = require('child_process');
@@ -10,7 +10,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuración
-const LOG_DIR = path.join(__dirname, '..', 'logs', 'railway');
+// Nota: este archivo vive en scripts/logs/, por eso subimos dos niveles para llegar a logs/railway
+const LOG_DIR = path.join(__dirname, '..', '..', 'logs', 'railway');
 const MAX_CHUNKS = 10; // Máximo número de chunks a mantener
 
 // Crear directorio si no existe
@@ -173,15 +174,15 @@ switch (command) {
 📊 Script de Descarga de Logs Railway
 
 Uso:
-  node scripts/download-railway-logs.js download [tiempo]  # Descargar logs
-  node scripts/download-railway-logs.js stats             # Ver estadísticas
-  node scripts/download-railway-logs.js help              # Ver ayuda
+  node scripts/logs/download-railway-logs.js download [tiempo]  # Descargar logs
+  node scripts/logs/download-railway-logs.js stats             # Ver estadísticas
+  node scripts/logs/download-railway-logs.js help              # Ver ayuda
 
 Ejemplos:
-  node scripts/download-railway-logs.js download 1h       # Última hora
-  node scripts/download-railway-logs.js download 6h       # Últimas 6 horas
-  node scripts/download-railway-logs.js download 24h      # Último día
-  node scripts/download-railway-logs.js stats             # Ver archivos descargados
+  node scripts/logs/download-railway-logs.js download 1h       # Última hora
+  node scripts/logs/download-railway-logs.js download 6h       # Últimas 6 horas
+  node scripts/logs/download-railway-logs.js download 24h      # Último día
+  node scripts/logs/download-railway-logs.js stats             # Ver archivos descargados
 
 Archivos se guardan en: logs/railway/
 `);
@@ -189,6 +190,6 @@ Archivos se guardan en: logs/railway/
         
     default:
         console.error(`❌ Comando desconocido: ${command}`);
-        console.error('💡 Usa: node scripts/download-railway-logs.js help');
+        console.error('💡 Usa: node scripts/logs/download-railway-logs.js help');
         process.exit(1);
 }

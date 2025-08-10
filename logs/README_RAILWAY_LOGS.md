@@ -339,7 +339,7 @@ railway logs --deployment | grep "\[MILESTONE\]"
 
 ### **Archivos Clave**
 - **Implementación**: `src/utils/logging/index.ts`
-- **Scripts**: `scripts/download-railway-logs.js`
+- **Scripts**: `scripts/logs/download-railway-logs.js`
 - **Configuración**: `package.json` (npm scripts)
 
 ### **Logs de Debug del Sistema**

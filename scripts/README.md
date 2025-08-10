@@ -27,4 +27,8 @@ npm run assistant
 
 # Ver logs Railway
 railway logs --follow
+
+## 📦 Logs
+- `scripts/logs/download-railway-logs.js` - Descarga y estadísticas de logs (salva en `logs/railway/`)
+- `scripts/maintenance/clean-logs.js` - Limpieza de logs antiguos (`--keep N`)
 ```

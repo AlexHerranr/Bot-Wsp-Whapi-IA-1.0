@@ -20,17 +20,34 @@
 ## 📦 Estructura del Proyecto
 
 ```
-src/
-├── core/              # Núcleo reutilizable (no industry-specific)
-│   ├── services/      # Servicios base: database, openai, whatsapp
-│   ├── jobs/          # Jobs programados
-│   ├── state/         # Gestión de estado y cache
-│   └── utils/         # Utilidades comunes
-├── plugins/           # Plugins por industria
-│   └── hotel/         # Plugin hotelero (Beds24)
-├── functions/         # Functions genéricas de OpenAI
-├── utils/             # Utilidades globales (logging, persistence)
-└── main.ts           # Entry point con carga dinámica de plugins
+.
+├── src/                          # Código fuente (TypeScript)
+│   ├── core/                     # Núcleo reutilizable (servicios, jobs, state, utils)
+│   ├── plugins/
+│   │   └── hotel/                # Plugin hotelero (Beds24)
+│   ├── functions/                # Funciones genéricas de OpenAI
+│   └── main.ts                   # Entry point
+├── tests/                        # Unit, integration, regression
+├── prisma/                       # Prisma schema y seeds
+├── logs/
+│   ├── Local/                    # Sesiones locales
+│   ├── railway/                  # Descargas y full logs Railway
+│   └── railway-downloads/        # Descargas crudas auxiliares
+├── scripts/
+│   ├── logs/                     # Descarga y utilidades de logs
+│   ├── maintenance/              # Mantenimiento/limpieza
+│   ├── windows/                  # Wrappers PowerShell/Batch
+│   └── assistant-management/     # Gestión de assistants OpenAI
+├── docs/
+│   ├── deployment/               # Guías de despliegue
+│   ├── changes/                  # Cambios/optimizaciones
+│   ├── logging/                  # Sistema de logging
+│   ├── notes/                    # Notas de proceso
+│   └── archive/
+│       └── vendor/               # Vendors archivados (p.ej. qwen-code)
+├── Dockerfile
+├── env.example
+└── README.md
 ```
 
 ## 🔧 Instalación
