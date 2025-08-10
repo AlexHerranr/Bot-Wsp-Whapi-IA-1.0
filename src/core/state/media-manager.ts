@@ -7,6 +7,9 @@ export class MediaManager {
 
     // Cache para mensajes enviados por el bot
     private botSentMessages: LRUCache<string, Set<string>>;
+    
+    // Cache adicional para contenido de mensajes enviados (para cuando no hay ID)
+    private botSentContent: LRUCache<string, Set<string>>;
 
     constructor(
         maxItems: number = 500,
@@ -21,6 +24,11 @@ export class MediaManager {
         this.botSentMessages = new LRUCache({
             max: maxItems,
             ttl: messageTTL,
+        });
+        
+        this.botSentContent = new LRUCache({
+            max: maxItems,
+            ttl: 5 * 60 * 1000, // 5 minutos para contenido
         });
     }
 
@@ -83,12 +91,36 @@ export class MediaManager {
     public clearBotMessages(userId: string): void {
         this.botSentMessages.delete(userId);
     }
+    
+    // Métodos para contenido de mensajes enviados (fallback cuando no hay ID)
+    public addBotSentContent(chatId: string, content: string): void {
+        if (!chatId || !content) return;
+        
+        // Normalizar el contenido (primeros 200 caracteres)
+        const normalizedContent = content.trim().substring(0, 200);
+        const normalizedChatId = chatId.toLowerCase();
+        
+        const contents = this.botSentContent.get(normalizedChatId) || new Set<string>();
+        contents.add(normalizedContent);
+        this.botSentContent.set(normalizedChatId, contents);
+    }
+    
+    public isBotSentContent(chatId: string, content: string): boolean {
+        if (!chatId || !content) return false;
+        
+        const normalizedContent = content.trim().substring(0, 200);
+        const normalizedChatId = chatId.toLowerCase();
+        
+        const contents = this.botSentContent.get(normalizedChatId);
+        return contents ? contents.has(normalizedContent) : false;
+    }
 
     // Métodos de utilidad
-    public getStats(): { pendingImages: number; botMessages: number } {
+    public getStats(): { pendingImages: number; botMessages: number; botContent: number } {
         return {
             pendingImages: this.pendingImages.size,
             botMessages: this.botSentMessages.size,
+            botContent: this.botSentContent.size,
         };
     }
 
@@ -97,5 +129,6 @@ export class MediaManager {
         // Este método está aquí por si necesitamos forzar una limpieza manual
         this.pendingImages.clear();
         this.botSentMessages.clear();
+        this.botSentContent.clear();
     }
 }
