@@ -192,7 +192,9 @@ export class WebhookProcessor {
                 }
             } else {
                 // Usuario ya no está escribiendo/grabando (available, offline, etc.)
-                const wasActive = userState.isTyping || userState.isRecording;
+                const wasTyping = userState.isTyping;
+                const wasRecording = userState.isRecording;
+                const wasActive = wasTyping || wasRecording;
                 if (wasActive) {
                     const now = Date.now();
                     this.userManager.updateState(userId, { 
@@ -201,18 +203,18 @@ export class WebhookProcessor {
                         lastActivity: now
                     });
                     
-                    logInfo('PRESENCE_EVENT', `Usuario dejó de ${userState.isTyping ? 'escribir' : 'grabar'}`, {
+                    logInfo('PRESENCE_EVENT', `Usuario dejó de ${wasTyping ? 'escribir' : 'grabar'}`, {
                         userId,
                         status,
                         userName: userState.userName || 'Usuario',
-                        wasTyping: userState.isTyping,
-                        wasRecording: userState.isRecording
+                        wasTyping,
+                        wasRecording
                     });
                     
                     // Si hay mensajes en buffer y el usuario estaba grabando, dar tiempo extra
                     // por si va a continuar grabando más audios
                     const buffer = this.bufferManager.getBuffer(userId);
-                    if (buffer && buffer.messages.length > 0 && userState.isRecording) {
+                    if (buffer && buffer.messages.length > 0 && wasRecording) {
                         logInfo('BUFFER_GRACE_PERIOD', 'Extendiendo buffer por fin de grabación', {
                             userId,
                             userName: userState.userName || 'Usuario',
@@ -245,6 +247,8 @@ export class WebhookProcessor {
         if (phoneNumber && phoneNumber.includes('@')) {
             phoneNumber = phoneNumber.split('@')[0];
         }
+        // Mejora: usar siempre el phoneNumber como userId canónico
+        userId = phoneNumber || userId;
         
         // Obtener nombre real del contacto desde la base de datos
         let userName = 'Usuario'; // Fallback por defecto
@@ -278,6 +282,82 @@ export class WebhookProcessor {
 
         // Si es un mensaje manual (from_me=true) del agente: enviar directo a OpenAI
         const fromMe = message.from_me === true || message.fromMe === true;
+
+        // Nueva regla: Manejo de from_me no-text
+        if (fromMe && message.type !== 'text') {
+            // Si es un mensaje del bot (ID conocido), ignorar para evitar loops
+            if (message.id && this.mediaManager.isBotSentMessage(message.id)) {
+                logDebug('FROM_ME_NON_TEXT_BOT_IGNORED', 'Mensaje from_me no-text del bot ignorado por ID', {
+                    messageId: message.id,
+                    type: message.type
+                });
+                return;
+            }
+
+            // Si es del agente humano y es voz/audio, sincronizar como contexto sin respuesta
+            const manualAgentEnabled = process.env.ENABLE_MANUAL_AGENT_MESSAGES === 'true';
+            if (manualAgentEnabled && (message.type === 'voice' || message.type === 'audio' || message.type === 'ptt')) {
+                const audioLink = message.voice?.link || message.audio?.link;
+                if (!audioLink) {
+                    logDebug('FROM_ME_VOICE_NO_LINK', 'from_me voz sin link, ignorado', {
+                        messageId: message.id || 'sin_id'
+                    });
+                    return;
+                }
+                try {
+                    const transcription = await this.mediaService.legacyTranscribeAudio(audioLink, userId, userName, message.id);
+                    if (transcription.success && transcription.result) {
+                        // Anti-eco para voz manual basada en contenido (normalizado por MediaManager)
+                        if (this.mediaManager.isBotSentContent(normalizedChatId, transcription.result)) {
+                            logDebug('MANUAL_VOICE_ECHO_IGNORED', 'Transcripción manual coincide con contenido del bot (eco)', {
+                                userId,
+                                chatId: normalizedChatId,
+                                preview: transcription.result.substring(0, 80)
+                            });
+                            return;
+                        }
+
+                        // Cap de longitud para contexto manual
+                        let content = transcription.result;
+                        const MAX_LEN = 4000;
+                        if (content.length > MAX_LEN) {
+                            content = content.substring(0, MAX_LEN) + '... [transcripción truncada para contexto]';
+                        }
+                        // Cliente objetivo para el contexto manual: usar chat_id o from
+                        let clientUserId = message.chat_id || message.from;
+                        if (clientUserId && typeof clientUserId === 'string' && clientUserId.includes('@')) {
+                            clientUserId = clientUserId.split('@')[0];
+                        }
+                        const agentName = message.from_name || 'Agente';
+                        await this.syncManualMessageToOpenAI(clientUserId, normalizedChatId, agentName, content);
+                        logSuccess('MANUAL_VOICE_SYNC', 'Nota de voz manual sincronizada sin respuesta', {
+                            userId: clientUserId,
+                            agentName,
+                            preview: content.substring(0, 100)
+                        });
+                    } else {
+                        logWarning('MANUAL_VOICE_TRANSCRIPTION_FAILED', 'Fallo transcripción voz manual from_me', {
+                            userId,
+                            error: transcription.error
+                        });
+                    }
+                } catch (e: any) {
+                    logWarning('MANUAL_VOICE_SYNC_ERROR', 'Error sincronizando voz manual', {
+                        userId,
+                        error: e?.message || String(e)
+                    });
+                }
+                return; // No procesar más este mensaje
+            }
+
+            // Cualquier otro from_me no-text se ignora
+            logDebug('FROM_ME_NON_TEXT_IGNORED', 'Mensaje from_me no-text ignorado', {
+                messageId: message.id || 'sin_id',
+                type: message.type
+            });
+            return;
+        }
+
         if (fromMe && message.type === 'text' && message.text?.body) {
             // Verificar si los mensajes manuales están habilitados
             const manualAgentEnabled = process.env.ENABLE_MANUAL_AGENT_MESSAGES === 'true';
@@ -288,6 +368,22 @@ export class WebhookProcessor {
                 return;
             }
             
+            // Ignorar mensajes interinos conocidos enviados por el bot durante function calling
+            const interimPhrases = [
+                'Permíteme y consulto en nuestro sistema',
+                'Buscando habitaciones disponibles',
+                'Calculando precios y ofertas',
+                'Procesando tu reserva',
+                'Un momento por favor'
+            ];
+            const textBodyLower = (message.text.body || '').toLowerCase();
+            if (interimPhrases.some(p => textBodyLower.startsWith(p.toLowerCase()))) {
+                logDebug('INTERIM_FROM_ME_IGNORED', 'Mensaje interino del bot filtrado por contenido', {
+                    preview: message.text.body.substring(0, 80)
+                });
+                return;
+            }
+
             // FILTRO 1: Verificar si el mensaje fue enviado por el bot (por ID)
             if (message.id && this.mediaManager.isBotSentMessage(message.id)) {
                 logDebug('BOT_MESSAGE_FILTERED_ID', 'Mensaje del bot filtrado por ID', {
@@ -306,6 +402,12 @@ export class WebhookProcessor {
             }
 
             // Si llegamos aquí, es un mensaje manual del agente real
+            // Cap de longitud para contexto manual
+            let manualContent = message.text.body;
+            const MAX_LEN = 4000;
+            if (manualContent.length > MAX_LEN) {
+                manualContent = manualContent.substring(0, MAX_LEN) + '... [texto truncado para contexto]';
+            }
             let clientUserId = message.chat_id || message.from;
             if (clientUserId && typeof clientUserId === 'string' && clientUserId.includes('@')) {
                 clientUserId = clientUserId.split('@')[0];
@@ -323,7 +425,7 @@ export class WebhookProcessor {
             this.terminalLog.manualMessage(agentName, userName, message.text.body);
             
             // SOLUCIÓN SIMPLE: Enviar directo a OpenAI con UNA SOLA llamada
-            await this.syncManualMessageToOpenAI(clientUserId, normalizedChatId, agentName, message.text.body);
+            await this.syncManualMessageToOpenAI(clientUserId, normalizedChatId, agentName, manualContent);
             return;
         }
 
@@ -387,7 +489,7 @@ export class WebhookProcessor {
                         this.terminalLog.message(userName, message.text.body);
                         // Propagar quotedId al buffer si existe
                         const quotedId = message.context?.quoted_id;
-                        this.bufferManager.addMessage(userId, messageContent, chatId, userName, quotedId);
+                        this.bufferManager.addMessage(userId, messageContent, normalizedChatId, userName, quotedId);
                     }
                     break;
 
@@ -431,6 +533,16 @@ export class WebhookProcessor {
                                     messageType: 'voice'
                                 });
                             }
+
+                            // Filtro anti-eco: si la transcripción coincide con contenido que el bot envió recientemente, ignorar
+                            if (this.mediaManager.isBotSentContent(normalizedChatId, result.result)) {
+                                logDebug('BOT_VOICE_ECHO_IGNORED', 'Transcripción coincide con contenido enviado por el bot (eco)', {
+                                    userId,
+                                    chatId: normalizedChatId,
+                                    preview: result.result.substring(0, 80)
+                                });
+                                return; // No agregar al buffer ni actualizar estado
+                            }
                             
                             this.terminalLog.message(userName, `(Nota de Voz Transcrita por Whisper)\n🎤 ${result.result}`);
                             
@@ -444,7 +556,7 @@ export class WebhookProcessor {
                             });
                             
                             const quotedId = message.context?.quoted_id;
-                            this.bufferManager.addMessage(userId, finalMessage, chatId, userName, quotedId);
+                            this.bufferManager.addMessage(userId, finalMessage, normalizedChatId, userName, quotedId);
                         } else {
                             this.terminalLog.voiceError(userName, result.error || 'Transcription failed');
                             
@@ -478,7 +590,7 @@ export class WebhookProcessor {
                             imageUrl: message.image.link,
                             caption: message.image.caption || ''
                         };
-                        this.bufferManager.addImageMessage(userId, imageMessage, chatId, userName);
+                        this.bufferManager.addImageMessage(userId, imageMessage, normalizedChatId, userName);
                     }
                     break;
             }
@@ -535,8 +647,10 @@ export class WebhookProcessor {
         try {
             // Obtener o crear thread para este usuario
             const threadId = await this.openaiService.getOrCreateThread(userId, chatId);
-            
-            // UNA SOLA llamada a OpenAI - mensaje del agente como assistant
+
+            // Nota previa para no responder automáticamente
+            await this.openaiService.addSimpleMessage(threadId, 'user', `[Mensaje manual escrito por agente ${agentName} - NO RESPONDER]`);
+            // Mensaje del agente como assistant, solo contexto
             await this.openaiService.addSimpleMessage(threadId, 'assistant', `[Agente ${agentName}]: ${message}`);
             
             logSuccess('MANUAL_SYNC_SIMPLE', 'Mensaje manual sincronizado con OpenAI', {

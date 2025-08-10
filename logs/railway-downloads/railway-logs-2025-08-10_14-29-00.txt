@@ -1,0 +1,854 @@
+2025-08-10T19:24:54Z [THR_REUSE:database] th_threa...wKc
+2025-08-10T19:24:55Z [OPENAI_P:unknown] 57300...251: Prompt completo compactado enviado a Ope...
+2025-08-10T19:24:55Z [OPENAI_M:openai] 57300...251: Mensaje enviado al thread de OpenAI
+2025-08-10T19:24:55Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:24:56Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:24:56Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 16s | 4657t
+2025-08-10T19:24:56Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:24:56Z [TOKENS_METRIC:openai] 57323...292: in:0 out:4657 total:4657 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:24:56Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:24:56Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:24:56Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:24:57Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:24:57Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:24:57Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:24:57Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:24:57Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:24:57Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:25:02Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:25:02Z [DB_QUERY:database] 57300...251: type:thread_fetch time:5ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (5.5s)
+2025-08-10T19:25:02Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:25:02Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:25:03Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:25:03Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:25:03Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:25:03Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:25:03Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:25:03Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:25:03Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:25:03Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+[7:25:04 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Quedo atento a que me confirmes la hora aproximada de llegada para revisar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 1262ms | Tamaño: 13398 bytes
+🎙️ Usuario: 🔊 → "Quedo atento a que me confirmes la hora aproximada de llegad..."
+2025-08-10T19:25:04Z [AUDIO:unknown] 57323...292: "Quedo atento a que me confirme..."
+2025-08-10T19:25:04Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:25:04Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:25:04Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:25:06Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:25:07Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:25:07Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-10T19:25:09Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:25:09Z [AI_DONE:openai] 57300...251 | th_threa...wKc | 15s | 4222t
+2025-08-10T19:25:09Z [OPENAI_R:openai] 57300...251: Respuesta completa de OpenAI
+2025-08-10T19:25:09Z [TOKENS_METRIC:openai] 57300...251: in:0 out:4222 total:4222 model:o3-mini-2025-01-31 thread:th_threa...wKc
+2025-08-10T19:25:09Z [TOKEN_US:unknown] 57300...251: Tokens utilizados en procesamiento
+2025-08-10T19:25:09Z [HIGH_LAT:performance] 57300...251: Latencia alta detectada en procesamiento
+2025-08-10T19:25:09Z [OPENAI_R:unknown] 57300...251: Run de OpenAI completado
+2025-08-10T19:25:09Z [TOKEN_CO:unknown] 57300...251: Token count actualizado en memoria
+2025-08-10T19:25:09Z [QUOTE_DE:unknown] 57300...251: Decisión de citado calculada
+2025-08-10T19:25:09Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 1/1
+2025-08-10T19:25:09Z [BUFFER:buffer] 57323...292: 1msg, 113ch
+2025-08-10T19:25:09Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:25:09Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:25:09Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:25:09Z [DB_QUERY:database] 57323...292: type:thread_fetch time:8ms res:thread:thread_S... cache:no_change
+2025-08-10T19:25:09Z [DB_QUERY:database] 57323...292: type:thread_fetch time:5ms res:thread:thread_S... cache:no_change
+2025-08-10T19:25:09Z [INDICATO:whapi] 57300...251: Indicador de escritura enviado exitosame...
+2025-08-10T19:25:10Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:25:10Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:25:10Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:25:10Z [AI_START:openai] 57323...292 | null
+🤖 OpenAI → Sr Alex (14.9s)
+2025-08-10T19:25:11Z [TYPING_F:whapi] 57300...251: Flag de typing reseteado post-procesamie...
+2025-08-10T19:25:11Z [SENT:webhook] 57300...251 | 64ch | 15s
+2025-08-10T19:25:11Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:25:11Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:25:11Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:25:11Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:25:12Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:25:12Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:25:12Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:25:12Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:25:12Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:25:12Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T19:25:13Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:25:16Z [SYS_METRIC:system] sys: mem:24/512MB cpu:0% conn:0 uptime:11h28m activeUsers:2
+2025-08-10T19:25:16Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:2 evicts:0
+2025-08-10T19:25:16Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T19:25:16Z [USAGE_STATS:system] sys: msgs:14/hr chunks:0 avgLen:214ch funcs:0 errs:0
+2025-08-10T19:25:16Z [LATENCY_METRIC:system] null: openai:15615ms beds24:48ms whapi:0ms db:14ms total:15683ms
+2025-08-10T19:25:20Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:25:20Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:25:20Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T19:25:24Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:25:24Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 14s | 4570t
+2025-08-10T19:25:24Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:25:24Z [MILESTONE:unknown] Line 5000 reached
+2025-08-10T19:25:24.339206784Z [INFO] [LOG_FILE_CREATED] Chunk 10 guardado: logs/railway-logs-chunk-10-2025-08-10T07-57-01.log labels={"app":"whatsapp-bot","category":"LOG_FILE_CREATED","chunkNumber":10,"fileName":"logs/railway-logs-chunk-10-2025-08-10T07-57-01.log","level":"INFO"} timestamp="2025-08-10T19:25:24.329Z"
+2025-08-10T19:25:24Z [TOKENS_METRIC:openai] 57323...292: in:0 out:4570 total:4570 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:25:24Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:25:24Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:25:24Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:25:25Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:25:25Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:25:25Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:25:25Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:25:25Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:25:29Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:25:30Z [DB_QUERY:database] 57300...251: type:thread_fetch time:10ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (4.9s)
+2025-08-10T19:25:30Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:25:30Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:25:30Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:25:30Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:25:30Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:25:30Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:25:30Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:25:30Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:25:30Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:25:30Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+[7:25:31 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Entendido, quedo atento a que me confirmes la hora aproximada de llegada para revisar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 1122ms | Tamaño: 13480 bytes
+🎙️ Usuario: 🔊 → "Entendido, quedo atento a que me confirmes la hora aproximad..."
+2025-08-10T19:25:31Z [AUDIO:unknown] 57323...292: "Entendido, quedo atento a que ..."
+2025-08-10T19:25:31Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:25:31Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:25:31Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:25:33Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:25:34Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:25:36Z [BUFFER:buffer] 57323...292: 1msg, 124ch
+2025-08-10T19:25:36Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:25:36Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:25:36Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:25:36Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:25:36Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:25:37Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:25:37Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:25:37Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:25:37Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:25:37Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:25:37Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:25:38Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:25:38Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:25:38Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:25:41Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:25:45Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:25:45Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:25:45Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T19:25:52Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:25:52Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 16s | 4872t
+2025-08-10T19:25:52Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:25:52Z [TOKENS_METRIC:openai] 57323...292: in:0 out:4872 total:4872 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:25:52Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:25:52Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:25:52Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:25:53Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:25:53Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:25:53Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:25:53Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:25:54Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:26:00Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:26:01Z [DB_QUERY:database] 57300...251: type:thread_fetch time:9ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (7.7s)
+2025-08-10T19:26:01Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:26:01Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:26:02Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:26:02Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:26:02Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:26:02Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:26:02Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:26:02Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:26:02Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:26:02Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+[7:26:03 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Perfecto. Quedo a la espera de que me confirmes la hora aproximada de llegada para revisar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 1130ms | Tamaño: 14475 bytes
+🎙️ Usuario: 🔊 → "Perfecto. Quedo a la espera de que me confirmes la hora apro..."
+2025-08-10T19:26:03Z [AUDIO:unknown] 57323...292: "Perfecto. Quedo a la espera de..."
+2025-08-10T19:26:03Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:26:03Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:26:03Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:26:05Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:26:05Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:26:08Z [BUFFER:buffer] 57323...292: 1msg, 129ch
+2025-08-10T19:26:08Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:26:08Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:26:08Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:26:08Z [DB_QUERY:database] 57323...292: type:thread_fetch time:5ms res:thread:thread_S... cache:no_change
+2025-08-10T19:26:08Z [DB_QUERY:database] 57323...292: type:thread_fetch time:5ms res:thread:thread_S... cache:no_change
+2025-08-10T19:26:08Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:26:08Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:26:08Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:26:08Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:26:09Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:26:09Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:26:09Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:26:09Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:26:09Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:26:10Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:26:16Z [SYS_METRIC:system] sys: mem:26/512MB cpu:0% conn:0 uptime:11h29m activeUsers:2
+2025-08-10T19:26:16Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:2 evicts:0
+2025-08-10T19:26:16Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T19:26:16Z [USAGE_STATS:system] sys: msgs:16/hr chunks:0 avgLen:216ch funcs:0 errs:0
+2025-08-10T19:26:16Z [LATENCY_METRIC:system] null: openai:15563ms beds24:44ms whapi:0ms db:13ms total:15625ms
+2025-08-10T19:26:18Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:26:18Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:26:18Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T19:26:20Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:26:21Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 12s | 4662t
+2025-08-10T19:26:21Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:26:21Z [TOKENS_METRIC:openai] 57323...292: in:0 out:4662 total:4662 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:26:21Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:26:21Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:26:21Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:26:22Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:26:22Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:26:22Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:26:22Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:26:22Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:26:26Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:26:27Z [DB_QUERY:database] 57300...251: type:thread_fetch time:9ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (5.6s)
+2025-08-10T19:26:27Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:26:27Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:26:28Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:26:28Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:26:28Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:26:28Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:26:28Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:26:28Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:26:28Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:26:28Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+[7:26:30 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Perfecto, quedo atento a que me confirmes la hora aproximada de llegada para revisar la opción del Early Check-in. ¡Gracias! | Usuario: 573235906292 | Duración: 2584ms | Tamaño: 13475 bytes
+🎙️ Usuario: 🔊 → "Perfecto, quedo atento a que me confirmes la hora aproximada..."
+2025-08-10T19:26:30Z [AUDIO:unknown] 57323...292: "Perfecto, quedo atento a que m..."
+2025-08-10T19:26:30Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:26:30Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:26:30Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:26:32Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:26:33Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:26:35Z [BUFFER:buffer] 57323...292: 1msg, 124ch
+2025-08-10T19:26:35Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:26:35Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:26:35Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:26:35Z [DB_QUERY:database] 57323...292: type:thread_fetch time:5ms res:thread:thread_S... cache:no_change
+2025-08-10T19:26:35Z [DB_QUERY:database] 57323...292: type:thread_fetch time:5ms res:thread:thread_S... cache:no_change
+2025-08-10T19:26:36Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:26:36Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:26:36Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:26:36Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:26:36Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:26:36Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:26:37Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:26:37Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:26:37Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:26:38Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:26:47Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-10T19:26:48Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:26:48Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:26:48Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T19:26:52Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:26:52Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 16s | 5408t
+2025-08-10T19:26:52Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:26:52Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5408 total:5408 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:26:52Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:26:52Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:26:52Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:26:53Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:26:53Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:26:53Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:26:53Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:26:54Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:26:57Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:26:58Z [DB_QUERY:database] 57300...251: type:thread_fetch time:111ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (5.1s)
+2025-08-10T19:26:58Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:26:58Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:26:59Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:26:59Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:26:59Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:26:59Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:26:59Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:26:59Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:26:59Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:26:59Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+[7:27:01 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Quedo atento a que me confirmes la hora próxima de llegada para revisar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 2515ms | Tamaño: 13065 bytes
+🎙️ Usuario: 🔊 → "Quedo atento a que me confirmes la hora próxima de llegada p..."
+2025-08-10T19:27:01Z [AUDIO:unknown] 57323...292: "Quedo atento a que me confirme..."
+2025-08-10T19:27:01Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:27:01Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:27:01Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:27:03Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:27:04Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:27:06Z [BUFFER:buffer] 57323...292: 1msg, 110ch
+2025-08-10T19:27:06Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:27:06Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:27:06Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:27:06Z [DB_QUERY:database] 57323...292: type:thread_fetch time:7ms res:thread:thread_S... cache:no_change
+2025-08-10T19:27:06Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:27:07Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:27:07Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:27:07Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:27:07Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:27:07Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:27:07Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:27:07Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:27:07Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:27:08Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:27:09Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:27:12Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:27:12Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:27:12Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T19:27:16Z [SYS_METRIC:system] sys: mem:22/512MB cpu:0% conn:0 uptime:11h30m activeUsers:2
+2025-08-10T19:27:16Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:2 evicts:0
+2025-08-10T19:27:16Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T19:27:16Z [USAGE_STATS:system] sys: msgs:18/hr chunks:0 avgLen:218ch funcs:0 errs:0
+2025-08-10T19:27:16Z [LATENCY_METRIC:system] null: openai:15472ms beds24:41ms whapi:0ms db:12ms total:15530ms
+2025-08-10T19:27:18Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:27:18Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 11s | 5128t
+2025-08-10T19:27:18Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:27:18Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5128 total:5128 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:27:18Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:27:18Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:27:18Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:27:19Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:27:19Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:27:19Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:27:19Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:27:19Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:27:25Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:27:26Z [DB_QUERY:database] 57300...251: type:thread_fetch time:12ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (6.7s)
+2025-08-10T19:27:26Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:27:26Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:27:26Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:27:26Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:27:26Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:27:26Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:27:26Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:27:26Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:27:26Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:27:26Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+[7:27:27 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Entendido, quedo atento a que me confirmes la hora aproximada de llegada para evaluar la posibilidad del Early Check-In. ¡Gracias! | Usuario: 573235906292 | Duración: 1354ms | Tamaño: 14766 bytes
+🎙️ Usuario: 🔊 → "Entendido, quedo atento a que me confirmes la hora aproximad..."
+2025-08-10T19:27:27Z [AUDIO:unknown] 57323...292: "Entendido, quedo atento a que ..."
+2025-08-10T19:27:27Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:27:27Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:27:27Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:27:28Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:27:28Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:27:28Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T19:27:29Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:27:30Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:27:32Z [BUFFER:buffer] 57323...292: 1msg, 130ch
+2025-08-10T19:27:32Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:27:32Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:27:32Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:27:32Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:27:32Z [DB_QUERY:database] 57323...292: type:thread_fetch time:8ms res:thread:thread_S... cache:no_change
+2025-08-10T19:27:33Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:27:33Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:27:33Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:27:33Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:27:33Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:27:33Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:27:34Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:27:34Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:27:34Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:27:37Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:27:44Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-10T19:27:49Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:27:49Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 16s | 5173t
+2025-08-10T19:27:49Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:27:49Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5173 total:5173 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:27:49Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:27:49Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:27:49Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:27:50Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:27:50Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:27:50Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:27:50Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:27:50Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:27:54Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:27:55Z [DB_QUERY:database] 57300...251: type:thread_fetch time:10ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (4.7s)
+2025-08-10T19:27:55Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:27:55Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:27:55Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:27:55Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:27:55Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:27:55Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:27:55Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:27:55Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:27:55Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:27:55Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:27:56Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:27:56Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:27:56Z [WEBHOOK_:unknown] sys: 📥 stat:1
+[7:27:56 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: De acuerdo, quedo atento a que me confirmes la hora aproximada de llegada para evaluar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 1243ms | Tamaño: 14645 bytes
+🎙️ Usuario: 🔊 → "De acuerdo, quedo atento a que me confirmes la hora aproxima..."
+2025-08-10T19:27:56Z [AUDIO:unknown] 57323...292: "De acuerdo, quedo atento a que..."
+2025-08-10T19:27:56Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:27:56Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:27:56Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:27:58Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:27:59Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:28:01Z [BUFFER:buffer] 57323...292: 1msg, 125ch
+2025-08-10T19:28:01Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:28:01Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:28:01Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:28:01Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:28:01Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:28:02Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:28:02Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:28:02Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:28:02Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:28:02Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:28:02Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:28:03Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:28:03Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:28:03Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:28:05Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:28:16Z [SYS_METRIC:system] sys: mem:23/512MB cpu:0% conn:0 uptime:11h31m activeUsers:2
+2025-08-10T19:28:16Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:2 evicts:0
+2025-08-10T19:28:16Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T19:28:16Z [USAGE_STATS:system] sys: msgs:20/hr chunks:0 avgLen:219ch funcs:0 errs:0
+2025-08-10T19:28:16Z [LATENCY_METRIC:system] null: openai:15336ms beds24:38ms whapi:0ms db:11ms total:15390ms
+2025-08-10T19:28:16Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:28:16Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 14s | 5283t
+2025-08-10T19:28:16Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:28:16Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5283 total:5283 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:28:16Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:28:16Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:28:16Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:28:17Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:28:17Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:28:17Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:28:17Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:28:17Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:28:22Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:28:23Z [DB_QUERY:database] 57300...251: type:thread_fetch time:11ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (5.8s)
+2025-08-10T19:28:23Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:28:23Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:28:23Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:28:23Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:28:23Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:28:23Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:28:23Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:28:23Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:28:23Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:28:23Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:28:24Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:28:24Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:28:24Z [WEBHOOK_:unknown] sys: 📥 stat:1
+[7:28:25 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Perfecto. Quedo a la espera de que me confirmes la hora aproximada de llegada para evaluar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 1272ms | Tamaño: 13424 bytes
+🎙️ Usuario: 🔊 → "Perfecto. Quedo a la espera de que me confirmes la hora apro..."
+2025-08-10T19:28:25Z [AUDIO:unknown] 57323...292: "Perfecto. Quedo a la espera de..."
+2025-08-10T19:28:25Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:28:25Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:28:25Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:28:27Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:28:27Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:28:30Z [BUFFER:buffer] 57323...292: 1msg, 129ch
+2025-08-10T19:28:30Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:28:30Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:28:30Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:28:30Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:28:30Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:28:31Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:28:31Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:28:31Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:28:31Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:28:32Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:28:32Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:28:32Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:28:32Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:28:33Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:28:34Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:28:35Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:28:44Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-10T19:28:51Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:28:51Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 20s | 5267t
+2025-08-10T19:28:51Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:28:51Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5267 total:5267 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:28:51Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:28:51Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:28:51Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:28:52Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:28:52Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:28:52Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:28:52Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:28:53Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:28:57Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:28:58Z [DB_QUERY:database] 57300...251: type:thread_fetch time:11ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (5.4s)
+2025-08-10T19:28:58Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:28:58Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:28:58Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:28:58Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:28:58Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:28:58Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:28:58Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:28:58Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:28:58Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:28:58Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:28:59Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:28:59Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:28:59Z [WEBHOOK_:unknown] sys: 📥 stat:1
+[7:29:00 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Perfecto. Quedo a la espera de que me confirmes la hora aproximada de llegada para evaluar la opción del early checking. Gracias. | Usuario: 573235906292 | Duración: 1590ms | Tamaño: 13801 bytes
+🎙️ Usuario: 🔊 → "Perfecto. Quedo a la espera de que me confirmes la hora apro..."
+2025-08-10T19:29:00Z [AUDIO:unknown] 57323...292: "Perfecto. Quedo a la espera de..."
+2025-08-10T19:29:00Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:29:00Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:29:00Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:29:02Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:29:02Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:29:05Z [BUFFER:buffer] 57323...292: 1msg, 129ch
+2025-08-10T19:29:05Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:29:05Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:29:05Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:29:05Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:29:05Z [DB_QUERY:database] 57323...292: type:thread_fetch time:7ms res:thread:thread_S... cache:no_change
+2025-08-10T19:29:05Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:29:05Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:29:05Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:29:05Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:29:06Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:29:06Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:29:06Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:29:06Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:29:06Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:29:07Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:29:14Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:29:14Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 9s | 5122t
+2025-08-10T19:29:14Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:29:14Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5122 total:5122 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:29:14Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:29:14Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:29:15Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:29:15Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:29:15Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:29:15Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:29:15Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:29:16Z [SYS_METRIC:system] sys: mem:25/512MB cpu:0% conn:0 uptime:11h32m activeUsers:2
+2025-08-10T19:29:16Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:2 evicts:0
+2025-08-10T19:29:16Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T19:29:16Z [USAGE_STATS:system] sys: msgs:23/hr chunks:0 avgLen:221ch funcs:0 errs:0
+2025-08-10T19:29:16Z [LATENCY_METRIC:system] null: openai:15231ms beds24:34ms whapi:0ms db:10ms total:15280ms
+2025-08-10T19:29:19Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:29:20Z [DB_QUERY:database] 57300...251: type:thread_fetch time:13ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (5.1s)
+2025-08-10T19:29:20Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:29:20Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:29:21Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:29:21Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:29:21Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:29:21Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:29:21Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:29:21Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:29:21Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:29:21Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:29:21Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:29:21Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:29:21Z [WEBHOOK_:unknown] sys: 📥 stat:1
+[7:29:23 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Perfecto. Quedo a la espera de que me confirmes la hora aproximada de llegada para evaluar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 2263ms | Tamaño: 14397 bytes
+🎙️ Usuario: 🔊 → "Perfecto. Quedo a la espera de que me confirmes la hora apro..."
+2025-08-10T19:29:23Z [AUDIO:unknown] 57323...292: "Perfecto. Quedo a la espera de..."
+2025-08-10T19:29:23Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:29:23Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:29:23Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:29:25Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:29:25Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:29:28Z [BUFFER:buffer] 57323...292: 1msg, 129ch
+2025-08-10T19:29:28Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:29:28Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:29:28Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:29:28Z [DB_QUERY:database] 57323...292: type:thread_fetch time:17ms res:thread:thread_S... cache:no_change
+2025-08-10T19:29:28Z [DB_QUERY:database] 57323...292: type:thread_fetch time:14ms res:thread:thread_S... cache:no_change
+2025-08-10T19:29:28Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:29:28Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:29:28Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:29:28Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:29:29Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:29:29Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:29:29Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:29:29Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:29:29Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:29:31Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:29:39Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:29:40Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 11s | 5170t
+2025-08-10T19:29:40Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:29:40Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5170 total:5170 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:29:40Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:29:40Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:29:40Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:29:41Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:29:41Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:29:41Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:29:41Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:29:41Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:29:44Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:29:45Z [DB_QUERY:database] 57300...251: type:thread_fetch time:12ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (4.4s)
+2025-08-10T19:29:45Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:29:45Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:29:45Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:29:45Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:29:45Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:29:45Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:29:45Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:29:45Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:29:45Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:29:45Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:29:46Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:29:46Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:29:46Z [WEBHOOK_:unknown] sys: 📥 stat:1
+[7:29:47 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Perfecto. Quedo a la espera de que confirmes la hora aproximada de llegada para evaluar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 1638ms | Tamaño: 13166 bytes
+🎙️ Usuario: 🔊 → "Perfecto. Quedo a la espera de que confirmes la hora aproxim..."
+2025-08-10T19:29:47Z [AUDIO:unknown] 57323...292: "Perfecto. Quedo a la espera de..."
+2025-08-10T19:29:47Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:29:47Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:29:47Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:29:49Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:29:50Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:29:52Z [BUFFER:buffer] 57323...292: 1msg, 126ch
+2025-08-10T19:29:52Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:29:52Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:29:52Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:29:52Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:29:52Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:29:52Z [MILESTONE:unknown] Line 5500 reached
+2025-08-10T19:29:52.560892591Z [INFO] [LOG_FILE_CREATED] Chunk 11 guardado: logs/railway-logs-chunk-11-2025-08-10T07-57-01.log labels={"app":"whatsapp-bot","category":"LOG_FILE_CREATED","chunkNumber":11,"fileName":"logs/railway-logs-chunk-11-2025-08-10T07-57-01.log","level":"INFO"} timestamp="2025-08-10T19:29:52.556Z"
+2025-08-10T19:29:53Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:29:53Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:29:53Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:29:53Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:29:53Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:29:53Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:29:54Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:29:54Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:29:54Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:29:56Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:30:03Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:30:03Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 10s | 5281t
+2025-08-10T19:30:03Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:30:03Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5281 total:5281 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:30:03Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:30:03Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:30:04Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:30:04Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:30:04Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:30:04Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:30:04Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:30:08Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:30:09Z [DB_QUERY:database] 57300...251: type:thread_fetch time:12ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (4.9s)
+2025-08-10T19:30:09Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:30:09Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:30:09Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:30:09Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:30:09Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:30:09Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:30:09Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:30:09Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:30:09Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:30:09Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:30:10Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:30:10Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:30:10Z [WEBHOOK_:unknown] sys: 📥 stat:1
+[7:30:10 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Perfecto. Quedo a la espera de que me confirmes la hora aproximada de llegada para evaluar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 1198ms | Tamaño: 14425 bytes
+🎙️ Usuario: 🔊 → "Perfecto. Quedo a la espera de que me confirmes la hora apro..."
+2025-08-10T19:30:10Z [AUDIO:unknown] 57323...292: "Perfecto. Quedo a la espera de..."
+2025-08-10T19:30:10Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:30:10Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:30:10Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:30:12Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:30:13Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:30:15Z [BUFFER:buffer] 57323...292: 1msg, 129ch
+2025-08-10T19:30:15Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:30:15Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:30:15Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:30:15Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:30:15Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:30:16Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:30:16Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:30:16Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:30:16Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:30:16Z [SYS_METRIC:system] sys: mem:23/512MB cpu:0% conn:0 uptime:11h33m activeUsers:2
+2025-08-10T19:30:16Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:2 evicts:0
+2025-08-10T19:30:16Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T19:30:16Z [USAGE_STATS:system] sys: msgs:25/hr chunks:0 avgLen:222ch funcs:0 errs:0
+2025-08-10T19:30:16Z [LATENCY_METRIC:system] null: openai:14951ms beds24:32ms whapi:0ms db:9ms total:14997ms
+2025-08-10T19:30:16Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:30:16Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:30:16Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:30:16Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:30:17Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:30:18Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:30:25Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:30:25Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 9s | 5457t
+2025-08-10T19:30:25Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:30:25Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5457 total:5457 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:30:25Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:30:25Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:30:26Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:30:26Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:30:26Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:30:26Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:30:27Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:30:31Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:30:31Z [DB_QUERY:database] 57300...251: type:thread_fetch time:10ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (5.2s)
+2025-08-10T19:30:31Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:30:31Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:30:32Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:30:32Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:30:32Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:30:32Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:30:32Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:30:32Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:30:32Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:30:32Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:30:33Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:30:33Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:30:33Z [WEBHOOK_:unknown] sys: 📥 stat:1
+[7:30:33 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Perfecto, quedo a la espera de que me confirmes la hora aproximada de llegada para evaluar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 1314ms | Tamaño: 14710 bytes
+🎙️ Usuario: 🔊 → "Perfecto, quedo a la espera de que me confirmes la hora apro..."
+2025-08-10T19:30:33Z [AUDIO:unknown] 57323...292: "Perfecto, quedo a la espera de..."
+2025-08-10T19:30:33Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:30:33Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:30:33Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:30:35Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:30:36Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:30:38Z [BUFFER:buffer] 57323...292: 1msg, 129ch
+2025-08-10T19:30:38Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:30:38Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:30:38Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:30:38Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:30:38Z [DB_QUERY:database] 57323...292: type:thread_fetch time:5ms res:thread:thread_S... cache:no_change
+2025-08-10T19:30:39Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:30:39Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:30:39Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:30:39Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:30:39Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:30:39Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:30:40Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:30:40Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:30:40Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:30:41Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:30:51Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:30:51Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 12s | 5948t
+2025-08-10T19:30:51Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:30:51Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5948 total:5948 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:30:51Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:30:51Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:30:51Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:30:52Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:30:52Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:30:52Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:30:52Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:30:53Z [INDICATO:whapi] 57300...251: Indicador de grabación enviado exitosame...
+2025-08-10T19:30:56Z [VOICE_SE:unknown] 57300...251: Nota de voz enviada
+2025-08-10T19:30:57Z [DB_QUERY:database] 57300...251: type:thread_fetch time:11ms res:thread:thread_F... cache:no_change
+🤖 OpenAI → 🔊 → Sr Alex (4.9s)
+2025-08-10T19:30:57Z [VOICE_SE:unknown] 57300...251: Notas de voz enviadas exitosamente
+2025-08-10T19:30:57Z [VOICE_FL:unknown] 57323...292: Flag de voz reseteado después de envío e...
+2025-08-10T19:30:57Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:30:57Z [WEBHOOK:webhook] msg:1
+2025-08-10T19:30:57Z [DELAYED_:unknown] 57323...292: Timer anterior cancelado
+2025-08-10T19:30:57Z [DELAYED_:unknown] 57323...292: Update programado para 10min
+2025-08-10T19:30:57Z [MSG_RX:webhook] 57323...292: voice 
+2025-08-10T19:30:57Z [BUFFER_C:unknown] 57323...292: Buffer creado por timer inteligente
+2025-08-10T19:30:57Z [BUFFER_V:unknown] 57323...292: Esperando transcripción de voz
+2025-08-10T19:30:57Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:30:58Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T19:30:58Z [WEBHOOK:webhook] stat:1
+2025-08-10T19:30:58Z [WEBHOOK_:unknown] sys: 📥 stat:1
+[7:30:59 PM] ℹ️ [AUDIO_TRANSCRIPTION_FULL] Transcripción completa: Quedo atento a que me confirmes la hora aproximada de llegada para evaluar la opción del Early Check-in. Gracias. | Usuario: 573235906292 | Duración: 1219ms | Tamaño: 12670 bytes
+🎙️ Usuario: 🔊 → "Quedo atento a que me confirmes la hora aproximada de llegad..."
+2025-08-10T19:30:59Z [AUDIO:unknown] 57323...292: "Quedo atento a que me confirme..."
+2025-08-10T19:30:59Z [BUFFER_S:buffer] 57323...292: Mensaje agregado, estado actual buffer
+2025-08-10T19:30:59Z [BUFFER_T:buffer] 57323...292: Timer anterior cancelado
+2025-08-10T19:30:59Z [BUFFER_S:unknown] 57323...292: Buffer esperando agrupación
+2025-08-10T19:31:01Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-10T19:31:01Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-10T19:31:04Z [BUFFER:buffer] 57323...292: 1msg, 113ch
+2025-08-10T19:31:04Z [MESSAGE_:webhook] 57323...292: Iniciando procesamiento de buffer
+2025-08-10T19:31:04Z [CACHE_HIT:cache] 57323...292
+2025-08-10T19:31:04Z [OPENAI_M:unknown] 57323...292: Mensaje preparado para OpenAI
+2025-08-10T19:31:04Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:31:04Z [DB_QUERY:database] 57323...292: type:thread_fetch time:6ms res:thread:thread_S... cache:no_change
+2025-08-10T19:31:04Z [INDICATO:whapi] 57323...292: Indicador de grabación enviado exitosame...
+2025-08-10T19:31:04Z [OPENAI_R:unknown] 57323...292: Iniciando run de OpenAI
+2025-08-10T19:31:04Z [OPENAI_C:unknown] 57323...292: Estado de concurrencia OpenAI
+2025-08-10T19:31:04Z [AI_START:openai] 57323...292 | null
+2025-08-10T19:31:05Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T19:31:05Z [THR_REUSE:database] th_threa...rXz
+2025-08-10T19:31:05Z [OPENAI_P:unknown] 57323...292: Prompt completo compactado enviado a Ope...
+2025-08-10T19:31:05Z [OPENAI_M:openai] 57323...292: Mensaje enviado al thread de OpenAI
+2025-08-10T19:31:06Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T19:31:07Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T19:31:15Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T19:31:15Z [AI_DONE:openai] 57323...292 | th_threa...rXz | 11s | 5666t
+2025-08-10T19:31:15Z [OPENAI_R:openai] 57323...292: Respuesta completa de OpenAI
+2025-08-10T19:31:15Z [TOKENS_METRIC:openai] 57323...292: in:0 out:5666 total:5666 model:o3-mini-2025-01-31 thread:th_threa...rXz
+2025-08-10T19:31:15Z [TOKEN_US:unknown] 57323...292: Tokens utilizados en procesamiento
+2025-08-10T19:31:15Z [HIGH_LAT:performance] 57323...292: Latencia alta detectada en procesamiento
+2025-08-10T19:31:15Z [OPENAI_R:unknown] 57323...292: Run de OpenAI completado
+2025-08-10T19:31:16Z [SYS_METRIC:system] sys: mem:25/512MB cpu:0% conn:0 uptime:11h34m activeUsers:2
+2025-08-10T19:31:16Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:2 evicts:0
+2025-08-10T19:31:16Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T19:31:16Z [USAGE_STATS:system] sys: msgs:28/hr chunks:0 avgLen:223ch funcs:0 errs:0
+2025-08-10T19:31:16Z [LATENCY_METRIC:system] null: openai:14614ms beds24:30ms whapi:0ms db:8ms total:14656ms
+🛑 Received SIGTERM, shutting down gracefully...
+2025-08-10T19:31:16Z [SHUTDOWN:unknown] sys: Señal de parada recibida: SIGTERM
+🛑 Stopping CoreBot...
+2025-08-10T19:31:16Z [BOT_STOP:unknown] sys: Iniciando proceso de parada del bot
+2025-08-10T19:31:16Z [FLUSH_AL:unknown] sys: Ejecutando todos los updates pendientes
+2025-08-10T19:31:16Z [DB_QUERY:database] 57300...251: type:thread_fetch time:11ms res:thread:thread_F... cache:no_change
+2025-08-10T19:31:16Z [TOKENS_S:unknown] 57300...251: Tokens acumulados
+2025-08-10T19:31:16Z [THREAD_T:unknown] 57300...251: Thread reusado: 0 + 4222 = 4222
+2025-08-10T19:31:16Z [VOICE_CO:unknown] 57323...292: Delay aplicado para agrupar voces consec...
+2025-08-10T19:31:16Z [TOKEN_CO:unknown] 57323...292: Token count actualizado en memoria
+2025-08-10T19:31:16Z [VOICE_RE:unknown] 57323...292: Enviando respuesta en voz por input de a...
+2025-08-10T19:31:16Z [QUOTE_DE:unknown] 57323...292: Decisión de citado calculada
+2025-08-10T19:31:16Z [THREAD_A:unknown] 57300...251: Thread activity + tokens actualizados: 5...
+2025-08-10T19:31:16Z [DELAYED_:unknown] 57300...251: lastActivity + tokens actualizados
+2025-08-10T19:31:16Z [DB_QUERY:database] 57323...292: type:thread_fetch time:5ms res:thread:thread_S... cache:no_change
+2025-08-10T19:31:16Z [TOKENS_S:unknown] 57323...292: Tokens acumulados
+2025-08-10T19:31:16Z [THREAD_T:unknown] 57323...292: Thread reusado: 0 + 5666 = 5666
+2025-08-10T19:31:16Z [THREAD_A:unknown] 57323...292: Thread activity + tokens actualizados: 5...
+2025-08-10T19:31:16Z [DELAYED_:unknown] 57323...292: lastActivity + tokens actualizados
+2025-08-10T19:31:16Z [DELAYED_:unknown] sys: Limpiando timers pendientes
+2025-08-10T19:31:16Z [SESSION_:unknown] sys: Sesión de bot finalizada
+✅ CoreBot stopped successfully
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.5.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+npm notice To update run: npm install -g npm@11.5.2
+npm notice
+
+> tealquilamos-bot@1.0.0 start
+> node dist/main.js
+
+🚀 Starting TeAlquilamos Bot...
+2025-08-10T19:31:31Z [APP_STAR:unknown] sys: Iniciando TeAlquilamos Bot
+✅ Configuration loaded successfully
+2025-08-10T19:31:31Z [CONFIG_L:unknown] sys: Configuración cargada exitosamente
+🌍 Server will start on 0.0.0.0:8080
+🔧 DI ✓ 5 services, 1 function
+🔌 hotel-plugin ✓ 1 function
+✅ check_availability registered
+2025-08-10T19:31:31Z [PLUGIN_R:unknown] sys: hotel-plugin ✓ 1 function
+2025-08-10T19:31:31Z [DI_COMPL:unknown] sys: DI ✓ 5 services, 1 function
+2025-08-10T19:31:32Z [DATABASE:database] sys: 🗄️ Conectado a la base de datos Postgre...
+2025-08-10T19:31:32Z [DATABASE:unknown] sys: Conexión exitosa a PostgreSQL
+🔧 Cleanup tasks configured
+2025-08-10T19:31:32Z [SERVER_S:unknown] sys: Servidor HTTP iniciado
+=== Bot TeAlquilamos Iniciado ===
+🚀 Servidor: 0.0.0.0:8080
+🔗 Webhook: configurando...
+✅ Sistema listo
+
+🚀 CoreBot started successfully on 0.0.0.0:8080
+📊 Functions registered: 1
+2025-08-10T19:31:32Z [BOT_READ:unknown] sys: Bot completamente inicializado
+^C

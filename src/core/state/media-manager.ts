@@ -96,8 +96,13 @@ export class MediaManager {
     public addBotSentContent(chatId: string, content: string): void {
         if (!chatId || !content) return;
         
-        // Normalizar el contenido (primeros 200 caracteres)
-        const normalizedContent = content.trim().substring(0, 200);
+        // Normalizar el contenido (quitar IDs internos, colapsar espacios, a minúsculas)
+        const normalizedContent = content
+            .replace(/\[(?:th_|run_|msg_|thread_|asst_)[^\]]+\]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .substring(0, 200);
         const normalizedChatId = chatId.toLowerCase();
         
         const contents = this.botSentContent.get(normalizedChatId) || new Set<string>();
@@ -108,7 +113,12 @@ export class MediaManager {
     public isBotSentContent(chatId: string, content: string): boolean {
         if (!chatId || !content) return false;
         
-        const normalizedContent = content.trim().substring(0, 200);
+        const normalizedContent = content
+            .replace(/\[(?:th_|run_|msg_|thread_|asst_)[^\]]+\]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .substring(0, 200);
         const normalizedChatId = chatId.toLowerCase();
         
         const contents = this.botSentContent.get(normalizedChatId);
