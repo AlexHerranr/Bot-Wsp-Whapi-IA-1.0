@@ -283,6 +283,7 @@ export class WhatsappService {
                 messageBody.quoted = quotedMessageId;
             }
 
+            const attemptStart = Date.now();
             const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/text`, {
                 method: 'POST',
                 headers: {
@@ -290,6 +291,14 @@ export class WhatsappService {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(messageBody)
+            });
+            logInfo('WHAPI_CHUNK_RESULT', 'Resultado envío chunk', {
+                userId: getShortUserId(chatId),
+                chatId,
+                chunkNumber: i + 1,
+                totalChunks: chunks.length,
+                ms: Date.now() - attemptStart,
+                status: response.status
             });
             // Intentar capturar ID del mensaje enviado por WHAPI
             try {

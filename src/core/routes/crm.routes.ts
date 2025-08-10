@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { container } from 'tsyringe';
 import { DatabaseService } from '../services/database.service';
 import { SimpleCRMService } from '../services/simple-crm.service';
-import { DailyActionsJob } from '../jobs/daily-actions.job';
+// import { DailyActionsJob } from '../jobs/daily-actions.job'; // DESHABILITADO - Ver docs/MEJORAS_FUTURAS.md
 
 const router = Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -174,41 +174,29 @@ router.get('/today-actions', async (req: Request, res: Response): Promise<void> 
   }
 });
 
-// Endpoint para ejecutar daily actions manualmente (testing)
+// Endpoint DESHABILITADO - Daily actions removido
 router.post('/execute-daily-actions', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const dailyJob = container.resolve(DailyActionsJob);
-    await dailyJob.executeManual();
-
-    res.json({ 
-      success: true, 
-      message: 'Daily actions ejecutadas correctamente' 
-    });
-
-  } catch (error) {
-    console.error('❌ Error en /execute-daily-actions:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Error interno del servidor' 
-    });
-  }
+  res.status(503).json({ 
+    success: false, 
+    error: 'Daily actions job deshabilitado. Ver docs/MEJORAS_FUTURAS.md para reactivar',
+    disabled: true
+  });
 });
 
 // Endpoint para obtener estado del sistema CRM
 router.get('/status', async (req: Request, res: Response): Promise<void> => {
   try {
     const db = container.resolve(DatabaseService);
-    const dailyJob = container.resolve(DailyActionsJob);
     
     const dbStatus = db.getConnectionStatus();
-    const jobStatus = dailyJob.getStatus();
 
     res.json({
       success: true,
       crm_mode: process.env.CRM_MODE || 'internal',
-      crm_enabled: process.env.CRM_ANALYSIS_ENABLED === 'true',
+      crm_enabled: false,
+      crm_jobs_disabled: true,
       database: dbStatus,
-      daily_job: jobStatus,
+      daily_job: { status: 'disabled', message: 'Ver docs/MEJORAS_FUTURAS.md' },
       assistant_id: process.env.CRM_ASSISTANT_ID || 'not_configured'
     });
 

@@ -1,0 +1,551 @@
+2025-08-10T21:31:30Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:31Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:33Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:34Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:36Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:37Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:39Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:40Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:42Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:43Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:45Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:46Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:48Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:49Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:51Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:52Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:54Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:55Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:57Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:31:58Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:00Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:01Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:03Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:04Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:06Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:07Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:09Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:10Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:12Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:13Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:15Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:16Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:18Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:19Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:21Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:22Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:24Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:25Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:27Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:27Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h16m activeUsers:1
+2025-08-10T21:32:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:32:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:32:27Z [USAGE_STATS:system] sys: msgs:8/hr chunks:0 avgLen:218ch funcs:1 errs:0
+2025-08-10T21:32:27Z [LATENCY_METRIC:system] null: openai:13391ms beds24:59ms whapi:0ms db:17ms total:13475ms
+2025-08-10T21:32:28Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:30Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:31Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:33Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:34Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:36Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:37Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:39Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:40Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:42Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:43Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:45Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:46Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:48Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:49Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:51Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:52Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:54Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:55Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:57Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:32:58Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:00Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:01Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:03Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:04Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:06Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:07Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:09Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:10Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:12Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:13Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:15Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:16Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:18Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:19Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:21Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:22Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:24Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:25Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:27Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:27Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h17m activeUsers:1
+2025-08-10T21:33:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:33:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:33:27Z [USAGE_STATS:system] sys: msgs:8/hr chunks:0 avgLen:218ch funcs:1 errs:0
+2025-08-10T21:33:27Z [LATENCY_METRIC:system] null: openai:13391ms beds24:59ms whapi:0ms db:17ms total:13475ms
+2025-08-10T21:33:28Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:30Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:31Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:33Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:34Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:36Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:37Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:39Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:40Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:42Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:43Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:45Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:46Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:48Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:49Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:51Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:52Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:54Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:55Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:57Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:33:58Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:00Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:01Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:03Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:04Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:06Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:07Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:09Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:10Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:12Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:13Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:15Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:16Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:18Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:19Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+✅ Retry exitoso después de 3 intentos
+2025-08-10T21:34:20Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 3/3
+2025-08-10T21:34:21Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+2025-08-10T21:34:21Z [INDICATO:whapi] 57300...251: Indicador de escritura enviado exitosame...
+2025-08-10T21:34:21Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T21:34:21Z [WEBHOOK:webhook] msg:1
+2025-08-10T21:34:22Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T21:34:22Z [WEBHOOK:webhook] stat:1
+2025-08-10T21:34:22Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T21:34:22Z [BUFFER_D:unknown] 57300...251: Retrasando por run activo
+🤖 OpenAI → Sr Alex (22.8s)
+2025-08-10T21:34:24Z [TYPING_F:whapi] 57300...251: Flag de typing reseteado post-procesamie...
+2025-08-10T21:34:24Z [SENT:webhook] 57300...251 | 396ch | 23s
+2025-08-10T21:34:24Z [BUFFER_P:unknown] 57300...251: Mensajes pendientes detectados después d...
+2025-08-10T21:34:24Z [BUFFER:buffer] 57300...251: 1msg, 1ch
+2025-08-10T21:34:24Z [MESSAGE_:webhook] 57300...251: Iniciando procesamiento de buffer
+2025-08-10T21:34:24Z [CACHE_HIT:cache] 57300...251
+2025-08-10T21:34:24Z [OPENAI_M:unknown] 57300...251: Mensaje preparado para OpenAI
+2025-08-10T21:34:24Z [DB_QUERY:database] 57300...251: type:thread_fetch time:6ms res:thread:thread_M... cache:no_change
+2025-08-10T21:34:24Z [DB_QUERY:database] 57300...251: type:thread_fetch time:6ms res:thread:thread_M... cache:no_change
+2025-08-10T21:34:24Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T21:34:24Z [WEBHOOK:webhook] msg:1
+2025-08-10T21:34:24Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T21:34:24Z [WEBHOOK:webhook] stat:1
+2025-08-10T21:34:24Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T21:34:25Z [OPENAI_R:unknown] 57300...251: Iniciando run de OpenAI
+2025-08-10T21:34:25Z [OPENAI_C:unknown] 57300...251: Estado de concurrencia OpenAI
+2025-08-10T21:34:25Z [AI_START:openai] 57300...251 | null
+2025-08-10T21:34:25Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-10T21:34:25Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-10T21:34:25Z [THR_REUSE:database] th_threa...yuA
+2025-08-10T21:34:25Z [OPENAI_P:unknown] 57300...251: Prompt completo compactado enviado a Ope...
+2025-08-10T21:34:25Z [OPENAI_M:openai] 57300...251: Mensaje enviado al thread de OpenAI
+2025-08-10T21:34:26Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-10T21:34:27Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-10T21:34:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h18m activeUsers:1
+2025-08-10T21:34:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:34:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:34:27Z [USAGE_STATS:system] sys: msgs:8/hr chunks:0 avgLen:218ch funcs:1 errs:0
+2025-08-10T21:34:27Z [LATENCY_METRIC:system] null: openai:13391ms beds24:59ms whapi:0ms db:17ms total:13475ms
+2025-08-10T21:34:30Z [BUFFER_E:unknown] 57300...251: Buffer vacío, limpiando
+2025-08-10T21:34:34Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-10T21:34:35Z [AI_DONE:openai] 57300...251 | th_threa...yuA | 10s | 4783t
+2025-08-10T21:34:35Z [OPENAI_R:openai] 57300...251: Respuesta completa de OpenAI
+2025-08-10T21:34:35Z [TOKENS_METRIC:openai] 57300...251: in:0 out:4783 total:4783 model:o3-mini-2025-01-31 thread:th_threa...yuA
+2025-08-10T21:34:35Z [TOKEN_US:unknown] 57300...251: Tokens utilizados en procesamiento
+2025-08-10T21:34:35Z [HIGH_LAT:performance] 57300...251: Latencia alta detectada en procesamiento
+2025-08-10T21:34:35Z [OPENAI_R:unknown] 57300...251: Run de OpenAI completado
+2025-08-10T21:34:35Z [TOKEN_CO:unknown] 57300...251: Token count actualizado en memoria
+2025-08-10T21:34:35Z [QUOTE_DE:unknown] 57300...251: Decisión de citado calculada
+2025-08-10T21:34:35Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 1/1
+2025-08-10T21:34:35Z [INDICATO:whapi] 57300...251: Indicador de escritura enviado exitosame...
+🤖 OpenAI → Sr Alex (10.1s)
+2025-08-10T21:34:37Z [SENT:webhook] 57300...251 | 128ch | 10s
+2025-08-10T21:34:37Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T21:34:37Z [WEBHOOK:webhook] msg:1
+2025-08-10T21:34:38Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T21:34:38Z [WEBHOOK:webhook] stat:1
+2025-08-10T21:34:38Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T21:35:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h19m activeUsers:1
+2025-08-10T21:35:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:35:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:35:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:35:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:36:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h20m activeUsers:1
+2025-08-10T21:36:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:36:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:36:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:36:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:37:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h21m activeUsers:1
+2025-08-10T21:37:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:37:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:37:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:37:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:38:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h22m activeUsers:1
+2025-08-10T21:38:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:38:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:38:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:38:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:39:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h23m activeUsers:1
+2025-08-10T21:39:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:39:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:39:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:39:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:40:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h24m activeUsers:1
+2025-08-10T21:40:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:40:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:40:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:40:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:40:53Z [DB_QUERY:database] 57300...251: type:thread_fetch time:50ms res:thread:thread_M... cache:no_change
+2025-08-10T21:40:53Z [TOKENS_S:unknown] 57300...251: Tokens acumulados
+2025-08-10T21:40:53Z [THREAD_T:unknown] 57300...251: Thread reusado: 0 + 4783 = 4783
+2025-08-10T21:40:53Z [THREAD_A:unknown] 57300...251: Thread activity + tokens actualizados: 5...
+2025-08-10T21:40:53Z [DELAYED_:unknown] 57300...251: lastActivity + tokens actualizados
+2025-08-10T21:41:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h25m activeUsers:1
+2025-08-10T21:41:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:41:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:41:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:41:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:42:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h26m activeUsers:1
+2025-08-10T21:42:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:42:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:42:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:42:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:42:27Z [MILESTONE:unknown] Line 1000 reached
+2025-08-10T21:42:29.020899140Z [INFO] [LOG_FILE_CREATED] Chunk 2 guardado: logs/railway-logs-chunk-2-2025-08-10T21-16-27.log labels={"app":"whatsapp-bot","category":"LOG_FILE_CREATED","chunkNumber":2,"fileName":"logs/railway-logs-chunk-2-2025-08-10T21-16-27.log","level":"INFO"} timestamp="2025-08-10T21:42:27.724Z"
+2025-08-10T21:43:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h27m activeUsers:1
+2025-08-10T21:43:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:43:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:43:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:43:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:44:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h28m activeUsers:1
+2025-08-10T21:44:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:44:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:44:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:44:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:45:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h29m activeUsers:1
+2025-08-10T21:45:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:45:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:45:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:45:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:46:27Z [STATE_CL:unknown] 57300...251: Limpiando user state inactivo optimizado
+🧹 Cleaned up 1 old user states (optimized for 100+ users)
+2025-08-10T21:46:27Z [MEMORY_O:unknown] sys: Estados de usuario limpiados para optimi...
+2025-08-10T21:46:27Z [MEMORY_C:unknown] sys: Cleanup de users ejecutado
+2025-08-10T21:46:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h30m activeUsers:1
+2025-08-10T21:46:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:46:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:46:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:46:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:47:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h31m activeUsers:1
+2025-08-10T21:47:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:47:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:47:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:47:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:48:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h32m activeUsers:1
+2025-08-10T21:48:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:48:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:48:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:48:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:49:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h33m activeUsers:1
+2025-08-10T21:49:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:49:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:49:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:49:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:50:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h34m activeUsers:1
+2025-08-10T21:50:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:50:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:50:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:50:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:51:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h35m activeUsers:1
+2025-08-10T21:51:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:51:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:51:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:51:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:52:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h36m activeUsers:1
+2025-08-10T21:52:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:52:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:52:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:52:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:53:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h37m activeUsers:1
+2025-08-10T21:53:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:53:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:53:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:53:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:54:27Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h38m activeUsers:1
+2025-08-10T21:54:27Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:54:27Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:54:27Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:54:27Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:55:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h39m activeUsers:1
+2025-08-10T21:55:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:55:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:55:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:55:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:56:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h40m activeUsers:1
+2025-08-10T21:56:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:56:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:56:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:56:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:57:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h41m activeUsers:1
+2025-08-10T21:57:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:57:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:57:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:57:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:58:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h42m activeUsers:1
+2025-08-10T21:58:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:58:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:58:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:58:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T21:59:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h43m activeUsers:1
+2025-08-10T21:59:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T21:59:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T21:59:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T21:59:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:00:13Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T22:00:13Z [WEBHOOK:webhook] msg:1
+2025-08-10T22:00:13Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T22:00:13Z [WEBHOOK:webhook] msg:1
+2025-08-10T22:00:13Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T22:00:13Z [WEBHOOK:webhook] msg:1
+2025-08-10T22:00:14Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T22:00:14Z [WEBHOOK:webhook] stat:1
+2025-08-10T22:00:14Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-10T22:00:14Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-10T22:00:14Z [WEBHOOK:webhook] stat:2
+2025-08-10T22:00:14Z [WEBHOOK_:unknown] sys: 📥 stat:2
+2025-08-10T22:00:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h44m activeUsers:1
+2025-08-10T22:00:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:00:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:00:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:00:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:01:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h45m activeUsers:1
+2025-08-10T22:01:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:01:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:01:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:01:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:02:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h46m activeUsers:1
+2025-08-10T22:02:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:02:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:02:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:02:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:03:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h47m activeUsers:1
+2025-08-10T22:03:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:03:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:03:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:03:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:04:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h48m activeUsers:1
+2025-08-10T22:04:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:04:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:04:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:04:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:05:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h49m activeUsers:1
+2025-08-10T22:05:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:05:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:05:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:05:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:06:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h50m activeUsers:1
+2025-08-10T22:06:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:06:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:06:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:06:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:07:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h51m activeUsers:1
+2025-08-10T22:07:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:07:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:07:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:07:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:08:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h52m activeUsers:1
+2025-08-10T22:08:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:08:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:08:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:08:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:09:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h53m activeUsers:1
+2025-08-10T22:09:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:09:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:09:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:09:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:10:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h54m activeUsers:1
+2025-08-10T22:10:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:10:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:10:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:10:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:11:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h55m activeUsers:1
+2025-08-10T22:11:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:11:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:11:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:11:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:12:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h56m activeUsers:1
+2025-08-10T22:12:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:12:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:12:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:12:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:13:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h57m activeUsers:1
+2025-08-10T22:13:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:13:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:13:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:13:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:14:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h58m activeUsers:1
+2025-08-10T22:14:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:14:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:14:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:14:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:15:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:0h59m activeUsers:1
+2025-08-10T22:15:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-10T22:15:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:15:28Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:206ch funcs:1 errs:0
+2025-08-10T22:15:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:16:28Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:1h0m activeUsers:0
+2025-08-10T22:16:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:16:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:16:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:16:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:17:28Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:1h1m activeUsers:0
+2025-08-10T22:17:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:17:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:17:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:17:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:18:28Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:1h2m activeUsers:0
+2025-08-10T22:18:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:18:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:18:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:18:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:19:28Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:1h3m activeUsers:0
+2025-08-10T22:19:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:19:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:19:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:19:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:20:28Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:1h4m activeUsers:0
+2025-08-10T22:20:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:20:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:20:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:20:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:21:28Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:1h5m activeUsers:0
+2025-08-10T22:21:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:21:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:21:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:21:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:22:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h6m activeUsers:0
+2025-08-10T22:22:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:22:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:22:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:22:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:23:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h7m activeUsers:0
+2025-08-10T22:23:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:23:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:23:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:23:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:24:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h8m activeUsers:0
+2025-08-10T22:24:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:24:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:24:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:24:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:25:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h9m activeUsers:0
+2025-08-10T22:25:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:25:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:25:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:25:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:26:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h10m activeUsers:0
+2025-08-10T22:26:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:26:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:26:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:26:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:27:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h11m activeUsers:0
+2025-08-10T22:27:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:27:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:27:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:27:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:28:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h12m activeUsers:0
+2025-08-10T22:28:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:28:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:28:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:28:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:29:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h13m activeUsers:0
+2025-08-10T22:29:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:29:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:29:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:29:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:30:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h14m activeUsers:0
+2025-08-10T22:30:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:30:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:30:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:30:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:31:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h15m activeUsers:0
+2025-08-10T22:31:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:31:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:31:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:31:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:32:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h16m activeUsers:0
+2025-08-10T22:32:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:32:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:32:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:32:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:33:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h17m activeUsers:0
+2025-08-10T22:33:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:33:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:33:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:33:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:34:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h18m activeUsers:0
+2025-08-10T22:34:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:34:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:34:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:34:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:35:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h19m activeUsers:0
+2025-08-10T22:35:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:35:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:35:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:35:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:36:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h20m activeUsers:0
+2025-08-10T22:36:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:36:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:36:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:36:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:37:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h21m activeUsers:0
+2025-08-10T22:37:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:37:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:37:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:37:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:38:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h22m activeUsers:0
+2025-08-10T22:38:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:38:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:38:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:38:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:39:28Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h23m activeUsers:0
+2025-08-10T22:39:28Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:39:28Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:39:28Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:39:28Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:40:29Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h24m activeUsers:0
+2025-08-10T22:40:29Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:40:29Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:40:29Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:40:29Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:41:29Z [SYS_METRIC:system] sys: mem:20/512MB cpu:0% conn:0 uptime:1h25m activeUsers:0
+2025-08-10T22:41:29Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:41:29Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:41:29Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:41:29Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:42:29Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:1h26m activeUsers:0
+2025-08-10T22:42:29Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:42:29Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:42:29Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:42:29Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms
+2025-08-10T22:43:29Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:1h27m activeUsers:0
+2025-08-10T22:43:29Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-10T22:43:29Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-10T22:43:29Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-10T22:43:29Z [LATENCY_METRIC:system] null: openai:13057ms beds24:53ms whapi:0ms db:15ms total:13133ms

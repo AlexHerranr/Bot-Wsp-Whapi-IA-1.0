@@ -7,6 +7,7 @@ import { logInfo, logSuccess, logWarning, logDebug } from '../../utils/logging';
 export class BufferManager implements IBufferManager {
     private buffers: Map<string, MessageBuffer> = new Map();
     private activeRuns: Map<string, boolean> = new Map(); // Flag simple para evitar concurrent runs per user/thread
+    private activeRunTimestamps: Map<string, number> = new Map(); // Timestamps para timeout de seguridad
 
     constructor(
         private processCallback: (userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }) => Promise<void>,
@@ -226,19 +227,35 @@ export class BufferManager implements IBufferManager {
 
         // Chequeo anti-concurrent: Si run activo, retrasar (en producción, poll OpenAI run status)
         if (this.activeRuns.get(userId)) {
-            logWarning('BUFFER_DELAYED_ACTIVE_RUN', 'Retrasando por run activo', { 
-                userId,
-                userName: buffer.userName,
-                pendingMessages: buffer.messages.length 
-            });
-            // Usar timer más corto (1.5s) cuando hay run activo para verificar más frecuentemente
-            if (buffer.timer) {
-                clearTimeout(buffer.timer);
+            const runStartTime = this.activeRunTimestamps.get(userId) || 0;
+            const runDuration = Date.now() - runStartTime;
+            
+            // TIMEOUT DE SEGURIDAD: Si run lleva >60s activo, forzar liberación para evitar locks infinitos
+            if (runDuration > 60000) { // 60 segundos
+                logWarning('BUFFER_FORCE_RELEASE_TIMEOUT', 'Liberando run atascado por timeout de seguridad', {
+                    userId,
+                    userName: buffer.userName,
+                    runDuration,
+                    reason: 'safety_timeout_60s'
+                });
+                this.releaseRun(userId);
+                // Continúa procesando después del force release
+            } else {
+                logWarning('BUFFER_DELAYED_ACTIVE_RUN', 'Retrasando por run activo', { 
+                    userId,
+                    userName: buffer.userName,
+                    pendingMessages: buffer.messages.length,
+                    runDuration
+                });
+                // Usar timer más corto (1.5s) cuando hay run activo para verificar más frecuentemente
+                if (buffer.timer) {
+                    clearTimeout(buffer.timer);
+                }
+                buffer.timer = setTimeout(() => {
+                    this.processBuffer(userId);
+                }, 1500); // Solo 1.5s cuando esperando que termine un run
+                return;
             }
-            buffer.timer = setTimeout(() => {
-                this.processBuffer(userId);
-            }, 1500); // Solo 1.5s cuando esperando que termine un run
-            return;
         }
         
         // Fast path para buffers de voice después de 3s sin actividad
@@ -270,6 +287,7 @@ export class BufferManager implements IBufferManager {
         }
 
         this.activeRuns.set(userId, true); // Marcar como activo
+        this.activeRunTimestamps.set(userId, Date.now()); // Timestamp para timeout de seguridad
 
         const messagesToProcess = [...buffer.messages];
         const { chatId, userName } = buffer;
@@ -310,6 +328,7 @@ export class BufferManager implements IBufferManager {
             });
         } finally {
             this.activeRuns.delete(userId); // Liberar
+            this.activeRunTimestamps.delete(userId); // Limpiar timestamp
             
             // CRÍTICO: Verificar si llegaron mensajes nuevos mientras procesábamos
             const currentBuffer = this.buffers.get(userId);
@@ -356,6 +375,11 @@ export class BufferManager implements IBufferManager {
 
     public getBuffer(userId: string): MessageBuffer | undefined {
         return this.buffers.get(userId);
+    }
+
+    public releaseRun(userId: string): void {
+        this.activeRuns.delete(userId);
+        this.activeRunTimestamps.delete(userId); // También limpiar timestamp
     }
 
     public cleanup(maxAge: number = 15 * 60 * 1000): number {

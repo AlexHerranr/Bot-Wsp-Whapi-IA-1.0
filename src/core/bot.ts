@@ -648,18 +648,27 @@ export class CoreBot {
                     }, 'bot.ts');
                 }
 
-                // ✅ Decidir si citar usando heurística
+                // ✅ Decidir si citar usando heurística y respetar reply humano
                 const currentBuffer = this.bufferManager.getBuffer(userId);
                 const quotedFromUser = currentBuffer?.quotedMessageId;
-                // Detectar si el mensaje venía con contexto quoted
-                const hasQuotedContext = /^(?:cliente responde(?: con nota de voz)? a este mensaje:)/i.test(combinedText);
-                // Normalizar texto para evitar sesgo de longitud por encabezados
-                const normalized = combinedText.replace(/Cliente responde (?:con nota de voz )?a este mensaje:.*?\n+Mensaje del cliente:\s*/is, '').trim();
+
+                // Detectar si el mensaje venía con contexto quoted (texto o voz) sin ancla al inicio
+                const hasQuotedContext = /cliente responde(?: con nota de voz)? a este mensaje:/i.test(combinedText);
+
+                // Normalizar texto removiendo encabezados de cita de texto o voz
+                const normalized = combinedText.replace(
+                    /Cliente responde (?:con nota de voz )?a este mensaje:.*?\n+(?:Mensaje del cliente|Transcripción de la nota de voz):\s*/is,
+                    ''
+                ).trim();
+
+                // Heurística solo para casos sin quotedId
                 const shouldQuote = this.shouldQuoteResponse(normalized, (pendingImages.length > 0) || hasQuotedContext);
-                
-                // Detectar si la IA hace referencia a "este/esa" (refuerzo adicional)
+
+                // Refuerzo por deícticos en la respuesta de la IA
                 const aiRefersToIt = /\b(este|esta|ese|esa|eso|aquel)\b/i.test(finalResponse);
-                const quotedToSend = (shouldQuote || aiRefersToIt) ? quotedFromUser : undefined;
+
+                // Si el usuario respondió con "reply", citamos siempre
+                const quotedToSend = quotedFromUser || undefined;
                 
                 // ✅ Log específico de decisión de citado
                 logInfo('QUOTE_DECISION', 'Decisión de citado calculada', {
@@ -673,6 +682,9 @@ export class CoreBot {
                     userTextLength: combinedText.length,
                     aiResponsePreview: finalResponse.substring(0, 80)
                 });
+
+                // Liberar el gate de 'run activo' antes de enviar chunks de WhatsApp
+                this.bufferManager.releaseRun(userId);
                 
                 const messageResult = await this.whatsappService.sendWhatsAppMessage(
                     chatId,
@@ -786,6 +798,9 @@ export class CoreBot {
             }
 
         } catch (error: any) {
+            // CRÍTICO: Liberar el gate de run activo para prevenir loops infinitos
+            this.bufferManager.releaseRun(userId);
+            
             // Mark recent error to prevent secondary buffer processing
             this.lastError[userId] = { time: Date.now() };
             
