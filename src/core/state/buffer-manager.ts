@@ -48,6 +48,20 @@ export class BufferManager implements IBufferManager {
         const textCount = buffer.messages.filter(msg => !msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
         const voiceCount = buffer.messages.filter(msg => msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
         const currentCombined = this.smartCombineMessages(buffer.messages, buffer.quotedMessageId);
+        
+        // ✅ Log específico del estado del buffer
+        if (buffer.messages.length > 0) {
+            logDebug('BUFFER_STATE', 'Estado actual del buffer al añadir mensaje', {
+                userId,
+                userName,
+                messageCount: buffer.messages.length,
+                hasQuotedId: !!buffer.quotedMessageId,
+                quotedId: buffer.quotedMessageId || null,
+                combinedPreview: currentCombined.substring(0, 80),
+                textCount,
+                voiceCount
+            });
+        }
         const preview20Words = currentCombined.split(' ').slice(0, 20).join(' ') + (currentCombined.split(' ').length > 20 ? '...' : '');
         
         // Log técnico para adición de mensaje con estado actual del buffer
@@ -321,13 +335,14 @@ export class BufferManager implements IBufferManager {
     }
 
     private smartCombineMessages(messages: string[], quotedMessageId?: string): string {
+        // ✅ Buffer solo concatena mensajes, NO inyecta IDs internos ni frases de cita
+        // La frase "Cliente responde a este mensaje" ya viene formateada desde webhook-processor
         if (messages.length <= 1) {
-            const base = messages[0] || '';
-            return quotedMessageId ? `Cliente responde a este mensaje [${quotedMessageId}]: ${base}` : base;
+            return messages[0] || '';
         }
         return messages
-            .map((msg, idx) => (idx === 0 && quotedMessageId ? `Cliente responde a este mensaje [${quotedMessageId}]: ${msg.trim()}` : msg.trim()))
-            .filter(msg => msg)
+            .map(msg => msg.trim())
+            .filter(Boolean)
             .join(' ');
     }
 

@@ -99,7 +99,11 @@ export class WhatsappService {
 
         const collectedIds: string[] = [];
         for (let i = 0; i < voiceChunks.length; i++) {
-            const chunk = voiceChunks[i].slice(0, 8000); // límite seguro para TTS
+            // ✅ Sanitizar IDs internos antes del TTS
+            const sanitizedChunk = voiceChunks[i]
+                .replace(/\[(?:th_|run_|msg_|thread_|asst_)[^\]]+\]/g, '')
+                .trim();
+            const chunk = sanitizedChunk.slice(0, 8000); // límite seguro para TTS
 
             // Presencia de grabando antes de cada nota
             await this.sendRecordingIndicator(chatId);
@@ -262,10 +266,15 @@ export class WhatsappService {
 
             const typingTime = 0; // Evitar doble espera: ya simulamos typing con presencia + delay
 
+            // ✅ Sanitizar IDs internos antes de enviar
+            const sanitizedChunk = chunk
+                .replace(/\[(?:th_|run_|msg_|thread_|asst_)[^\]]+\]/g, '')
+                .trim();
+
             // Construir el cuerpo del mensaje
             const messageBody: any = { 
                 to: chatId, 
-                body: chunk, 
+                body: sanitizedChunk, 
                 typing_time: typingTime 
             };
 

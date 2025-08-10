@@ -457,14 +457,8 @@ export class CoreBot {
                 });
             }
 
-            // Enfatizar quoted en el prompt a OpenAI si aplica (simple y no invasivo)
-            try {
-                const buf = this.bufferManager.getBuffer(userId);
-                const quotedId = buf?.quotedMessageId;
-                if (quotedId) {
-                    processedMessage = `El cliente cita un mensaje previo [${quotedId}]. Responde refiriéndolo si aplica.\n${processedMessage}`;
-                }
-            } catch {}
+            // ❌ ELIMINADO: No inyectar IDs internos en el prompt
+            // El contexto quoted ya viene formateado desde webhook-processor
 
             // 5. Verificar si hay un run activo antes de procesar
             if (existingThreadId) {
@@ -654,15 +648,34 @@ export class CoreBot {
                     }, 'bot.ts');
                 }
 
-                // Si el burst venía con quoted, citar en el primer chunk de respuesta
+                // ✅ Decidir si citar usando heurística
                 const currentBuffer = this.bufferManager.getBuffer(userId);
-                const quotedMessageId = currentBuffer?.quotedMessageId;
+                const quotedFromUser = currentBuffer?.quotedMessageId;
+                const shouldQuote = this.shouldQuoteResponse(combinedText, pendingImages.length > 0);
+                
+                // Detectar si la IA hace referencia a "este/esa" (refuerzo adicional)
+                const aiRefersToIt = /\b(este|esta|ese|esa|eso|aquel)\b/i.test(finalResponse);
+                const quotedToSend = (shouldQuote || aiRefersToIt) ? quotedFromUser : undefined;
+                
+                // ✅ Log específico de decisión de citado
+                logInfo('QUOTE_DECISION', 'Decisión de citado calculada', {
+                    userId,
+                    userName,
+                    willQuote: !!quotedToSend,
+                    quotedId: quotedToSend || null,
+                    shouldQuote,
+                    aiRefersToIt,
+                    hasImage: pendingImages.length > 0,
+                    userTextLength: combinedText.length,
+                    aiResponsePreview: finalResponse.substring(0, 80)
+                });
+                
                 const messageResult = await this.whatsappService.sendWhatsAppMessage(
                     chatId,
                     finalResponse,
                     userState,
                     isQuoteOrPrice,
-                    quotedMessageId
+                    quotedToSend
                 );
                 
                 if (messageResult.success) {
@@ -809,6 +822,19 @@ export class CoreBot {
         }
     }
 
+    /**
+     * ✅ Heurística para decidir cuándo citar al responder
+     */
+    private shouldQuoteResponse(userText: string, hasMedia: boolean): boolean {
+        if (!userText) return false;
+        
+        const trimmed = userText.trim();
+        const isShort = trimmed.length < 60;
+        const hasDeictics = /\b(este|esta|ese|esa|eso|aquel)\b/i.test(trimmed);
+        
+        return hasMedia || isShort || hasDeictics;
+    }
+
     private buildContextualMessage(
         userName: string, 
         displayName: string | null, 
@@ -837,7 +863,7 @@ export class CoreBot {
 Tags: NOHAYREGISTRO
 Hora actual: ${colombianTime}
 
-${message.includes('Cliente responde a este mensaje:') ? message : `Mensaje del cliente:
+${/cliente responde a este mensaje/i.test(message) ? message : `Mensaje del cliente:
 ${message}`}`;
             return contextualMessage;
         }
@@ -853,12 +879,12 @@ ${message}`}`;
             : 'Sin tags';
 
         // Formatear el mensaje contextual (formato compacto)
-        const hasQuoted = message.includes('Cliente responde a este mensaje');
+        const alreadyQuoted = /cliente responde a este mensaje/i.test(message);
         const contextualMessage = `Cliente: ${clientName}
 Tags: ${tagsText}
 Hora actual: ${colombianTime}
 
-${hasQuoted ? message : `Mensaje del cliente:
+${alreadyQuoted ? message : `Mensaje del cliente:
 ${message}`}`;
 
         return contextualMessage;

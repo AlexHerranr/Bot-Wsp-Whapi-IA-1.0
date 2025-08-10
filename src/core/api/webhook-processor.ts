@@ -364,6 +364,14 @@ export class WebhookProcessor {
                         if (message.context && message.context.quoted_id) {
                             const quotedContent = message.context.quoted_content?.body || '[mensaje citado]';
                             messageContent = `Cliente responde a este mensaje: ${quotedContent}\n\nMensaje del cliente: ${message.text.body}`;
+                            
+                            // ✅ Log específico de mensaje citado detectado
+                            logInfo('QUOTED_DETECTED', 'Mensaje citado detectado desde webhook', {
+                                userId,
+                                quotedId: message.context.quoted_id,
+                                quotedPreview: quotedContent.substring(0, 80),
+                                originalMessage: message.text.body.substring(0, 80)
+                            });
                         }
                         
                         // Log técnico de sesión
@@ -414,11 +422,13 @@ export class WebhookProcessor {
                                 const quotedContent = message.context.quoted_content?.body || '[mensaje citado]';
                                 finalMessage = `Cliente responde con nota de voz a este mensaje: ${quotedContent}\n\nTranscripción de la nota de voz: ${result.result}`;
                                 
-                                logInfo('VOICE_QUOTED_CONTEXT', 'Nota de voz con contexto quoted', {
+                                // ✅ Log específico de nota de voz citada detectada
+                                logInfo('QUOTED_DETECTED', 'Nota de voz citada detectada desde webhook', {
                                     userId,
-                                    userName,
                                     quotedId: message.context.quoted_id,
-                                    quotedPreview: quotedContent.substring(0, 50)
+                                    quotedPreview: quotedContent.substring(0, 80),
+                                    transcription: result.result.substring(0, 80),
+                                    messageType: 'voice'
                                 });
                             }
                             
