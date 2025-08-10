@@ -651,9 +651,11 @@ export class CoreBot {
                 // ✅ Decidir si citar usando heurística
                 const currentBuffer = this.bufferManager.getBuffer(userId);
                 const quotedFromUser = currentBuffer?.quotedMessageId;
+                // Detectar si el mensaje venía con contexto quoted
+                const hasQuotedContext = /^(?:cliente responde(?: con nota de voz)? a este mensaje:)/i.test(combinedText);
                 // Normalizar texto para evitar sesgo de longitud por encabezados
-                const normalized = combinedText.replace(/Cliente responde a este mensaje:.*?\n+Mensaje del cliente:\s*/is, '').trim();
-                const shouldQuote = this.shouldQuoteResponse(normalized, pendingImages.length > 0);
+                const normalized = combinedText.replace(/Cliente responde (?:con nota de voz )?a este mensaje:.*?\n+Mensaje del cliente:\s*/is, '').trim();
+                const shouldQuote = this.shouldQuoteResponse(normalized, (pendingImages.length > 0) || hasQuotedContext);
                 
                 // Detectar si la IA hace referencia a "este/esa" (refuerzo adicional)
                 const aiRefersToIt = /\b(este|esta|ese|esa|eso|aquel)\b/i.test(finalResponse);
