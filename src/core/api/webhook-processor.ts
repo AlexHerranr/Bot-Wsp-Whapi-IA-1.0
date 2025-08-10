@@ -5,6 +5,7 @@ import { UserManager } from '../state/user-state-manager';
 import { MediaService } from '../services/media.service';
 import { DatabaseService } from '../services/database.service';
 import { DelayedActivityService } from '../services/delayed-activity.service';
+import { OpenAIService } from '../services/openai.service';
 import { TerminalLog } from '../utils/terminal-log';
 import { RateLimiter } from '../utils/rate-limiter';
 import { logInfo, logSuccess, logError, logWarning, logDebug } from '../../utils/logging';
@@ -18,6 +19,7 @@ export class WebhookProcessor {
         private mediaService: MediaService,
         private databaseService: DatabaseService,
         private delayedActivityService: DelayedActivityService,
+        private openaiService: OpenAIService,
         private terminalLog: TerminalLog
     ) {}
 
@@ -226,8 +228,11 @@ export class WebhookProcessor {
     }
 
     private async handleMessage(message: any): Promise<void> {
-        // Ignorar eco de mensajes enviados por el bot (desde WHAPI) para evitar loops
+        // Primero verificar si es un mensaje del bot (por ID)
         if (message && message.id && this.mediaManager.isBotSentMessage(message.id)) {
+            logDebug('BOT_ECHO_IGNORED', 'Eco del bot ignorado por ID', {
+                messageId: message.id
+            });
             return;
         }
 
@@ -271,19 +276,43 @@ export class WebhookProcessor {
             normalizedChatId = normalizedChatId + '@s.whatsapp.net';
         }
 
-        // Si es un mensaje manual (from_me=true) del agente: sincronizar y NO enviar a OpenAI
-        // Nota: algunos webhooks usan from_me, otros from_me/fromMe. Normalizamos ambos.
+        // Si es un mensaje manual (from_me=true) del agente: enviar directo a OpenAI
         const fromMe = message.from_me === true || message.fromMe === true;
         if (fromMe && message.type === 'text' && message.text?.body) {
-            // Reinterpretar userId como el cliente (desde chat_id) para hilo correcto
+            // Verificar si los mensajes manuales están habilitados
+            const manualAgentEnabled = process.env.ENABLE_MANUAL_AGENT_MESSAGES === 'true';
+            if (!manualAgentEnabled) {
+                logDebug('FROM_ME_DISABLED', 'Mensajes from_me deshabilitados por configuración', {
+                    messageId: message.id || 'sin_id'
+                });
+                return;
+            }
+            
+            // FILTRO 1: Verificar si el mensaje fue enviado por el bot (por ID)
+            if (message.id && this.mediaManager.isBotSentMessage(message.id)) {
+                logDebug('BOT_MESSAGE_FILTERED_ID', 'Mensaje del bot filtrado por ID', {
+                    messageId: message.id
+                });
+                return;
+            }
+            
+            // FILTRO 2: Verificar por contenido (fallback cuando no hay ID confiable)
+            if (this.mediaManager.isBotSentContent(normalizedChatId, message.text.body)) {
+                logDebug('BOT_MESSAGE_FILTERED_CONTENT', 'Mensaje del bot filtrado por contenido', {
+                    messageId: message.id || 'sin_id',
+                    preview: message.text.body.substring(0, 50)
+                });
+                return;
+            }
+
+            // Si llegamos aquí, es un mensaje manual del agente real
             let clientUserId = message.chat_id || message.from;
             if (clientUserId && typeof clientUserId === 'string' && clientUserId.includes('@')) {
                 clientUserId = clientUserId.split('@')[0];
             }
 
             const agentName = message.from_name || 'Agente';
-            const manualText = `[Mensaje manual del agente ${agentName} - NO RESPONDER]\n${message.text.body}`;
-
+            
             logInfo('MANUAL_DETECTED', 'Mensaje manual del agente detectado', {
                 userId: clientUserId,
                 agentName,
@@ -292,10 +321,10 @@ export class WebhookProcessor {
             });
 
             this.terminalLog.manualMessage(agentName, userName, message.text.body);
-            // Importante: conservar el nombre del cliente en el buffer para logs y sincronización correctos
-            // En lugar de encolar a OpenAI, enviamos al buffer para que el callback lo sincronice y detenga flujo
-            this.bufferManager.addMessage(clientUserId, manualText, normalizedChatId, userName);
-            return; // No actualizar estado ni procesar como input de cliente
+            
+            // SOLUCIÓN SIMPLE: Enviar directo a OpenAI con UNA SOLA llamada
+            await this.syncManualMessageToOpenAI(clientUserId, normalizedChatId, agentName, message.text.body);
+            return;
         }
 
         // Actualizar estado del usuario y resetear typing/recording (ya envió el mensaje)
@@ -487,5 +516,32 @@ export class WebhookProcessor {
                 });
             }
         }, 2000); // 2 segundos - no bloquea respuesta inmediata
+    }
+
+    /**
+     * Método simple para sincronizar mensaje manual directo a OpenAI
+     */
+    private async syncManualMessageToOpenAI(userId: string, chatId: string, agentName: string, message: string): Promise<void> {
+        try {
+            // Obtener o crear thread para este usuario
+            const threadId = await this.openaiService.getOrCreateThread(userId, chatId);
+            
+            // UNA SOLA llamada a OpenAI - mensaje del agente como assistant
+            await this.openaiService.addSimpleMessage(threadId, 'assistant', `[Agente ${agentName}]: ${message}`);
+            
+            logSuccess('MANUAL_SYNC_SIMPLE', 'Mensaje manual sincronizado con OpenAI', {
+                userId,
+                agentName,
+                threadId,
+                messageLength: message.length
+            });
+            
+        } catch (error) {
+            logError('MANUAL_SYNC_ERROR', 'Error sincronizando mensaje manual', {
+                userId,
+                agentName,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
     }
 }

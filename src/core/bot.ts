@@ -112,7 +112,7 @@ export class CoreBot {
             this.processBufferCallback.bind(this),
             (userId: string) => this.userManager.getState(userId)
         );
-        this.webhookProcessor = new WebhookProcessor(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.terminalLog);
+        this.webhookProcessor = new WebhookProcessor(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.openaiService, this.terminalLog);
         this.hotelValidation = new HotelValidation();
 
         this.setupMiddleware();
@@ -252,31 +252,7 @@ export class CoreBot {
             return;
         }
 
-        // Manejo simple: si el contenido proviene de un agente humano (marcador de webhook),
-        // sincronizar al thread existente como mensaje manual y NO generar respuesta automática.
-        if (combinedText.includes('[Mensaje manual del agente')) {
-            try {
-                const existingThread = await this.threadPersistence.getThread(userId);
-                const threadId = existingThread?.threadId;
-                if (!threadId) {
-                    logWarning('MANUAL_NO_THREAD', 'Sin thread activo para sincronizar mensaje manual', { userId, userName });
-                    return; // cliente debe haber iniciado la conversación
-                }
-
-                const agentNameMatch = combinedText.match(/\[Mensaje manual del agente\s(.+?)\s-\sNO RESPONDER\]/);
-                const agentName = agentNameMatch?.[1] || 'Agente';
-                const manualBody = combinedText.replace(/\[Mensaje manual del agente.+?\]\n?/, '').trim();
-
-                const ok = await this.openaiService.appendManualAgentMessage(threadId, agentName, manualBody);
-                if (ok) {
-                    this.terminalLog.manualSynced(agentName, userName);
-                    logSuccess('MANUAL_SYNCED', 'Mensaje manual sincronizado y flujo detenido', { userId, agentName, length: manualBody.length });
-                }
-            } catch (e) {
-                logError('MANUAL_SYNC_EXCEPTION', 'Excepción sincronizando mensaje manual', { userId, error: e instanceof Error ? e.message : String(e) });
-            }
-            return; // no continuar a procesamiento normal
-        }
+        // NOTA: Los mensajes manuales ahora se manejan directamente en WebhookProcessor
 
         // NOTA: Verificación de typing removida - el BufferManager ya maneja los delays correctamente
         // No necesitamos delays adicionales aquí ya que el buffer espera el tiempo apropiado
@@ -699,6 +675,9 @@ export class CoreBot {
                         // Fallback: marcar un id temporal (menos fiable)
                         this.mediaManager.addBotSentMessage(`msg_${Date.now()}`);
                     }
+                    
+                    // NUEVO: También registrar el contenido como fallback
+                    this.mediaManager.addBotSentContent(chatId, finalResponse);
                     
                     // Reset voice flag ONLY if message was actually sent as voice
                     if (messageResult.sentAsVoice) {
