@@ -10,13 +10,24 @@ export class HotelValidation {
     private userRetryState: Map<string, RetryState> = new Map();
 
     public isQuoteOrPriceMessage(message: string): boolean {
+        // Generic rule: 4+ consecutive digits, but exclude years (2025-2030)
+        const fourPlusDigits = message.match(/\d{4,}/g) || [];
+        const hasNonYearNumbers = fourPlusDigits.some(num => {
+            const numValue = parseInt(num);
+            // Exclude years from 2025-2030 (current relevant range)
+            return numValue < 2025 || numValue > 2030;
+        });
+        
+        if (hasNonYearNumbers) {
+            return true;
+        }
+        
+        // Keep specific patterns for critical cases with fewer digits
         const sensitivePatterns = [
             /\$\d+[.,]?\d*/g,              // $840.000, $210,000
             /\d+[.,]?\d*\s*(cop|pesos?)/gi,  // 840000 COP, 210 pesos
-            /\d+\s*noches?/gi,              // 4 noches
             /https?:\/\/\S+/i,              // URLs
-            /wa\.me\/p/i,                   // WhatsApp links
-            /(?:apartamento|apartaestudio|apto\.?)\s+\d{3,4}(?:-[a-z])?/gi  // Apartamento 1622, Apto. 1820-A
+            /wa\.me\/p/i                    // WhatsApp links
         ];
         return sensitivePatterns.some(pattern => pattern.test(message));
     }
