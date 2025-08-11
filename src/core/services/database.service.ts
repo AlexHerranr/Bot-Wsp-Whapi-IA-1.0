@@ -672,6 +672,21 @@ export class DatabaseService {
                     data: { threadTokenCount: tokenCount }
                 });
                 
+                // Sincronizar inmediatamente a cache para mantener frescura
+                if (this.clientCache && this.clientCache.has(phoneNumber)) {
+                    try {
+                        const cached = this.clientCache.get(phoneNumber);
+                        if (cached) {
+                            cached.threadTokenCount = tokenCount;
+                            cached.cachedAt = new Date(); // Marcar como fresco
+                            this.clientCache.set(phoneNumber, cached);
+                            setCacheSize(this.clientCache.getStats().size);
+                        }
+                    } catch (error) {
+                        console.warn(`Cache sync failed for token update ${phoneNumber}:`, error);
+                    }
+                }
+                
                 logInfo('TOKEN_COUNT_UPDATE', `📊 Token count actualizado: ${phoneNumber} = ${tokenCount} tokens`, { 
                     phoneNumber, 
                     tokenCount,

@@ -12,15 +12,72 @@ interface ThreadRecord {
     userName?: string;
     lastActivity: Date;
     labels?: string[];
+    tokenCount?: number;
 }
 
 @injectable()
 export class ThreadPersistenceService {
     constructor(private databaseService: DatabaseService) {}
 
-    // Migrar desde la interfaz antigua a la nueva
+    // Cache-first strategy: Cache → BD → null
     async getThread(userId: string): Promise<ThreadRecord | null> {
-        return await this.databaseService.getThread(userId);
+        // 1. Verificar CACHE primero
+        try {
+            const clientCache = this.databaseService.getClientCache();
+            if (clientCache) {
+                const cachedData = clientCache.get(userId);
+                if (cachedData && cachedData.threadId) {
+                    console.info(`Cache HIT for thread: ${userId}`);
+                    // Cache HIT - convertir a ThreadRecord
+                    return {
+                        threadId: cachedData.threadId,
+                        chatId: cachedData.chatId || '',
+                        userName: cachedData.userName,
+                        lastActivity: cachedData.lastActivity,
+                        labels: cachedData.labels ? cachedData.labels.split('/') : [],
+                        tokenCount: cachedData.threadTokenCount || 0
+                    };
+                }
+            }
+        } catch (error) {
+            console.warn('Cache read failed, falling back to BD:', error);
+        }
+
+        // 2. Cache MISS - ir a BD
+        try {
+            const threadFromBD = await this.databaseService.getThread(userId);
+            
+            // Si encontramos en BD, actualizar cache
+            if (threadFromBD) {
+                console.info(`BD HIT (cache miss) for thread: ${userId}, syncing cache`);
+                try {
+                    const clientCache = this.databaseService.getClientCache();
+                    if (clientCache) {
+                        const cacheData = {
+                            phoneNumber: userId,
+                            name: null,
+                            userName: threadFromBD.userName || null,
+                            labels: threadFromBD.labels ? threadFromBD.labels.join('/') : null,
+                            chatId: threadFromBD.chatId || null,
+                            threadId: threadFromBD.threadId,
+                            lastActivity: threadFromBD.lastActivity,
+                            cachedAt: new Date(),
+                            threadTokenCount: threadFromBD.tokenCount || 0
+                        };
+                        clientCache.set(userId, cacheData);
+                        setCacheSize(clientCache.getStats().size);
+                    }
+                } catch (error) {
+                    console.warn('Cache update from BD failed:', error);
+                }
+            }
+            
+            return threadFromBD;
+            
+        } catch (error) {
+            console.warn('BD read failed:', error);
+            return null; // No thread found - caller will create new
+        }
     }
 
     async setThread(userId: string, threadId: string, chatId?: string, userName?: string): Promise<void> {
@@ -40,11 +97,22 @@ export class ThreadPersistenceService {
                     threadTokenCount: 0
                 };
                 
-                // Actualizar con thread nuevo
+                // Verificar si es thread realmente nuevo
+                const isNewThread = !existingData.threadId || existingData.threadId !== threadId;
+                
+                // Actualizar datos preservando existentes cuando corresponde
                 existingData.threadId = threadId;
                 existingData.chatId = chatId || existingData.chatId;
                 existingData.userName = userName || existingData.userName;
-                existingData.threadTokenCount = 0; // Reset para thread nuevo
+                
+                // Solo resetear tokens si es thread realmente nuevo
+                if (isNewThread) {
+                    existingData.threadTokenCount = 0;
+                    console.info(`New thread created for ${userId}: ${threadId}, resetting tokenCount`);
+                } else {
+                    console.info(`Updating metadata for existing thread ${userId}: ${threadId}, preserving tokenCount: ${existingData.threadTokenCount || 0}`);
+                }
+                
                 existingData.lastActivity = new Date();
                 existingData.cachedAt = new Date();
                 
@@ -65,8 +133,17 @@ export class ThreadPersistenceService {
                 userName
             });
             
-            // Reset token count para thread nuevo
-            await this.databaseService.updateThreadTokenCount(userId, 0);
+            // Solo resetear tokens en BD si es thread nuevo (consistente con cache)
+            const clientCache = this.databaseService.getClientCache();
+            const cachedData = clientCache?.get(userId);
+            const isNewThread = !cachedData?.threadId || cachedData.threadId !== threadId || cachedData.threadTokenCount === 0;
+            
+            if (isNewThread) {
+                await this.databaseService.updateThreadTokenCount(userId, 0);
+                console.info(`BD: Reset token count for new thread ${userId}: ${threadId}`);
+            } else {
+                console.info(`BD: Preserving token count for existing thread ${userId}: ${threadId}`);
+            }
         } catch (error) {
             // BD failure no debe interrumpir - cache tiene los datos
             console.warn('BD update failed, but cache is updated:', error);
@@ -80,6 +157,26 @@ export class ThreadPersistenceService {
         chatId?: string;
     }): Promise<boolean> {
         try {
+            // Cache-first: Actualizar cache primero
+            const clientCache = this.databaseService.getClientCache();
+            if (clientCache) {
+                const cachedData = clientCache.get(userId);
+                if (cachedData) {
+                    // Preservar threadId y tokenCount, solo actualizar metadata
+                    if (updates.name !== undefined) cachedData.name = updates.name;
+                    if (updates.userName !== undefined) cachedData.userName = updates.userName;
+                    if (updates.chatId !== undefined) cachedData.chatId = updates.chatId;
+                    if (updates.labels !== undefined) cachedData.labels = updates.labels.join('/');
+                    
+                    cachedData.cachedAt = new Date();
+                    clientCache.set(userId, cachedData);
+                    setCacheSize(clientCache.getStats().size);
+                    
+                    console.info(`Cache: Updated metadata for ${userId}, preserving threadId: ${cachedData.threadId}, tokenCount: ${cachedData.threadTokenCount || 0}`);
+                }
+            }
+
+            // BD update (fallback resiliente)
             const existing = await this.databaseService.getThread(userId);
             if (!existing) return false;
 
@@ -89,6 +186,7 @@ export class ThreadPersistenceService {
                 labels: updates.labels || existing.labels
             });
 
+            console.info(`BD: Updated metadata for ${userId}, preserved threadId: ${existing.threadId}`);
             return true;
         } catch (error) {
             console.error(`Error updating thread metadata for ${userId}:`, error);
