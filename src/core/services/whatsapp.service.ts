@@ -443,7 +443,7 @@ export class WhatsappService {
         return longPause;
     }
 
-    public async getChatInfo(chatId: string): Promise<{ name?: string; labels?: Array<{ id?: string; name: string; color?: string }> } | null> {
+    public async getChatInfo(chatId: string): Promise<{ labels?: Array<{ id?: string; name: string; color?: string }> } | null> {
         try {
             const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/chats/${encodeURIComponent(chatId)}`, {
                 method: 'GET',
@@ -460,8 +460,7 @@ export class WhatsappService {
 
             const chatInfo = await response.json() as any;
             return {
-                name: chatInfo.name || chatInfo.last_message?.from_name || null,
-                labels: chatInfo.labels || []
+                labels: chatInfo.labels || []  // Solo labels - names vienen del webhook
             };
         } catch (error) {
             console.warn(`⚠️ Error obteniendo chat info para ${chatId}:`, error);

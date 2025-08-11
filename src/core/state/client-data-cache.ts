@@ -46,14 +46,21 @@ export class ClientDataCache {
     /**
      * Verificar si los datos del webhook difieren del caché
      */
-    public needsUpdate(phoneNumber: string, webhookName?: string, webhookLabels?: string[]): boolean {
+    public needsUpdate(phoneNumber: string, webhookChatName?: string, webhookFromName?: string, webhookLabels?: string[]): boolean {
         const cached = this.get(phoneNumber);
         if (!cached) return true; // No hay caché, necesita consultar BD
 
-        // Comparar nombre del webhook con caché
-        if (webhookName && webhookName !== 'Usuario' && webhookName !== phoneNumber) {
-            if (cached.name !== webhookName || cached.userName !== webhookName) {
+        // Comparar chat_name del webhook con caché (nombre guardado)
+        if (webhookChatName && webhookChatName !== 'Usuario' && webhookChatName !== phoneNumber) {
+            if (cached.name !== webhookChatName) {
                 return true; // Nombre diferente, necesita actualizar
+            }
+        }
+
+        // Comparar from_name del webhook con caché (display name)
+        if (webhookFromName && webhookFromName !== 'Usuario' && webhookFromName !== phoneNumber) {
+            if (cached.userName !== webhookFromName) {
+                return true; // UserName diferente, necesita actualizar
             }
         }
 

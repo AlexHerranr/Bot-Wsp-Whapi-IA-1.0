@@ -7,7 +7,7 @@ export const WhatsAppMessageSchema = z.object({
     from: z.string(),
     from_me: z.boolean(),
     chat_id: z.string().optional(),
-    from_name: z.string().optional(),
+    chat_name: z.string().optional(),  // Nombre del chat/contacto (reemplaza from_name)
     type: z.enum(['text', 'image', 'voice', 'audio', 'ptt', 'document', 'video', 'link_preview']),
     text: z.object({
         body: z.string()

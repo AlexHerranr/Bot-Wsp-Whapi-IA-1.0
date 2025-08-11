@@ -5,10 +5,6 @@ import { container } from 'tsyringe';
 import { CoreBot } from './core/bot';
 import { FunctionRegistryService } from './core/services/function-registry.service';
 import { HotelPlugin } from './plugins/hotel';
-// CRM Services deshabilitados - archivos en docs/archive/crm-jobs/
-// import { SimpleCRMService } from './core/services/simple-crm.service';
-// import { DailyActionsJob } from './core/jobs/daily-actions.job';
-// import { CRMAnalysisJob } from './core/jobs/crm-analysis.job';
 import { DatabaseService } from './core/services/database.service';
 import { logInfo } from './utils/logging';
 
@@ -74,13 +70,6 @@ function setupDependencyInjection() {
     const databaseService = new DatabaseService();
     container.registerInstance('DatabaseService', databaseService);
     
-    // CRM Services DESHABILITADOS - Ver docs/MEJORAS_FUTURAS.md
-    // const crmService = new SimpleCRMService(databaseService);
-    // container.registerInstance('SimpleCRMService', crmService);
-    // const dailyJob = new DailyActionsJob(databaseService);
-    // container.registerInstance('DailyActionsJob', dailyJob);
-    // const crmAnalysisJob = new CRMAnalysisJob(databaseService, crmService);
-    // container.registerInstance('CRMAnalysisJob', crmAnalysisJob);
     
     // Register plugins conditionally
     const enabledPlugins = [];
@@ -122,13 +111,6 @@ async function main() {
         // Setup DI container
         const { functionRegistry, enabledPlugins } = setupDependencyInjection();
         
-        // CRM Jobs DESHABILITADOS - Ver docs/MEJORAS_FUTURAS.md para reactivar
-        // const { dailyJob, crmAnalysisJob } = setupDependencyInjection();
-        // if (process.env.CRM_ANALYSIS_ENABLED === 'true' && process.env.CRM_MODE === 'internal') {
-        //     dailyJob.start();
-        //     crmAnalysisJob.start();
-        //     console.log('📅 2 jobs scheduled');
-        // }
         
         // Create and start bot
         bot = new CoreBot(config, functionRegistry);

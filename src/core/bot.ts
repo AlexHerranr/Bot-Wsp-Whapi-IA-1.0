@@ -21,7 +21,6 @@ import { WebhookProcessor } from './api/webhook-processor';
 import { TerminalLog } from './utils/terminal-log';
 // import { HotelPlugin } from '../plugins/hotel/hotel.plugin'; // Moved to main.ts
 import { IFunctionRegistry } from '../shared/interfaces';
-import { crmRoutes } from './routes/crm.routes';
 import { logBotReady, logServerStart, logInfo, logSuccess, logError, logWarning } from '../utils/logging';
 import { HotelValidation } from '../plugins/hotel/logic/validation';
 
@@ -112,7 +111,7 @@ export class CoreBot {
             this.processBufferCallback.bind(this),
             (userId: string) => this.userManager.getState(userId)
         );
-        this.webhookProcessor = new WebhookProcessor(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.openaiService, this.terminalLog);
+        this.webhookProcessor = new WebhookProcessor(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.openaiService, this.terminalLog, this.clientDataCache);
         this.hotelValidation = new HotelValidation();
 
         this.setupMiddleware();
@@ -220,8 +219,6 @@ export class CoreBot {
             }
         });
 
-        // CRM API routes
-        this.app.use('/api/crm', crmRoutes as any);
     }
 
     private async processBufferCallback(userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<void> {
@@ -351,7 +348,7 @@ export class CoreBot {
                         // Actualizar caché con datos frescos de BD
                         this.clientDataCache.updateFromDatabase(userId, {
                             name: user?.name || null,
-                            userName: user?.userName || userName || null,
+                            userName: user?.userName || null, // Mantener BD limpia en cache
                             labels: dbClientData.labels || [],
                             chatId: dbClientData.chatId,
                             lastActivity: dbClientData.lastActivity,
@@ -977,9 +974,10 @@ ${message}`}`;
         }
 
         // Construir nombre del cliente (formato compacto)
+        const safeUserName = userName || 'Usuario'; // Fallback para userName null
         const clientName = hasDBRecord 
-            ? `${displayName} / ${userName}`  // Tiene nombre real guardado
-            : userName;                       // Solo username
+            ? `${displayName} / ${safeUserName}`  // Tiene nombre real guardado
+            : safeUserName;                       // Solo username con fallback
 
         // Construir etiquetas (formato compacto)
         const tagsText = labels.length > 0 

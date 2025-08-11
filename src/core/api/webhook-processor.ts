@@ -9,6 +9,7 @@ import { OpenAIService } from '../services/openai.service';
 import { TerminalLog } from '../utils/terminal-log';
 import { RateLimiter } from '../utils/rate-limiter';
 import { logInfo, logSuccess, logError, logWarning, logDebug } from '../../utils/logging';
+import { ClientDataCache } from '../state/client-data-cache';
 
 export class WebhookProcessor {
     
@@ -20,7 +21,8 @@ export class WebhookProcessor {
         private databaseService: DatabaseService,
         private delayedActivityService: DelayedActivityService,
         private openaiService: OpenAIService,
-        private terminalLog: TerminalLog
+        private terminalLog: TerminalLog,
+        private clientCache: ClientDataCache
     ) {}
 
     public async process(payload: unknown): Promise<void> {
@@ -250,26 +252,86 @@ export class WebhookProcessor {
         // Mejora: usar siempre el phoneNumber como userId canónico
         userId = phoneNumber || userId;
         
-        // Obtener nombre real del contacto desde la base de datos
+        // Extraer nombres del webhook (fuente principal - event-driven)
+        const webhookChatName = (message as any).chat_name; // Nombre guardado del chat
+        const webhookFromName = (message as any).from_name; // Display name del perfil
+        
+        // Obtener datos del cliente desde cache/BD
         let userName = 'Usuario'; // Fallback por defecto
         let shouldEnrichAsync = false;
+        let clientNeedsUpdate = false;
         
         try {
             const clientData = await this.databaseService.findUserByPhoneNumber(phoneNumber);
-            if (clientData && clientData.name) {
-                userName = clientData.name;
+            if (clientData) {
+                // Priorizar name, luego userName, fallback a 'Usuario'
+                userName = clientData.name || clientData.userName || 'Usuario';
                 
-                // Verificar si necesita enriquecimiento async (datos incompletos)
-                const nameEqualsPhone = clientData.name === phoneNumber;
+                // Verificar si webhook tiene datos más actualizados
+                clientNeedsUpdate = this.clientCache.needsUpdate(
+                    phoneNumber, 
+                    webhookChatName, 
+                    webhookFromName,
+                    undefined // labels - no vienen en webhook
+                );
+                
+                // Solo enriquecer si necesita labels (names ya vienen del webhook)
                 const hasNoLabels = !(clientData as any).labels;
-                shouldEnrichAsync = nameEqualsPhone || hasNoLabels;
+                shouldEnrichAsync = hasNoLabels;
             } else {
-                // Usuario nuevo o sin datos → programar enriquecimiento
+                // Usuario nuevo → siempre necesita update y enriquecimiento
+                clientNeedsUpdate = true;
                 shouldEnrichAsync = true;
             }
         } catch (error) {
             console.warn(`⚠️ Error obteniendo nombre del contacto ${phoneNumber}:`, error);
             shouldEnrichAsync = true; // Por seguridad, intentar enriquecer
+            clientNeedsUpdate = true; // Forzar actualización por el error
+        }
+
+        // Actualizar BD si el webhook tiene datos más nuevos (y no son solo phoneNumber)
+        const hasValidChatName = webhookChatName && webhookChatName !== phoneNumber;
+        const hasValidFromName = webhookFromName && webhookFromName !== phoneNumber;
+        
+        if (clientNeedsUpdate && (hasValidChatName || hasValidFromName)) {
+            try {
+                await this.databaseService.upsertClient({
+                    phoneNumber,
+                    userName: userName || 'Usuario', // Fallback limpio
+                    chatId: chatId || `${phoneNumber}@s.whatsapp.net`,
+                    lastActivity: new Date(),
+                    chat_name: hasValidChatName ? webhookChatName : null,
+                    from_name: hasValidFromName ? webhookFromName : null
+                });
+                
+                // Usar el nombre más actualizado para el procesamiento
+                if (hasValidChatName) {
+                    userName = webhookChatName;
+                }
+                
+                logInfo('CLIENT_UPDATED', 'Cliente actualizado desde webhook', {
+                    phoneNumber,
+                    chat_name: webhookChatName,
+                    from_name: webhookFromName,
+                    source: 'webhook_event'
+                });
+                
+                // Log debug para trazabilidad de nombres filtrados
+                if (webhookChatName && !hasValidChatName) {
+                    logDebug('NAME_SKIPPED', 'chat_name inválido (phoneNumber), seteado null', { 
+                        phoneNumber, 
+                        skipped_name: webhookChatName 
+                    });
+                }
+                if (webhookFromName && !hasValidFromName) {
+                    logDebug('NAME_SKIPPED', 'from_name inválido (phoneNumber), seteado null', { 
+                        phoneNumber, 
+                        skipped_name: webhookFromName 
+                    });
+                }
+            } catch (error) {
+                console.warn(`⚠️ Error actualizando cliente ${phoneNumber}:`, error);
+            }
         }
 
         // Normalizar datos para BD: chatId con formato 
@@ -328,7 +390,7 @@ export class WebhookProcessor {
                         if (clientUserId && typeof clientUserId === 'string' && clientUserId.includes('@')) {
                             clientUserId = clientUserId.split('@')[0];
                         }
-                        const agentName = message.from_name || 'Agente';
+                        const agentName = (message as any).chat_name || 'Agente';
                         await this.syncManualMessageToOpenAI(clientUserId, normalizedChatId, agentName, content);
                         logSuccess('MANUAL_VOICE_SYNC', 'Nota de voz manual sincronizada sin respuesta', {
                             userId: clientUserId,
@@ -413,7 +475,7 @@ export class WebhookProcessor {
                 clientUserId = clientUserId.split('@')[0];
             }
 
-            const agentName = message.from_name || 'Agente';
+            const agentName = (message as any).chat_name || 'Agente';
             
             logInfo('MANUAL_DETECTED', 'Mensaje manual del agente detectado', {
                 userId: clientUserId,
@@ -603,8 +665,6 @@ export class WebhookProcessor {
             this.queueAsyncEnrichment(phoneNumber, userName);
         }
 
-        // CRM Analysis: Se ejecuta via Daily Actions Job, no en cada webhook
-        // El análisis CRM se ejecuta diariamente a las 9:00 AM para todos los clientes
     }
 
     /**

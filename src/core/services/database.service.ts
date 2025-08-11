@@ -475,6 +475,8 @@ export class DatabaseService {
         userName: string;
         chatId: string;
         lastActivity: Date;
+        chat_name?: string;  // Nuevo: nombre del chat
+        from_name?: string;  // Nuevo: display name del perfil
     }) {
         if (this.isConnected) {
             try {
@@ -492,12 +494,22 @@ export class DatabaseService {
                     lastActivity: clientData.lastActivity
                 };
                 
-                // USERNAME: Solo actualizar si hay discrepancia o está vacío
-                if (!existingClient || 
-                    !existingClient.userName || 
-                    existingClient.userName !== clientData.userName) {
-                    updateData.userName = clientData.userName;
+                // NAME (chat_name): Solo actualizar si hay discrepancia o está vacío
+                if (clientData.chat_name && clientData.chat_name !== existingClient?.name) {
+                    updateData.name = clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null;
                 }
+                
+                // USERNAME (from_name): Solo actualizar si hay discrepancia o está vacío  
+                if (clientData.from_name && clientData.from_name !== existingClient?.userName) {
+                    updateData.userName = clientData.from_name !== clientData.phoneNumber ? clientData.from_name : null;
+                } else if (!existingClient?.userName) {
+                    // Fallback: usar userName original si no hay from_name
+                    updateData.userName = clientData.userName !== clientData.phoneNumber ? clientData.userName : null;
+                }
+                
+                // Limpieza adicional: Si los valores finales son phoneNumber, mantenerlos null
+                if (updateData.name === clientData.phoneNumber) updateData.name = null;
+                if (updateData.userName === clientData.phoneNumber) updateData.userName = null;
                 
                 // Usar upsert por phoneNumber (PK)
                 const result = await this.prisma.clientView.upsert({
@@ -505,7 +517,9 @@ export class DatabaseService {
                     update: updateData,
                     create: {
                         phoneNumber: clientData.phoneNumber,
-                        userName: clientData.userName,
+                        name: clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null,
+                        userName: clientData.from_name !== clientData.phoneNumber ? clientData.from_name : 
+                                 (clientData.userName !== clientData.phoneNumber ? clientData.userName : null),
                         chatId: clientData.chatId,
                         lastActivity: clientData.lastActivity,
                         prioridad: 2, // Valor por defecto (MEDIA)
@@ -722,36 +736,22 @@ export class DatabaseService {
             }
 
             const chatInfo = await response.json() as any;
-            const realName = (chatInfo as any).name || (chatInfo as any).last_message?.from_name || null;
             const labels = (chatInfo as any).labels || [];
 
-            if (realName || labels.length > 0) {
-                const updateData: any = {};
-                
-                // NAME: Solo actualizar si hay discrepancia o está vacío
+            // Solo procesar labels - names ya vienen del webhook
+            if (labels.length > 0) {
                 const existingClient = await this.prisma.clientView.findUnique({
                     where: { phoneNumber }
                 });
                 
-                if (realName && realName !== phoneNumber) {
-                    // Solo actualizar name si es diferente del actual
-                    if (!existingClient?.name || existingClient.name !== realName) {
-                        updateData.name = realName;
-                    }
-                    // Solo actualizar userName si es diferente del actual
-                    if (!existingClient?.userName || existingClient.userName !== realName) {
-                        updateData.userName = realName;
-                    }
-                }
-
+                const updateData: any = {};
+                
                 // LABELS: Solo actualizar si están vacíos o hay discrepancia
-                if (labels.length > 0) {
-                    const labelsArray = labels.map((label: any) => label?.name || label).filter(Boolean);
-                    const newLabelsString = labelsArray.join('/');
-                    
-                    if (!existingClient?.labels || existingClient.labels !== newLabelsString) {
-                        updateData.labels = newLabelsString;
-                    }
+                const labelsArray = labels.map((label: any) => label?.name || label).filter(Boolean);
+                const newLabelsString = labelsArray.join('/');
+                
+                if (!existingClient?.labels || existingClient.labels !== newLabelsString) {
+                    updateData.labels = newLabelsString;
                 }
                 
                 // Solo hacer update si hay cambios
@@ -761,14 +761,14 @@ export class DatabaseService {
                         data: updateData
                     });
 
-                    logInfo('USER_ENRICHMENT', `Usuario enriquecido automáticamente: ${phoneNumber} → ${realName || 'sin nombre'}, ${labels.length} etiquetas`, { phoneNumber, realName, labelsCount: labels.length, operation: 'enrichUserFromWhapi' });
+                    logInfo('USER_ENRICHMENT', `Labels actualizados automáticamente: ${phoneNumber} → ${labels.length} etiquetas`, { phoneNumber, labelsCount: labels.length, source: 'whapi_get', operation: 'enrichUserFromWhapi' });
 
                     // 🔧 NUEVO: Log compacto de operación DB
                     logDatabaseOperation(
                         phoneNumber,
                         'enrich',
                         Date.now() - enrichStart,
-                        `labels=${labels.length} name="${realName || 'unknown'}"`,
+                        `labels=${labels.length}`,
                         true // cache updated
                     );
                 }

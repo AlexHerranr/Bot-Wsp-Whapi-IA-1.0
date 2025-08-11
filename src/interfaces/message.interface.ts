@@ -11,7 +11,7 @@ export interface WhatsAppMessage {
     body: string;
   };
   from: string;
-  from_name?: string;
+  chat_name?: string;  // Nombre del chat/contacto (reemplaza from_name)
   type: string;
 }
 
