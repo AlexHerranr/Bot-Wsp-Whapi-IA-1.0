@@ -1,0 +1,251 @@
+Starting Container
+
+> tealquilamos-bot@1.0.0 start
+> node dist/main.js
+
+🚀 Starting TeAlquilamos Bot...
+2025-08-11T20:59:03Z [APP_STAR:unknown] sys: Iniciando TeAlquilamos Bot
+✅ Configuration loaded successfully
+2025-08-11T20:59:03Z [CONFIG_L:unknown] sys: Configuración cargada exitosamente
+🌍 Server will start on 0.0.0.0:8080
+🔧 DI ✓ 5 services, 1 function
+🔌 hotel-plugin ✓ 1 function
+✅ check_availability registered
+2025-08-11T20:59:03Z [PLUGIN_R:unknown] sys: hotel-plugin ✓ 1 function
+2025-08-11T20:59:03Z [DI_COMPL:unknown] sys: DI ✓ 2 services, 1 function (CRM jobs de...
+2025-08-11T20:59:03Z [DATABASE:database] sys: 🗄️ Conectado a la base de datos Postgre...
+2025-08-11T20:59:03Z [DATABASE:unknown] sys: Conexión exitosa a PostgreSQL
+🔧 Cleanup tasks configured
+2025-08-11T20:59:03Z [SERVER_S:unknown] sys: Servidor HTTP iniciado
+=== Bot TeAlquilamos Iniciado ===
+🚀 Servidor: 0.0.0.0:8080
+🔗 Webhook: configurando...
+✅ Sistema listo
+
+🚀 CoreBot started successfully on 0.0.0.0:8080
+📊 Functions registered: 1
+2025-08-11T20:59:03Z [BOT_READ:unknown] sys: Bot completamente inicializado
+2025-08-11T20:59:31Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T20:59:31Z [WEBHOOK:webhook] pres:1
+2025-08-11T20:59:31Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+✍️ Usuario está escribiendo...
+2025-08-11T20:59:33Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T20:59:33Z [WEBHOOK:webhook] pres:1
+2025-08-11T20:59:33Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-11T20:59:33Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T20:59:33Z [WEBHOOK:webhook] msg:1
+2025-08-11T20:59:33Z [CLIENT_U:unknown] sys: Cliente actualizado desde webhook
+2025-08-11T20:59:33Z [DELAYED_:unknown] 57300...251: Update programado para 2min
+2025-08-11T20:59:33Z [MSG_RX:webhook] 57300...251: text "Hila..."
+🗣️ Sr Alex: 💬 "Hila" → 🤖
+2025-08-11T20:59:33Z [BUFFER_C:unknown] 57300...251: Buffer creado para mensaje
+2025-08-11T20:59:33Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-11T20:59:33Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-11T20:59:33Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T20:59:33Z [WEBHOOK:webhook] pres:1
+2025-08-11T20:59:33Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+2025-08-11T20:59:33Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-11T20:59:33Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-11T20:59:34Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T20:59:34Z [WEBHOOK:webhook] msg:1
+2025-08-11T20:59:34Z [CLIENT_U:unknown] sys: Cliente actualizado desde webhook
+2025-08-11T20:59:34Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-11T20:59:34Z [DELAYED_:unknown] 57300...251: Update programado para 2min
+2025-08-11T20:59:34Z [MSG_RX:webhook] 57300...251: text "Hola..."
+🗣️ Sr Alex: 💬 "Hola" → 🤖
+2025-08-11T20:59:34Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-11T20:59:34Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-11T20:59:34Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-11T20:59:35Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T20:59:35Z [WEBHOOK:webhook] msg:1
+2025-08-11T20:59:35Z [CLIENT_U:unknown] sys: Cliente actualizado desde webhook
+2025-08-11T20:59:35Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-11T20:59:35Z [DELAYED_:unknown] 57300...251: Update programado para 2min
+2025-08-11T20:59:35Z [MSG_RX:webhook] 57300...251: text "Q tal..."
+🗣️ Sr Alex: 💬 "Q tal" → 🤖
+2025-08-11T20:59:35Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-11T20:59:35Z [BUFFER_T:buffer] 57300...251: Timer anterior cancelado
+2025-08-11T20:59:35Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-11T20:59:40Z [BUFFER:buffer] 57300...251: 3msg, 15ch
+2025-08-11T20:59:40Z [MESSAGE_:webhook] 57300...251: Iniciando procesamiento de buffer
+2025-08-11T20:59:40Z [CACHE_MISS:cache] 57300...251
+2025-08-11T20:59:40Z [DB_QUERY:database] 57300...251: type:thread_fetch time:4ms res:thread:thread_L... cache:no_change
+2025-08-11T20:59:40Z [OPENAI_M:unknown] 57300...251: Mensaje preparado para OpenAI
+2025-08-11T20:59:40Z [DB_QUERY:database] 57300...251: type:thread_fetch time:6ms res:thread:thread_L... cache:no_change
+BD HIT (cache miss) for thread: 573003913251, syncing cache
+2025-08-11T20:59:40Z [OPENAI_R:unknown] 57300...251: Iniciando run de OpenAI
+2025-08-11T20:59:40Z [OPENAI_C:unknown] 57300...251: Estado de concurrencia OpenAI
+2025-08-11T20:59:40Z [AI_START:openai] 57300...251 | null
+2025-08-11T20:59:41Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-11T20:59:41Z [THREAD_R:unknown] 57300...251: Thread reutilizado - lógica simplificada
+2025-08-11T20:59:41Z [OPENAI_P:unknown] 57300...251: Prompt completo compactado enviado a Ope...
+2025-08-11T20:59:41Z [OPENAI_M:openai] 57300...251: Mensaje enviado al thread de OpenAI
+2025-08-11T20:59:42Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-11T20:59:44Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-11T20:59:54Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-11T20:59:56Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-11T20:59:57Z [AI_DONE:openai] 57300...251 | th_threa...LAo | 17s | 8003t
+2025-08-11T20:59:57Z [OPENAI_R:openai] 57300...251: Respuesta completa de OpenAI
+2025-08-11T20:59:57Z [TOKENS_METRIC:openai] 57300...251: in:4506 out:8003 total:12509 model:o3-mini-2025-01-31 thread:th_threa...LAo
+2025-08-11T20:59:57Z [TOKEN_US:unknown] 57300...251: Tokens utilizados en procesamiento
+2025-08-11T20:59:57Z [HIGH_LAT:performance] 57300...251: Latencia alta detectada en procesamiento
+2025-08-11T20:59:57Z [OPENAI_R:unknown] 57300...251: Run de OpenAI completado
+2025-08-11T20:59:58Z [TOKEN_CO:unknown] sys: 📊 Token count actualizado: 573003913251...
+2025-08-11T20:59:58Z [TOKEN_IM:unknown] 57300...251: Tokens actualizados inmediatamente por r...
+2025-08-11T20:59:58Z [QUOTE_DE:unknown] 57300...251: Decisión de citado calculada
+2025-08-11T20:59:58Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 1/1
+2025-08-11T20:59:58Z [INDICATO:whapi] 57300...251: Indicador de escritura enviado exitosame...
+2025-08-11T20:59:59Z [WHAPI_CH:unknown] 57300...251: Resultado envío chunk
+🤖 OpenAI → Sr Alex (17.2s)
+2025-08-11T20:59:59Z [TYPING_F:whapi] 57300...251: Flag de typing reseteado post-procesamie...
+2025-08-11T20:59:59Z [SENT:webhook] 57300...251 | 148ch | 17s
+2025-08-11T21:00:00Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T21:00:00Z [WEBHOOK:webhook] msg:1
+prisma:error 
+Invalid `prisma.clientView.upsert()` invocation:
+
+
+Unique constraint failed on the fields: (`chatId`)
+2025-08-11T21:00:00Z [DATABASE:unknown] sys: Error guardando cliente en BD: 
+Invalid ...
+2025-08-11T21:00:00Z [CONSTRAI:unknown] sys: Constraint error recoverable, manteniend...
+2025-08-11T21:00:00Z [CLIENT_U:unknown] sys: Cliente actualizado desde webhook
+2025-08-11T21:00:01Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T21:00:01Z [WEBHOOK:webhook] stat:1
+2025-08-11T21:00:01Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-11T21:00:03Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h1m activeUsers:1
+2025-08-11T21:00:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:00:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:00:03Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:127ch funcs:0 errs:0
+2025-08-11T21:00:03Z [LATENCY_METRIC:system] null: openai:17189ms beds24:0ms whapi:0ms db:0ms total:17189ms
+2025-08-11T21:00:13Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T21:00:13Z [WEBHOOK:webhook] pres:1
+2025-08-11T21:00:13Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado
+✍️ Sr Alex está escribiendo...
+2025-08-11T21:00:18Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T21:00:18Z [WEBHOOK:webhook] msg:1
+2025-08-11T21:00:20Z [CLIENT_U:unknown] sys: Cliente actualizado desde webhook
+2025-08-11T21:00:20Z [DELAYED_:unknown] 57300...251: Timer anterior cancelado
+2025-08-11T21:00:20Z [DELAYED_:unknown] 57300...251: Update programado para 2min
+2025-08-11T21:00:20Z [MSG_RX:webhook] 57300...251: text "No todo bien hasta a..."
+🗣️ Sr Alex: 💬 "No todo bien hasta ahora" → 🤖
+2025-08-11T21:00:20Z [BUFFER_C:unknown] 57300...251: Buffer creado para mensaje
+2025-08-11T21:00:20Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-11T21:00:20Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-11T21:00:25Z [BUFFER:buffer] 57300...251: 1msg, 24ch
+2025-08-11T21:00:25Z [MESSAGE_:webhook] 57300...251: Iniciando procesamiento de buffer
+2025-08-11T21:00:25Z [CACHE_MISS:cache] 57300...251
+2025-08-11T21:00:25Z [DB_QUERY:database] 57300...251: type:thread_fetch time:5ms res:thread:thread_L... cache:no_change
+2025-08-11T21:00:25Z [OPENAI_M:unknown] 57300...251: Mensaje preparado para OpenAI
+2025-08-11T21:00:25Z [DB_QUERY:database] 57300...251: type:thread_fetch time:5ms res:thread:thread_L... cache:no_change
+BD HIT (cache miss) for thread: 573003913251, syncing cache
+2025-08-11T21:00:25Z [OPENAI_R:unknown] 57300...251: Iniciando run de OpenAI
+2025-08-11T21:00:25Z [OPENAI_C:unknown] 57300...251: Estado de concurrencia OpenAI
+2025-08-11T21:00:25Z [AI_START:openai] 57300...251 | null
+2025-08-11T21:00:26Z [THREAD_T:unknown] sys: Token count estimado para thread
+2025-08-11T21:00:28Z [THREAD_R:unknown] 57300...251: Thread reutilizado - lógica simplificada
+2025-08-11T21:00:29Z [OPENAI_P:unknown] 57300...251: Prompt completo compactado enviado a Ope...
+2025-08-11T21:00:29Z [OPENAI_M:openai] 57300...251: Mensaje enviado al thread de OpenAI
+2025-08-11T21:00:29Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-11T21:00:33Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-11T21:00:45Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-11T21:01:01Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-11T21:01:01Z [AI_DONE:openai] 57300...251 | th_threa...LAo | 36s | 8932t
+2025-08-11T21:01:01Z [OPENAI_R:openai] 57300...251: Respuesta completa de OpenAI
+2025-08-11T21:01:01Z [TOKENS_METRIC:openai] 57300...251: in:4598 out:8932 total:13530 model:o3-mini-2025-01-31 thread:th_threa...LAo
+2025-08-11T21:01:01Z [TOKEN_US:unknown] 57300...251: Tokens utilizados en procesamiento
+2025-08-11T21:01:01Z [HIGH_LAT:performance] 57300...251: Latencia alta detectada en procesamiento
+2025-08-11T21:01:01Z [OPENAI_R:unknown] 57300...251: Run de OpenAI completado
+2025-08-11T21:01:01Z [TOKEN_DB:unknown] sys: Lag significativo detectado en BD tokens
+2025-08-11T21:01:01Z [TOKEN_CO:unknown] sys: 📊 Token count actualizado: 573003913251...
+2025-08-11T21:01:01Z [TOKEN_IM:unknown] 57300...251: Tokens actualizados inmediatamente por r...
+2025-08-11T21:01:01Z [QUOTE_DE:unknown] 57300...251: Decisión de citado calculada
+2025-08-11T21:01:01Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 1/1
+2025-08-11T21:01:01Z [INDICATO:whapi] 57300...251: Indicador de escritura enviado exitosame...
+2025-08-11T21:01:02Z [WHAPI_CH:unknown] 57300...251: Resultado envío chunk
+🤖 OpenAI → Sr Alex (35.8s)
+2025-08-11T21:01:02Z [TYPING_F:whapi] 57300...251: Flag de typing reseteado post-procesamie...
+2025-08-11T21:01:02Z [SENT:webhook] 57300...251 | 194ch | 36s
+2025-08-11T21:01:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h2m activeUsers:1
+2025-08-11T21:01:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:01:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:01:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:01:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+2025-08-11T21:01:03Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T21:01:03Z [WEBHOOK:webhook] msg:1
+prisma:error 
+Invalid `prisma.clientView.upsert()` invocation:
+
+
+Unique constraint failed on the fields: (`chatId`)
+2025-08-11T21:01:03Z [DATABASE:unknown] sys: Error guardando cliente en BD: 
+Invalid ...
+2025-08-11T21:01:03Z [CONSTRAI:unknown] sys: Constraint error recoverable, manteniend...
+2025-08-11T21:01:03Z [CLIENT_U:unknown] sys: Cliente actualizado desde webhook
+2025-08-11T21:01:04Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-11T21:01:04Z [WEBHOOK:webhook] stat:1
+2025-08-11T21:01:04Z [WEBHOOK_:unknown] sys: 📥 stat:1
+2025-08-11T21:02:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h3m activeUsers:1
+2025-08-11T21:02:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:02:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:02:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:02:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+2025-08-11T21:02:20Z [DB_QUERY:database] 57300...251: type:thread_fetch time:10ms res:thread:thread_L... cache:no_change
+2025-08-11T21:02:20Z [TOKENS_S:unknown] 57300...251: Tokens acumulados
+2025-08-11T21:02:20Z [TOKEN_CO:unknown] 57300...251: Token count inválido - solo actualiza la...
+2025-08-11T21:02:21Z [THREAD_A:unknown] 57300...251: Thread activity + tokens actualizados: 5...
+2025-08-11T21:02:21Z [DELAYED_:unknown] 57300...251: lastActivity + tokens actualizados
+2025-08-11T21:03:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h4m activeUsers:1
+2025-08-11T21:03:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:03:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:03:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:03:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+2025-08-11T21:04:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h5m activeUsers:1
+2025-08-11T21:04:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:04:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:04:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:04:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+2025-08-11T21:05:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h6m activeUsers:1
+2025-08-11T21:05:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:05:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:05:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:05:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+2025-08-11T21:06:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h7m activeUsers:1
+2025-08-11T21:06:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:06:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:06:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:06:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+2025-08-11T21:07:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h8m activeUsers:1
+2025-08-11T21:07:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:07:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:07:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:07:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+2025-08-11T21:08:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h9m activeUsers:1
+2025-08-11T21:08:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:08:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:08:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:08:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+2025-08-11T21:09:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h10m activeUsers:1
+2025-08-11T21:09:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:09:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:09:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:09:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+2025-08-11T21:10:03Z [SYS_METRIC:system] sys: mem:19/512MB cpu:0% conn:0 uptime:0h11m activeUsers:1
+2025-08-11T21:10:03Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:1 evicts:0
+2025-08-11T21:10:03Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-11T21:10:03Z [USAGE_STATS:system] sys: msgs:2/hr chunks:0 avgLen:132ch funcs:0 errs:0
+2025-08-11T21:10:03Z [LATENCY_METRIC:system] null: openai:26506ms beds24:0ms whapi:0ms db:0ms total:26506ms
+Stopping Container
+🛑 Received SIGTERM, shutting down gracefully...
+2025-08-11T21:10:05Z [SHUTDOWN:unknown] sys: Señal de parada recibida: SIGTERM
+🛑 Stopping CoreBot...
+2025-08-11T21:10:05Z [BOT_STOP:unknown] sys: Iniciando proceso de parada del bot
+2025-08-11T21:10:05Z [FLUSH_AL:unknown] sys: Ejecutando todos los updates pendientes
+2025-08-11T21:10:05Z [DELAYED_:unknown] sys: Limpiando timers pendientes
+2025-08-11T21:10:05Z [SESSION_:unknown] sys: Sesión de bot finalizada
+✅ CoreBot stopped successfully
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.5.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+npm notice To update run: npm install -g npm@11.5.2
+npm notice
