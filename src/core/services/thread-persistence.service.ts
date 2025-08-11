@@ -34,7 +34,7 @@ export class ThreadPersistenceService {
                         chatId: cachedData.chatId || '',
                         userName: cachedData.userName,
                         lastActivity: cachedData.lastActivity,
-                        labels: cachedData.labels ? cachedData.labels.split('/') : [],
+                        labels: Array.isArray(cachedData.labels) ? cachedData.labels : (cachedData.labels ? (cachedData.labels as string).split('/') : []),
                         tokenCount: cachedData.threadTokenCount || 0
                     };
                 }
@@ -57,7 +57,7 @@ export class ThreadPersistenceService {
                             phoneNumber: userId,
                             name: null,
                             userName: threadFromBD.userName || null,
-                            labels: threadFromBD.labels ? threadFromBD.labels.join('/') : null,
+                            labels: threadFromBD.labels || [],
                             chatId: threadFromBD.chatId || null,
                             threadId: threadFromBD.threadId,
                             lastActivity: threadFromBD.lastActivity,
@@ -90,8 +90,9 @@ export class ThreadPersistenceService {
                     phoneNumber: userId,
                     name: null,
                     userName: userName || null,
-                    labels: null,
+                    labels: [],
                     chatId: chatId || null,
+                    threadId: undefined,
                     lastActivity: new Date(),
                     cachedAt: new Date(),
                     threadTokenCount: 0
@@ -166,7 +167,7 @@ export class ThreadPersistenceService {
                     if (updates.name !== undefined) cachedData.name = updates.name;
                     if (updates.userName !== undefined) cachedData.userName = updates.userName;
                     if (updates.chatId !== undefined) cachedData.chatId = updates.chatId;
-                    if (updates.labels !== undefined) cachedData.labels = updates.labels.join('/');
+                    if (updates.labels !== undefined) cachedData.labels = updates.labels;
                     
                     cachedData.cachedAt = new Date();
                     clientCache.set(userId, cachedData);

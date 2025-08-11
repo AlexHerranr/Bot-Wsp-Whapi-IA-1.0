@@ -7,6 +7,7 @@ export interface ClientData {
     userName: string | null;
     labels: string[];
     chatId: string | null;
+    threadId?: string | null; // Thread ID de OpenAI
     lastActivity: Date;
     threadTokenCount?: number;  // Conteo de tokens del thread
     // Metadata del caché
@@ -104,6 +105,7 @@ export class ClientDataCache {
         userName: string | null;
         labels: string[];
         chatId: string | null;
+        threadId?: string | null;
         lastActivity: Date;
         threadTokenCount?: number;
     }): void {
