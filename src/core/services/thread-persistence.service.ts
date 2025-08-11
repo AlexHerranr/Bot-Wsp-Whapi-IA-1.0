@@ -29,6 +29,7 @@ export class ThreadPersistenceService {
                 console.info(`CACHE_GET: key=${userId}, found=${!!cachedData}, size=${clientCache.getStats().size}`);
                 if (cachedData) {
                     console.info(`Cache HIT for thread: ${userId}`);
+                    console.info(`CACHE_DEBUG: threadId=${cachedData.threadId}, tokenCount=${cachedData.threadTokenCount}, cachedAt=${cachedData.cachedAt}`);
                     trackCache(true); // Track cache hit
                     
                     // Si cache tiene threadId válido, usarlo directamente
@@ -78,6 +79,7 @@ export class ThreadPersistenceService {
                         clientCache.set(userId, cacheData);
                         setCacheSize(clientCache.getStats().size);
                         console.info(`CACHE_SET: stored for ${userId}, size: ${clientCache.getStats().size}`);
+                        console.info(`CACHE_SET_DEBUG: threadId=${cacheData.threadId}, tokenCount=${cacheData.threadTokenCount}`);
                     }
                 } catch (error) {
                     console.warn('Cache update from BD failed:', error);

@@ -544,6 +544,37 @@ export class DatabaseService {
                     }
                 });
                 
+                // NUEVO: Sincronizar clientCache después de BD update exitoso
+                if (this.clientCache && result) {
+                    try {
+                        // Obtener o crear entrada en clientCache
+                        const existingCacheData = this.clientCache.get(clientData.phoneNumber) || {
+                            phoneNumber: clientData.phoneNumber,
+                            name: null,
+                            userName: null,
+                            labels: [],
+                            chatId: null,
+                            threadId: null,
+                            lastActivity: new Date(),
+                            cachedAt: new Date(),
+                            threadTokenCount: 0
+                        };
+                        
+                        // Actualizar con datos del webhook preservando threadId existente
+                        existingCacheData.name = result.name || existingCacheData.name;
+                        existingCacheData.userName = result.userName || existingCacheData.userName;
+                        existingCacheData.chatId = result.chatId || existingCacheData.chatId;
+                        existingCacheData.lastActivity = result.lastActivity;
+                        existingCacheData.cachedAt = new Date();
+                        // IMPORTANTE: Preservar threadId y threadTokenCount existentes
+                        
+                        this.clientCache.set(clientData.phoneNumber, existingCacheData);
+                        console.info(`WEBHOOK_CACHE_SYNC: Updated clientCache for ${clientData.phoneNumber}, preserving threadId: ${existingCacheData.threadId}`);
+                    } catch (cacheError) {
+                        console.warn(`Error syncing webhook data to clientCache: ${cacheError}`);
+                    }
+                }
+                
                 return result;
             } catch (error) {
                 logError('DATABASE_ERROR', `Error guardando cliente en BD: ${error instanceof Error ? error.message : error}`, { phoneNumber: clientData.phoneNumber, operation: 'saveClient' });
