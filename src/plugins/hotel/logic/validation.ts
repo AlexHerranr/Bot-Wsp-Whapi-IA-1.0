@@ -15,7 +15,8 @@ export class HotelValidation {
             /\d+[.,]?\d*\s*(cop|pesos?)/gi,  // 840000 COP, 210 pesos
             /\d+\s*noches?/gi,              // 4 noches
             /https?:\/\/\S+/i,              // URLs
-            /wa\.me\/p/i                    // WhatsApp links
+            /wa\.me\/p/i,                   // WhatsApp links
+            /(?:apartamento|apartaestudio|apto\.?)\s+\d{3,4}(?:-[a-z])?/gi  // Apartamento 1622, Apto. 1820-A
         ];
         return sensitivePatterns.some(pattern => pattern.test(message));
     }
@@ -24,7 +25,7 @@ export class HotelValidation {
      * Extracts apartment names from text (Colombian format)
      */
     public extractApartmentNames(text: string): string[] {
-        const apartmentRegex = /(?:Apartamento|Apartaestudio|Apto\.?)\s+(\d{3,4}-[A-Z])/gi;
+        const apartmentRegex = /(?:apartamento|apartaestudio|apto\.?)\s+(\d{3,4}(?:-[a-z])?)/gi;
         const matches = text.matchAll(apartmentRegex);
         return Array.from(matches, match => match[1]);
     }
