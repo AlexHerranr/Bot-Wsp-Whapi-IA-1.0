@@ -22,6 +22,7 @@ import { TerminalLog } from './utils/terminal-log';
 // import { HotelPlugin } from '../plugins/hotel/hotel.plugin'; // Moved to main.ts
 import { IFunctionRegistry } from '../shared/interfaces';
 import { logBotReady, logServerStart, logInfo, logSuccess, logError, logWarning } from '../utils/logging';
+import { trackCache, setCacheSize } from '../utils/logging/collectors';
 import { HotelValidation } from '../plugins/hotel/logic/validation';
 
 // Simulación de la configuración
@@ -302,6 +303,7 @@ export class CoreBot {
             if (!clientData || needsUpdate) {
                 needsDatabaseQuery = true;
                 
+                trackCache(false); // Miss
                 logInfo('CACHE_MISS', 'Consultando BD por caché vacío o datos desactualizados', {
                     userId,
                     userName,
@@ -374,6 +376,7 @@ export class CoreBot {
                     });
                 }
             } else {
+                trackCache(true); // Hit
                 logInfo('CACHE_HIT', 'Usando datos del cliente desde caché', {
                     userId,
                     userName,

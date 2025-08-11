@@ -4,6 +4,7 @@
 import 'reflect-metadata';
 import { DatabaseService } from './database.service';
 import { injectable } from 'tsyringe';
+import { setCacheSize } from '../../utils/logging/collectors';
 
 interface ThreadRecord {
     threadId: string;
@@ -23,14 +24,53 @@ export class ThreadPersistenceService {
     }
 
     async setThread(userId: string, threadId: string, chatId?: string, userName?: string): Promise<void> {
-        await this.databaseService.saveOrUpdateThread(userId, {
-            threadId,
-            chatId,
-            userName
-        });
-        
-        // Reset token count para thread nuevo
-        await this.databaseService.updateThreadTokenCount(userId, 0);
+        // Siempre actualizar cache primero para asegurar disponibilidad
+        try {
+            const clientCache = this.databaseService.getClientCache();
+            if (clientCache) {
+                // Obtener datos existentes o crear nuevos
+                const existingData = clientCache.get(userId) || {
+                    phoneNumber: userId,
+                    name: null,
+                    userName: userName || null,
+                    labels: null,
+                    chatId: chatId || null,
+                    lastActivity: new Date(),
+                    cachedAt: new Date(),
+                    threadTokenCount: 0
+                };
+                
+                // Actualizar con thread nuevo
+                existingData.threadId = threadId;
+                existingData.chatId = chatId || existingData.chatId;
+                existingData.userName = userName || existingData.userName;
+                existingData.threadTokenCount = 0; // Reset para thread nuevo
+                existingData.lastActivity = new Date();
+                existingData.cachedAt = new Date();
+                
+                clientCache.set(userId, existingData);
+                // Actualizar métricas de cache
+                setCacheSize(clientCache.getStats().size);
+            }
+        } catch (error) {
+            // Cache update no debe interrumpir el flujo
+            console.warn('Cache update failed, continuing with BD operations:', error);
+        }
+
+        // Intentar BD - si falla, cache ya tiene datos actualizados
+        try {
+            await this.databaseService.saveOrUpdateThread(userId, {
+                threadId,
+                chatId,
+                userName
+            });
+            
+            // Reset token count para thread nuevo
+            await this.databaseService.updateThreadTokenCount(userId, 0);
+        } catch (error) {
+            // BD failure no debe interrumpir - cache tiene los datos
+            console.warn('BD update failed, but cache is updated:', error);
+        }
     }
 
     async updateThreadMetadata(userId: string, updates: {

@@ -6,6 +6,7 @@ import { logError, logInfo, logWarning } from '../../utils/logging';
 import type { ClientDataCache } from '../state/client-data-cache';
 // 🔧 NUEVO: Importar logging compacto
 import { logDatabaseOperation, logThreadUsage } from '../../utils/logging/integrations';
+import { setCacheSize } from '../../utils/logging/collectors';
 
 interface MemoryStore {
     threads: Map<string, ThreadRecord>;
@@ -80,6 +81,10 @@ export class DatabaseService {
         this.clientCache = cache;
     }
 
+    public getClientCache(): ClientDataCache | undefined {
+        return this.clientCache;
+    }
+
     public async disconnect(): Promise<void> {
         await this.prisma.$disconnect();
     }
@@ -121,6 +126,13 @@ export class DatabaseService {
                     // Manejo simple: si falla por unique en chatId, rehacer sin tocar chatId
                     const msg = typeof error?.message === 'string' ? error.message : String(error);
                     if (msg.includes('Unique constraint') && msg.includes('chatId')) {
+                        logWarning('CHATID_CONSTRAINT_ERROR', 'Resolviendo constraint duplicado de chatId', {
+                            userId,
+                            threadId: threadData.threadId,
+                            chatId: threadData.chatId,
+                            error: msg.substring(0, 200)
+                        });
+                        
                         const { chatId, ...rest } = clientViewData as any;
                         await this.prisma.clientView.upsert({
                             where: { phoneNumber: userId },
@@ -131,7 +143,14 @@ export class DatabaseService {
                                 chatId: threadData.chatId || chatId || undefined
                             }
                         });
+                        
+                        logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto exitosamente', { userId });
                     } else {
+                        logError('DATABASE_ERROR', `Error guardando thread en BD: ${msg}`, { userId, threadId: threadData.threadId, operation: 'setThread' });
+                        // No desconectar BD por errores de constraint - solo por conectividad
+                        if (msg.includes('connect') || msg.includes('timeout') || msg.includes('network')) {
+                            this.isConnected = false;
+                        }
                         throw error;
                     }
                 }
@@ -231,6 +250,8 @@ export class DatabaseService {
                                 }
                                 // Re-guardar en cache
                                 this.clientCache.set(userId, cached);
+                                // Actualizar tamaño del cache en métricas
+                                setCacheSize(this.clientCache.getStats().size);
                             }
                         }
                     } catch (error) {

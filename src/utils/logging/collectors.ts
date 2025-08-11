@@ -75,6 +75,7 @@ class MetricsCollector {
     private activeUsers = new Set<string>();
     private latencies: LatencyMetrics[] = [];
     private lastHourReset = Date.now();
+    private cacheSize = 0;
 
     // Rate limiting tracking
     private openaiCalls = 0;
@@ -107,6 +108,10 @@ class MetricsCollector {
         if (evicted) {
             this.evictions++;
         }
+    }
+
+    setCacheSize(size: number): void {
+        this.cacheSize = size;
     }
 
     updateBuffer(type: 'active' | 'merged' | 'abandoned' | 'voice' | 'text', count: number = 1): void {
@@ -195,7 +200,7 @@ class MetricsCollector {
         return {
             hits: this.cacheHits,
             misses: this.cacheMisses,
-            size: 0, // Would need to track actual cache size
+            size: this.cacheSize,
             users: this.activeUsers.size,
             evictions: this.evictions
         };
@@ -304,6 +309,7 @@ export const trackFunction = () => metricsCollector.incrementFunction();
 export const trackError = () => metricsCollector.incrementError();
 export const trackChunks = (count: number = 1) => metricsCollector.incrementChunks(count);
 export const trackCache = (hit: boolean, evicted: boolean = false) => metricsCollector.updateCache(hit, evicted);
+export const setCacheSize = (size: number) => metricsCollector.setCacheSize(size);
 export const trackBuffer = (type: 'active' | 'merged' | 'abandoned' | 'voice' | 'text', count: number = 1) => 
     metricsCollector.updateBuffer(type, count);
 export const trackUser = (userId: string) => metricsCollector.addActiveUser(userId);
