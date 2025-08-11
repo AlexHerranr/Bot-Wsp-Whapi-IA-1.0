@@ -324,6 +324,7 @@ export class DatabaseService {
                     userName: client.userName,
                     lastActivity: client.lastActivity,
                     labels: client.labels ? client.labels.split('/') : [],
+                    tokenCount: client.threadTokenCount || 0
                 };
                 
                 // 🔧 NUEVO: Log compacto de operación DB
