@@ -74,39 +74,11 @@ export class ThreadPersistenceService {
         return await this.databaseService.updateThreadActivity(userId, tokenCount);
     }
 
+    // MÉTODO DESHABILITADO - Lógica simplificada: solo reutilizar si existe y es válido
     async shouldRenewThread(userId: string, currentTokens?: number): Promise<{ shouldRenew: boolean; reason?: string }> {
-        try {
-            const thread = await this.getThread(userId);
-            if (!thread) {
-                return { shouldRenew: true, reason: 'no_thread_found' };
-            }
-
-            // 1. Verificar renovación semanal (7 días)
-            const THREAD_MAX_AGE_DAYS = parseInt(process.env.THREAD_MAX_AGE_DAYS || '7');
-            const maxAgeDate = new Date();
-            maxAgeDate.setDate(maxAgeDate.getDate() - THREAD_MAX_AGE_DAYS);
-            
-            if (thread.lastActivity < maxAgeDate) {
-                return { 
-                    shouldRenew: true, 
-                    reason: 'thread_weekly_renewal',
-                };
-            }
-
-            // 2. Verificar límite de tokens (20k tokens recomendado para hotel)
-            const TOKEN_LIMIT = parseInt(process.env.THREAD_TOKEN_LIMIT || '20000');
-            if (currentTokens && currentTokens > TOKEN_LIMIT) {
-                return {
-                    shouldRenew: true,
-                    reason: 'token_limit_exceeded'
-                };
-            }
-
-            return { shouldRenew: false };
-        } catch (error) {
-            console.error(`Error checking thread renewal for ${userId}:`, error);
-            return { shouldRenew: false }; // En caso de error, mantener thread existente
-        }
+        // Siempre retornar false - no renovar automáticamente
+        // La validación se hace en OpenAI Service directamente
+        return { shouldRenew: false, reason: 'simplified_logic_no_auto_renewal' };
     }
 
     getAllUserIds(): Promise<string[]> {
@@ -157,7 +129,7 @@ export class ThreadPersistenceService {
     }
 
     cleanupOldThreads(months: number): Promise<number> {
-        console.log(`Cleanup de threads > ${months} meses solicitado`);
+        console.log(`Cleanup de threads > ${months} meses DESHABILITADO - lógica simplificada`);
         return Promise.resolve(0);
     }
 

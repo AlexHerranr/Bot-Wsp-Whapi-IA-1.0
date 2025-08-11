@@ -14,7 +14,7 @@ interface PendingUpdate {
 
 export class DelayedActivityService {
     private pendingUpdates = new Map<string, PendingUpdate>();
-    private readonly DELAY_MS = 10 * 60 * 1000; // 10 minutos
+    private readonly DELAY_MS = 2 * 60 * 1000; // 2 minutos (reducido de 10)
 
     constructor(private databaseService: DatabaseService) {}
 
@@ -40,10 +40,10 @@ export class DelayedActivityService {
             timer
         });
 
-        logInfo('DELAYED_UPDATE_SCHEDULED', 'Update programado para 10min', {
+        logInfo('DELAYED_UPDATE_SCHEDULED', 'Update programado para 2min', {
             userId,
             tokenCount,
-            delayMinutes: 10,
+            delayMinutes: 2,
             totalPending: this.pendingUpdates.size
         });
     }
@@ -106,7 +106,7 @@ export class DelayedActivityService {
                     userId,
                     lastActivity: pending.lastActivity,
                     tokenCount: accumulatedTokens,
-                    delayMinutes: 10
+                    delayMinutes: 2
                 });
             } else {
                 logWarning('DELAYED_UPDATE_FAILED', 'Error en actualización delayed', { userId });

@@ -107,6 +107,18 @@ export class ClientDataCache {
     }
 
     /**
+     * Actualizar solo el conteo de tokens en caché
+     */
+    public updateThreadTokenCount(phoneNumber: string, tokenCount: number): void {
+        const cached = this.get(phoneNumber);
+        if (cached) {
+            cached.threadTokenCount = tokenCount;
+            cached.needsSync = false; // Ya está actualizado
+            this.cache.set(phoneNumber, cached);
+        }
+    }
+
+    /**
      * Limpiar entrada del caché
      */
     public delete(phoneNumber: string): void {

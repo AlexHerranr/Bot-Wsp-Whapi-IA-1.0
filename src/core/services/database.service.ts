@@ -139,7 +139,7 @@ export class DatabaseService {
                     }
                 }
                 
-                logInfo('THREAD_SAVED', `✅ Thread guardado en PostgreSQL: ${userId}`, { userId });
+                logInfo('THREAD_SAVED_SIMPLE', `✅ Thread guardado con lógica simplificada: ${userId}`, { userId });
                 
                 // 🔧 NUEVO: Log compacto de thread usage
                 if (threadData.threadId) {
@@ -184,30 +184,22 @@ export class DatabaseService {
                     });
                     
                     if (current && current.threadId === currentThreadId) {
-                        // THREAD REUSADO: Sumar tokens BD + acumulados
+                        // THREAD REUSADO: Sumar tokens BD + acumulados (lógica simplificada)
                         const currentTokens = current.threadTokenCount || 0;
                         updateData.threadTokenCount = currentTokens + tokenCount;
-                        logInfo('THREAD_TOKENS_ACCUMULATED', `Thread reusado: ${currentTokens} + ${tokenCount} = ${currentTokens + tokenCount}`, {
-                            userId, threadId: currentThreadId, previousTokens: currentTokens, newTokens: tokenCount
+                        logInfo('THREAD_TOKENS_ACCUMULATED_SIMPLE', `Thread reusado - tokens acumulados: ${currentTokens} + ${tokenCount}`, {
+                            userId, threadId: currentThreadId, previousTokens: currentTokens, newTokens: tokenCount, total: currentTokens + tokenCount
                         });
                     } else {
-                        // THREAD NUEVO: Empezar desde 0, ignorar BD
+                        // THREAD NUEVO: Empezar desde tokens del run actual (lógica simplificada)
                         updateData.threadTokenCount = tokenCount;
                         updateData.threadId = currentThreadId; // Actualizar threadId también
                         
-                        // Log detallado para monitoreo - distinguir casos
-                        const resetReason = !current ? 'user_not_found' : 
-                                          !current.threadId ? 'first_thread' : 
-                                          'thread_changed';
-                        
-                        logInfo('THREAD_TOKENS_RESET', `Thread nuevo: empezando desde ${tokenCount} tokens`, {
+                        logInfo('THREAD_TOKENS_NEW_SIMPLE', `Thread nuevo - iniciando con tokens: ${tokenCount}`, {
                             userId, 
                             threadId: currentThreadId, 
-                            oldThreadId: current?.threadId || null,
-                            oldTokenCount: current?.threadTokenCount || 0,
-                            newTokens: tokenCount,
-                            resetReason: resetReason,
-                            tokensLost: current?.threadTokenCount || 0
+                            initialTokens: tokenCount,
+                            reason: 'simplified_new_thread'
                         });
                     }
                 } else if (tokenCount !== undefined && tokenCount <= 0) {
@@ -644,14 +636,44 @@ export class DatabaseService {
     public async updateThreadTokenCount(phoneNumber: string, tokenCount: number): Promise<void> {
         if (this.isConnected) {
             try {
+                // Obtener conteo actual de BD para detectar lag/inconsistencias
+                const currentData = await this.prisma.clientView.findUnique({ 
+                    where: { phoneNumber }, 
+                    select: { threadTokenCount: true } 
+                });
+                
+                const currentDbCount = currentData?.threadTokenCount || 0;
+                
+                // Detectar inconsistencias significativas
+                if (tokenCount > currentDbCount) {
+                    const diff = tokenCount - currentDbCount;
+                    if (diff > 500) { // Threshold para detectar lags significativos
+                        logWarning('TOKEN_DB_LAG_DETECTED', `Lag significativo detectado en BD tokens`, {
+                            phoneNumber,
+                            currentDbTokens: currentDbCount,
+                            newTokens: tokenCount,
+                            diff,
+                            reason: 'delayed_update_catchup'
+                        });
+                    }
+                }
+                
                 await this.prisma.clientView.update({
                     where: { phoneNumber },
                     data: { threadTokenCount: tokenCount }
                 });
-                logInfo('TOKEN_COUNT_UPDATE', `📊 Token count actualizado: ${phoneNumber} = ${tokenCount} tokens`, { phoneNumber, tokenCount });
+                
+                logInfo('TOKEN_COUNT_UPDATE', `📊 Token count actualizado: ${phoneNumber} = ${tokenCount} tokens`, { 
+                    phoneNumber, 
+                    tokenCount,
+                    previousTokens: currentDbCount,
+                    increment: tokenCount - currentDbCount
+                });
             } catch (error) {
-                logWarning('TOKEN_COUNT_ERROR', `⚠️ Error actualizando token count para ${phoneNumber}`, { phoneNumber, error });
+                logWarning('TOKEN_COUNT_ERROR', `⚠️ Error actualizando token count para ${phoneNumber}`, { phoneNumber, tokenCount, error });
             }
+        } else {
+            logWarning('TOKEN_COUNT_SKIP', `Saltando actualización de tokens: BD desconectada`, { phoneNumber, tokenCount });
         }
     }
 

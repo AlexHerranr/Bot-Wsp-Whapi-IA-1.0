@@ -425,8 +425,8 @@ export class WhatsappService {
      * - Escritura lenta/pensando: 15-25 WPM = ~75-125 chars/min
      */
     private calculateHumanTypingDelay(textLength: number): number {
-        // Versión simple: 1s para textos cortos, 2s para textos largos
-        return textLength <= 160 ? 1000 : 2000;
+        // Reducido drasticamente para evitar acumulación en múltiples chunks
+        return textLength <= 160 ? 300 : 500;
     }
 
     /**

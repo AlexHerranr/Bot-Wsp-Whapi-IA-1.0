@@ -8,6 +8,7 @@ import { CacheManager } from '../state/cache-manager';
 import { logInfo, logSuccess, logError, logWarning, logDebug } from '../../utils/logging';
 // 🔧 NUEVO: Importar logging compacto
 import { logOpenAIPromptSent, logTokenUsage, logMessageFlowComplete } from '../../utils/logging/integrations';
+import { DatabaseService } from './database.service';
 
 export interface OpenAIServiceConfig {
     apiKey: string;
@@ -38,6 +39,7 @@ export class OpenAIService implements IOpenAIService {
     private functionRegistry?: IFunctionRegistry;
     private whatsappService?: any; // Referencia opcional para mensajes interinos
     private currentChatId?: string; // Chat ID actual para mensajes interinos
+    private databaseService?: DatabaseService; // Servicio de BD para resets de tokens
     private static activeOpenAICalls: number = 0; // Contador global de llamadas concurrentes
     private static readonly MAX_CONCURRENT_CALLS = 50; // Límite para 100 usuarios
 
@@ -46,7 +48,8 @@ export class OpenAIService implements IOpenAIService {
         terminalLog: TerminalLog,
         cacheManager?: CacheManager,
         functionRegistry?: IFunctionRegistry,
-        whatsappService?: any
+        whatsappService?: any,
+        databaseService?: DatabaseService
     ) {
         this.config = {
             apiKey: config.apiKey,
@@ -62,6 +65,7 @@ export class OpenAIService implements IOpenAIService {
         this.cache = cacheManager;
         this.functionRegistry = functionRegistry;
         this.whatsappService = whatsappService;
+        this.databaseService = databaseService;
     }
 
 
@@ -122,45 +126,31 @@ export class OpenAIService implements IOpenAIService {
             let threadTokenCount: number | undefined;
             
             if (existingThreadId) {
-                // Validar que el thread existe y obtener token count
-                const validation = await this.validateThread(existingThreadId);
+                // Validar que el thread existe en OpenAI (lógica simplificada)
+                const validation = await this.validateThread(existingThreadId, userId);
                 if (validation.isValid) {
-                    // Verificar si token count es muy alto para crear nuevo thread
-                    if (validation.tokenCount && validation.tokenCount > 5000) {
-                        logInfo('THREAD_HIGH_TOKEN_COUNT', 'Thread con muchos tokens, creando nuevo', {
-                            userId,
-                            userName,
-                            oldThreadId: existingThreadId,
-                            tokenCount: validation.tokenCount,
-                            reason: 'token_limit_exceeded'
-                        });
-                        // Crear nuevo thread en lugar de reutilizar
-                        threadId = await this.getOrCreateThread(userId, chatId);
-                    } else {
-                        threadId = existingThreadId;
-                        threadTokenCount = validation.tokenCount;
-                        
-                        // Log crítico: Thread reutilizado desde base de datos
-                        logInfo('THREAD_REUSE', 'Thread reutilizado desde base de datos', {
-                            userId,
-                            userName, 
-                            chatId,
-                            threadId: existingThreadId,
-                            tokenCount: threadTokenCount,
-                            source: 'database'
-                        });
-                        
-                        // DEBUG: Detailed thread validation info
-                        logDebug('THREAD_VALIDATION', 'Thread validation details', {
-                            userId,
-                            threadId: existingThreadId,
-                            tokenCount: threadTokenCount,
-                            validationPassed: true,
-                            source: 'database'
-                        });
+                    threadId = existingThreadId;
+                    threadTokenCount = validation.tokenCount;
+                    
+                    // Verificar si thread está vacío (sin mensajes reales)
+                    const hasRealMessages = await this.checkThreadHasMessages(threadId, userId);
+                    
+                    // checkThreadHasMessages ya maneja el reset interno, solo actualizar variable local
+                    if (!hasRealMessages) {
+                        threadTokenCount = 0; // Sincronizar con BD
                     }
+                    
+                    // Log crítico: Thread reutilizado (simplificado)
+                    logInfo('THREAD_REUSE_SIMPLE', 'Thread reutilizado - lógica simplificada', {
+                        userId,
+                        userName, 
+                        chatId,
+                        threadId: existingThreadId,
+                        tokenCount: threadTokenCount,
+                        hasMessages: hasRealMessages
+                    });
                 } else {
-                    // Thread inválido, crear uno nuevo
+                    // Thread inválido, crear uno nuevo (validateThread ya resetea tokens)
                     logWarning('THREAD_INVALID', 'Thread existente inválido, creando nuevo', {
                         userId,
                         userName,
@@ -168,9 +158,11 @@ export class OpenAIService implements IOpenAIService {
                         reason: 'thread_validation_failed'
                     });
                     threadId = await this.getOrCreateThread(userId, chatId);
+                    threadTokenCount = 0; // Thread nuevo empieza en 0
                 }
             } else {
                 threadId = await this.getOrCreateThread(userId, chatId);
+                threadTokenCount = 0; // Thread nuevo empieza en 0
             }
 
             // Step 2: Add message to thread (with optional image)
@@ -550,7 +542,123 @@ export class OpenAIService implements IOpenAIService {
         }
     }
 
-    private async validateThread(threadId: string): Promise<{ isValid: boolean; tokenCount?: number }> {
+    private async checkThreadHasMessages(threadId: string, userId: string): Promise<boolean> {
+        // Cache para reducir calls a OpenAI en reuso frecuente (5min TTL)
+        const cacheKey = `thread_has_messages:${threadId}`;
+        
+        if (this.cache) {
+            const cachedResult = this.cache.get<boolean>(cacheKey);
+            if (cachedResult !== undefined) {
+                logDebug('THREAD_MESSAGES_CACHE_HIT', 'Resultado desde cache', {
+                    threadId,
+                    userId,
+                    hasMessages: cachedResult,
+                    source: 'cache'
+                });
+                
+                // Si está cacheado como vacío, aún verificar tokens huérfanos en BD
+                if (!cachedResult && this.databaseService) {
+                    const currentThread = await this.databaseService.getThread(userId);
+                    if (currentThread?.tokenCount && currentThread.tokenCount > 0) {
+                        try {
+                            await this.databaseService.updateThreadTokenCount(userId, 0);
+                            logWarning('THREAD_TOKENS_RESET_ORPHAN_CACHED', 'Reset tokens huérfanos (resultado cacheado)', { 
+                                userId, 
+                                threadId,
+                                orphanTokens: currentThread.tokenCount
+                            });
+                        } catch (resetError) {
+                            logError('TOKEN_RESET_ORPHAN_ERROR', 'Error reseteando tokens huérfanos (cached)', {
+                                userId,
+                                threadId,
+                                resetError: resetError instanceof Error ? resetError.message : String(resetError)
+                            });
+                        }
+                    }
+                }
+                
+                return cachedResult;
+            }
+        }
+        
+        try {
+            // Get messages from thread to check if it has real content (optimizado: limit=1)
+            const messages = await openAIWithRetry(
+                () => this.openai.beta.threads.messages.list(threadId, { limit: 1 }),
+                {
+                    maxRetries: 2,
+                    baseDelay: 500,
+                    maxDelay: 2000
+                }
+            );
+
+            const hasMessages = messages.data.length > 0;
+            
+            // Si thread está vacío pero tiene tokens en BD, resetear tokens huérfanos
+            if (!hasMessages && this.databaseService) {
+                const currentThread = await this.databaseService.getThread(userId);
+                if (currentThread?.tokenCount && currentThread.tokenCount > 0) {
+                    try {
+                        await this.databaseService.updateThreadTokenCount(userId, 0);
+                        logWarning('THREAD_TOKENS_RESET_ORPHAN', 'Thread vacío detectado - reseteando tokens huérfanos en BD', { 
+                            userId, 
+                            threadId,
+                            orphanTokens: currentThread.tokenCount
+                        });
+                    } catch (resetError) {
+                        logError('TOKEN_RESET_ORPHAN_ERROR', 'Error reseteando tokens huérfanos', {
+                            userId,
+                            threadId,
+                            resetError: resetError instanceof Error ? resetError.message : String(resetError)
+                        });
+                    }
+                }
+            }
+            
+            // Cachear resultado por 5 minutos para reducir calls a OpenAI
+            if (this.cache) {
+                this.cache.set(cacheKey, hasMessages, 300000); // 5 min TTL
+            }
+            
+            logDebug('THREAD_MESSAGES_CHECK', 'Verificando si thread tiene mensajes reales', {
+                threadId,
+                userId,
+                messageCount: messages.data.length,
+                hasMessages,
+                cached: !!this.cache
+            });
+
+            return hasMessages;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            
+            // Métricas mejoradas para monitorear errores frecuentes
+            logWarning('CHECK_THREAD_MESSAGES_ERROR', 'Error verificando mensajes en thread - asumiendo hasMessages=true', {
+                threadId,
+                userId,
+                error: errorMessage,
+                assumedResult: true,
+                conservativeApproach: 'avoid_false_resets',
+                cacheAvailable: !!this.cache
+            });
+            
+            // Cachear como true por 1 minuto (TTL menor) para evitar calls repetidos fallidos
+            if (this.cache) {
+                this.cache.set(cacheKey, true, 60000); // 1 min TTL para errores
+                logDebug('ERROR_CACHED_CONSERVATIVE', 'Error cacheado conservadoramente', {
+                    threadId,
+                    userId,
+                    ttl: '1min',
+                    assumedHasMessages: true
+                });
+            }
+            
+            // Si hay error, asumir que SÍ tiene mensajes para ser conservadores
+            return true;
+        }
+    }
+
+    private async validateThread(threadId: string, userId: string): Promise<{ isValid: boolean; tokenCount?: number }> {
         // Cache de validación para reducir llamadas a OpenAI
         const validationCacheKey = `thread_valid:${threadId}`;
         
@@ -604,8 +712,29 @@ export class OpenAIService implements IOpenAIService {
                 errorMessage.includes('Invalid thread') ||
                 error.status === 404) {
                 
+                // Resetear tokens para thread inválido
+                try {
+                    if (this.databaseService) {
+                        await this.databaseService.updateThreadTokenCount(userId, 0);
+                        logWarning('TOKEN_RESET_INVALID', 'Reset tokens a 0: Thread no encontrado en OpenAI', { 
+                            userId, 
+                            threadId, 
+                            error: errorMessage 
+                        });
+                    } else {
+                        logWarning('TOKEN_RESET_SKIPPED', 'DatabaseService no disponible - skip reset', { userId, threadId });
+                    }
+                } catch (resetError) {
+                    logError('TOKEN_RESET_ERROR', 'Error reseteando tokens para thread inválido', {
+                        userId,
+                        threadId,
+                        resetError: resetError instanceof Error ? resetError.message : String(resetError)
+                    });
+                }
+                
                 logWarning('THREAD_NOT_FOUND', 'Thread no encontrado en OpenAI', {
                     threadId,
+                    userId,
                     error: errorMessage
                 });
                 

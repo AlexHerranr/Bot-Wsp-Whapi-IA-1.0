@@ -99,11 +99,11 @@ export class CoreBot {
         // Function registry passed from main.ts (with plugins already registered)
         this.functionRegistry = functionRegistry || container.resolve(FunctionRegistryService);
 
-        // Initialize OpenAI Service with function registry
+        // Initialize OpenAI Service with function registry and databaseService
         this.openaiService = new OpenAIService({
             apiKey: this.config.secrets.OPENAI_API_KEY,
             assistantId: process.env.ASSISTANT_ID || process.env.OPENAI_ASSISTANT_ID || 'asst_default'
-        }, this.terminalLog, undefined, this.functionRegistry);
+        }, this.terminalLog, undefined, this.functionRegistry, undefined, this.databaseService);
 
         // Initialize Thread Persistence Service
         this.threadPersistence = new ThreadPersistenceService(this.databaseService);
@@ -421,27 +421,12 @@ export class CoreBot {
                 displayName: clientData?.name || null
             });
 
-            // 4. Obtener thread existente y verificar si necesita renovación
+            // 4. Obtener thread existente (lógica simplificada)
             const existingThread = await this.threadPersistence.getThread(userId);
             let existingThreadId = existingThread?.threadId;
 
-            // Verificación removida - OpenAIService.processMessage ya valida el thread
-            // con cache, evitando llamadas duplicadas a OpenAI
-            // La validación se hace dentro de OpenAIService.validateThread() con cache de 30min
-
-            // Verificar si el thread necesita renovación por edad (después de validación)
-            if (existingThreadId) {
-                const renewalCheck = await this.threadPersistence.shouldRenewThread(userId);
-                if (renewalCheck.shouldRenew) {
-                    logWarning('THREAD_RENEWAL', `Thread renovado por: ${renewalCheck.reason}`, {
-                        userId,
-                        userName,
-                        oldThreadId: existingThreadId,
-                        reason: renewalCheck.reason
-                    });
-                    existingThreadId = undefined; // Forzar creación de thread nuevo
-                }
-            }
+            // Lógica simplificada: Solo verificar existencia en BD
+            // La validación con OpenAI se hace en OpenAIService.processMessage
 
             // Verificar longitud máxima antes de enviar a OpenAI
             const MAX_LENGTH = 4000; // Límite conservador para evitar overflow de tokens
@@ -593,14 +578,108 @@ export class CoreBot {
 
             // 6. Guardar/actualizar thread en la base de datos
             if (processingResult.threadId) {
+                const tokensUsed = processingResult.tokensUsed || 0;
+                const immediateThreshold = parseInt(process.env.TOKEN_IMMEDIATE_THRESHOLD || '1000', 10);
+                
                 if (!existingThreadId || existingThreadId !== processingResult.threadId) {
                     // Thread nuevo - crear registro completo
                     await this.threadPersistence.setThread(userId, processingResult.threadId, chatId, userName);
-                    // También programar tokens para thread nuevo (empezará desde 0)
-                    this.delayedActivityService.updateTokenCount(userId, processingResult.tokensUsed || 0, processingResult.threadId);
+                    
+                    // Reset tokens a 0 para thread nuevo (evitar herencia de tokens no relacionados)
+                    try {
+                        await this.databaseService.updateThreadTokenCount(userId, 0);
+                        logInfo('TOKEN_RESET_NEW_THREAD', 'Reset tokens a 0: Nuevo thread sin relación previa', { 
+                            userId, 
+                            userName,
+                            newThreadId: processingResult.threadId 
+                        });
+                    } catch (resetError) {
+                        logError('TOKEN_RESET_NEW_ERROR', 'Error reseteando tokens para thread nuevo', {
+                            userId,
+                            userName,
+                            newThreadId: processingResult.threadId,
+                            resetError: resetError instanceof Error ? resetError.message : String(resetError)
+                        });
+                    }
+                    
+                    // Actualización inmediata para runs grandes en threads nuevos
+                    if (tokensUsed > immediateThreshold) {
+                        try {
+                            await this.databaseService.updateThreadTokenCount(userId, tokensUsed);
+                            logInfo('TOKEN_IMMEDIATE_UPDATE', 'Tokens actualizados inmediatamente por run grande en thread nuevo', {
+                                userId,
+                                userName,
+                                tokensUsed,
+                                threshold: immediateThreshold,
+                                threadId: processingResult.threadId,
+                                reason: 'large_run_new_thread'
+                            });
+                        } catch (error) {
+                            logError('TOKEN_IMMEDIATE_ERROR', 'Error en actualización inmediata, fallback a delayed', { 
+                                userId, 
+                                userName,
+                                tokensUsed, 
+                                threshold: immediateThreshold,
+                                error: error instanceof Error ? error.message : String(error),
+                                fallback: 'delayed_update'
+                            });
+                            // Fallback a delayed
+                            this.delayedActivityService.updateTokenCount(userId, tokensUsed, processingResult.threadId);
+                        }
+                    } else {
+                        // Programar tokens para thread nuevo (sumará al reset de 0)
+                        this.delayedActivityService.updateTokenCount(userId, tokensUsed, processingResult.threadId);
+                    }
                 } else {
-                    // Thread existente - programar actualización delayed con tokens (sumará con BD)
-                    this.delayedActivityService.updateTokenCount(userId, processingResult.tokensUsed || 0, processingResult.threadId);
+                    // Thread existente - verificar si necesita actualización inmediata
+                    if (tokensUsed > immediateThreshold) {
+                        try {
+                            // Intentar obtener tokens del cache primero, luego BD
+                            const cachedData = this.clientDataCache.get(userId);
+                            let existingTokens = cachedData?.threadTokenCount || 0;
+                            
+                            // Si no hay en cache, consultar BD
+                            if (!cachedData || cachedData.threadTokenCount === undefined) {
+                                const existing = await this.databaseService.getThread(userId);
+                                existingTokens = existing?.tokenCount || 0;
+                            }
+                            
+                            const accumulatedTokens = existingTokens + tokensUsed;
+                            
+                            await this.databaseService.updateThreadTokenCount(userId, accumulatedTokens);
+                            
+                            // Actualizar cache con nuevo conteo
+                            if (cachedData) {
+                                this.clientDataCache.updateThreadTokenCount(userId, accumulatedTokens);
+                            }
+                            
+                            logInfo('TOKEN_IMMEDIATE_UPDATE', 'Tokens actualizados inmediatamente por run grande', {
+                                userId,
+                                userName,
+                                tokensUsed,
+                                existingTokens,
+                                accumulatedTokens,
+                                threshold: immediateThreshold,
+                                threadId: processingResult.threadId,
+                                usedCache: !!cachedData,
+                                reason: 'large_run_existing_thread'
+                            });
+                        } catch (error) {
+                            logError('TOKEN_IMMEDIATE_ERROR', 'Error en actualización inmediata, fallback a delayed', { 
+                                userId, 
+                                userName,
+                                tokensUsed, 
+                                threshold: immediateThreshold,
+                                error: error instanceof Error ? error.message : String(error),
+                                fallback: 'delayed_update'
+                            });
+                            // Fallback a delayed
+                            this.delayedActivityService.updateTokenCount(userId, tokensUsed, processingResult.threadId);
+                        }
+                    } else {
+                        // Thread existente - programar actualización delayed con tokens (sumará con BD)
+                        this.delayedActivityService.updateTokenCount(userId, tokensUsed, processingResult.threadId);
+                    }
                 }
             }
 
