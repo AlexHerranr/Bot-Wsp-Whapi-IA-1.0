@@ -31,21 +31,22 @@ export class ThreadPersistenceService {
                     console.info(`Cache HIT for thread: ${userId}`);
                     trackCache(true); // Track cache hit
                     
-                    // Si threadId es null/undefined en cache, significa que NO HAY THREAD
-                    if (!cachedData.threadId) {
-                        console.info(`Cache HIT but no threadId - user has no thread: ${userId}`);
-                        return null; // Cache es fuente de verdad: no thread
+                    // Si cache tiene threadId válido, usarlo directamente
+                    if (cachedData.threadId) {
+                        // Cache HIT con thread válido - convertir a ThreadRecord
+                        return {
+                            threadId: cachedData.threadId,
+                            chatId: cachedData.chatId || '',
+                            userName: cachedData.userName,
+                            lastActivity: cachedData.lastActivity,
+                            labels: Array.isArray(cachedData.labels) ? cachedData.labels : (cachedData.labels ? (cachedData.labels as string).split('/') : []),
+                            tokenCount: cachedData.threadTokenCount || 0
+                        };
+                    } else {
+                        // Cache HIT pero sin threadId - ir a BD como fallback
+                        console.info(`Cache HIT but no threadId - checking BD as fallback: ${userId}`);
+                        // Continuar al bloque BD (no return aquí)
                     }
-                    
-                    // Cache HIT con thread válido - convertir a ThreadRecord
-                    return {
-                        threadId: cachedData.threadId,
-                        chatId: cachedData.chatId || '',
-                        userName: cachedData.userName,
-                        lastActivity: cachedData.lastActivity,
-                        labels: Array.isArray(cachedData.labels) ? cachedData.labels : (cachedData.labels ? (cachedData.labels as string).split('/') : []),
-                        tokenCount: cachedData.threadTokenCount || 0
-                    };
                 }
             }
         } catch (error) {
