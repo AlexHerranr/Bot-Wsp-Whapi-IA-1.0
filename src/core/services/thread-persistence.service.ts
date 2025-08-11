@@ -60,6 +60,7 @@ export class ThreadPersistenceService {
             // Si encontramos en BD, actualizar cache
             if (threadFromBD) {
                 console.info(`BD HIT (cache miss) for thread: ${userId}, syncing cache`);
+                console.info(`[THREAD_SOURCE:cache] ${userId}: bd:${threadFromBD.tokenCount || 0} cache:0 thread:${threadFromBD.threadId} src:bd_fallback`);
                 try {
                     const clientCache = this.databaseService.getClientCache();
                     if (clientCache) {

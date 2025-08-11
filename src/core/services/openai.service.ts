@@ -311,6 +311,11 @@ export class OpenAIService implements IOpenAIService {
                 // CRÍTICO: Si es thread nuevo o cambió threadId, usar 0 como base, sino usar threadTokenCount de BD
                 const baseTokenCount = isNewThread ? 0 : (threadTokenCount || 0);
                 logTokenUsage(userId, threadId, baseTokenCount, runResult.tokensUsed, runResult.modelUsed || 'unknown');
+                
+                // TOKEN SUMMARY LOG - Información completa de fuentes
+                const finalTokenCount = baseTokenCount + runResult.tokensUsed;
+                const source = existingThreadId ? (existingThreadId === threadId ? 'cache_hit' : 'thread_changed') : 'new_thread';
+                console.info(`[TOKEN_SUMMARY:openai] ${userId}: bd:${existingTokenCount || 0} cache:${threadTokenCount || 0} run:+${runResult.tokensUsed} total:${finalTokenCount} src:${source}`);
             }
             
             logMessageFlowComplete(
