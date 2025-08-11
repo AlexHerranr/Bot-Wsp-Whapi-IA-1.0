@@ -124,6 +124,7 @@ export class OpenAIService implements IOpenAIService {
             // Step 1: Get or create thread (validate existing thread first)
             let threadId: string;
             let threadTokenCount: number | undefined;
+            let isNewThread = false;
             
             if (existingThreadId) {
                 // Validar que el thread existe en OpenAI (lógica simplificada)
@@ -160,10 +161,26 @@ export class OpenAIService implements IOpenAIService {
                     });
                     threadId = await this.getOrCreateThread(userId, chatId);
                     threadTokenCount = 0; // Thread nuevo empieza en 0
+                    isNewThread = true;
                 }
             } else {
                 threadId = await this.getOrCreateThread(userId, chatId);
                 threadTokenCount = 0; // Thread nuevo empieza en 0
+                isNewThread = true;
+            }
+            
+            // CRÍTICO: Si el threadId cambió respecto al existingThreadId, resetear tokens
+            if (existingThreadId && threadId !== existingThreadId) {
+                logWarning('THREAD_CHANGED', 'ThreadId cambió - reseteando tokens acumulados', {
+                    userId,
+                    userName,
+                    oldThreadId: existingThreadId,
+                    newThreadId: threadId,
+                    oldTokenCount: existingTokenCount || 0,
+                    resetToZero: true
+                });
+                threadTokenCount = 0; // Reset completo
+                isNewThread = true;
             }
 
             // Step 2: Add message to thread (with optional image)
@@ -291,7 +308,9 @@ export class OpenAIService implements IOpenAIService {
 
             // 🔧 NUEVO: Log compacto de tokens y flow completo
             if (runResult.tokensUsed) {
-                logTokenUsage(userId, threadId, existingTokenCount || threadTokenCount || 0, runResult.tokensUsed, runResult.modelUsed || 'unknown'); // Usar tokens acumulados desde BD/cache
+                // CRÍTICO: Si es thread nuevo o cambió threadId, usar 0 como base, sino usar threadTokenCount de BD
+                const baseTokenCount = isNewThread ? 0 : (threadTokenCount || 0);
+                logTokenUsage(userId, threadId, baseTokenCount, runResult.tokensUsed, runResult.modelUsed || 'unknown');
             }
             
             logMessageFlowComplete(
