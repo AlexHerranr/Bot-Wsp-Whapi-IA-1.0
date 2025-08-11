@@ -27,10 +27,17 @@ export class ThreadPersistenceService {
             if (clientCache) {
                 const cachedData = clientCache.get(userId);
                 console.info(`CACHE_GET: key=${userId}, found=${!!cachedData}, size=${clientCache.getStats().size}`);
-                if (cachedData && cachedData.threadId) {
+                if (cachedData) {
                     console.info(`Cache HIT for thread: ${userId}`);
                     trackCache(true); // Track cache hit
-                    // Cache HIT - convertir a ThreadRecord
+                    
+                    // Si threadId es null/undefined en cache, significa que NO HAY THREAD
+                    if (!cachedData.threadId) {
+                        console.info(`Cache HIT but no threadId - user has no thread: ${userId}`);
+                        return null; // Cache es fuente de verdad: no thread
+                    }
+                    
+                    // Cache HIT con thread válido - convertir a ThreadRecord
                     return {
                         threadId: cachedData.threadId,
                         chatId: cachedData.chatId || '',
