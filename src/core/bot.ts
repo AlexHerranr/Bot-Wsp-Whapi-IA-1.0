@@ -535,6 +535,7 @@ export class CoreBot {
                 chatId, 
                 userName,
                 existingThreadId,
+                existingThread?.tokenCount, // Pasar tokens acumulados de BD/cache
                 imageMessage
             );
 

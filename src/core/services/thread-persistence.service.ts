@@ -4,7 +4,7 @@
 import 'reflect-metadata';
 import { DatabaseService } from './database.service';
 import { injectable } from 'tsyringe';
-import { setCacheSize } from '../../utils/logging/collectors';
+import { setCacheSize, trackCache } from '../../utils/logging/collectors';
 
 interface ThreadRecord {
     threadId: string;
@@ -28,6 +28,7 @@ export class ThreadPersistenceService {
                 const cachedData = clientCache.get(userId);
                 if (cachedData && cachedData.threadId) {
                     console.info(`Cache HIT for thread: ${userId}`);
+                    trackCache(true); // Track cache hit
                     // Cache HIT - convertir a ThreadRecord
                     return {
                         threadId: cachedData.threadId,

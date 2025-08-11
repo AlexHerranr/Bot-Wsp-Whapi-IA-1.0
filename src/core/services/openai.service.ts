@@ -69,7 +69,7 @@ export class OpenAIService implements IOpenAIService {
     }
 
 
-    async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<ProcessingResult> {
+    async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string, existingTokenCount?: number, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<ProcessingResult> {
         const startTime = Date.now();
         
         // Guardar chatId para posibles mensajes interinos
@@ -291,7 +291,7 @@ export class OpenAIService implements IOpenAIService {
 
             // 🔧 NUEVO: Log compacto de tokens y flow completo
             if (runResult.tokensUsed) {
-                logTokenUsage(userId, threadId, threadTokenCount || 0, runResult.tokensUsed, runResult.modelUsed || 'unknown'); // Usar tokens acumulados del thread
+                logTokenUsage(userId, threadId, existingTokenCount || threadTokenCount || 0, runResult.tokensUsed, runResult.modelUsed || 'unknown'); // Usar tokens acumulados desde BD/cache
             }
             
             logMessageFlowComplete(

@@ -546,7 +546,18 @@ export class DatabaseService {
                 return result;
             } catch (error) {
                 logError('DATABASE_ERROR', `Error guardando cliente en BD: ${error instanceof Error ? error.message : error}`, { phoneNumber: clientData.phoneNumber, operation: 'saveClient' });
-                this.isConnected = false;
+                
+                // Para constraint errors, no desconectar BD inmediatamente - es recoverable
+                if (error instanceof Error && error.message.includes('Unique constraint failed')) {
+                    logWarning('CONSTRAINT_ERROR_RECOVERABLE', `Constraint error recoverable, manteniendo conexión BD`, { 
+                        phoneNumber: clientData.phoneNumber, 
+                        error: error.message 
+                    });
+                } else {
+                    // Otros errores sí marcan BD como desconectada
+                    this.isConnected = false;
+                }
+                
                 // Fallback to memory
                 this.memoryStore.users.set(clientData.phoneNumber, clientData);
             }
@@ -695,9 +706,20 @@ export class DatabaseService {
                 });
             } catch (error) {
                 logWarning('TOKEN_COUNT_ERROR', `⚠️ Error actualizando token count para ${phoneNumber}`, { phoneNumber, tokenCount, error });
+                // Si hay error, marcar como desconectado para intentar reconectar
+                this.isConnected = false;
             }
         } else {
-            logWarning('TOKEN_COUNT_SKIP', `Saltando actualización de tokens: BD desconectada`, { phoneNumber, tokenCount });
+            // Intentar reconectar antes de saltar
+            logInfo('BD_RECONNECT_ATTEMPT', `Intentando reconectar BD para token update: ${phoneNumber}`, { phoneNumber, tokenCount });
+            await this.connect();
+            
+            if (this.isConnected) {
+                // Reintentar después de reconexión exitosa
+                return this.updateThreadTokenCount(phoneNumber, tokenCount);
+            } else {
+                logWarning('TOKEN_COUNT_SKIP', `Saltando actualización de tokens: BD desconectada`, { phoneNumber, tokenCount });
+            }
         }
     }
 
