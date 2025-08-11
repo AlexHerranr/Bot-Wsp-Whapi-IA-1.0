@@ -606,11 +606,14 @@ export class CoreBot {
                     // Actualización inmediata para runs grandes en threads nuevos
                     if (tokensUsed > immediateThreshold) {
                         try {
-                            await this.databaseService.updateThreadTokenCount(userId, tokensUsed);
+                            const totalTokens = (existingThread?.tokenCount || 0) + tokensUsed;
+                            await this.databaseService.updateThreadTokenCount(userId, totalTokens);
                             logInfo('TOKEN_IMMEDIATE_UPDATE', 'Tokens actualizados inmediatamente por run grande en thread nuevo', {
                                 userId,
                                 userName,
                                 tokensUsed,
+                                existingTokens: existingThread?.tokenCount || 0,
+                                totalTokens,
                                 threshold: immediateThreshold,
                                 threadId: processingResult.threadId,
                                 reason: 'large_run_new_thread'
