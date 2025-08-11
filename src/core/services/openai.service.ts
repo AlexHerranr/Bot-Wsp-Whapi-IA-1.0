@@ -147,6 +147,7 @@ export class OpenAIService implements IOpenAIService {
                         chatId,
                         threadId: existingThreadId,
                         tokenCount: threadTokenCount,
+                        previousTokens: threadTokenCount || 0,
                         hasMessages: hasRealMessages
                     });
                 } else {
@@ -290,7 +291,7 @@ export class OpenAIService implements IOpenAIService {
 
             // 🔧 NUEVO: Log compacto de tokens y flow completo
             if (runResult.tokensUsed) {
-                logTokenUsage(userId, threadId, 0, runResult.tokensUsed, runResult.modelUsed || 'unknown'); // Usar modelo real del run
+                logTokenUsage(userId, threadId, threadTokenCount || 0, runResult.tokensUsed, runResult.modelUsed || 'unknown'); // Usar tokens acumulados del thread
             }
             
             logMessageFlowComplete(

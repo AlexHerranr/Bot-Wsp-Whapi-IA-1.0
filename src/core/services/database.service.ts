@@ -104,9 +104,6 @@ export class DatabaseService {
                     threadId: threadData.threadId,
                     chatId: threadData.chatId,
                     userName: threadData.userName,
-                    profileStatus: (threadData as any).profileStatus,
-                    proximaAccion: (threadData as any).proximaAccion,
-                    prioridad: (threadData as any).prioridad || 2,
                     labels: labelsString,
                     lastActivity: new Date(),
                 };
@@ -217,7 +214,6 @@ export class DatabaseService {
                     update: updateData,
                     create: {
                         phoneNumber: userId,
-                        prioridad: 2, // Valor por defecto (MEDIA)
                         ...updateData
                     }
                 });
@@ -522,7 +518,6 @@ export class DatabaseService {
                                  (clientData.userName !== clientData.phoneNumber ? clientData.userName : null),
                         chatId: clientData.chatId,
                         lastActivity: clientData.lastActivity,
-                        prioridad: 2, // Valor por defecto (MEDIA)
                         threadTokenCount: 0 // Inicializar contador tokens
                     }
                 });
@@ -621,29 +616,8 @@ export class DatabaseService {
     }
 
     public async getClientsWithActionToday(): Promise<any[]> {
-        if (this.isConnected) {
-            try {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-
-                return await this.prisma.clientView.findMany({
-                    where: {
-                        fechaProximaAccion: {
-                            gte: today,
-                            lt: tomorrow
-                        }
-                    }
-                });
-            } catch (error) {
-                logError('DATABASE_ERROR', 'Error obteniendo clientes para hoy', { operation: 'getClientsToday', error: error instanceof Error ? error.message : error });
-                return [];
-            }
-        } else {
-            // Fallback to memory - simple implementation
-            return [];
-        }
+        // Bot no debe interactuar con columnas CRM - retorna vacío
+        return [];
     }
 
     // --- Thread Token Management ---

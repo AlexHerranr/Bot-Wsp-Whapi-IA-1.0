@@ -21,7 +21,7 @@ model ClientView {
   profileStatus       String?   @db.Text
   proximaAccion       String?
   fechaProximaAccion  DateTime?
-  prioridad           Int?      @default(2)
+  prioridad           Int?
 }
 
 // Tabla simplificada para datos estáticos de apartamentos
