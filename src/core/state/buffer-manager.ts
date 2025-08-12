@@ -216,7 +216,7 @@ export class BufferManager implements IBufferManager {
         }
 
         // Evitar flush si estamos esperando transcripción de voz
-        if ((buffer as any).waitingVoice) {
+        if ((buffer as any).waitingVoice && !buffer.messages.some(msg => msg.includes('(Nota de Voz Transcrita por Whisper)'))) {
             this.setOrExtendTimer(userId, 'voice');
             return;
         }
