@@ -206,6 +206,10 @@ export class OpenAIService implements IOpenAIService {
                 timestamp: new Date().toISOString()
             });
             
+            // Log visible en Railway con primeras 15 palabras del contenido exacto
+            const first15Words = flattenedMessage.split(' ').slice(0, 15).join(' ');
+            console.info(`[OPENAI_RAW_CONTENT] ${userId}: "${first15Words}..." (${flattenedMessage.length}ch total)`);
+            
             // Mantener el log anterior para compatibilidad  
             logInfo('OPENAI_MESSAGE_SENT', 'Mensaje enviado al thread de OpenAI', {
                 userId,
