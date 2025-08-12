@@ -4,7 +4,7 @@ import { ICacheManager } from '../../shared/interfaces';
 import { CacheEntry } from '../../shared/types';
 import { 
     CHAT_INFO_CACHE_TTL, 
-    CONTEXT_CACHE_TTL, 
+    // ELIMINADO: CONTEXT_CACHE_TTL - context moved to external N8N flows
     PRECOMPUTED_CACHE_TTL,
     DEFAULT_CACHE_SIZE,
     CLEANUP_INTERVAL 
@@ -129,14 +129,8 @@ export class CacheManager implements ICacheManager {
         return this.get(`chat_info:${userId}`);
     }
 
-    // Context Cache (1 hora TTL)
-    setContext(userId: string, context: string): void {
-        this.set(`context:${userId}`, context, CONTEXT_CACHE_TTL);
-    }
-
-    getContext(userId: string): string | undefined {
-        return this.get(`context:${userId}`);
-    }
+    // ELIMINADO: Context Cache - moved to external N8N flows
+    // setContext/getContext methods removed - context injection handled externally
 
     // Precomputed Cache (1 minuto TTL)
     setPrecomputed(key: string, data: any): void {

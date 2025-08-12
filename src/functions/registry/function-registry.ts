@@ -8,8 +8,7 @@ import type { FunctionDefinition } from '../types/function-types.js';
 // Importar definiciones de funciones
 // import { checkAvailabilityFunction } from '../availability/beds24-availability.js'; // Moved to hotel plugin
 // import { escalateToHumanFunction } from '../escalation/escalate-to-human.js'; // Moved to hotel plugin
-import { injectHistoryFunction } from '../history/inject-history.js';
-import { getConversationContextFunction } from '../context/get-conversation-context.js';
+// ELIMINADO: Context injection functionality moved to external N8N flows
 
 /**
  * Registro de todas las funciones disponibles
@@ -21,9 +20,9 @@ export const FUNCTION_REGISTRY: Record<string, FunctionDefinition> = {
   // Funciones de escalamiento moved to hotel plugin
   // escalate_to_human: escalateToHumanFunction,
   
-  // Funciones de contexto e historial
-  // inject_history: injectHistoryFunction, // DESACTIVADO: OpenAI ya no necesita inyectar automáticamente
-  get_conversation_context: getConversationContextFunction, // ✅ ACTIVO: OpenAI solicita contexto bajo demanda
+  // Funciones de contexto e historial - ELIMINADAS
+  // inject_history: ELIMINADO - movido a flujos externos N8N
+  // get_conversation_context: ELIMINADO - movido a flujos externos N8N
   
   // Funciones de booking (documentadas, pendientes de implementación)
   // create_booking: createBookingFunction,

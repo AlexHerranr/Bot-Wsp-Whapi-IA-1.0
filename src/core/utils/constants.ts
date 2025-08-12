@@ -1,6 +1,6 @@
 // Constantes de configuración para Tiempos de Espera y Límites
 export const CHAT_INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
-export const CONTEXT_CACHE_TTL = 60 * 60 * 1000; // 1 hora
+// ELIMINADO: CONTEXT_CACHE_TTL - context injection moved to external N8N flows
 export const PRECOMPUTED_CACHE_TTL = 1 * 60 * 1000; // 1 minuto
 
 // Buffer timing constants - Sistema unificado de 5s (configurable vía env)
