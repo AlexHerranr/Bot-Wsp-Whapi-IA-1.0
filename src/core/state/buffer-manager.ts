@@ -45,8 +45,16 @@ export class BufferManager implements IBufferManager {
             buffer.isVoice = true;
             (buffer as any).waitingVoice = false; // Apagar espera cuando llega la transcripción
             
-            // FIX: Reactivar timer inmediatamente cuando llega transcripción
-            this.setOrExtendTimer(userId, 'voice_transcribed');
+            // FIX: Procesar inmediatamente cuando llega transcripción para evitar bucle infinito
+            setTimeout(() => {
+                this.processBuffer(userId);
+            }, 1000); // 1s delay para permitir que se complete el agregado del mensaje
+            
+            logInfo('AUDIO_TRANSCRIPTION_RECEIVED', 'Transcripción recibida, procesando inmediatamente', {
+                userId,
+                userName: buffer.userName || 'Usuario',
+                messageCount: buffer.messages.length
+            }, 'buffer-manager.ts');
         }
         
         // Analizar tipos de mensajes en el buffer
