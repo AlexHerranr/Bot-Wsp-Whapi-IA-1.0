@@ -88,6 +88,7 @@ export class CoreBot {
 
         // Inyectar cache en database service para actualizaciones BD->Cache
         this.databaseService.setClientCache(this.clientDataCache);
+        console.info('Cache unificado inyectado en DB service - MemoryStore eliminado');
 
         this.mediaService = new MediaService(this.terminalLog, {
             openaiApiKey: this.config.secrets.OPENAI_API_KEY,

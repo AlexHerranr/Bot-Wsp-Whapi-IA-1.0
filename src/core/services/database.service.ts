@@ -27,11 +27,25 @@ export class DatabaseService {
             log: ['warn', 'error'],
         });
         
-        // Initialize memory store for fallback
+        // Initialize memory store for fallback (DEPRECATED - users migrated to ClientDataCache)
         this.memoryStore = {
-            threads: new Map(),
-            users: new Map(),
+            threads: new Map(), // DEPRECADO: solo para sync histórico
+            users: new Map(), // ELIMINADO: Migrado a ClientDataCache
             lastSync: new Date()
+        };
+    }
+
+    // Helper para crear entrada de cache por defecto
+    private createDefaultCacheEntry(phoneNumber: string) {
+        return {
+            phoneNumber,
+            name: null,
+            userName: null,
+            labels: [],
+            chatId: null,
+            threadId: null,
+            lastActivity: new Date(),
+            threadTokenCount: 0
         };
     }
 
@@ -169,15 +183,31 @@ export class DatabaseService {
                     );
                 }
             } catch (error) {
-                logWarning('THREAD_SAVE_ERROR', `⚠️ Error guardando en PostgreSQL, usando memoria`, { error: error instanceof Error ? error.message : error });
+                logWarning('THREAD_SAVE_ERROR', `⚠️ Error guardando en PostgreSQL, usando cache unificado`, { error: error instanceof Error ? error.message : error });
                 this.isConnected = false;
-                // Fallback to memory
-                this.memoryStore.threads.set(userId, threadRecord);
+                // Fallback to unified cache
+                if (this.clientCache) {
+                    const cached = this.clientCache.get(userId) || this.createDefaultCacheEntry(userId);
+                    Object.assign(cached, {
+                        threadId: threadRecord.threadId,
+                        threadTokenCount: threadRecord.tokenCount,
+                        lastActivity: threadRecord.lastActivity
+                    });
+                    this.clientCache.set(userId, cached);
+                }
             }
         } else {
-            // Store in memory
-            this.memoryStore.threads.set(userId, threadRecord);
-            logInfo('THREAD_MEMORY_SAVE', `💾 Thread guardado en memoria (fallback): ${userId}`, { userId });
+            // Store in unified cache
+            if (this.clientCache) {
+                const cached = this.clientCache.get(userId) || this.createDefaultCacheEntry(userId);
+                Object.assign(cached, {
+                    threadId: threadRecord.threadId,
+                    threadTokenCount: threadRecord.tokenCount,
+                    lastActivity: threadRecord.lastActivity
+                });
+                this.clientCache.set(userId, cached);
+            }
+            logInfo('THREAD_CACHE_SAVE', `💾 Thread guardado en cache unificado (fallback): ${userId}`, { userId });
         }
 
         return threadRecord;
@@ -338,14 +368,40 @@ export class DatabaseService {
                 
                 return result;
             } catch (error) {
-                logError('DATABASE_ERROR', `Error leyendo de PostgreSQL, usando memoria: ${error instanceof Error ? error.message : error}`, { userId, operation: 'getThread' });
+                logError('DATABASE_ERROR', `Error leyendo de PostgreSQL, usando cache: ${error instanceof Error ? error.message : error}`, { userId, operation: 'getThread' });
                 this.isConnected = false;
-                // Fallback to memory
-                return this.memoryStore.threads.get(userId) || null;
+                // Fallback to cache
+                if (this.clientCache) {
+                    const cached = this.clientCache.get(userId);
+                    if (cached?.threadId) {
+                        return {
+                            threadId: cached.threadId,
+                            chatId: cached.chatId || '',
+                            userName: cached.userName,
+                            lastActivity: cached.lastActivity,
+                            labels: cached.labels,
+                            tokenCount: cached.threadTokenCount || 0
+                        };
+                    }
+                }
+                return null;
             }
         } else {
-            // Read from memory
-            return this.memoryStore.threads.get(userId) || null;
+            // Read from cache
+            if (this.clientCache) {
+                const cached = this.clientCache.get(userId);
+                if (cached?.threadId) {
+                    return {
+                        threadId: cached.threadId,
+                        chatId: cached.chatId || '',
+                        userName: cached.userName,
+                        lastActivity: cached.lastActivity,
+                        labels: cached.labels,
+                        tokenCount: cached.threadTokenCount || 0
+                    };
+                }
+            }
+            return null;
         }
     }
 
@@ -362,24 +418,38 @@ export class DatabaseService {
                 });
                 return true;
             } catch (error) {
-                logWarning('THREAD_DELETE_ERROR', `⚠️ Error eliminando thread de PostgreSQL, usando memoria`, { error: error instanceof Error ? error.message : error });
+                logWarning('THREAD_DELETE_ERROR', `⚠️ Error eliminando thread de PostgreSQL, usando cache`, { error: error instanceof Error ? error.message : error });
                 this.isConnected = false;
-                // Fallback to memory deletion
-                this.memoryStore.threads.delete(userId);
+                // Fallback to cache deletion
+                if (this.clientCache) {
+                    const cached = this.clientCache.get(userId);
+                    if (cached) {
+                        cached.threadId = null;
+                        cached.threadTokenCount = 0;
+                        this.clientCache.set(userId, cached);
+                    }
+                }
                 return true;
             }
         } else {
-            // Delete from memory
-            this.memoryStore.threads.delete(userId);
+            // Delete from cache
+            if (this.clientCache) {
+                const cached = this.clientCache.get(userId);
+                if (cached) {
+                    cached.threadId = null;
+                    cached.threadTokenCount = 0;
+                    this.clientCache.set(userId, cached);
+                }
+            }
             return true;
         }
     }
 
-    // --- Métodos de Sincronización ---
+    // --- Métodos de Sincronización (Deprecado - Cache unificado no necesita sync) ---
     private async syncMemoryToDatabase(): Promise<void> {
-        if (!this.isConnected || this.memoryStore.threads.size === 0) {
-            return;
-        }
+        // DEPRECADO: Cache unificado no necesita sync manual
+        // El ClientDataCache mantiene consistencia automáticamente
+        return;
 
         logInfo('SYNC_START', `🔄 Sincronizando ${this.memoryStore.threads.size} threads de memoria a PostgreSQL...`, { threadsCount: this.memoryStore.threads.size });
         let syncedCount = 0;
@@ -483,7 +553,12 @@ export class DatabaseService {
             lastActivity: new Date()
         };
         
-        this.memoryStore.users.set(phoneNumber, userData);
+        // Store in unified cache
+        if (this.clientCache) {
+            const cached = this.clientCache.get(phoneNumber) || this.createDefaultCacheEntry(phoneNumber);
+            Object.assign(cached, userData);
+            this.clientCache.set(phoneNumber, cached);
+        }
         return userData;
     }
 
@@ -590,13 +665,21 @@ export class DatabaseService {
                     this.isConnected = false;
                 }
                 
-                // Fallback to memory
-                this.memoryStore.users.set(clientData.phoneNumber, clientData);
+                // Fallback to unified cache
+                if (this.clientCache) {
+                    const cached = this.clientCache.get(clientData.phoneNumber) || this.createDefaultCacheEntry(clientData.phoneNumber);
+                    Object.assign(cached, clientData);
+                    this.clientCache.set(clientData.phoneNumber, cached);
+                }
             }
         } else {
-            // Fallback to memory
-            this.memoryStore.users.set(clientData.phoneNumber, clientData);
-            logInfo('CLIENT_MEMORY_SAVE', `💾 Cliente guardado en memoria: ${clientData.phoneNumber}`, { phoneNumber: clientData.phoneNumber });
+            // Fallback to unified cache
+            if (this.clientCache) {
+                const cached = this.clientCache.get(clientData.phoneNumber) || this.createDefaultCacheEntry(clientData.phoneNumber);
+                Object.assign(cached, clientData);
+                this.clientCache.set(clientData.phoneNumber, cached);
+            }
+            logInfo('CLIENT_CACHE_SAVE', `💾 Cliente guardado en cache unificado: ${clientData.phoneNumber}`, { phoneNumber: clientData.phoneNumber });
         }
     }
 
@@ -634,7 +717,7 @@ export class DatabaseService {
                     messages: 0,
                     timestamp: new Date(),
                     mode: 'PostgreSQL',
-                    memoryFallback: this.memoryStore.threads.size
+                    cacheSize: this.clientCache?.getStats().size || 0
                 };
             } catch (error) {
                 logWarning('STATS_ERROR', `⚠️ Error obteniendo estadísticas de PostgreSQL`, { error: error instanceof Error ? error.message : error });
@@ -644,12 +727,12 @@ export class DatabaseService {
         
         // Fallback to memory stats
         return {
-            users: this.memoryStore.threads.size,
-            threads: this.memoryStore.threads.size,
+            users: this.clientCache?.getStats().size || 0,
+            threads: this.clientCache?.getStats().size || 0,
             messages: 0,
             timestamp: new Date(),
             mode: 'Memory Fallback',
-            memoryFallback: this.memoryStore.threads.size
+            cacheSize: this.clientCache?.getStats().size || 0
         };
     }
 
@@ -671,10 +754,13 @@ export class DatabaseService {
                 throw error;
             }
         } else {
-            // Fallback to memory
-            const existing = this.memoryStore.users.get(phoneNumber);
-            if (existing) {
-                this.memoryStore.users.set(phoneNumber, { ...existing, ...data });
+            // Fallback to unified cache
+            if (this.clientCache) {
+                const existing = this.clientCache.get(phoneNumber);
+                if (existing) {
+                    Object.assign(existing, data);
+                    this.clientCache.set(phoneNumber, existing);
+                }
             }
         }
     }
