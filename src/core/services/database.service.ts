@@ -138,19 +138,28 @@ export class DatabaseService {
                             error: msg.substring(0, 200)
                         });
                         
-                        // Estrategia: preservar chatId existente, actualizar otros campos
-                        const { chatId, ...restData } = clientViewData as any;
-                        await this.prisma.clientView.upsert({
-                            where: { phoneNumber: userId },
-                            update: restData, // actualizar todo menos chatId
-                            create: {
-                                phoneNumber: userId,
-                                ...restData,
-                                chatId: threadData.chatId || undefined // usar chatId original si existe, sino omitir
-                            }
-                        });
-                        
-                        logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto - chatId preservado', { userId }, 'database.service.ts');
+                        try {
+                            // Estrategia: solo actualizar campos no únicos si el registro ya existe
+                            const { chatId, ...restData } = clientViewData as any;
+                            await this.prisma.clientView.update({
+                                where: { phoneNumber: userId },
+                                data: restData // actualizar solo campos no únicos
+                            });
+                            
+                            logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto - solo update de campos seguros', { userId }, 'database.service.ts');
+                        } catch (updateError: any) {
+                            // Si el update falla, significa que el registro no existe, omitir chatId al crear
+                            const { chatId, ...restData } = clientViewData as any;
+                            await this.prisma.clientView.create({
+                                data: {
+                                    phoneNumber: userId,
+                                    ...restData
+                                    // chatId omitido para evitar constraint
+                                }
+                            });
+                            
+                            logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto - creado sin chatId', { userId }, 'database.service.ts');
+                        }
                     } else {
                         logError('DATABASE_ERROR', `Error guardando thread en BD: ${msg}`, { userId, threadId: threadData.threadId, operation: 'setThread' }, 'database.service.ts');
                         // Solo desconectar BD por errores de conectividad, no constraints
@@ -250,14 +259,34 @@ export class DatabaseService {
                     }, 'database.service.ts');
                 }
                 
-                await this.prisma.clientView.upsert({
-                    where: { phoneNumber: userId },
-                    update: updateData,
-                    create: {
-                        phoneNumber: userId,
-                        ...updateData
+                try {
+                    await this.prisma.clientView.upsert({
+                        where: { phoneNumber: userId },
+                        update: updateData,
+                        create: {
+                            phoneNumber: userId,
+                            ...updateData
+                        }
+                    });
+                } catch (error: any) {
+                    const msg = typeof error?.message === 'string' ? error.message : String(error);
+                    if (msg.includes('Unique constraint') && msg.includes('chatId')) {
+                        logWarning('CONSTRAINT_ERROR', 'Constraint error recoverable, manteniendo operación', { userId, error: msg.substring(0, 100) }, 'database.service.ts');
+                        // Para updateThreadActivity, solo hacer update de campos seguros
+                        const { chatId, ...safeData } = updateData;
+                        await this.prisma.clientView.update({
+                            where: { phoneNumber: userId },
+                            data: safeData
+                        }).catch(() => {
+                            // Si update falla, el registro no existe, crear sin chatId
+                            this.prisma.clientView.create({
+                                data: { phoneNumber: userId, ...safeData }
+                            });
+                        });
+                    } else {
+                        throw error;
                     }
-                });
+                }
                 
                 // Actualizar cache si está disponible con manejo de errores
                 if (this.clientCache) {
@@ -492,11 +521,33 @@ export class DatabaseService {
     public async getOrCreateUser(phoneNumber: string, name?: string) {
         if (this.isConnected) {
             try {
-                const user = await this.prisma.clientView.upsert({
-                    where: { phoneNumber },
-                    update: { name },
-                    create: { phoneNumber, name, lastActivity: new Date() },
-                });
+                let user;
+                try {
+                    user = await this.prisma.clientView.upsert({
+                        where: { phoneNumber },
+                        update: { name },
+                        create: { phoneNumber, name, lastActivity: new Date() },
+                    });
+                } catch (error: any) {
+                    const msg = typeof error?.message === 'string' ? error.message : String(error);
+                    if (msg.includes('Unique constraint') && msg.includes('chatId')) {
+                        logWarning('CONSTRAINT_ERROR', 'Constraint error in getOrCreateUser', { phoneNumber, error: msg.substring(0, 100) }, 'database.service.ts');
+                        // Para getOrCreateUser, solo intentar actualizar name si el registro existe
+                        try {
+                            user = await this.prisma.clientView.update({
+                                where: { phoneNumber },
+                                data: { name }
+                            });
+                        } catch (updateError) {
+                            // Si no existe, crear sin chatId
+                            user = await this.prisma.clientView.create({
+                                data: { phoneNumber, name, lastActivity: new Date() }
+                            });
+                        }
+                    } else {
+                        throw error;
+                    }
+                }
 
                 // Si el usuario fue recién creado o tiene datos incompletos, intentar enriquecerlo
                 if (this.shouldEnrichUser(user)) {
@@ -571,20 +622,56 @@ export class DatabaseService {
                 if (updateData.name === clientData.phoneNumber) updateData.name = null;
                 if (updateData.userName === clientData.phoneNumber) updateData.userName = null;
                 
-                // Usar upsert por phoneNumber (PK)
-                const result = await this.prisma.clientView.upsert({
-                    where: { phoneNumber: clientData.phoneNumber },
-                    update: updateData,
-                    create: {
-                        phoneNumber: clientData.phoneNumber,
-                        name: clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null,
-                        userName: clientData.from_name !== clientData.phoneNumber ? clientData.from_name : 
-                                 (clientData.userName !== clientData.phoneNumber ? clientData.userName : null),
-                        chatId: clientData.chatId,
-                        lastActivity: clientData.lastActivity,
-                        threadTokenCount: 0 // Inicializar contador tokens
+                // Usar upsert por phoneNumber (PK) con protección de constraint único
+                let result;
+                try {
+                    result = await this.prisma.clientView.upsert({
+                        where: { phoneNumber: clientData.phoneNumber },
+                        update: updateData,
+                        create: {
+                            phoneNumber: clientData.phoneNumber,
+                            name: clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null,
+                            userName: clientData.from_name !== clientData.phoneNumber ? clientData.from_name : 
+                                     (clientData.userName !== clientData.phoneNumber ? clientData.userName : null),
+                            chatId: clientData.chatId,
+                            lastActivity: clientData.lastActivity,
+                            threadTokenCount: 0 // Inicializar contador tokens
+                        }
+                    });
+                } catch (error: any) {
+                    const msg = typeof error?.message === 'string' ? error.message : String(error);
+                    if (msg.includes('Unique constraint') && msg.includes('chatId')) {
+                        logWarning('CONSTRAINT_ERROR', 'Constraint error recoverable, manteniendo operación', { 
+                            phoneNumber: clientData.phoneNumber, 
+                            chatId: clientData.chatId,
+                            error: msg.substring(0, 100) 
+                        }, 'database.service.ts');
+                        
+                        // Estrategia para syncWhatsAppClient: omitir chatId si hay conflicto
+                        const { chatId, ...safeUpdateData } = updateData;
+                        try {
+                            result = await this.prisma.clientView.update({
+                                where: { phoneNumber: clientData.phoneNumber },
+                                data: safeUpdateData
+                            });
+                        } catch (updateError) {
+                            // Si no existe, crear sin chatId
+                            result = await this.prisma.clientView.create({
+                                data: {
+                                    phoneNumber: clientData.phoneNumber,
+                                    name: clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null,
+                                    userName: clientData.from_name !== clientData.phoneNumber ? clientData.from_name : 
+                                             (clientData.userName !== clientData.phoneNumber ? clientData.userName : null),
+                                    // chatId omitido para evitar constraint
+                                    lastActivity: clientData.lastActivity,
+                                    threadTokenCount: 0
+                                }
+                            });
+                        }
+                    } else {
+                        throw error;
                     }
-                });
+                }
                 
                 // NUEVO: Sincronizar clientCache después de BD update exitoso
                 if (this.clientCache && result) {
