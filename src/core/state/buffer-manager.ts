@@ -44,6 +44,9 @@ export class BufferManager implements IBufferManager {
         if (messageText.includes('(Nota de Voz Transcrita por Whisper)')) {
             buffer.isVoice = true;
             (buffer as any).waitingVoice = false; // Apagar espera cuando llega la transcripción
+            
+            // FIX: Reactivar timer inmediatamente cuando llega transcripción
+            this.setOrExtendTimer(userId, 'voice_transcribed');
         }
         
         // Analizar tipos de mensajes en el buffer
