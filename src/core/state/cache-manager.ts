@@ -43,7 +43,7 @@ export class CacheManager implements ICacheManager {
     constructor(options: CacheOptions = {}) {
         this.options = {
             maxSize: options.maxSize ?? DEFAULT_CACHE_SIZE,
-            defaultTtl: options.defaultTtl ?? CONTEXT_CACHE_TTL, // 1 hora por defecto
+            defaultTtl: options.defaultTtl ?? CHAT_INFO_CACHE_TTL, // 5 minutos por defecto
             cleanupInterval: options.cleanupInterval ?? CLEANUP_INTERVAL,
             enableMetrics: options.enableMetrics ?? true
         };
