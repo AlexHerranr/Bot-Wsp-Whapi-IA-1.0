@@ -1089,6 +1089,14 @@ ${message}`}`;
                 console.log(`🧹 Cleaned up ${cleaned} old buffers`);
             }
         }, 5 * 60 * 1000);
+
+        // Métricas reales de buffer (ligeras) cada 60s
+        const bufferMetricInterval = setInterval(() => {
+            try {
+                const stats = this.bufferManager.getStats();
+                logInfo('BUFFER_METRIC', 'buffer metrics', { active: stats.active }, 'bot.ts');
+            } catch {}
+        }, 60 * 1000);
         
         // User state cleanup every 10 minutes (más frecuente para 100+ usuarios)
         const userCleanup = setInterval(() => {

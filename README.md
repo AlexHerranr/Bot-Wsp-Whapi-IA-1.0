@@ -11,10 +11,10 @@
 - **Arquitectura Modular**: Core genérico + sistema de plugins por industria
 - **Plugin Hotelero**: Integración completa con Beds24 y gestión de reservas
 - **OpenAI Integration**: Assistant API con function calling y threading inteligente
-- **Procesamiento Inteligente**: Buffer de mensajes con detección de typing
+- **Procesamiento Inteligente**: Buffer de mensajes con detección de typing y manejo optimizado de voz
 - **Base de Datos**: PostgreSQL con Prisma ORM
 - **CRM Interno**: Sistema de gestión de contactos y análisis automático
-- **Logging Dual**: Terminal limpio + logs técnicos detallados
+- **Logging Dual**: Terminal limpio + logs técnicos detallados con métricas precisas en tiempo real
 - **Jobs Programados**: Análisis CRM y acciones diarias automatizadas
 
 ## 📦 Estructura del Proyecto
@@ -262,10 +262,12 @@ npm run logs             # Ver logs en tiempo real
 ## 📈 Métricas y Performance
 
 ### **Tiempos de Respuesta**
-- **Respuesta inicial**: <2egundos
-- **Procesamiento de mensaje**: <1undo
-- **Inyección de historial**: <500
-- **Consulta Beds24: <3egundos
+- **Respuesta inicial**: <2 segundos
+- **Procesamiento de mensaje**: <1 segundo  
+- **Buffer de voz optimizado**: Espera inteligente para transcripciones completas
+- **Envío de chunks**: Mantenimiento de indicadores de typing durante reintentos
+- **Inyección de historial**: <500ms
+- **Consulta Beds24**: <3 segundos con logs precisos
 
 ### **Disponibilidad**
 - **Uptime**:990.9ailway)

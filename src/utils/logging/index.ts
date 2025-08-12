@@ -716,7 +716,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             return `${timestamp} [BEDS24:${source}] API request`;
             
         case 'BEDS24_RESPONSE_DETAIL':
-            const rooms = details?.availableRooms?.length || 0;
+            const rooms = (details?.roomsCount ?? (details?.availableRooms?.length ?? 0)) || 0;
             return `${timestamp} [BEDS24:${source}] ${rooms} rooms found`;
             
         case 'MESSAGE_CHUNKS':

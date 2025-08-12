@@ -303,22 +303,32 @@ export class WhatsappService {
             }
 
             const attemptStart = Date.now();
-            const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/text`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.config.secrets.WHAPI_TOKEN}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(messageBody)
-            });
-            logInfo('WHAPI_CHUNK_RESULT', 'Resultado envío chunk', {
-                userId: getShortUserId(chatId),
-                chatId,
-                chunkNumber: i + 1,
-                totalChunks: chunks.length,
-                ms: Date.now() - attemptStart,
-                status: response.status
-            });
+            // Mantener typing vivo durante reintentos o latencias largas
+            const keepTyping = setInterval(() => {
+                this.sendTypingIndicator(chatId).catch(() => {});
+            }, 15000);
+
+            let response: Response;
+            try {
+                response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/text`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.config.secrets.WHAPI_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(messageBody)
+                });
+                logInfo('WHAPI_CHUNK_RESULT', 'Resultado envío chunk', {
+                    userId: getShortUserId(chatId),
+                    chatId,
+                    chunkNumber: i + 1,
+                    totalChunks: chunks.length,
+                    ms: Date.now() - attemptStart,
+                    status: response.status
+                });
+            } finally {
+                clearInterval(keepTyping);
+            }
             // Intentar capturar ID del mensaje enviado por WHAPI
             try {
                 const data: any = await response.clone().json();

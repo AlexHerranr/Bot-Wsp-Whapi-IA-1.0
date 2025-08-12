@@ -43,6 +43,7 @@ export class BufferManager implements IBufferManager {
         // Marcar como voice si el mensaje contiene audio
         if (messageText.includes('(Nota de Voz Transcrita por Whisper)')) {
             buffer.isVoice = true;
+            (buffer as any).waitingVoice = false; // Apagar espera cuando llega la transcripción
         }
         
         // Analizar tipos de mensajes en el buffer
@@ -200,6 +201,12 @@ export class BufferManager implements IBufferManager {
                 reason: 'no_messages_or_images'
             }, 'buffer-manager.ts');
             this.clearBuffer(userId);
+            return;
+        }
+
+        // Evitar flush si estamos esperando transcripción de voz
+        if ((buffer as any).waitingVoice) {
+            this.setOrExtendTimer(userId, 'voice');
             return;
         }
 
@@ -422,6 +429,7 @@ export class BufferManager implements IBufferManager {
             
             // Para voice, log especial indicando espera de transcripción
             if (triggerType === 'voice') {
+                (buffer as any).waitingVoice = true; // Marcar que esperamos la transcripción
                 logInfo('BUFFER_VOICE_WAIT', 'Esperando transcripción de voz', { 
                     userId, 
                     userName: buffer.userName,
