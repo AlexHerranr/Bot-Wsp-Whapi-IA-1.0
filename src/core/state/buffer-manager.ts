@@ -204,8 +204,11 @@ export class BufferManager implements IBufferManager {
             return;
         }
 
-        // Evitar flush si estamos esperando transcripción de voz
-        if ((buffer as any).waitingVoice && !buffer.messages.some(msg => msg.includes('(Nota de Voz Transcrita por Whisper)'))) {
+        // Priorizar procesamiento si transcripción ya presente (evita race conditions)
+        if (buffer.messages.some(msg => msg.includes('(Nota de Voz Transcrita por Whisper)'))) {
+            // Force process if transcription already in buffer - proceed to normal processing
+            logDebug('BUFFER_VOICE_CHECK', 'Waiting skipped - transcription present', { hasTranscription: true });
+        } else if ((buffer as any).waitingVoice) {
             this.setOrExtendTimer(userId, 'voice');
             return;
         }
