@@ -37,7 +37,7 @@ export class OpenAiHandler implements AiHandler {
       userId,
       threadId,
       content: message
-    });
+    }, 'openai_handler.ts');
     await this.openai.beta.threads.messages.create(threadId, {
       role: 'user',
       content: message
@@ -62,7 +62,7 @@ export class OpenAiHandler implements AiHandler {
         userId,
         threadId,
         runId: run.id
-      });
+      }, 'openai_handler.ts');
       return { text: "" };
     }
 
@@ -75,7 +75,7 @@ export class OpenAiHandler implements AiHandler {
       logInfo('OPENAI_NO_ASSISTANT_MESSAGES', 'No hay mensajes del assistant, permitiendo flujo natural', {
         userId,
         threadId
-      });
+      }, 'openai_handler.ts');
       return { text: "" };
     }
 
@@ -87,14 +87,14 @@ export class OpenAiHandler implements AiHandler {
         userId,
         threadId,
         content: responseContent.text.value
-      });
+      }, 'openai_handler.ts');
       return { text: responseContent.text.value };
     } else {
       // 🔧 ELIMINADO: Fallback automático - permitir que OpenAI maneje la respuesta
       logInfo('OPENAI_UNSUPPORTED_FORMAT', 'Formato de respuesta no soportado, permitiendo flujo natural', {
         userId,
         threadId
-      });
+      }, 'openai_handler.ts');
       return { text: "" };
     }
   }

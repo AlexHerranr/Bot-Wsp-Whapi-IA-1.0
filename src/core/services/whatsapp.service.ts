@@ -121,7 +121,7 @@ export class WhatsappService {
                 indicatorType: 'recording',
                 part: i + 1,
                 totalParts: voiceChunks.length
-            });
+            }, 'whatsapp.service.ts');
 
             const startTime = Date.now();
             const ttsResponse = await this.openai.audio.speech.create({
@@ -211,7 +211,7 @@ export class WhatsappService {
             parts: voiceChunks.length,
             messageLength: message.length,
             success: true
-        });
+        }, 'whatsapp.service.ts');
 
         // CRÍTICO: Marcar contenido como enviado para prevenir duplicados texto/voz
         this.mediaManager.addBotSentContent(chatId, message);
@@ -267,7 +267,7 @@ export class WhatsappService {
                 preview: chunk20Words,
                 isFirstChunk: i === 0,
                 hasQuoted: i === 0 && !!quotedMessageId
-            });
+            }, 'whatsapp.service.ts');
             
             // Mostrar indicador de escritura antes de cada chunk (incluido el primero)
             await this.sendTypingIndicator(chatId);

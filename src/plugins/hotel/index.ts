@@ -30,6 +30,6 @@ export class HotelPlugin {
             plugin: 'hotel-plugin',
             functions: ['check_availability'],
             source: source || 'hotel-plugin'
-        });
+        }, 'index.ts');
     }
 }

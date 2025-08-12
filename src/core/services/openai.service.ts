@@ -83,14 +83,14 @@ export class OpenAIService implements IOpenAIService {
                 activeCalls: OpenAIService.activeOpenAICalls,
                 maxCalls: OpenAIService.MAX_CONCURRENT_CALLS,
                 waitingUsers: OpenAIService.activeOpenAICalls - OpenAIService.MAX_CONCURRENT_CALLS + 1
-            });
+            }, 'openai.service.ts');
             
             logWarning('OPENAI_CONCURRENCY_WAIT', 'Esperando por límite de concurrencia OpenAI', {
                 userId,
                 userName,
                 activeCalls: OpenAIService.activeOpenAICalls,
                 maxCalls: OpenAIService.MAX_CONCURRENT_CALLS
-            });
+            }, 'openai.service.ts');
             await new Promise(resolve => setTimeout(resolve, 100));
         }
         
@@ -150,7 +150,7 @@ export class OpenAIService implements IOpenAIService {
                         tokenCount: threadTokenCount,
                         previousTokens: threadTokenCount || 0,
                         hasMessages: hasRealMessages
-                    });
+                    }, 'openai.service.ts');
                 } else {
                     // Thread inválido, crear uno nuevo (validateThread ya resetea tokens)
                     logWarning('THREAD_INVALID', 'Thread existente inválido, creando nuevo', {
@@ -158,7 +158,7 @@ export class OpenAIService implements IOpenAIService {
                         userName,
                         oldThreadId: existingThreadId,
                         reason: 'thread_validation_failed'
-                    });
+                    }, 'openai.service.ts');
                     threadId = await this.getOrCreateThread(userId, chatId);
                     threadTokenCount = 0; // Thread nuevo empieza en 0
                     isNewThread = true;
@@ -178,7 +178,7 @@ export class OpenAIService implements IOpenAIService {
                     newThreadId: threadId,
                     oldTokenCount: existingTokenCount || 0,
                     resetToZero: true
-                });
+                }, 'openai.service.ts');
                 threadTokenCount = 0; // Reset completo
                 isNewThread = true;
             }
@@ -340,7 +340,7 @@ export class OpenAIService implements IOpenAIService {
                     runId: runResult.runId,
                     tokens: runResult.tokensUsed,
                     processingTime
-                });
+                }, 'openai.service.ts');
             }
 
             // Log crítico: High latency si es alto
@@ -352,7 +352,7 @@ export class OpenAIService implements IOpenAIService {
                     runId: runResult.runId,
                     latencyMs: processingTime,
                     tokensUsed: runResult.tokensUsed
-                });
+                }, 'openai.service.ts');
             }
 
             return {
@@ -430,7 +430,7 @@ export class OpenAIService implements IOpenAIService {
                     chatId,
                     threadId: cachedThreadId,
                     source: 'cache'
-                });
+                }, 'openai.service.ts');
                 
                 // DEBUG: Cache hit details
                 logDebug('CACHE_HIT_DETAIL', 'Thread cache hit details', {
@@ -439,7 +439,7 @@ export class OpenAIService implements IOpenAIService {
                     threadId: cachedThreadId,
                     cacheKey,
                     cacheEnabled: this.config.enableThreadCache
-                });
+                }, 'openai.service.ts');
                 
                 return cachedThreadId;
             }
@@ -463,7 +463,7 @@ export class OpenAIService implements IOpenAIService {
             chatId,
             threadId: thread.id,
             enableCache: this.config.enableThreadCache
-        });
+        }, 'openai.service.ts');
         
         // DEBUG: Thread creation details
         logDebug('THREAD_CREATION_DETAIL', 'New thread creation details', {
@@ -516,7 +516,7 @@ export class OpenAIService implements IOpenAIService {
                 totalCharacters,
                 estimatedTokens,
                 messageCount: messages.data.length
-            });
+            }, 'openai.service.ts');
 
             return estimatedTokens;
             
@@ -525,7 +525,7 @@ export class OpenAIService implements IOpenAIService {
             logWarning('THREAD_TOKEN_COUNT_ERROR', 'Error obteniendo token count', {
                 threadId,
                 error: errorMessage
-            });
+            }, 'openai.service.ts');
             
             // Si no podemos obtener el count, asumir que está bien
             return 0;
@@ -553,7 +553,7 @@ export class OpenAIService implements IOpenAIService {
                                 threadId,
                                 messageId: message.id,
                                 imageType: content.type
-                            });
+                            }, 'openai.service.ts');
                             return true;
                         }
                     }
@@ -565,7 +565,7 @@ export class OpenAIService implements IOpenAIService {
             logWarning('CHECK_THREAD_IMAGES_ERROR', 'Error verificando imágenes en thread', {
                 threadId,
                 error: error instanceof Error ? error.message : 'Unknown error'
-            });
+            }, 'openai.service.ts');
             // Si hay error, asumir que NO hay imágenes para evitar forzar gpt-4o innecesariamente
             return false;
         }
@@ -583,7 +583,7 @@ export class OpenAIService implements IOpenAIService {
                     userId,
                     hasMessages: cachedResult,
                     source: 'cache'
-                });
+                }, 'openai.service.ts');
                 
                 // Si está cacheado como vacío, aún verificar tokens huérfanos en BD
                 if (!cachedResult && this.databaseService) {
@@ -633,7 +633,7 @@ export class OpenAIService implements IOpenAIService {
                             userId, 
                             threadId,
                             orphanTokens: currentThread.tokenCount
-                        });
+                        }, 'openai.service.ts');
                     } catch (resetError) {
                         logError('TOKEN_RESET_ORPHAN_ERROR', 'Error reseteando tokens huérfanos', {
                             userId,
@@ -655,7 +655,7 @@ export class OpenAIService implements IOpenAIService {
                 messageCount: messages.data.length,
                 hasMessages,
                 cached: !!this.cache
-            });
+            }, 'openai.service.ts');
 
             return hasMessages;
         } catch (error) {
@@ -669,7 +669,7 @@ export class OpenAIService implements IOpenAIService {
                 assumedResult: true,
                 conservativeApproach: 'avoid_false_resets',
                 cacheAvailable: !!this.cache
-            });
+            }, 'openai.service.ts');
             
             // Cachear como true por 1 minuto (TTL menor) para evitar calls repetidos fallidos
             if (this.cache) {
@@ -679,7 +679,7 @@ export class OpenAIService implements IOpenAIService {
                     userId,
                     ttl: '1min',
                     assumedHasMessages: true
-                });
+                }, 'openai.service.ts');
             }
             
             // Si hay error, asumir que SÍ tiene mensajes para ser conservadores
@@ -698,7 +698,7 @@ export class OpenAIService implements IOpenAIService {
                     threadId,
                     isValid: cachedValidation.isValid,
                     tokenCount: cachedValidation.tokenCount
-                });
+                }, 'openai.service.ts');
                 return cachedValidation;
             }
         }
@@ -727,7 +727,7 @@ export class OpenAIService implements IOpenAIService {
                     isValid: true,
                     tokenCount,
                     ttl: '30min'
-                });
+                }, 'openai.service.ts');
             }
             
             return result;
@@ -749,9 +749,9 @@ export class OpenAIService implements IOpenAIService {
                             userId, 
                             threadId, 
                             error: errorMessage 
-                        });
+                        }, 'openai.service.ts');
                     } else {
-                        logWarning('TOKEN_RESET_SKIPPED', 'DatabaseService no disponible - skip reset', { userId, threadId });
+                        logWarning('TOKEN_RESET_SKIPPED', 'DatabaseService no disponible - skip reset', { userId, threadId }, 'openai.service.ts');
                     }
                 } catch (resetError) {
                     logError('TOKEN_RESET_ERROR', 'Error reseteando tokens para thread inválido', {
@@ -765,7 +765,7 @@ export class OpenAIService implements IOpenAIService {
                     threadId,
                     userId,
                     error: errorMessage
-                });
+                }, 'openai.service.ts');
                 
                 const result = { isValid: false };
                 
@@ -781,7 +781,7 @@ export class OpenAIService implements IOpenAIService {
             logWarning('THREAD_VALIDATION_ERROR', 'Error validando thread, asumiendo válido', {
                 threadId,
                 error: errorMessage
-            });
+            }, 'openai.service.ts');
             
             return { isValid: true }; // Benefit of the doubt - no cachear errores temporales
         }
@@ -798,7 +798,7 @@ export class OpenAIService implements IOpenAIService {
             logWarning('CHECK_ACTIVE_RUN_ERROR', 'Error verificando run activo', {
                 threadId,
                 error: error instanceof Error ? error.message : 'Unknown error'
-            });
+            }, 'openai.service.ts');
             return { isActive: false }; // Asumir no activo en caso de error
         }
     }
@@ -867,7 +867,7 @@ export class OpenAIService implements IOpenAIService {
                     reasoningEffort: 'not_set',
                     hasCurrentImage,
                     hasImageHistory
-                });
+                }, 'openai.service.ts');
             } else {
                 // Usar modelo por defecto del Assistant (configurado en OpenAI Dashboard)
                 logInfo('MODEL_DEFAULT', 'Usando modelo por defecto del Assistant', {
@@ -875,7 +875,7 @@ export class OpenAIService implements IOpenAIService {
                     assistantId: this.config.assistantId,
                     hasCurrentImage: hasCurrentImage,
                     hasImageHistory: hasImageHistory
-                });
+                }, 'openai.service.ts');
             }
             
             const run = await openAIWithRetry(
@@ -942,7 +942,7 @@ export class OpenAIService implements IOpenAIService {
                         status: run.status,
                         attempts: attempts + 1,
                         reason: 'max_attempts_reached'
-                    });
+                    }, 'openai.service.ts');
                     break;
                 }
 
@@ -987,7 +987,7 @@ export class OpenAIService implements IOpenAIService {
                             actionType: run.required_action?.type,
                             toolCallsCount: run.required_action?.submit_tool_outputs?.tool_calls?.length || 0,
                             attempts: attempts + 1
-                        });
+                        }, 'openai.service.ts');
                         
                         if (run.required_action?.type === 'submit_tool_outputs') {
                             const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
@@ -1020,7 +1020,7 @@ export class OpenAIService implements IOpenAIService {
                                             runId,
                                             functionName: slowFunction.function.name,
                                             message: interimMessage
-                                        });
+                                        }, 'openai.service.ts');
                                     }
                                 } catch (error) {
                                     // No bloquear por error en mensaje interino
@@ -1140,7 +1140,7 @@ export class OpenAIService implements IOpenAIService {
                     functionName: functionCall.function.name,
                     functionId: functionCall.id,
                     arguments: functionCall.function.arguments
-                });
+                }, 'openai.service.ts');
 
                 try {
                     // Execute function using the real registry
@@ -1166,7 +1166,7 @@ export class OpenAIService implements IOpenAIService {
                         compactLength: compactFunctionResult.length,
                         isBeds24: functionCall.function.name === 'check_availability',
                         sentToOpenAI: true
-                    });
+                    }, 'openai.service.ts');
                     
                     // Log crítico: Función ejecutada exitosamente
                     logSuccess('FUNCTION_COMPLETED', `Función ${functionCall.function.name} completada exitosamente`, {
@@ -1251,7 +1251,7 @@ export class OpenAIService implements IOpenAIService {
                     userName,
                     functionCount: functionCalls.length,
                     tokensUsed: result.tokensUsed
-                });
+                }, 'openai.service.ts');
             }
             
             return {

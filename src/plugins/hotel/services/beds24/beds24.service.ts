@@ -50,7 +50,7 @@ export class Beds24Service {
                 return config;
             },
             (error) => {
-                logError('BEDS24_API', 'Error en request', { error: error.message });
+                logError('BEDS24_API', 'Error en request', { error: error.message }, 'beds24.service.ts');
                 return Promise.reject(error);
             }
         );
@@ -78,7 +78,7 @@ export class Beds24Service {
                         status: error.response?.status,
                         message: error.response?.data?.error || error.message,
                         url: error.config?.url
-                    });
+                    }, 'beds24.service.ts');
                 } catch (logError) {
                     // 🔧 ETAPA 1: Capturar errores en logging para evitar crash
                     console.error('[ERROR] BEDS24_LOG_ERROR:', logError.message);
@@ -90,7 +90,7 @@ export class Beds24Service {
         logSuccess('BEDS24_SERVICE', 'Servicio Beds24 inicializado', {
             apiUrl: config.apiUrl,
             hasToken: !!config.apiToken
-        });
+        }, 'beds24.service.ts');
     }
 
     /**
@@ -155,7 +155,7 @@ export class Beds24Service {
                     error: error instanceof Error ? error.message : error,
                     duration: `${duration}ms`,
                     query
-                });
+                }, 'beds24.service.ts');
             } catch (logError) {
                 // 🔧 ETAPA 1: Capturar errores en logging para evitar crash
                 console.error('[ERROR] BEDS24_LOG_ERROR:', logError.message);
@@ -211,7 +211,7 @@ export class Beds24Service {
         } catch (error) {
             logError('BEDS24_PROPERTIES', 'Error obteniendo propiedades', {
                 error: error instanceof Error ? error.message : error
-            });
+            }, 'beds24.service.ts');
             throw error;
         }
     }
@@ -249,7 +249,7 @@ export class Beds24Service {
         } catch (error) {
             logError('BEDS24_ROOMS', 'Error obteniendo habitaciones', {
                 error: error instanceof Error ? error.message : error
-            });
+            }, 'beds24.service.ts');
             throw error;
         }
     }
@@ -310,24 +310,24 @@ export class Beds24Service {
      */
     async validateToken(): Promise<boolean> {
         try {
-            logDebug('BEDS24_AUTH', 'Validando token de autenticación');
+            logDebug('BEDS24_AUTH', 'Validando token de autenticación', {}, 'beds24.service.ts');
             
             const response = await this.apiClient.get('/authentication/details');
             
             if (response.status === 200 && response.data.validToken === true) {
                 logSuccess('BEDS24_AUTH', 'Token válido confirmado', {
                     scopes: response.data.scopes || 'No especificados'
-                });
+                }, 'beds24.service.ts');
                 return true;
             } else {
-                logError('BEDS24_AUTH', 'Token inválido según endpoint details');
+                logError('BEDS24_AUTH', 'Token inválido según endpoint details', {}, 'beds24.service.ts');
                 return false;
             }
 
         } catch (error) {
             logError('BEDS24_AUTH', 'Error validando token', {
                 error: error instanceof Error ? error.message : error
-            });
+            }, 'beds24.service.ts');
             return false;
         }
     }
@@ -337,7 +337,7 @@ export class Beds24Service {
      */
     async healthCheck(): Promise<boolean> {
         try {
-            logDebug('BEDS24_HEALTH', 'Verificando estado de API Beds24');
+            logDebug('BEDS24_HEALTH', 'Verificando estado de API Beds24', {}, 'beds24.service.ts');
             
             // Primero validar el token
             const tokenValid = await this.validateToken();
@@ -352,9 +352,9 @@ export class Beds24Service {
             const isHealthy = response.status === 200 && response.data.success;
             
             if (isHealthy) {
-                logSuccess('BEDS24_HEALTH', 'API Beds24 funcionando correctamente');
+                logSuccess('BEDS24_HEALTH', 'API Beds24 funcionando correctamente', {}, 'beds24.service.ts');
             } else {
-                logError('BEDS24_HEALTH', 'API Beds24 no responde correctamente');
+                logError('BEDS24_HEALTH', 'API Beds24 no responde correctamente', {}, 'beds24.service.ts');
             }
 
             return isHealthy;
@@ -362,7 +362,7 @@ export class Beds24Service {
         } catch (error) {
             logError('BEDS24_HEALTH', 'Error en health check', {
                 error: error instanceof Error ? error.message : error
-            });
+            }, 'beds24.service.ts');
             return false;
         }
     }

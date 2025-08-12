@@ -75,7 +75,7 @@ export async function injectHistory(
                 isNewThread,
                 hasContextAnalysis: !!contextAnalysis,
                 requestId
-            });
+            }, 'historyInjection.ts');
             
             return {
                 success: true,
@@ -96,7 +96,7 @@ export async function injectHistory(
                 isNewThread,
                 reason: isNewThread ? 'new_thread_delegated_to_openai' : 'recently_injected',
                 requestId
-            });
+            }, 'historyInjection.ts');
             
             return {
                 success: true,
@@ -127,7 +127,7 @@ export async function injectHistory(
                 matchPercentage: contextAnalysis.matchPercentage,
                 reason: contextAnalysis.reason,
                 requestId
-            });
+            }, 'historyInjection.ts');
         }
         
         return {
@@ -145,7 +145,7 @@ export async function injectHistory(
             threadId,
             error: error.message,
             requestId
-        });
+        }, 'historyInjection.ts');
         
         return {
             success: false,
@@ -215,14 +215,14 @@ async function checkNeedsInjection(threadId: string, shortUserId: string, isNewT
             threadId,
             error: error.message,
             requestId
-        });
+        }, 'historyInjection.ts');
     }
     
     logInfo('INJECTION_CHECK_NEEDS', 'Thread necesita inyección', {
         userId: shortUserId,
         threadId,
         requestId
-    });
+    }, 'historyInjection.ts');
     return true;
 }
 
@@ -240,7 +240,7 @@ function markAsInjected(threadId: string, shortUserId: string): void {
         userId: shortUserId,
         threadId,
         cacheSize: injectionCache.size
-    });
+    }, 'historyInjection.ts');
 }
 
 // 🔧 ELIMINADO: Función injectNewThreadHistory obsoleta
@@ -264,7 +264,7 @@ async function compressHistory(history: string, shortUserId: string, requestId?:
                 originalLines: lines.length,
                 compressedLines: recentLines.length,
                 requestId
-            });
+            }, 'historyInjection.ts');
             
             return compressed;
         }
@@ -277,7 +277,7 @@ async function compressHistory(history: string, shortUserId: string, requestId?:
             userId: shortUserId,
             error: error.message,
             requestId
-        });
+        }, 'historyInjection.ts');
         return history;
     }
 }
@@ -412,7 +412,7 @@ async function injectContentToThread(threadId: string, content: string): Promise
     logInfo('CONTENT_INJECTION', 'Contenido listo para inyección', {
         threadId,
         contentLength: content.length
-    });
+    }, 'historyInjection.ts');
 }
 
 /**
@@ -453,7 +453,7 @@ export function cleanupExpiredCaches(): void {
             contextExpired,
             remainingHistory: historyCache.size,
             remainingContext: contextInjectionCache.size
-        });
+        }, 'historyInjection.ts');
     }
 }
 

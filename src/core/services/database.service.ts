@@ -53,7 +53,7 @@ export class DatabaseService {
             await this.prisma.$connect();
             this.isConnected = true;
             this.connectionRetries = 0;
-            logInfo('DATABASE_CONNECTION', '🗄️ Conectado a la base de datos PostgreSQL.');
+            logInfo('DATABASE_CONNECTION', '🗄️ Conectado a la base de datos PostgreSQL.', {}, 'database.service.ts');
             
             // Log técnico de sesión
             const { logSuccess } = require('../../utils/logging');
@@ -61,7 +61,7 @@ export class DatabaseService {
                 host: process.env.DB_HOST || 'localhost',
                 database: process.env.DB_NAME || 'unknown',
                 environment: process.env.NODE_ENV || 'development'
-            });
+            }, 'database.service.ts');
             
             // Sync memory data to database if we were in fallback mode
             await this.syncMemoryToDatabase();
@@ -72,7 +72,7 @@ export class DatabaseService {
             logWarning('DATABASE_CONNECTION', `⚠️ Error conectando a PostgreSQL (intento ${this.connectionRetries}/${this.maxRetries})`, { error: error instanceof Error ? error.message : error });
             
             if (this.connectionRetries >= this.maxRetries) {
-                logInfo('DATABASE_FALLBACK', '🔄 Activando modo fallback a memoria...');
+                logInfo('DATABASE_FALLBACK', '🔄 Activando modo fallback a memoria...', {}, 'database.service.ts');
                 // Don't throw error, continue in memory mode
             } else {
                 throw error;
@@ -150,9 +150,9 @@ export class DatabaseService {
                             }
                         });
                         
-                        logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto - chatId preservado', { userId });
+                        logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto - chatId preservado', { userId }, 'database.service.ts');
                     } else {
-                        logError('DATABASE_ERROR', `Error guardando thread en BD: ${msg}`, { userId, threadId: threadData.threadId, operation: 'setThread' });
+                        logError('DATABASE_ERROR', `Error guardando thread en BD: ${msg}`, { userId, threadId: threadData.threadId, operation: 'setThread' }, 'database.service.ts');
                         // Solo desconectar BD por errores de conectividad, no constraints
                         if (msg.includes('connect') || msg.includes('timeout') || msg.includes('network')) {
                             this.isConnected = false;
@@ -161,7 +161,7 @@ export class DatabaseService {
                     }
                 }
                 
-                logInfo('THREAD_SAVED_SIMPLE', `✅ Thread guardado con lógica simplificada: ${userId}`, { userId });
+                logInfo('THREAD_SAVED_SIMPLE', `✅ Thread guardado con lógica simplificada: ${userId}`, { userId }, 'database.service.ts');
                 
                 // 🔧 NUEVO: Log compacto de thread usage
                 if (threadData.threadId) {
@@ -175,7 +175,7 @@ export class DatabaseService {
                     );
                 }
             } catch (error) {
-                logWarning('THREAD_SAVE_ERROR', `⚠️ Error guardando en PostgreSQL, usando cache unificado`, { error: error instanceof Error ? error.message : error });
+                logWarning('THREAD_SAVE_ERROR', `⚠️ Error guardando en PostgreSQL, usando cache unificado`, { error: error instanceof Error ? error.message : error }, 'database.service.ts');
                 this.isConnected = false;
                 // Fallback to unified cache
                 if (this.clientCache) {
@@ -227,7 +227,7 @@ export class DatabaseService {
                         updateData.threadTokenCount = currentTokens + tokenCount;
                         logInfo('THREAD_TOKENS_ACCUMULATED_SIMPLE', `Thread reusado - tokens acumulados: ${currentTokens} + ${tokenCount}`, {
                             userId, threadId: currentThreadId, previousTokens: currentTokens, newTokens: tokenCount, total: currentTokens + tokenCount
-                        });
+                        }, 'database.service.ts');
                     } else {
                         // THREAD NUEVO: Empezar desde tokens del run actual (lógica simplificada)
                         updateData.threadTokenCount = tokenCount;
@@ -238,7 +238,7 @@ export class DatabaseService {
                             threadId: currentThreadId, 
                             initialTokens: tokenCount,
                             reason: 'simplified_new_thread'
-                        });
+                        }, 'database.service.ts');
                     }
                 } else if (tokenCount !== undefined && tokenCount <= 0) {
                     // Log cuando se skip por tokens inválidos
@@ -247,7 +247,7 @@ export class DatabaseService {
                         tokenCount,
                         threadId: currentThreadId,
                         reason: 'invalid_token_count'
-                    });
+                    }, 'database.service.ts');
                 }
                 
                 await this.prisma.clientView.upsert({
@@ -296,7 +296,7 @@ export class DatabaseService {
                 });
                 return true;
             } catch (error) {
-                logError('DATABASE_ERROR', `Error actualizando activity, usando memoria: ${error instanceof Error ? error.message : error}`, { userId, operation: 'updateThreadActivity' });
+                logError('DATABASE_ERROR', `Error actualizando activity, usando memoria: ${error instanceof Error ? error.message : error}`, { userId, operation: 'updateThreadActivity' }, 'database.service.ts');
                 this.isConnected = false;
                 
                 // Fallback: actualizar en cache
@@ -366,7 +366,7 @@ export class DatabaseService {
                 
                 return result;
             } catch (error) {
-                logError('DATABASE_ERROR', `Error leyendo de PostgreSQL, usando cache: ${error instanceof Error ? error.message : error}`, { userId, operation: 'getThread' });
+                logError('DATABASE_ERROR', `Error leyendo de PostgreSQL, usando cache: ${error instanceof Error ? error.message : error}`, { userId, operation: 'getThread' }, 'database.service.ts');
                 this.isConnected = false;
                 // Fallback to cache
                 if (this.clientCache) {
@@ -416,7 +416,7 @@ export class DatabaseService {
                 });
                 return true;
             } catch (error) {
-                logWarning('THREAD_DELETE_ERROR', `⚠️ Error eliminando thread de PostgreSQL, usando cache`, { error: error instanceof Error ? error.message : error });
+                logWarning('THREAD_DELETE_ERROR', `⚠️ Error eliminando thread de PostgreSQL, usando cache`, { error: error instanceof Error ? error.message : error }, 'database.service.ts');
                 this.isConnected = false;
                 // Fallback to cache deletion
                 if (this.clientCache) {
@@ -447,7 +447,7 @@ export class DatabaseService {
     private async syncMemoryToDatabase(): Promise<void> {
         // DEPRECADO: Cache unificado no necesita sync manual
         // El ClientDataCache mantiene consistencia automáticamente
-        logInfo('SYNC_DEPRECATED', `Sync deprecado - Cache unificado mantiene consistencia automática`);
+        logInfo('SYNC_DEPRECATED', `Sync deprecado - Cache unificado mantiene consistencia automática`, {}, 'database.service.ts');
     }
 
     public async forceSync(): Promise<void> {
@@ -468,7 +468,7 @@ export class DatabaseService {
             try {
                 return await this.prisma.clientView.findUnique({ where: { phoneNumber } });
             } catch (error) {
-                logError('DATABASE_ERROR', `Error buscando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'findUserByPhoneNumber' });
+                logError('DATABASE_ERROR', `Error buscando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'findUserByPhoneNumber' }, 'database.service.ts');
                 this.isConnected = false;
                 return null;
             }
@@ -505,7 +505,7 @@ export class DatabaseService {
 
                 return user;
             } catch (error) {
-                logError('DATABASE_ERROR', `Error creando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'createUser' });
+                logError('DATABASE_ERROR', `Error creando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'createUser' }, 'database.service.ts');
                 this.isConnected = false;
             }
         }
@@ -626,14 +626,14 @@ export class DatabaseService {
                 
                 return result;
             } catch (error) {
-                logError('DATABASE_ERROR', `Error guardando cliente en BD: ${error instanceof Error ? error.message : error}`, { phoneNumber: clientData.phoneNumber, operation: 'saveClient' });
+                logError('DATABASE_ERROR', `Error guardando cliente en BD: ${error instanceof Error ? error.message : error}`, { phoneNumber: clientData.phoneNumber, operation: 'saveClient' }, 'database.service.ts');
                 
                 // Para constraint errors, no desconectar BD inmediatamente - es recoverable
                 if (error instanceof Error && error.message.includes('Unique constraint failed')) {
                     logWarning('CONSTRAINT_ERROR_RECOVERABLE', `Constraint error recoverable, manteniendo conexión BD`, { 
                         phoneNumber: clientData.phoneNumber, 
                         error: error.message 
-                    });
+                    }, 'database.service.ts');
                 } else {
                     // Otros errores sí marcan BD como desconectada
                     this.isConnected = false;
@@ -653,7 +653,7 @@ export class DatabaseService {
                 Object.assign(cached, clientData);
                 this.clientCache.set(clientData.phoneNumber, cached);
             }
-            logInfo('CLIENT_CACHE_SAVE', `💾 Cliente guardado en cache unificado: ${clientData.phoneNumber}`, { phoneNumber: clientData.phoneNumber });
+            logInfo('CLIENT_CACHE_SAVE', `💾 Cliente guardado en cache unificado: ${clientData.phoneNumber}`, { phoneNumber: clientData.phoneNumber }, 'database.service.ts');
         }
     }
 
@@ -694,7 +694,7 @@ export class DatabaseService {
                     cacheSize: this.clientCache?.getStats().size || 0
                 };
             } catch (error) {
-                logWarning('STATS_ERROR', `⚠️ Error obteniendo estadísticas de PostgreSQL`, { error: error instanceof Error ? error.message : error });
+                logWarning('STATS_ERROR', `⚠️ Error obteniendo estadísticas de PostgreSQL`, { error: error instanceof Error ? error.message : error }, 'database.service.ts');
                 this.isConnected = false;
             }
         }
@@ -722,9 +722,9 @@ export class DatabaseService {
                     where: { phoneNumber },
                     data
                 });
-                logInfo('DATABASE_UPDATE', `Cliente actualizado: ${phoneNumber}`, { phoneNumber, operation: 'updateClient' });
+                logInfo('DATABASE_UPDATE', `Cliente actualizado: ${phoneNumber}`, { phoneNumber, operation: 'updateClient' }, 'database.service.ts');
             } catch (error) {
-                logError('DATABASE_ERROR', `Error actualizando cliente ${phoneNumber}`, { phoneNumber, operation: 'updateClient', error: error instanceof Error ? error.message : error });
+                logError('DATABASE_ERROR', `Error actualizando cliente ${phoneNumber}`, { phoneNumber, operation: 'updateClient', error: error instanceof Error ? error.message : error }, 'database.service.ts');
                 throw error;
             }
         } else {
@@ -766,7 +766,7 @@ export class DatabaseService {
                             newTokens: tokenCount,
                             diff,
                             reason: 'delayed_update_catchup'
-                        });
+                        }, 'database.service.ts');
                     }
                 }
                 
@@ -795,22 +795,22 @@ export class DatabaseService {
                     tokenCount,
                     previousTokens: currentDbCount,
                     increment: tokenCount - currentDbCount
-                });
+                }, 'database.service.ts');
             } catch (error) {
-                logWarning('TOKEN_COUNT_ERROR', `⚠️ Error actualizando token count para ${phoneNumber}`, { phoneNumber, tokenCount, error });
+                logWarning('TOKEN_COUNT_ERROR', `⚠️ Error actualizando token count para ${phoneNumber}`, { phoneNumber, tokenCount, error }, 'database.service.ts');
                 // Si hay error, marcar como desconectado para intentar reconectar
                 this.isConnected = false;
             }
         } else {
             // Intentar reconectar antes de saltar
-            logInfo('BD_RECONNECT_ATTEMPT', `Intentando reconectar BD para token update: ${phoneNumber}`, { phoneNumber, tokenCount });
+            logInfo('BD_RECONNECT_ATTEMPT', `Intentando reconectar BD para token update: ${phoneNumber}`, { phoneNumber, tokenCount }, 'database.service.ts');
             await this.connect();
             
             if (this.isConnected) {
                 // Reintentar después de reconexión exitosa
                 return this.updateThreadTokenCount(phoneNumber, tokenCount);
             } else {
-                logWarning('TOKEN_COUNT_SKIP', `Saltando actualización de tokens: BD desconectada`, { phoneNumber, tokenCount });
+                logWarning('TOKEN_COUNT_SKIP', `Saltando actualización de tokens: BD desconectada`, { phoneNumber, tokenCount }, 'database.service.ts');
             }
         }
     }
@@ -842,7 +842,7 @@ export class DatabaseService {
             const whapiToken = process.env.WHAPI_TOKEN;
 
             if (!whapiToken) {
-                logWarning('WHAPI_ENRICHMENT', 'WHAPI_TOKEN no disponible para enriquecimiento', { phoneNumber, operation: 'enrichUserFromWhapi' });
+                logWarning('WHAPI_ENRICHMENT', 'WHAPI_TOKEN no disponible para enriquecimiento', { phoneNumber, operation: 'enrichUserFromWhapi' }, 'database.service.ts');
                 return;
             }
 
@@ -855,7 +855,7 @@ export class DatabaseService {
             });
 
             if (!response.ok) {
-                logWarning('WHAPI_ENRICHMENT', `Error ${response.status} enriqueciendo usuario ${phoneNumber}`, { phoneNumber, statusCode: response.status, operation: 'enrichUserFromWhapi' });
+                logWarning('WHAPI_ENRICHMENT', `Error ${response.status} enriqueciendo usuario ${phoneNumber}`, { phoneNumber, statusCode: response.status, operation: 'enrichUserFromWhapi' }, 'database.service.ts');
                 return;
             }
 
@@ -885,7 +885,7 @@ export class DatabaseService {
                         data: updateData
                     });
 
-                    logInfo('USER_ENRICHMENT', `Labels actualizados automáticamente: ${phoneNumber} → ${labels.length} etiquetas`, { phoneNumber, labelsCount: labels.length, source: 'whapi_get', operation: 'enrichUserFromWhapi' });
+                    logInfo('USER_ENRICHMENT', `Labels actualizados automáticamente: ${phoneNumber} → ${labels.length} etiquetas`, { phoneNumber, labelsCount: labels.length, source: 'whapi_get', operation: 'enrichUserFromWhapi' }, 'database.service.ts');
 
                     // 🔧 NUEVO: Log compacto de operación DB
                     logDatabaseOperation(
@@ -898,7 +898,7 @@ export class DatabaseService {
                 }
             }
         } catch (error) {
-            logError('WHAPI_ENRICHMENT', `Error enriqueciendo usuario ${phoneNumber}`, { phoneNumber, operation: 'enrichUserFromWhapi', error: error instanceof Error ? error.message : error });
+            logError('WHAPI_ENRICHMENT', `Error enriqueciendo usuario ${phoneNumber}`, { phoneNumber, operation: 'enrichUserFromWhapi', error: error instanceof Error ? error.message : error }, 'database.service.ts');
         }
     }
 }

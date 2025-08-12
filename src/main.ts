@@ -53,7 +53,7 @@ function loadConfig(): AppConfig {
         host: config.host,
         hasOpenAI: !!config.secrets.OPENAI_API_KEY,
         hasWhapi: !!config.secrets.WHAPI_TOKEN
-    });
+    }, 'main.ts');
     console.log(`🌍 Server will start on ${config.host}:${config.port}`);
     
     return config;
@@ -86,7 +86,7 @@ function setupDependencyInjection() {
         functions: functionRegistry.list(),
         container: 'tsyringe',
         crmStatus: 'disabled'
-    });
+    }, 'main.ts');
     
     return { functionRegistry, enabledPlugins };
 }
@@ -103,7 +103,7 @@ async function main() {
             nodeVersion: process.version,
             environment: process.env.NODE_ENV || 'development',
             pid: process.pid
-        });
+        }, 'main.ts');
         
         // Load configuration
         const config = loadConfig();

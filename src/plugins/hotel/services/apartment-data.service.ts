@@ -53,7 +53,7 @@ export class ApartmentDataService {
         requestedRoomIds: roomIds.length,
         foundApartments: apartments.length,
         duration: `${duration}ms`
-      });
+      }, 'apartment-data.service.ts');
       
       return apartmentMap;
       
@@ -61,7 +61,7 @@ export class ApartmentDataService {
       logError('APARTMENT_DATA_SERVICE', 'Error loading apartment details', {
         error: error instanceof Error ? error.message : 'Unknown error',
         roomIds
-      });
+      }, 'apartment-data.service.ts');
       
       // Retornar Map vacío en caso de error
       return new Map();
@@ -89,7 +89,7 @@ export class ApartmentDataService {
       logSuccess('APARTMENT_DATA_SERVICE', 'Apartment upserted', {
         roomId: data.roomId,
         roomName: data.roomName
-      });
+      }, 'apartment-data.service.ts');
       
       return {
         propertyId: apartment.propertyId,
@@ -102,7 +102,7 @@ export class ApartmentDataService {
       logError('APARTMENT_DATA_SERVICE', 'Error upserting apartment', {
         error: error instanceof Error ? error.message : 'Unknown error',
         roomId: data.roomId
-      });
+      }, 'apartment-data.service.ts');
       
       return null;
     }

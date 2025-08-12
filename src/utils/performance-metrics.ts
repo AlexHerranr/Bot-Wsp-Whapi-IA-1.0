@@ -170,7 +170,7 @@ export class PerformanceMonitor {
                 calls: metrics.functionCalls,
                 errors: metrics.functionErrors
             }
-        });
+        }, 'performance-metrics.ts');
         
         // Alertas de performance
         this.checkPerformanceAlerts(metrics);
@@ -184,7 +184,7 @@ export class PerformanceMonitor {
                 currentLatency: `${metrics.openaiLatencyAvg}ms`,
                 threshold: '15000ms',
                 recommendation: 'Verificar conectividad y carga del sistema'
-            });
+            }, 'performance-metrics.ts');
         }
         
         // Alerta: Memoria alta
@@ -193,7 +193,7 @@ export class PerformanceMonitor {
                 currentMemory: `${metrics.memoryUsageMB}MB`,
                 threshold: '400MB',
                 recommendation: 'Verificar limpieza de estados y buffers'
-            });
+            }, 'performance-metrics.ts');
         }
         
         // Alerta: Tasa de éxito baja
@@ -202,7 +202,7 @@ export class PerformanceMonitor {
                 currentRate: `${metrics.successRate}%`,
                 threshold: '85%',
                 recommendation: 'Verificar errores de OpenAI y funciones'
-            });
+            }, 'performance-metrics.ts');
         }
         
         // Alerta: Muchos hits de concurrencia
@@ -223,7 +223,7 @@ export class PerformanceMonitor {
                 count: cleanedCount,
                 type,
                 recommendation: 'Verificar patrones de uso y memory leaks'
-            });
+            }, 'performance-metrics.ts');
         }
         
         if (cleanedCount > 0) {
@@ -231,7 +231,7 @@ export class PerformanceMonitor {
                 count: cleanedCount,
                 type,
                 reason: 'scheduled_cleanup'
-            });
+            }, 'performance-metrics.ts');
         }
     }
 
@@ -249,7 +249,7 @@ export class PerformanceMonitor {
             startTime: new Date()
         };
         
-        logInfo('PERFORMANCE_METRICS_RESET', 'Métricas de performance reiniciadas');
+        logInfo('PERFORMANCE_METRICS_RESET', 'Métricas de performance reiniciadas', {}, 'performance-metrics.ts');
     }
     
     // Obtener resumen de estadísticas

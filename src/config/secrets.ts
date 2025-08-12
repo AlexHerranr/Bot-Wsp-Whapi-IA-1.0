@@ -34,7 +34,7 @@ const accessSecretVersion = async (client: SecretManagerServiceClient, name: str
         }
         return payload;
     } catch (error) {
-        logError('SECRET_MANAGER', `Error al acceder al secreto ${name}`, { error });
+        logError('SECRET_MANAGER', `Error al acceder al secreto ${name}`, { error }, 'secrets.ts');
         throw error;
     }
 };
@@ -127,7 +127,7 @@ export const getSecrets = async (): Promise<AppSecrets> => {
         console.log('Secretos cargados y cacheados exitosamente desde Secret Manager.');
         return cachedSecrets;
     } catch (error) {
-        logError('SECRET_MANAGER', 'Fallo catastrófico al cargar secretos desde Secret Manager. El sistema no puede iniciar.', { error });
+        logError('SECRET_MANAGER', 'Fallo catastrófico al cargar secretos desde Secret Manager. El sistema no puede iniciar.', { error }, 'secrets.ts');
         // En caso de fallo, detener la aplicación es la opción más segura.
         process.exit(1);
     }

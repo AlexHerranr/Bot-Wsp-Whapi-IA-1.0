@@ -19,7 +19,7 @@ export class BufferManager implements IBufferManager {
         if (!buffer) {
             buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null, quotedMessageId } as any;
             this.buffers.set(userId, buffer);
-            logInfo('BUFFER_CREATED', 'Buffer creado para mensaje', { userId, userName, reason: 'new_message' });
+            logInfo('BUFFER_CREATED', 'Buffer creado para mensaje', { userId, userName, reason: 'new_message' }, 'buffer-manager.ts');
         } else {
             if (userName && userName !== 'Usuario') buffer.userName = userName;
             if (chatId && !buffer.chatId) buffer.chatId = chatId;
@@ -27,7 +27,7 @@ export class BufferManager implements IBufferManager {
         }
 
         if (buffer.messages.length >= MAX_BUFFER_MESSAGES) {
-            logWarning('BUFFER_LIMIT_REACHED', 'Límite alcanzado, procesando inmediatamente', { userId, userName, messageCount: buffer.messages.length });
+            logWarning('BUFFER_LIMIT_REACHED', 'Límite alcanzado, procesando inmediatamente', { userId, userName, messageCount: buffer.messages.length }, 'buffer-manager.ts');
             this.processBuffer(userId);
             return;
         }
@@ -96,7 +96,7 @@ export class BufferManager implements IBufferManager {
         if (!buffer) {
             buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null, pendingImage: null };
             this.buffers.set(userId, buffer);
-            logInfo('BUFFER_CREATED', 'Buffer creado para imagen', { userId, userName, reason: 'image_message' });
+            logInfo('BUFFER_CREATED', 'Buffer creado para imagen', { userId, userName, reason: 'image_message' }, 'buffer-manager.ts');
         } else {
             if (userName && userName !== 'Usuario') buffer.userName = userName;
             if (chatId && !buffer.chatId) buffer.chatId = chatId;
@@ -119,7 +119,7 @@ export class BufferManager implements IBufferManager {
             userName: buffer.userName || 'Usuario',
             hasCaption: !!imageMessage.caption,
             pendingMessages: buffer.messages.length
-        });
+        }, 'buffer-manager.ts');
     }
 
     public onTypingOrRecording(userId: string): void {
@@ -144,7 +144,7 @@ export class BufferManager implements IBufferManager {
                 userName: buffer.userName || 'Usuario',
                 messageCount: buffer.messages.length,
                 reason: 'typing_or_recording'
-            });
+            }, 'buffer-manager.ts');
         }
         // Si buffer existe pero está vacío, no hacer nada (no logs para reducir ruido)
     }
@@ -166,7 +166,7 @@ export class BufferManager implements IBufferManager {
                 userName: buffer.userName || 'Usuario',
                 reason: 'new_event',
                 previousDelay: delay
-            });
+            }, 'buffer-manager.ts');
         }
 
         // Crear nuevo timer de 5s
@@ -188,7 +188,7 @@ export class BufferManager implements IBufferManager {
             timeoutRemaining: `${delay/1000}s`,
             reason,
             delayMs: delay
-        });
+        }, 'buffer-manager.ts');
     }
 
     private async processBuffer(userId: string): Promise<void> {
@@ -198,7 +198,7 @@ export class BufferManager implements IBufferManager {
                 userId,
                 userName: buffer?.userName || 'unknown',
                 reason: 'no_messages_or_images'
-            });
+            }, 'buffer-manager.ts');
             this.clearBuffer(userId);
             return;
         }
@@ -223,7 +223,7 @@ export class BufferManager implements IBufferManager {
             messageCount: buffer.messages.length,
             hasImage: !!buffer.pendingImage,
             reason: 'order_preservation'
-        });
+        }, 'buffer-manager.ts');
 
         // Chequeo anti-concurrent: Si run activo, retrasar (en producción, poll OpenAI run status)
         if (this.activeRuns.get(userId)) {
@@ -237,7 +237,7 @@ export class BufferManager implements IBufferManager {
                     userName: buffer.userName,
                     runDuration,
                     reason: 'safety_timeout_60s'
-                });
+                }, 'buffer-manager.ts');
                 this.releaseRun(userId);
                 // Continúa procesando después del force release
             } else {
@@ -246,7 +246,7 @@ export class BufferManager implements IBufferManager {
                     userName: buffer.userName,
                     pendingMessages: buffer.messages.length,
                     runDuration
-                });
+                }, 'buffer-manager.ts');
                 // Usar timer más corto (1.5s) cuando hay run activo para verificar más frecuentemente
                 if (buffer.timer) {
                     clearTimeout(buffer.timer);
@@ -279,7 +279,7 @@ export class BufferManager implements IBufferManager {
                         isTyping: userState.isTyping,
                         isRecording: userState.isRecording,
                         messageCount: buffer.messages.length
-                    });
+                    }, 'buffer-manager.ts');
                     this.setOrExtendTimer(userId, 'activity'); // Re-extender mientras activo
                     return;
                 }
@@ -391,12 +391,12 @@ export class BufferManager implements IBufferManager {
                     userId,
                     userName: buffer.userName,
                     age: now - buffer.lastActivity
-                });
+                }, 'buffer-manager.ts');
                 this.clearBuffer(userId);
                 cleaned++;
             }
         }
-        if (cleaned > 0) logInfo('BUFFER_CLEANUP_COMPLETE', 'Limpieza completada', { cleaned, remaining: this.buffers.size });
+        if (cleaned > 0) logInfo('BUFFER_CLEANUP_COMPLETE', 'Limpieza completada', { cleaned, remaining: this.buffers.size }, 'buffer-manager.ts');
         return cleaned;
     }
 
@@ -417,7 +417,7 @@ export class BufferManager implements IBufferManager {
             if (!buffer) {
                 buffer = { messages: [], chatId: '', userName: '', lastActivity: Date.now(), timer: null };
                 this.buffers.set(userId, buffer);
-                logInfo('BUFFER_CREATED', 'Buffer creado por timer inteligente', { userId, triggerType });
+                logInfo('BUFFER_CREATED', 'Buffer creado por timer inteligente', { userId, triggerType }, 'buffer-manager.ts');
             }
             
             // Para voice, log especial indicando espera de transcripción
@@ -426,7 +426,7 @@ export class BufferManager implements IBufferManager {
                     userId, 
                     userName: buffer.userName,
                     delay: BUFFER_DELAY_MS
-                });
+                }, 'buffer-manager.ts');
                 // Voice siempre debe establecer timer para esperar transcripción
                 this.setOrExtendTimer(userId, type);
             } else {
@@ -438,7 +438,7 @@ export class BufferManager implements IBufferManager {
                         userId,
                         triggerType,
                         reason: 'empty_buffer'
-                    });
+                    }, 'buffer-manager.ts');
                 }
             }
         }
@@ -451,7 +451,7 @@ export class BufferManager implements IBufferManager {
                 userId,
                 userName: buffer.userName,
                 messageCount: buffer.messages.length
-            });
+            }, 'buffer-manager.ts');
             this.clearBuffer(userId);
         }
     }

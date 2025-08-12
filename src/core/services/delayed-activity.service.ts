@@ -45,7 +45,7 @@ export class DelayedActivityService {
             tokenCount,
             delayMinutes: 2,
             totalPending: this.pendingUpdates.size
-        });
+        }, 'delayed-activity.service.ts');
     }
 
     /**
@@ -78,7 +78,7 @@ export class DelayedActivityService {
     private async executeDelayedUpdate(userId: string): Promise<void> {
         const pending = this.pendingUpdates.get(userId);
         if (!pending) {
-            logWarning('DELAYED_UPDATE_NOT_FOUND', 'Update no encontrado al ejecutar', { userId });
+            logWarning('DELAYED_UPDATE_NOT_FOUND', 'Update no encontrado al ejecutar', { userId }, 'delayed-activity.service.ts');
             return;
         }
 
@@ -92,7 +92,7 @@ export class DelayedActivityService {
                 existing: existing?.tokenCount || 0,
                 new: pending.tokenCount || 0,
                 accumulated: accumulatedTokens 
-            });
+            }, 'delayed-activity.service.ts');
 
             // 1 SOLA LLAMADA A BD con tokens acumulados
             const success = await this.databaseService.updateThreadActivity(
@@ -107,9 +107,9 @@ export class DelayedActivityService {
                     lastActivity: pending.lastActivity,
                     tokenCount: accumulatedTokens,
                     delayMinutes: 2
-                });
+                }, 'delayed-activity.service.ts');
             } else {
-                logWarning('DELAYED_UPDATE_FAILED', 'Error en actualización delayed', { userId });
+                logWarning('DELAYED_UPDATE_FAILED', 'Error en actualización delayed', { userId }, 'delayed-activity.service.ts');
             }
         } catch (error) {
             logWarning('DELAYED_UPDATE_ERROR', 'Exception en actualización delayed', {
@@ -142,7 +142,7 @@ export class DelayedActivityService {
                 userId,
                 wasScheduledFor: existing.lastActivity,
                 tokenCount: existing.tokenCount
-            });
+            }, 'delayed-activity.service.ts');
             return true;
         }
         return false;
@@ -187,7 +187,7 @@ export class DelayedActivityService {
         
         logInfo('FLUSH_ALL_UPDATES', 'Ejecutando todos los updates pendientes', {
             count: pending.length
-        });
+        }, 'delayed-activity.service.ts');
 
         for (const update of pending) {
             clearTimeout(update.timer);
@@ -201,7 +201,7 @@ export class DelayedActivityService {
     public shutdown(): void {
         logInfo('DELAYED_ACTIVITY_SHUTDOWN', 'Limpiando timers pendientes', {
             pendingCount: this.pendingUpdates.size
-        });
+        }, 'delayed-activity.service.ts');
 
         // Cancelar todos los timers
         for (const update of this.pendingUpdates.values()) {

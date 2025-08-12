@@ -71,7 +71,7 @@ export class Beds24Client {
             logError('BEDS24_CLIENT', 'Token de Beds24 no configurado', {
                 tokenExists: !!this.apiToken,
                 baseUrl: this.baseUrl
-            });
+            }, 'beds24-client.ts');
         }
     }
 
@@ -84,7 +84,7 @@ export class Beds24Client {
 
         try {
             if (!this.apiToken) {
-                logError('BEDS24_API', 'Token no configurado - no se puede consultar disponibilidad');
+                logError('BEDS24_API', 'Token no configurado - no se puede consultar disponibilidad', {}, 'beds24-client.ts');
                 throw new Error('Token de Beds24 no configurado. Configurar BEDS24_TOKEN en variables de entorno.');
             }
 
@@ -183,7 +183,7 @@ export class Beds24Client {
                 duration: `${duration}ms`,
                 dateRange: `${options.arrival} - ${options.departure}`,
                 numAdults: options.numAdults
-            });
+            }, 'beds24-client.ts');
 
             // Log técnico: texto completo con caracteres especiales visibles
             const escapedText = formattedResponse
@@ -191,10 +191,10 @@ export class Beds24Client {
                 .replace(/\t/g, '\\t')
                 .replace(/\r/g, '\\r');
             
-            logInfo('HOTEL_AVAILABILITY_RESULT', `Texto enviado a OpenAI: ${escapedText}`);
+            logInfo('HOTEL_AVAILABILITY_RESULT', `Texto enviado a OpenAI: ${escapedText}`, {}, 'beds24-client.ts');
 
             // 🔧 NUEVO: Log compacto específico con resumen técnico
-            logInfo('HOTEL_AVAILABILITY', `${options.arrival}_${options.departure}_${options.numAdults}adl | ${availableApartments.length}apts | ${duration}ms | BD:OK | Ages:MISS | ${formattedResponse.length}chars`);
+            logInfo('HOTEL_AVAILABILITY', `${options.arrival}_${options.departure}_${options.numAdults}adl | ${availableApartments.length}apts | ${duration}ms | BD:OK | Ages:MISS | ${formattedResponse.length}chars`, {}, 'beds24-client.ts');
 
             return formattedResponse;
 
@@ -207,7 +207,7 @@ export class Beds24Client {
                 options,
                 apiUrl: this.baseUrl,
                 hasToken: !!this.apiToken
-            });
+            }, 'beds24-client.ts');
 
             // 🔧 NUEVO: Log error compacto
             const userId = (options as any).userId || 'system';
@@ -336,7 +336,7 @@ export class Beds24Client {
             logError('BEDS24_CLIENT', 'Error enriching with local data', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 apartmentCount: apartments.length
-            });
+            }, 'beds24-client.ts');
 
             // Fallback: retornar con defaults en caso de error BD
             return apartments.map(apt => ({

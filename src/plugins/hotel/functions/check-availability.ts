@@ -73,7 +73,7 @@ export async function checkAvailability(args: {
         );
         
         // Log técnico resumido en una línea
-        logInfo('HOTEL_AVAILABILITY', `${args.startDate}_${args.endDate}_${numAdults}adl | ${apartmentCount}apts | ${duration}ms | BD:${hasFixedCharges?'OK':'MISS'} | Ages:${hasAgeInfo?'OK':'MISS'} | ${result.length}chars`);
+        logInfo('HOTEL_AVAILABILITY', `${args.startDate}_${args.endDate}_${numAdults}adl | ${apartmentCount}apts | ${duration}ms | BD:${hasFixedCharges?'OK':'MISS'} | Ages:${hasAgeInfo?'OK':'MISS'} | ${result.length}chars`, {}, 'check-availability.ts');
 
         return result; // Ya viene formateado o con mensaje de error
 
@@ -83,7 +83,7 @@ export async function checkAvailability(args: {
         logError('CHECK_AVAILABILITY_ERROR', 'Error inesperado en check_availability', { 
             error: error.message || error,
             args 
-        });
+        }, 'check-availability.ts');
         
         // 🔧 NUEVO: Log compacto de function performance con error
         logFunctionPerformance(

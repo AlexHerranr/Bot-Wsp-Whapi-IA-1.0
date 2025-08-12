@@ -187,7 +187,7 @@ export class CoreBot {
                     userId, 
                     changes: changes || ['all'],
                     source: 'external_hook'
-                });
+                }, 'bot.ts');
 
                 // Invalidar cache para forzar refresh en próximo acceso
                 try {
@@ -216,7 +216,7 @@ export class CoreBot {
                 logError('HOOK_ERROR', `Error procesando hook de actualización`, { 
                     error: error instanceof Error ? error.message : error,
                     body: req.body
-                });
+                }, 'bot.ts');
                 res.status(500).json({ error: 'Internal server error' });
             }
         });
@@ -247,7 +247,7 @@ export class CoreBot {
                 userName,
                 chatId,
                 reason: 'empty_callback'
-            });
+            }, 'bot.ts');
             return;
         }
 
@@ -310,7 +310,7 @@ export class CoreBot {
                     userName,
                     hadCache: !!clientData,
                     reason: !clientData ? 'no_cache' : 'data_mismatch'
-                });
+                }, 'bot.ts');
 
                 // Consultar BD solo cuando sea necesario - con manejo de errores
                 let user = null;
@@ -374,7 +374,7 @@ export class CoreBot {
                         userId,
                         userName,
                         reason: 'no_db_data_found'
-                    });
+                    }, 'bot.ts');
                 }
             } else {
                 trackCache(true); // Hit
@@ -398,7 +398,7 @@ export class CoreBot {
                     messageCount,
                     combinedLength: combinedText.length,
                     reason: 'multi_message_burst'
-                });
+                }, 'bot.ts');
             }
             
             // 3. Construir mensaje contextual con formato temporal
@@ -440,7 +440,7 @@ export class CoreBot {
                     originalLength: contextualMessage.length,
                     truncatedLength: processedMessage.length,
                     limit: MAX_LENGTH
-                });
+                }, 'bot.ts');
             }
 
             // ❌ ELIMINADO: No inyectar IDs internos en el prompt
@@ -459,7 +459,7 @@ export class CoreBot {
                             threadId: existingThreadId,
                             attempt: waitAttempts + 1,
                             maxAttempts: maxWaitAttempts
-                        });
+                        }, 'bot.ts');
                         await new Promise(resolve => setTimeout(resolve, 2000));
                         waitAttempts++;
                     } else {
@@ -472,7 +472,7 @@ export class CoreBot {
                         userId,
                         threadId: existingThreadId,
                         combinedLength: processedMessage.length
-                    });
+                    }, 'bot.ts');
                     // Reencolar el mensaje para procesarlo después y no perderlo
                     try {
                         this.bufferManager.addMessage(userId, combinedText, chatId, userName);
@@ -481,7 +481,7 @@ export class CoreBot {
                             userId,
                             userName,
                             length: combinedText.length
-                        });
+                        }, 'bot.ts');
                     } catch (requeueError) {
                         logWarning('BUFFER_REQUEUE_FAILED', 'Fallo reencolando mensaje tras timeout de run', {
                             userId,
@@ -504,7 +504,7 @@ export class CoreBot {
                         chatId,
                         indicatorType: 'recording',
                         success: true
-                    });
+                    }, 'bot.ts');
                 } else {
                     // Evitar indicador de escritura largo antes del run de OpenAI para no simular escritura durante toda la latencia
                     // El indicador se envía justo antes de cada chunk en WhatsappService
@@ -546,7 +546,7 @@ export class CoreBot {
                 userName,
                 status: processingResult.success ? 'completed' : 'failed',
                 threadId: processingResult.threadId || 'unknown'
-            });
+            }, 'bot.ts');
 
             if (!processingResult.success) {
                 throw new Error(processingResult.error || 'OpenAI processing failed');
@@ -561,7 +561,7 @@ export class CoreBot {
                     chatId,
                     delayMs: 1000,
                     reason: 'voice_grouping_optimized'
-                });
+                }, 'bot.ts');
             }
 
             let response = processingResult.response || '';
@@ -575,7 +575,7 @@ export class CoreBot {
                     chatId,
                     threadId: processingResult.threadId,
                     reason: 'empty_response'
-                });
+                }, 'bot.ts');
             }
 
             // 6. Guardar/actualizar thread en la base de datos
@@ -594,7 +594,7 @@ export class CoreBot {
                             userId, 
                             userName,
                             newThreadId: processingResult.threadId 
-                        });
+                        }, 'bot.ts');
                     } catch (resetError) {
                         logError('TOKEN_RESET_NEW_ERROR', 'Error reseteando tokens para thread nuevo', {
                             userId,
@@ -619,7 +619,7 @@ export class CoreBot {
                                 threshold: immediateThreshold,
                                 threadId: processingResult.threadId,
                                 reason: 'large_run_new_thread'
-                            });
+                            }, 'bot.ts');
                         } catch (error) {
                             logError('TOKEN_IMMEDIATE_ERROR', 'Error en actualización inmediata, fallback a delayed', { 
                                 userId, 
@@ -669,7 +669,7 @@ export class CoreBot {
                                 threadId: processingResult.threadId,
                                 usedCache: !!cachedData,
                                 reason: 'large_run_existing_thread'
-                            });
+                            }, 'bot.ts');
                         } catch (error) {
                             logError('TOKEN_IMMEDIATE_ERROR', 'Error en actualización inmediata, fallback a delayed', { 
                                 userId, 
@@ -704,7 +704,7 @@ export class CoreBot {
                     userName,
                     imageCount: pendingImages.length,
                     reason: 'successful_processing'
-                });
+                }, 'bot.ts');
             }
 
             // 9. Generate hotel-specific context if needed
@@ -840,7 +840,7 @@ export class CoreBot {
                     userName,
                     chatId,
                     processingTime: processingResult.processingTime
-                });
+                }, 'bot.ts');
             }
             
             // Limpiar marker de error después de procesamiento exitoso (como en el monolítico)
@@ -855,7 +855,7 @@ export class CoreBot {
                     userId,
                     userName,
                     reason: 'successful_processing_complete'
-                });
+                }, 'bot.ts');
             }
             
             // Log técnico de sesión - procesamiento exitoso (solo si hay respuesta)
@@ -914,7 +914,7 @@ export class CoreBot {
                         userId,
                         userName,
                         reason: 'run_active_error'
-                    });
+                    }, 'bot.ts');
                 }
             }
             

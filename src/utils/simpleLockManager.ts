@@ -50,7 +50,7 @@ export class SimpleLockManager {
                 remainingTimeout: `${existingLock.timeout - lockAge}ms`,
                 activeLocks: this.userLocks.size,
                 activeQueues: this.userQueues.size
-            });
+            }, 'simpleLockManager.ts');
             return false;
         }
         
@@ -85,7 +85,7 @@ export class SimpleLockManager {
                 lockDuration: `${lockDuration}ms`,
                 wasExpired: lockDuration >= this.LOCK_TIMEOUT,
                 activeLocks: this.userLocks.size
-            });
+            }, 'simpleLockManager.ts');
         } else {
             // 🔧 NUEVO: Cambiar de debug a trace para reducir ruido
             logTrace('LOCK_ALREADY_RELEASED', 'Lock ya liberado para usuario', {
@@ -133,7 +133,7 @@ export class SimpleLockManager {
             logDebug('QUEUE_EMPTY', 'No hay mensajes en cola para usuario', {
                 userId,
                 totalQueues: this.userQueues.size
-            });
+            }, 'simpleLockManager.ts');
             return;
         }
 
@@ -167,7 +167,7 @@ export class SimpleLockManager {
                     messageId: item.messageId,
                     processedCount,
                     remainingInQueue: queue.length
-                });
+                }, 'simpleLockManager.ts');
             } catch (error) {
                 errorCount++;
                 logError('QUEUE_ITEM_ERROR', 'Error procesando mensaje de cola', {
@@ -221,7 +221,7 @@ export class SimpleLockManager {
                 lockDuration: `${now - lock.timestamp}ms`,
                 timeout: `${this.LOCK_TIMEOUT}ms`,
                 activeLocks: this.userLocks.size
-            });
+            }, 'simpleLockManager.ts');
             
             return false;
         }
@@ -241,7 +241,7 @@ export class SimpleLockManager {
         logDebug('LOCK_STATS', 'Estadísticas del sistema de locks', {
             ...stats,
             totalUsers: stats.activeLocks + stats.activeQueues
-        });
+        }, 'simpleLockManager.ts');
         
         return stats;
     }
@@ -260,7 +260,7 @@ export class SimpleLockManager {
             locksCleared: locksCount,
             queuesCleared: queuesCount,
             reason: 'manual_clear'
-        });
+        }, 'simpleLockManager.ts');
     }
 
     /**

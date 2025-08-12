@@ -50,7 +50,7 @@ export class WebhookProcessor {
         if (body.health && !body.messages && !body.presences && !body.statuses && !body.chats) {
             logDebug('HEALTH_WEBHOOK_IGNORED', 'Webhook solo de salud ignorado', {
                 health_status: body.health?.status?.text || body.health_status
-            });
+            }, 'webhook-processor.ts');
             return;
         }
         
@@ -60,7 +60,7 @@ export class WebhookProcessor {
                     statuses?.length ? `stat:${statuses.length}` : 'other';
         logInfo('WEBHOOK_RECEIVED', `📥 ${type}`, {
             data: type
-        });
+        }, 'webhook-processor.ts');
 
         // 1. PRIORIDAD: Eventos de Presencia
         if (presences && Array.isArray(presences) && presences.length > 0) {
@@ -94,7 +94,7 @@ export class WebhookProcessor {
                                'other';
             
             // Log siempre para mantener visibilidad pero de forma corta
-            logInfo('WEBHOOK_OTHER', `📥 ${webhookType}`, { type: webhookType });
+            logInfo('WEBHOOK_OTHER', `📥 ${webhookType}`, { type: webhookType }, 'webhook-processor.ts');
             return;
         }
 
@@ -110,7 +110,7 @@ export class WebhookProcessor {
             logWarning('WEBHOOK', 'Webhook inválido recibido', { 
                 ...debugInfo,
                 note: 'Rate limited - solo se loggea una vez por minuto'
-            });
+            }, 'webhook-processor.ts');
         }
     }
 
@@ -179,7 +179,7 @@ export class WebhookProcessor {
                     userName: userState.userName || 'Usuario',
                     status,
                     reason: 'extend_timer'
-                });
+                }, 'webhook-processor.ts');
                 
                 // SIEMPRE procesar el timer (crítico para buffering)
                 this.bufferManager.setIntelligentTimer(userId, status as 'typing' | 'recording');
@@ -211,7 +211,7 @@ export class WebhookProcessor {
                         userName: userState.userName || 'Usuario',
                         wasTyping,
                         wasRecording
-                    });
+                    }, 'webhook-processor.ts');
                     
                     // Si hay mensajes en buffer y el usuario estaba grabando, dar tiempo extra
                     // por si va a continuar grabando más audios
@@ -222,7 +222,7 @@ export class WebhookProcessor {
                             userName: userState.userName || 'Usuario',
                             messageCount: buffer.messages.length,
                             reason: 'recording_ended_with_messages'
-                        });
+                        }, 'webhook-processor.ts');
                         // Extender timer para dar oportunidad de continuar
                         this.bufferManager.setIntelligentTimer(userId, 'voice');
                     }
@@ -236,7 +236,7 @@ export class WebhookProcessor {
         if (message && message.id && this.mediaManager.isBotSentMessage(message.id)) {
             logDebug('BOT_ECHO_IGNORED', 'Eco del bot ignorado por ID', {
                 messageId: message.id
-            });
+            }, 'webhook-processor.ts');
             return;
         }
 
@@ -314,7 +314,7 @@ export class WebhookProcessor {
                     chat_name: webhookChatName,
                     from_name: webhookFromName,
                     source: 'webhook_event'
-                });
+                }, 'webhook-processor.ts');
                 
                 // Log debug para trazabilidad de nombres filtrados
                 if (webhookChatName && !hasValidChatName) {
@@ -352,7 +352,7 @@ export class WebhookProcessor {
                 logDebug('FROM_ME_NON_TEXT_BOT_IGNORED', 'Mensaje from_me no-text del bot ignorado por ID', {
                     messageId: message.id,
                     type: message.type
-                });
+                }, 'webhook-processor.ts');
                 return;
             }
 
@@ -363,7 +363,7 @@ export class WebhookProcessor {
                 if (!audioLink) {
                     logDebug('FROM_ME_VOICE_NO_LINK', 'from_me voz sin link, ignorado', {
                         messageId: message.id || 'sin_id'
-                    });
+                    }, 'webhook-processor.ts');
                     return;
                 }
                 try {
@@ -401,7 +401,7 @@ export class WebhookProcessor {
                         logWarning('MANUAL_VOICE_TRANSCRIPTION_FAILED', 'Fallo transcripción voz manual from_me', {
                             userId,
                             error: transcription.error
-                        });
+                        }, 'webhook-processor.ts');
                     }
                 } catch (e: any) {
                     logWarning('MANUAL_VOICE_SYNC_ERROR', 'Error sincronizando voz manual', {
@@ -416,7 +416,7 @@ export class WebhookProcessor {
             logDebug('FROM_ME_NON_TEXT_IGNORED', 'Mensaje from_me no-text ignorado', {
                 messageId: message.id || 'sin_id',
                 type: message.type
-            });
+            }, 'webhook-processor.ts');
             return;
         }
 
@@ -426,7 +426,7 @@ export class WebhookProcessor {
             if (!manualAgentEnabled) {
                 logDebug('FROM_ME_DISABLED', 'Mensajes from_me deshabilitados por configuración', {
                     messageId: message.id || 'sin_id'
-                });
+                }, 'webhook-processor.ts');
                 return;
             }
             
@@ -450,7 +450,7 @@ export class WebhookProcessor {
             if (message.id && this.mediaManager.isBotSentMessage(message.id)) {
                 logDebug('BOT_MESSAGE_FILTERED_ID', 'Mensaje del bot filtrado por ID', {
                     messageId: message.id
-                });
+                }, 'webhook-processor.ts');
                 return;
             }
             
@@ -628,7 +628,7 @@ export class WebhookProcessor {
                                 userName,
                                 messageId: message.id,
                                 error: result.error
-                            });
+                            }, 'webhook-processor.ts');
                         }
                     }
                     break;
@@ -643,7 +643,7 @@ export class WebhookProcessor {
                         chatId,
                         messageType: 'image',
                         messageId: message.id
-                    });
+                    }, 'webhook-processor.ts');
                     
                     if (message.image && message.image.link) {
                         // Agregar imagen al buffer para procesamiento directo con assistant
@@ -678,7 +678,7 @@ export class WebhookProcessor {
                     phoneNumber,
                     currentUserName,
                     reason: 'incomplete_data'
-                });
+                }, 'webhook-processor.ts');
 
                 // Enriquecer desde Whapi
                 await this.databaseService.enrichUserFromWhapi(phoneNumber);
@@ -688,7 +688,7 @@ export class WebhookProcessor {
                 logSuccess('ASYNC_ENRICHMENT_COMPLETE', 'Enriquecimiento async completado', {
                     phoneNumber,
                     previousUserName: currentUserName
-                });
+                }, 'webhook-processor.ts');
 
             } catch (error) {
                 logWarning('ASYNC_ENRICHMENT_ERROR', 'Error en enriquecimiento async, continuando', {
@@ -718,7 +718,7 @@ export class WebhookProcessor {
                 agentName,
                 threadId,
                 messageLength: message.length
-            });
+            }, 'webhook-processor.ts');
             
         } catch (error) {
             logError('MANUAL_SYNC_ERROR', 'Error sincronizando mensaje manual', {

@@ -59,7 +59,7 @@ async function handleGetConversationContext(args: any, requestId?: string): Prom
     userId,
     contextLevel: context_level,
     requestId
-  });
+  }, 'get-conversation-context.ts');
 
   try {
     let context = "";
@@ -98,7 +98,7 @@ async function handleGetConversationContext(args: any, requestId?: string): Prom
       contextLevel: context_level,
       messageCount,
       contextLength: context.length
-    });
+    }, 'get-conversation-context.ts');
 
     return {
       success: true,

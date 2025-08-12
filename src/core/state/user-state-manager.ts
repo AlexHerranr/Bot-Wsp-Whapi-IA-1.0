@@ -101,7 +101,7 @@ export class UserManager {
                         userId,
                         reason: 'state_cleanup_memory_optimization',
                         previousVoiceState: true
-                    });
+                    }, 'user-state-manager.ts');
                 }
                 
                 if (state.lastTyping > 0) {
@@ -110,7 +110,7 @@ export class UserManager {
                         lastTyping: state.lastTyping,
                         reason: 'state_cleanup_memory_optimization',
                         previousTypingState: state.lastTyping
-                    });
+                    }, 'user-state-manager.ts');
                 }
             }
             
