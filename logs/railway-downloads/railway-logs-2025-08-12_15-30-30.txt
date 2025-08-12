@@ -1,0 +1,551 @@
+2025-08-12T20:08:53Z [BUFFER_METRIC:buffer] sys: active:1 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:08:55Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:08:55Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:08:58Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:08:58Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:01Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:01Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:04Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:04Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:07Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:07Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:10Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:10Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:13Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:13Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:16Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:16Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:19Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:19Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:22Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:22Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:25Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:25Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:28Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:28Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:31Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:31Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:34Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:34Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:37Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:37Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:40Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:40Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:43Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:43Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:46Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:46Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:49Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:49Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:52Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:52Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:53Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:15h43m activeUsers:1
+2025-08-12T20:09:53Z [CACHE_METRIC:cache] sys: hits:74% misses:26% size:0MB users:1 evicts:0
+2025-08-12T20:09:53Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:09:53Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:166ch funcs:2 errs:0
+2025-08-12T20:09:53Z [LATENCY_METRIC:system] null: openai:25759ms beds24:105ms whapi:0ms db:30ms total:25910ms
+2025-08-12T20:09:53Z [BUFFER_METRIC:buffer] sys: active:1 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:09:55Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:55Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:09:58Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:09:58Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:01Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:01Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:04Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:04Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:07Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:07Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:10Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:10Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:13Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:13Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:16Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:16Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:19Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:19Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:22Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:22Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:25Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:25Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:28Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:28Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:31Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:31Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:34Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:34Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:37Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:37Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:40Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:40Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:43Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:43Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:46Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:46Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:49Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:49Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:52Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:52Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:53Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:15h44m activeUsers:1
+2025-08-12T20:10:53Z [CACHE_METRIC:cache] sys: hits:74% misses:26% size:0MB users:1 evicts:0
+2025-08-12T20:10:53Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:10:53Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:166ch funcs:2 errs:0
+2025-08-12T20:10:53Z [LATENCY_METRIC:system] null: openai:25759ms beds24:105ms whapi:0ms db:30ms total:25910ms
+2025-08-12T20:10:53Z [BUFFER_METRIC:buffer] sys: active:1 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:10:55Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:55Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:10:58Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:10:58Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:01Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:01Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:04Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:04Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:07Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:07Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:10Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:10Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:13Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:13Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:16Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:16Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:19Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:19Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:22Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:22Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:25Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:25Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:28Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:28Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:31Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:31Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:34Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:34Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:37Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:37Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:40Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:40Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:43Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:43Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:46Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:46Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:46Z [MILESTONE:unknown] Line 7000 reached
+2025-08-12T20:11:46.785749392Z [INFO] [LOG_FILE_CREATED] Chunk 14 guardado: logs/railway-logs-chunk-14-2025-08-12T04-26-33.log labels={"app":"whatsapp-bot","category":"LOG_FILE_CREATED","chunkNumber":14,"fileName":"logs/railway-logs-chunk-14-2025-08-12T04-26-33.log","level":"INFO"} timestamp="2025-08-12T20:11:46.783Z"
+2025-08-12T20:11:49Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:49Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:52Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:52Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:53Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:15h45m activeUsers:1
+2025-08-12T20:11:53Z [CACHE_METRIC:cache] sys: hits:74% misses:26% size:0MB users:1 evicts:0
+2025-08-12T20:11:53Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:11:53Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:166ch funcs:2 errs:0
+2025-08-12T20:11:53Z [LATENCY_METRIC:system] null: openai:25759ms beds24:105ms whapi:0ms db:30ms total:25910ms
+2025-08-12T20:11:53Z [BUFFER_METRIC:buffer] sys: active:1 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:11:55Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:55Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:11:58Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:11:58Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:01Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:01Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:04Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:04Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:07Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:07Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:10Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:10Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:13Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:13Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:16Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:16Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:19Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:19Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:22Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:22Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:25Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:25Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:28Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:28Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:31Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:31Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:34Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:34Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:37Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:37Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:40Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:40Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:43Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:43Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:46Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:46Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:49Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:49Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:52Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:52Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:53Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:15h46m activeUsers:1
+2025-08-12T20:12:53Z [CACHE_METRIC:cache] sys: hits:74% misses:26% size:0MB users:1 evicts:0
+2025-08-12T20:12:53Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:12:53Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:166ch funcs:2 errs:0
+2025-08-12T20:12:53Z [LATENCY_METRIC:system] null: openai:25759ms beds24:105ms whapi:0ms db:30ms total:25910ms
+2025-08-12T20:12:53Z [BUFFER_METRIC:buffer] sys: active:1 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:12:55Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:55Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:12:58Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:12:58Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:01Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:01Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:04Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:04Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:07Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:07Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:10Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:10Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:13Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:13Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:16Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:16Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:19Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:19Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:22Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:22Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:25Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:25Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:28Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:28Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:31Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:31Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:34Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:34Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:37Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:37Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:40Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:40Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:43Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:43Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:46Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:46Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:49Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:49Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:52Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:52Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:53Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:15h47m activeUsers:1
+2025-08-12T20:13:53Z [CACHE_METRIC:cache] sys: hits:74% misses:26% size:0MB users:1 evicts:0
+2025-08-12T20:13:53Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:13:53Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:166ch funcs:2 errs:0
+2025-08-12T20:13:53Z [LATENCY_METRIC:system] null: openai:25759ms beds24:105ms whapi:0ms db:30ms total:25910ms
+2025-08-12T20:13:53Z [BUFFER_METRIC:buffer] sys: active:1 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:13:55Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:55Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:13:58Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:13:58Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:01Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:01Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:04Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:04Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:07Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:07Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:10Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:10Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:13Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:13Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:16Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:16Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:19Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:19Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:22Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:22Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:25Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:25Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:28Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:28Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:31Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:31Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:34Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:34Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:37Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:37Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:40Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:40Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:43Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:43Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:46Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:46Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:49Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:49Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:52Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:52Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:53Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:15h48m activeUsers:1
+2025-08-12T20:14:53Z [CACHE_METRIC:cache] sys: hits:74% misses:26% size:0MB users:1 evicts:0
+2025-08-12T20:14:53Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:14:53Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:166ch funcs:2 errs:0
+2025-08-12T20:14:53Z [LATENCY_METRIC:system] null: openai:25759ms beds24:105ms whapi:0ms db:30ms total:25910ms
+2025-08-12T20:14:53Z [BUFFER_METRIC:buffer] sys: active:1 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:14:55Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:55Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:14:58Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:14:58Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:01Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:01Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:04Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:04Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:07Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:07Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:10Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:10Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:13Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:13Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:16Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:16Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:19Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:19Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:22Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:22Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:25Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:25Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:28Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:28Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:31Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:31Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:34Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:34Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:37Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:37Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:40Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:40Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:43Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:43Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:46Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:46Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:49Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:49Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:52Z [BUFFER_T:buffer] 57312...849: Timer anterior cancelado
+2025-08-12T20:15:52Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:15:53Z [SYS_METRIC:system] sys: mem:21/512MB cpu:0% conn:0 uptime:15h49m activeUsers:1
+2025-08-12T20:15:53Z [CACHE_METRIC:cache] sys: hits:74% misses:26% size:0MB users:1 evicts:0
+2025-08-12T20:15:53Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:15:53Z [USAGE_STATS:system] sys: msgs:9/hr chunks:0 avgLen:166ch funcs:2 errs:0
+2025-08-12T20:15:53Z [LATENCY_METRIC:system] null: openai:25759ms beds24:105ms whapi:0ms db:30ms total:25910ms
+2025-08-12T20:15:53Z [BUFFER_METRIC:buffer] sys: active:1 merged:0 abandoned:0 voice:0 text:0
+🛑 Received SIGTERM, shutting down gracefully...
+2025-08-12T20:15:55Z [SHUTDOWN:unknown] sys: Señal de parada recibida: SIGTERM
+🛑 Stopping CoreBot...
+2025-08-12T20:15:55Z [BOT_STOP:unknown] sys: Iniciando proceso de parada del bot
+2025-08-12T20:15:55Z [FLUSH_AL:unknown] sys: Ejecutando todos los updates pendientes
+2025-08-12T20:15:55Z [DELAYED_:unknown] sys: Limpiando timers pendientes
+2025-08-12T20:15:55Z [SESSION_:unknown] sys: Sesión de bot finalizada
+✅ CoreBot stopped successfully
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.5.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+npm notice To update run: npm install -g npm@11.5.2
+npm notice
+
+> tealquilamos-bot@1.0.0 start
+> node dist/main.js
+
+🚀 Starting TeAlquilamos Bot...
+2025-08-12T20:15:57Z [APP_STAR:unknown] sys: Iniciando TeAlquilamos Bot
+✅ Configuration loaded successfully
+2025-08-12T20:15:57Z [CONFIG_L:unknown] sys: Configuración cargada exitosamente
+🌍 Server will start on 0.0.0.0:8080
+🔧 DI ✓ 5 services, 1 function
+🔌 hotel-plugin ✓ 1 function
+✅ check_availability registered
+2025-08-12T20:15:57Z [PLUGIN_R:unknown] sys: hotel-plugin ✓ 1 function
+2025-08-12T20:15:57Z [DI_COMPL:unknown] sys: DI ✓ 2 services, 1 function (CRM jobs de...
+Cache unificado inyectado en DB service - MemoryStore eliminado
+2025-08-12T20:15:57Z [DATABASE:database] sys: 🗄️ Conectado a la base de datos Postgre...
+2025-08-12T20:15:57Z [DATABASE:unknown] sys: Conexión exitosa a PostgreSQL
+2025-08-12T20:15:57Z [SYNC_DEP:unknown] sys: Sync deprecado - Cache unificado mantien...
+🔧 Cleanup tasks configured
+2025-08-12T20:15:57Z [SERVER_S:unknown] sys: Servidor HTTP iniciado
+=== Bot TeAlquilamos Iniciado ===
+🚀 Servidor: 0.0.0.0:8080
+🔗 Webhook: configurando...
+✅ Sistema listo
+
+🚀 CoreBot started successfully on 0.0.0.0:8080
+📊 Functions registered: 1
+2025-08-12T20:15:57Z [BOT_READ:unknown] sys: Bot completamente inicializado
+2025-08-12T20:16:57Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h1m activeUsers:0
+2025-08-12T20:16:57Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-12T20:16:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:16:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:16:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:17:57Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h2m activeUsers:0
+2025-08-12T20:17:57Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-12T20:17:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:17:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:17:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:18:57Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h3m activeUsers:0
+2025-08-12T20:18:57Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-12T20:18:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:18:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:18:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:19:57Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h4m activeUsers:0
+2025-08-12T20:19:57Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-12T20:19:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:19:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:19:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:20:57Z [SYS_METRIC:system] sys: mem:14/512MB cpu:0% conn:0 uptime:0h5m activeUsers:0
+2025-08-12T20:20:57Z [CACHE_METRIC:cache] sys: hits:0% misses:100% size:0MB users:0 evicts:0
+2025-08-12T20:20:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:20:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:20:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:21:48Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-12T20:21:48Z [WEBHOOK:webhook] pres:1
+2025-08-12T20:21:48Z [BUFFER_E:unknown] 57312...849: Evento de presencia detectado
+✍️ Usuario está escribiendo...
+2025-08-12T20:21:49Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-12T20:21:49Z [WEBHOOK:webhook] pres:1
+2025-08-12T20:21:49Z [BUFFER_E:unknown] 57312...849: Evento de presencia detectado
+2025-08-12T20:21:50Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-12T20:21:50Z [WEBHOOK:webhook] msg:1
+2025-08-12T20:21:50Z [RECONCIL:unknown] sys: Cliente actualizado por reconciliación
+WEBHOOK_CACHE_SYNC: Updated clientCache for 573125359849, preserving threadId: null
+2025-08-12T20:21:50Z [CLIENT_U:unknown] sys: Cliente actualizado desde webhook
+2025-08-12T20:21:50Z [DELAYED_:unknown] 57312...849: Update programado para 2min
+2025-08-12T20:21:50Z [MSG_RX:webhook] 57312...849: text "Hola..."
+🗣️ brandname: 💬 "Hola" → 🤖
+2025-08-12T20:21:50Z [BUFFER_C:unknown] 57312...849: Buffer creado para mensaje
+2025-08-12T20:21:50Z [BUFFER_S:buffer] 57312...849: Mensaje agregado, estado actual buffer
+2025-08-12T20:21:50Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:21:52Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-12T20:21:52Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-12T20:21:55Z [BUFFER:buffer] 57312...849: 1msg, 4ch
+2025-08-12T20:21:55Z [MESSAGE_:webhook] 57312...849: Iniciando procesamiento de buffer
+2025-08-12T20:21:55Z [CACHE_MISS:cache] 57312...849
+2025-08-12T20:21:55Z [DB_QUERY:database] 57312...849: type:thread_fetch time:6ms res:thread:... cache:no_change
+2025-08-12T20:21:55Z [OPENAI_M:unknown] 57312...849: Mensaje preparado para OpenAI
+CACHE_GET: key=573125359849, found=true, size=1
+Cache HIT for thread: 573125359849
+CACHE_DEBUG: threadId=undefined, tokenCount=0, cachedAt=Tue Aug 12 2025 20:21:55 GMT+0000 (Coordinated Universal Time)
+Cache HIT but no threadId - checking BD as fallback: 573125359849
+2025-08-12T20:21:55Z [DB_QUERY:database] 57312...849: type:thread_fetch time:6ms res:thread:... cache:no_change
+BD HIT (cache miss) for thread: 573125359849, syncing cache
+[THREAD_SOURCE:cache] 573125359849: bd:0 cache:0 thread: src:bd_fallback
+CACHE_SET: stored for 573125359849, size: 1
+CACHE_SET_DEBUG: threadId=, tokenCount=0
+2025-08-12T20:21:55Z [OPENAI_R:unknown] 57312...849: Iniciando run de OpenAI
+2025-08-12T20:21:55Z [OPENAI_C:unknown] 57312...849: Estado de concurrencia OpenAI
+2025-08-12T20:21:55Z [AI_START:openai] 57312...849 | null
+2025-08-12T20:21:55Z [WEBHOOK_:unknown] sys: Procesando webhook
+2025-08-12T20:21:55Z [WEBHOOK:webhook] msg:1
+2025-08-12T20:21:55Z [DELAYED_:unknown] 57312...849: Timer anterior cancelado
+2025-08-12T20:21:55Z [DELAYED_:unknown] 57312...849: Update programado para 2min
+2025-08-12T20:21:55Z [MSG_RX:webhook] 57312...849: text "Soy gay..."
+🗣️ brandname: 💬 "Soy gay" → 🤖
+2025-08-12T20:21:55Z [BUFFER_S:buffer] 57312...849: Mensaje agregado, estado actual buffer
+2025-08-12T20:21:55Z [BUFFER_S:unknown] 57312...849: Buffer esperando agrupación
+2025-08-12T20:21:55Z [THR_NEW:unknown] th_threa...iYd
+2025-08-12T20:21:55Z [OPENAI_P:unknown] 57312...849: Prompt completo compactado enviado a Ope...
+[OPENAI_RAW_CONTENT] 573125359849: "Cliente: NOHAYREGISTRO\nTags: NOHAYREGISTRO\nHora actual: 12 de ago de 2025, 3:21 p. m.\n\nMensaje del cliente:\nHola..." (117ch total)
+2025-08-12T20:21:55Z [OPENAI_M:openai] 57312...849: Mensaje enviado al thread de OpenAI
+2025-08-12T20:21:56Z [MODEL_DE:unknown] sys: Usando modelo por defecto del Assistant
+2025-08-12T20:21:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h6m activeUsers:0
+2025-08-12T20:21:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:21:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:21:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:21:57Z [ASYNC_EN:unknown] sys: Iniciando enriquecimiento async
+2025-08-12T20:21:57Z [BUFFER_METRIC:buffer] sys: active:1 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:21:57Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-12T20:21:58Z [ASYNC_EN:unknown] sys: Enriquecimiento async completado
+2025-08-12T20:22:00Z [BUFFER_D:unknown] 57312...849: Retrasando por run activo
+2025-08-12T20:22:01Z [OPENAI_P:unknown] sys: Esperando respuesta - status: failed
+2025-08-12T20:22:01Z [OPENAI_R:unknown] 57312...849: Run de OpenAI completado
+2025-08-12T20:22:01Z [BUFFER_E:unknown] 57312...849: Limpiando buffer por error
+❌ Error: Error en el callback del buffer para brandname: Run failed: Sorry, something went wrong.
+2025-08-12T20:22:01Z [MESSAGE_:unknown] 57312...849: Error procesando buffer de mensajes
+2025-08-12T20:22:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h7m activeUsers:0
+2025-08-12T20:22:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:22:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:22:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:22:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:23:55Z [DB_QUERY:database] 57312...849: type:thread_fetch time:12ms res:thread:... cache:no_change
+2025-08-12T20:23:55Z [TOKENS_S:unknown] 57312...849: Tokens acumulados
+2025-08-12T20:23:55Z [TOKEN_CO:unknown] 57312...849: Token count inválido - solo actualiza la...
+2025-08-12T20:23:55Z [RECONCIL:unknown] 57312...849: Thread activity actualizado por reconcil...
+2025-08-12T20:23:55Z [THREAD_A:unknown] 57312...849: Thread activity + tokens actualizados: 5...
+2025-08-12T20:23:55Z [DELAYED_:unknown] 57312...849: lastActivity + tokens actualizados
+2025-08-12T20:23:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h8m activeUsers:0
+2025-08-12T20:23:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:23:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:23:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:23:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:24:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h9m activeUsers:0
+2025-08-12T20:24:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:24:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:24:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:24:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:25:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h10m activeUsers:0
+2025-08-12T20:25:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:25:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:25:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:25:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:26:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h11m activeUsers:0
+2025-08-12T20:26:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:26:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:26:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:26:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:27:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h12m activeUsers:0
+2025-08-12T20:27:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:27:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:27:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:27:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:28:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h13m activeUsers:0
+2025-08-12T20:28:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:28:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:28:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:28:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:29:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h14m activeUsers:0
+2025-08-12T20:29:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:29:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:29:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:29:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:30:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h15m activeUsers:0
+2025-08-12T20:30:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:30:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:30:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:30:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:31:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h16m activeUsers:0
+2025-08-12T20:31:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:31:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:31:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:31:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:32:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h17m activeUsers:0
+2025-08-12T20:32:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:32:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:32:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:32:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:33:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h18m activeUsers:0
+2025-08-12T20:33:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:33:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:33:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:33:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:34:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h19m activeUsers:0
+2025-08-12T20:34:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:34:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:34:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:34:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:35:57Z [STATE_CL:unknown] 57312...849: Limpiando user state inactivo optimizado
+2025-08-12T20:35:57Z [TYPING_F:unknown] 57312...849: Reset flag de typing en cleanup optimiza...
+🧹 Cleaned up 1 old user states (optimized for 100+ users)
+2025-08-12T20:35:57Z [MEMORY_O:unknown] sys: Estados de usuario limpiados para optimi...
+2025-08-12T20:35:57Z [MEMORY_C:unknown] sys: Cleanup de users ejecutado
+2025-08-12T20:35:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h20m activeUsers:0
+2025-08-12T20:35:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:35:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:35:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:35:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:36:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h21m activeUsers:0
+2025-08-12T20:36:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:36:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:36:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:36:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:37:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h22m activeUsers:0
+2025-08-12T20:37:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:37:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:37:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:37:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:38:57Z [SYS_METRIC:system] sys: mem:18/512MB cpu:0% conn:0 uptime:0h23m activeUsers:0
+2025-08-12T20:38:57Z [CACHE_METRIC:cache] sys: hits:50% misses:50% size:0MB users:0 evicts:0
+2025-08-12T20:38:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-12T20:38:57Z [USAGE_STATS:system] sys: msgs:0/hr chunks:0 avgLen:0ch funcs:0 errs:0
+2025-08-12T20:38:57Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
