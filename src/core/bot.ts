@@ -95,7 +95,7 @@ export class CoreBot {
             whapiApiUrl: this.config.secrets.WHAPI_API_URL,
             whapiToken: this.config.secrets.WHAPI_TOKEN
         });
-        this.whatsappService = new WhatsappService(this.openai, this.terminalLog, this.config, this.databaseService);
+        this.whatsappService = new WhatsappService(this.openai, this.terminalLog, this.config, this.databaseService, this.mediaManager);
         
         // Function registry passed from main.ts (with plugins already registered)
         this.functionRegistry = functionRegistry || container.resolve(FunctionRegistryService);

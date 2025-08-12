@@ -5,6 +5,7 @@ import { fetchWithRetry } from '../utils/retry-utils';
 import { getShortUserId } from '../utils/identifiers';
 import { logInfo } from '../../utils/logging';
 import { DatabaseService } from './database.service';
+import { MediaManager } from '../state/media-manager';
 
 // Simulación de la configuración que será inyectada
 interface AppConfig {
@@ -20,14 +21,21 @@ interface UserState {
 }
 
 export class WhatsappService {
+    private lastIndicatorTime: { [chatId: string]: number } = {}; // Para throttle de indicadores
+
     constructor(
         private openai: OpenAI,
         private terminalLog: TerminalLog,
         private config: AppConfig,
-        private databaseService: DatabaseService
+        private databaseService: DatabaseService,
+        private mediaManager: MediaManager
     ) {}
 
     public async sendTypingIndicator(chatId: string): Promise<void> {
+        // Throttle para evitar spam de indicadores (1 segundo mínimo)
+        if (Date.now() - (this.lastIndicatorTime[chatId] || 0) < 1000) return;
+        this.lastIndicatorTime[chatId] = Date.now();
+
         try {
             await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/presences/${chatId}`, {
                 method: 'PUT',
@@ -43,6 +51,10 @@ export class WhatsappService {
     }
 
     public async sendRecordingIndicator(chatId: string): Promise<void> {
+        // Throttle para evitar spam de indicadores (1 segundo mínimo)  
+        if (Date.now() - (this.lastIndicatorTime[chatId] || 0) < 1000) return;
+        this.lastIndicatorTime[chatId] = Date.now();
+
         try {
             await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/presences/${chatId}`, {
                 method: 'PUT',
@@ -205,10 +217,21 @@ export class WhatsappService {
             success: true
         });
 
+        // CRÍTICO: Marcar contenido como enviado para prevenir duplicados texto/voz
+        this.mediaManager.addBotSentContent(chatId, message);
+        
         return { success: true, messageIds: collectedIds };
     }
 
     private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string): Promise<{ success: boolean; messageIds: string[] }> {
+        // CRÍTICO: Verificar si ya se envió como voz para prevenir duplicados
+        if (this.mediaManager.isBotSentContent(chatId, message)) {
+            logInfo('DUPLICATE_PREVENTED', 'Texto skipped - ya enviado como voz', { 
+                chatId, messagePreview: message.substring(0, 100) 
+            });
+            return { success: true, messageIds: [] }; // Skip pero success=true
+        }
+
         // Regla simple: si hay párrafos separados por doble salto de línea, SIEMPRE enviar por párrafos.
         // Si no hay párrafos y es cotización/precio/link, enviar en un solo bloque.
         // En otros casos, usar división inteligente existente.
@@ -316,6 +339,10 @@ export class WhatsappService {
                 // Ignorar si no hay JSON o formato distinto
             }
         }
+
+        // CRÍTICO: Marcar contenido como enviado para prevenir duplicados
+        this.mediaManager.addBotSentContent(chatId, message);
+        
         return { success: true, messageIds: collectedIds };
     }
 

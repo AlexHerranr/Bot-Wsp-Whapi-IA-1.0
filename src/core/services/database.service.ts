@@ -118,6 +118,7 @@ export class DatabaseService {
                 };
 
                 try {
+                    // CRÍTICO: Usar phoneNumber como PK principal para evitar constraint conflicts
                     await this.prisma.clientView.upsert({
                         where: { phoneNumber: userId },
                         update: clientViewData,
@@ -127,7 +128,7 @@ export class DatabaseService {
                         }
                     });
                 } catch (error: any) {
-                    // Manejo simple: si falla por unique en chatId, rehacer sin tocar chatId
+                    // MEJORADO: Manejo más robusto de constraint duplicado en chatId
                     const msg = typeof error?.message === 'string' ? error.message : String(error);
                     if (msg.includes('Unique constraint') && msg.includes('chatId')) {
                         logWarning('CHATID_CONSTRAINT_ERROR', 'Resolviendo constraint duplicado de chatId', {
@@ -137,21 +138,22 @@ export class DatabaseService {
                             error: msg.substring(0, 200)
                         });
                         
-                        const { chatId, ...rest } = clientViewData as any;
+                        // Estrategia: preservar chatId existente, actualizar otros campos
+                        const { chatId, ...restData } = clientViewData as any;
                         await this.prisma.clientView.upsert({
                             where: { phoneNumber: userId },
-                            update: rest, // evitar sobrescribir chatId existente
+                            update: restData, // actualizar todo menos chatId
                             create: {
                                 phoneNumber: userId,
-                                ...rest,
-                                chatId: threadData.chatId || chatId || undefined
+                                ...restData,
+                                chatId: null // crear sin chatId para evitar conflicts
                             }
                         });
                         
-                        logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto exitosamente', { userId });
+                        logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto - chatId preservado', { userId });
                     } else {
                         logError('DATABASE_ERROR', `Error guardando thread en BD: ${msg}`, { userId, threadId: threadData.threadId, operation: 'setThread' });
-                        // No desconectar BD por errores de constraint - solo por conectividad
+                        // Solo desconectar BD por errores de conectividad, no constraints
                         if (msg.includes('connect') || msg.includes('timeout') || msg.includes('network')) {
                             this.isConnected = false;
                         }
