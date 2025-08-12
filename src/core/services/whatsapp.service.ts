@@ -21,8 +21,6 @@ interface UserState {
 }
 
 export class WhatsappService {
-    private lastIndicatorTime: { [chatId: string]: number } = {}; // Para throttle de indicadores
-
     constructor(
         private openai: OpenAI,
         private terminalLog: TerminalLog,
@@ -32,10 +30,6 @@ export class WhatsappService {
     ) {}
 
     public async sendTypingIndicator(chatId: string): Promise<void> {
-        // Throttle para evitar spam de indicadores (1 segundo mínimo)
-        if (Date.now() - (this.lastIndicatorTime[chatId] || 0) < 1000) return;
-        this.lastIndicatorTime[chatId] = Date.now();
-
         try {
             await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/presences/${chatId}`, {
                 method: 'PUT',
@@ -51,10 +45,6 @@ export class WhatsappService {
     }
 
     public async sendRecordingIndicator(chatId: string): Promise<void> {
-        // Throttle para evitar spam de indicadores (1 segundo mínimo)  
-        if (Date.now() - (this.lastIndicatorTime[chatId] || 0) < 1000) return;
-        this.lastIndicatorTime[chatId] = Date.now();
-
         try {
             await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/presences/${chatId}`, {
                 method: 'PUT',
