@@ -224,15 +224,41 @@ export class OpenAIService implements IOpenAIService {
             // Step 3: Check if thread has image history and create run
             const hasImageHistory = await this.checkThreadForImages(threadId);
             const needsImageModel = !!imageMessage || hasImageHistory;
-            const runResult = await this.createAndMonitorRun(threadId, userName, needsImageModel, !!imageMessage, hasImageHistory);
+            let runResult = await this.createAndMonitorRun(threadId, userName, needsImageModel, !!imageMessage, hasImageHistory);
 
+            // Retry simple en caso de fallo del run
             if (!runResult.success) {
-                return {
-                    success: false,
-                    error: runResult.error,
-                    processingTime: Date.now() - startTime,
-                    threadId
-                };
+                logWarning('OPENAI_RUN_FAILED', 'Run falló - aplicando retry simple', {
+                    userId,
+                    userName,
+                    threadId,
+                    error: runResult.error
+                }, 'openai.service.ts');
+
+                // Pequeño delay para evitar mismo estado inmediato
+                await this.sleep(500);
+                const retryResult = await this.createAndMonitorRun(threadId, userName, needsImageModel, !!imageMessage, hasImageHistory);
+
+                if (!retryResult.success) {
+                    const fallbackText = 'Perdón, tuve un inconveniente técnico y no pude responder ahora. ¿Podrías repetir tu mensaje?';
+                    logWarning('OPENAI_FALLBACK_REPLY', 'Enviando mensaje de fallback por fallo de OpenAI', {
+                        userId,
+                        userName,
+                        threadId,
+                        originalError: runResult.error,
+                        retryError: retryResult.error
+                    }, 'openai.service.ts');
+
+                    return {
+                        success: true,
+                        response: fallbackText,
+                        processingTime: Date.now() - startTime,
+                        threadId
+                    };
+                }
+
+                // Usar el resultado del retry si fue exitoso
+                runResult = retryResult;
             }
 
             // Step 4: Handle function calls if present
