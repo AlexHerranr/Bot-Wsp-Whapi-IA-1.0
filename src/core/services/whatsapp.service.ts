@@ -92,6 +92,12 @@ export class WhatsappService {
     }
 
     private async sendVoiceMessage(chatId: string, message: string, quotedMessageId?: string): Promise<{ success: boolean; messageIds: string[] }> {
+        // CRÍTICO: Dedup simétrico - verificar si ya se envió como texto
+        if (this.mediaManager.isBotSentContent(chatId, message)) {
+            logInfo('DUPLICATE_PREVENTED', 'Voz skipped - ya enviado como texto', { chatId, messagePreview: message.substring(0, 100) });
+            return { success: true, messageIds: [] }; // Skip pero success=true
+        }
+
         const shortUserId = getShortUserId(chatId);
         const startTimeTotal = Date.now();
 

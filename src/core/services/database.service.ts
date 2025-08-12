@@ -146,7 +146,7 @@ export class DatabaseService {
                             create: {
                                 phoneNumber: userId,
                                 ...restData,
-                                chatId: null // crear sin chatId para evitar conflicts
+                                chatId: threadData.chatId || undefined // usar chatId original si existe, sino omitir
                             }
                         });
                         
