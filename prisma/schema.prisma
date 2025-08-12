@@ -34,3 +34,438 @@ model HotelApartment {
   
   @@map("hotel_apartments")
 }
+
+// 📚 RESERVAS PASADAS - Check-out ≤ 2025-08-11 (ya completadas)
+model ReservationsPast {
+  id             Int      @id @default(autoincrement())
+  
+  // 🎯 INFORMACIÓN CRÍTICA (Prioridad 1)
+  bookingId      String   @unique
+  phone          String   // requerido porque filtramos sólo reservas con teléfono
+  guestName      String?  // "Juan Pérez" - nombre completo simple
+  status         String?  // confirmed, cancelled, etc (tal como viene de Beds24)
+  internalNotes  String?  // message de Beds24 - notas internas
+  
+  // 🏨 UBICACIÓN (Prioridad 2)  
+  propertyName   String?  // Nombre de la propiedad (suficiente sin ID)
+  
+  // 📅 FECHAS DE ESTADÍA (Prioridad 3) - Formato simple YYYY-MM-DD
+  arrivalDate    String?  // "2024-01-15" - formato limpio
+  departureDate  String?  // "2024-01-16" - formato limpio
+  numNights      Int?
+  
+  // 👥 OCUPACIÓN (Prioridad 4)
+  totalPersons   Int?     // 3 - número total simple
+  
+  // 💰 FINANCIEROS (Prioridad 5) - String para mantener formato original
+  totalCharges   String?  // "150000" (sin decimales como viene de API)
+  totalPayments  String?  // "75000"
+  balance        String?  // "75000" 
+  basePrice      String?  // "140000"
+  
+  // 📊 ORIGEN Y CONTACTO (Prioridad 6)
+  channel        String?  // Canal de reserva
+  email          String?
+  country        String?  // País del huésped
+  guestLang      String?  // "es", "en" - idioma del huésped para WhatsApp
+  apiReference   String?
+  
+  // 💳 TRANSACCIONES DETALLADAS (Prioridad 7) - Arrays por defecto
+  charges        Json     @default("[]")  // Array siempre, nunca null
+  payments       Json     @default("[]")  // Array siempre, nunca null
+  
+  // 💬 CONVERSACIÓN Y EVENTOS (Prioridad 7.5)
+  messages       Json     @default("[]")  // [{"id":123,"time":"2025-08-12T06:04:18Z","source":"guest","direction":"in","text":"Hola"}]
+  infoItems      Json     @default("[]")  // [{"code":"door_code","text":"1234","time":"2024-01-15T10:00:00Z"}]
+  
+  // 📝 NOTAS Y FECHAS DE SISTEMA (Prioridad 8)
+  notes          String?
+  bookingDate    String?  // "2024-01-10" - cuándo se hizo la reserva
+  modifiedDate   String?  // "2024-01-12" - última modificación en Beds24
+  
+  // 🕐 CONTROL INTERNO BD
+  lastUpdatedBD  DateTime @default(now()) @updatedAt  // Se actualiza automáticamente cada vez que se modifica la fila
+  
+  // 🗂️ BACKUP COMPLETO (Prioridad 9)
+  raw            Json?    // JSON con toda la respuesta de API
+
+  // 🚀 ÍNDICES ESTRATÉGICOS para performance
+  @@index([departureDate])                  // Filtros por checkout (clave para pasadas)
+  @@index([arrivalDate])                    // Filtros por fecha
+  @@index([status])                         // Filtros por estado
+  @@index([propertyName, departureDate])    // Listados por propiedad + checkout
+  @@index([phone])                          // Búsquedas por teléfono (WhatsApp)
+  @@index([guestName])                      // Búsquedas por nombre
+}
+
+// ✅ RESERVAS CONFIRMADAS FUTURAS - Check-out > 2025-08-11 (con pago completo o de Airbnb/Expedia)
+model ReservationsConfirmedFuture {
+  id             Int      @id @default(autoincrement())
+  
+  // 🎯 INFORMACIÓN CRÍTICA (Prioridad 1)
+  bookingId      String   @unique
+  phone          String   // requerido porque filtramos sólo reservas con teléfono
+  guestName      String?  // "Juan Pérez" - nombre completo simple
+  status         String?  // confirmed (estado confirmado)
+  internalNotes  String?  // message de Beds24 - notas internas
+  
+  // 🏨 UBICACIÓN (Prioridad 2)  
+  propertyName   String?  // Nombre de la propiedad (suficiente sin ID)
+  
+  // 📅 FECHAS DE ESTADÍA (Prioridad 3) - Formato simple YYYY-MM-DD
+  arrivalDate    String?  // "2024-01-15" - formato limpio
+  departureDate  String?  // "2024-01-16" - formato limpio
+  numNights      Int?
+  
+  // 👥 OCUPACIÓN (Prioridad 4)
+  totalPersons   Int?     // 3 - número total simple
+  
+  // 💰 FINANCIEROS (Prioridad 5) - String para mantener formato original
+  totalCharges   String?  // "150000" (sin decimales como viene de API)
+  totalPayments  String?  // "75000"
+  balance        String?  // "75000" 
+  basePrice      String?  // "140000"
+  
+  // 📊 ORIGEN Y CONTACTO (Prioridad 6)
+  channel        String?  // Canal de reserva
+  email          String?
+  country        String?  // País del huésped
+  guestLang      String?  // "es", "en" - idioma del huésped para WhatsApp
+  apiReference   String?
+  
+  // 💳 TRANSACCIONES DETALLADAS (Prioridad 7) - Arrays por defecto
+  charges        Json     @default("[]")  // Array siempre, nunca null
+  payments       Json     @default("[]")  // Array siempre, nunca null
+  
+  // 💬 CONVERSACIÓN Y EVENTOS (Prioridad 7.5)
+  messages       Json     @default("[]")  // [{"id":123,"time":"2025-08-12T06:04:18Z","source":"guest","direction":"in","text":"Hola"}]
+  infoItems      Json     @default("[]")  // [{"code":"door_code","text":"1234","time":"2024-01-15T10:00:00Z"}]
+  
+  // 📝 NOTAS Y FECHAS DE SISTEMA (Prioridad 8)
+  notes          String?
+  bookingDate    String?  // "2024-01-10" - cuándo se hizo la reserva
+  modifiedDate   String?  // "2024-01-12" - última modificación en Beds24
+  
+  // 🕐 CONTROL INTERNO BD
+  lastUpdatedBD  DateTime @default(now()) @updatedAt  // Se actualiza automáticamente cada vez que se modifica la fila
+  
+  // 🗂️ BACKUP COMPLETO (Prioridad 9)
+  raw            Json?    // JSON con toda la respuesta de API
+
+  // 🚀 ÍNDICES ESTRATÉGICOS para performance
+  @@index([arrivalDate])                    // Filtros por fecha (clave para futuras)
+  @@index([departureDate])                  // Filtros por checkout
+  @@index([status])                         // Filtros por estado
+  @@index([propertyName, arrivalDate])      // Listados por propiedad + arrival
+  @@index([phone])                          // Búsquedas por teléfono (WhatsApp)
+  @@index([guestName])                      // Búsquedas por nombre
+  @@index([channel])                        // Análisis por canal
+}
+
+// 🎯 RESERVAS PENDIENTES FUTURAS (LEADS) - Check-out > 2025-08-11 (sin pago, no Airbnb/Expedia)
+model ReservationsPendingFuture {
+  id             Int      @id @default(autoincrement())
+  
+  // 🎯 INFORMACIÓN CRÍTICA DEL LEAD (Prioridad 1)
+  bookingId      String   @unique
+  phone          String   // requerido - teléfono para WhatsApp marketing
+  guestName      String?  // "Juan Pérez" - potencial cliente
+  status         String?  // 'confirmed' o 'new' (estados que califican como leads)
+  internalNotes  String?  // message de Beds24 - notas internas
+  
+  // 🏨 UBICACIÓN Y FECHAS (Prioridad 2)
+  propertyName   String?  // Dónde quiere hospedarse
+  arrivalDate    String?  // Cuándo llega (para campañas dirigidas)
+  departureDate  String?  // Cuándo se va
+  numNights      Int?     // Duración de la estadía
+  
+  // 👥 OCUPACIÓN (para ofertas personalizadas)
+  totalPersons   Int?     // Cuántas personas
+  
+  // 💰 INFORMACIÓN FINANCIERA CRÍTICA (Prioridad 3)
+  totalCharges   String?  // Cuánto debe pagar
+  totalPayments  String?  // Cuánto ha pagado (debería ser NULL o muy poco)
+  balance        String?  // Saldo pendiente (lo que necesitamos cobrar)
+  basePrice      String?  // Precio base de la reserva
+  
+  // 📊 CANAL DE ORIGEN (Prioridad 4) - NO Airbnb ni Expedia
+  channel        String?  // Canal de reserva (excluimos Airbnb y Expedia automáticamente)
+  email          String?  // Email de contacto adicional
+  country        String?  // País (para segmentación)
+  guestLang      String?  // Idioma preferido para marketing
+  apiReference   String?
+  
+  // 💳 TRANSACCIONES (para análisis de pagos pendientes)
+  charges        Json     @default("[]")  // Cargos pendientes
+  payments       Json     @default("[]")  // Pagos parciales (si los hay)
+  
+  // 💬 COMUNICACIÓN
+  messages       Json     @default("[]")  // Conversaciones previas
+  infoItems      Json     @default("[]")  // Información adicional
+  
+  // 🚨 GESTIÓN DE LEADS
+  leadStatus     String   @default("active")     // active, contacted, converted, lost
+  leadPriority   String   @default("medium")     // high, medium, low (basado en valor/fecha)
+  leadSource     String   @default("no_payment") // no_payment, partial_payment, new_booking
+  
+  // 📅 FECHAS DE SEGUIMIENTO
+  createdAt      DateTime @default(now())        // Cuándo se identificó como lead
+  lastContactAt  DateTime?                       // Última vez que se contactó
+  followUpDate   DateTime?                       // Próximo seguimiento programado
+  
+  // 📝 NOTAS DE CRM
+  crmNotes       String?  // Notas del equipo comercial (separadas de internalNotes)
+  contactAttempts Int     @default(0)           // Cuántas veces se ha intentado contactar
+  
+  // 📝 NOTAS Y FECHAS DE SISTEMA ORIGINAL
+  notes          String?
+  bookingDate    String?  // "2024-01-10" - cuándo se hizo la reserva
+  modifiedDate   String?  // "2024-01-12" - última modificación en Beds24
+  
+  // 🕐 CONTROL INTERNO BD
+  lastUpdatedBD  DateTime @default(now()) @updatedAt  // Se actualiza automáticamente
+  
+  // 🗂️ BACKUP COMPLETO
+  raw            Json?    // JSON con toda la respuesta de API
+
+  // 🚀 ÍNDICES PARA MARKETING Y CRM
+  @@index([leadStatus])                         // Filtrar leads activos
+  @@index([leadPriority, arrivalDate])          // Priorizar por fecha cercana
+  @@index([arrivalDate])                        // Campañas por fechas próximas
+  @@index([phone])                              // Búsquedas por WhatsApp
+  @@index([channel])                            // Análisis por canal (excluye Airbnb/Expedia)
+  @@index([followUpDate])                       // Agenda de seguimientos
+  @@index([createdAt])                          // Leads nuevos
+  @@index([totalCharges])                       // Segmentación por valor
+  @@index([status])                             // Estados de reserva
+  @@index([guestName])                          // Búsquedas por nombre
+}
+
+// 🎯 LEADS DIRECTOS - Vista simplificada para gestión comercial
+model LeadsDirectos {
+  id             Int      @id @default(autoincrement())
+  
+  // 🎯 INFORMACIÓN BÁSICA DEL LEAD
+  bookingId      String   @unique  // Referencia a Beds24
+  huesped        String   // Nombre del huésped (campo principal)
+  apto           String?  // Apartamento/Propiedad
+  llegada        String   // Fecha de llegada YYYY-MM-DD
+  pax            Int?     // Número de personas
+  telefono       String   // Teléfono para WhatsApp (sin formato)
+  
+  // 🚨 GESTIÓN COMERCIAL
+  estadoLead     String   @default("nuevo")      // nuevo, contactado, seguimiento, convertido, perdido
+  prioridad      String   @default("media")      // alta, media, baja
+  ultimaGestion  DateTime?                      // Última vez que se gestionó
+  
+  // 📊 INFORMACIÓN FINANCIERA (referencia)
+  valorReserva   String?  // Valor total de la reserva
+  canal          String?  // Canal de origen (Booking, Direct, etc.)
+  
+  // 📝 GESTIÓN Y SEGUIMIENTO
+  proximaAccion  DateTime?                      // Próxima acción programada
+  intentosContacto Int    @default(0)           // Cuántas veces se ha contactado
+  notas          String?                        // Notas del equipo comercial
+  responsable    String?                        // Quien gestiona este lead
+  
+  // 🗓️ FECHAS DE CONTROL
+  fechaCreacion  DateTime @default(now())       // Cuándo se creó el lead
+  fechaConversion DateTime?                     // Si se convirtió, cuándo
+  
+  // 🔄 SINCRONIZACIÓN
+  lastSyncAt     DateTime @default(now()) @updatedAt
+  
+  // 🗂️ REFERENCIA COMPLETA
+  reservaCompleta Json?   // Datos completos de la reserva original
+  
+  // 🚀 ÍNDICES PARA GESTIÓN COMERCIAL
+  @@index([estadoLead])                         // Filtrar por estado
+  @@index([prioridad])                          // Filtrar por prioridad
+  @@index([llegada])                            // Ordenar por fecha de llegada
+  @@index([ultimaGestion])                      // Leads sin gestionar
+  @@index([proximaAccion])                      // Agenda de seguimiento
+  @@index([telefono])                           // Búsqueda por WhatsApp
+  @@index([responsable])                        // Leads por responsable
+  @@index([estadoLead, prioridad])              // Vista combinada
+  @@index([fechaCreacion])                      // Leads nuevos
+}
+
+// 🗑️ LEADS DESCARTADOS - Archivo de leads que no se concretaron
+model LeadsDescartados {
+  id             Int      @id @default(autoincrement())
+  
+  // 🎯 INFORMACIÓN BÁSICA DEL LEAD (copiada de LeadsDirectos)
+  bookingIdOriginal String @unique               // ID del lead original
+  huesped        String                          // Nombre del huésped
+  apto           String?                         // Apartamento de interés original
+  llegada        String                          // Fecha de llegada original
+  pax            Int?                            // Número de personas
+  telefono       String                          // Teléfono para futura referencia
+  
+  // 🗑️ MOTIVO DEL DESCARTE
+  razonDescarte  String                          // Por qué se descartó
+  categoriaDescarte String @default("sin_interes") // sin_interes, precio, fechas, competencia, otro
+  
+  // 📝 HISTORIAL DE GESTIÓN
+  estadoOriginal String                          // Estado que tenía antes del descarte
+  prioridadOriginal String                       // Prioridad que tenía
+  intentosRealizados Int   @default(0)           // Cuántos intentos se hicieron
+  valorEstimadoOriginal String?                  // Valor que se estimaba
+  canalOriginal  String?                         // Canal de origen
+  
+  // 👤 RESPONSABLE Y NOTAS
+  descartadoPor  String?                         // Quién lo descartó
+  notasFinales   String?                         // Notas finales del proceso
+  conversacionCompleta Json?                     // Historial de conversación si existe
+  
+  // 🗓️ FECHAS DE CONTROL
+  fechaCreacionOriginal DateTime                 // Cuándo se creó el lead original
+  fechaUltimaGestion   DateTime?                 // Última gestión antes del descarte
+  fechaDescarte        DateTime @default(now()) // Cuándo se descartó
+  
+  // 🔄 POSIBLE REACTIVACIÓN
+  puedeReactivarse Boolean @default(true)        // Si puede volver a activarse en el futuro
+  fechaReactivacion DateTime?                    // Cuándo podría reactivarse (ej: próxima temporada)
+  
+  // 🗂️ BACKUP COMPLETO
+  leadOriginalCompleto Json?                     // Backup del lead original completo
+  
+  // 🚀 ÍNDICES PARA ANÁLISIS
+  @@index([categoriaDescarte])                  // Análisis por tipo de descarte
+  @@index([fechaDescarte])                      // Descartes por período
+  @@index([razonDescarte])                      // Motivos más comunes
+  @@index([telefono])                           // Verificar si recontacta
+  @@index([descartadoPor])                      // Performance por responsable
+  @@index([puedeReactivarse])                   // Leads reactivables
+  @@index([fechaReactivacion])                  // Agenda de reactivación
+  @@index([valorEstimadoOriginal])              // Valor perdido por descarte
+}
+
+// 🚫 RESERVAS CANCELADAS PASADAS - Check-out ≤ 2025-08-11 (canceladas ya completadas)
+model ReservationsCancelledPast {
+  id             Int      @id @default(autoincrement())
+  
+  // 🎯 INFORMACIÓN CRÍTICA (Prioridad 1)
+  bookingId      String   @unique
+  phone          String   // requerido porque filtramos sólo reservas con teléfono
+  guestName      String?  // "Juan Pérez" - nombre completo simple
+  status         String?  // cancelled, black (estados de cancelación)
+  internalNotes  String?  // message de Beds24 - notas internas
+  
+  // 🏨 UBICACIÓN (Prioridad 2)  
+  propertyName   String?  // Nombre de la propiedad (suficiente sin ID)
+  
+  // 📅 FECHAS DE ESTADÍA (Prioridad 3) - Formato simple YYYY-MM-DD
+  arrivalDate    String?  // "2024-01-15" - formato limpio
+  departureDate  String?  // "2024-01-16" - formato limpio
+  numNights      Int?
+  
+  // 👥 OCUPACIÓN (Prioridad 4)
+  totalPersons   Int?     // 3 - número total simple
+  
+  // 💰 FINANCIEROS (Prioridad 5) - String para mantener formato original
+  totalCharges   String?  // "150000" (sin decimales como viene de API)
+  totalPayments  String?  // "75000"
+  balance        String?  // "75000" 
+  basePrice      String?  // "140000"
+  
+  // 📊 ORIGEN Y CONTACTO (Prioridad 6)
+  channel        String?  // Canal de reserva
+  email          String?
+  country        String?  // País del huésped
+  guestLang      String?  // "es", "en" - idioma del huésped para WhatsApp
+  apiReference   String?
+  
+  // 💳 TRANSACCIONES DETALLADAS (Prioridad 7) - Arrays por defecto
+  charges        Json     @default("[]")  // Array siempre, nunca null
+  payments       Json     @default("[]")  // Array siempre, nunca null
+  
+  // 💬 CONVERSACIÓN Y EVENTOS (Prioridad 7.5)
+  messages       Json     @default("[]")  // [{"id":123,"time":"2025-08-12T06:04:18Z","source":"guest","direction":"in","text":"Hola"}]
+  infoItems      Json     @default("[]")  // [{"code":"door_code","text":"1234","time":"2024-01-15T10:00:00Z"}]
+  
+  // 📝 NOTAS Y FECHAS DE SISTEMA (Prioridad 8)
+  notes          String?
+  bookingDate    String?  // "2024-01-10" - cuándo se hizo la reserva
+  modifiedDate   String?  // "2024-01-12" - última modificación en Beds24
+  
+  // 🕐 CONTROL INTERNO BD
+  lastUpdatedBD  DateTime @default(now()) @updatedAt  // Se actualiza automáticamente cada vez que se modifica la fila
+  
+  // 🗂️ BACKUP COMPLETO (Prioridad 9)
+  raw            Json?    // JSON con toda la respuesta de API
+
+  // 🚀 ÍNDICES ESTRATÉGICOS para performance
+  @@index([departureDate])                  // Filtros por checkout (clave para pasadas)
+  @@index([status])                         // Filtros por tipo de cancelación
+  @@index([arrivalDate])                    // Filtros por fecha original
+  @@index([propertyName, status])           // Listados por propiedad + tipo cancelación
+  @@index([phone])                          // Búsquedas por teléfono (WhatsApp)
+  @@index([guestName])                      // Búsquedas por nombre
+  @@index([modifiedDate])                   // Cuando se canceló
+}
+
+// 🔮 RESERVAS CANCELADAS FUTURAS - Check-out > 2025-08-11 (canceladas actuales/futuras)
+model ReservationsCancelledFuture {
+  id             Int      @id @default(autoincrement())
+  
+  // 🎯 INFORMACIÓN CRÍTICA (Prioridad 1)
+  bookingId      String   @unique
+  phone          String   // requerido porque filtramos sólo reservas con teléfono
+  guestName      String?  // "Juan Pérez" - nombre completo simple
+  status         String?  // cancelled, black (estados de cancelación)
+  internalNotes  String?  // message de Beds24 - notas internas
+  
+  // 🏨 UBICACIÓN (Prioridad 2)  
+  propertyName   String?  // Nombre de la propiedad (suficiente sin ID)
+  
+  // 📅 FECHAS DE ESTADÍA (Prioridad 3) - Formato simple YYYY-MM-DD
+  arrivalDate    String?  // "2024-01-15" - formato limpio
+  departureDate  String?  // "2024-01-16" - formato limpio
+  numNights      Int?
+  
+  // 👥 OCUPACIÓN (Prioridad 4)
+  totalPersons   Int?     // 3 - número total simple
+  
+  // 💰 FINANCIEROS (Prioridad 5) - String para mantener formato original
+  totalCharges   String?  // "150000" (sin decimales como viene de API)
+  totalPayments  String?  // "75000"
+  balance        String?  // "75000" 
+  basePrice      String?  // "140000"
+  
+  // 📊 ORIGEN Y CONTACTO (Prioridad 6)
+  channel        String?  // Canal de reserva
+  email          String?
+  country        String?  // País del huésped
+  guestLang      String?  // "es", "en" - idioma del huésped para WhatsApp
+  apiReference   String?
+  
+  // 💳 TRANSACCIONES DETALLADAS (Prioridad 7) - Arrays por defecto
+  charges        Json     @default("[]")  // Array siempre, nunca null
+  payments       Json     @default("[]")  // Array siempre, nunca null
+  
+  // 💬 CONVERSACIÓN Y EVENTOS (Prioridad 7.5)
+  messages       Json     @default("[]")  // [{"id":123,"time":"2025-08-12T06:04:18Z","source":"guest","direction":"in","text":"Hola"}]
+  infoItems      Json     @default("[]")  // [{"code":"door_code","text":"1234","time":"2024-01-15T10:00:00Z"}]
+  
+  // 📝 NOTAS Y FECHAS DE SISTEMA (Prioridad 8)
+  notes          String?
+  bookingDate    String?  // "2024-01-10" - cuándo se hizo la reserva
+  modifiedDate   String?  // "2024-01-12" - última modificación en Beds24
+  
+  // 🕐 CONTROL INTERNO BD
+  lastUpdatedBD  DateTime @default(now()) @updatedAt  // Se actualiza automáticamente cada vez que se modifica la fila
+  
+  // 🗂️ BACKUP COMPLETO (Prioridad 9)
+  raw            Json?    // JSON con toda la respuesta de API
+
+  // 🚀 ÍNDICES ESTRATÉGICOS para performance
+  @@index([arrivalDate])                    // Filtros por fecha (clave para futuras)
+  @@index([departureDate])                  // Filtros por checkout
+  @@index([status])                         // Filtros por tipo de cancelación
+  @@index([propertyName, status])           // Listados por propiedad + tipo cancelación
+  @@index([phone])                          // Búsquedas por teléfono (WhatsApp)
+  @@index([guestName])                      // Búsquedas por nombre
+  @@index([modifiedDate])                   // Cuando se canceló
+}
+

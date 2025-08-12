@@ -112,7 +112,13 @@
       "Bash(RAILWAY_COMPACT_LOGS=true node test-logging-sources.js)",
       "Bash(git reset:*)",
       "WebFetch(domain:whapi.cloud)",
-      "Bash(where railway)"
+      "Bash(where railway)",
+      "Bash(BEDS24_TOKEN=$BEDS24_TOKEN BEDS24_API_URL=$BEDS24_API_URL npx tsx debug-messages.ts)",
+      "Bash(start http://localhost:5567)",
+      "Bash(start http://localhost:5568)",
+      "Bash(start http://localhost:5569)",
+      "Bash(start http://localhost:5570)",
+      "Bash(start http://localhost:5571)"
     ],
     "deny": []
   }
