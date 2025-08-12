@@ -8,16 +8,11 @@ import type { ClientDataCache } from '../state/client-data-cache';
 import { logDatabaseOperation, logThreadUsage } from '../../utils/logging/integrations';
 import { setCacheSize } from '../../utils/logging/collectors';
 
-interface MemoryStore {
-    threads: Map<string, ThreadRecord>;
-    users: Map<string, any>;
-    lastSync: Date;
-}
+// ELIMINADO: MemoryStore interface - migrado a ClientDataCache unificado
 
 export class DatabaseService {
     private prisma: PrismaClient;
     private isConnected: boolean = false;
-    private memoryStore: MemoryStore;
     private connectionRetries: number = 0;
     private maxRetries: number = 3;
     private clientCache?: ClientDataCache;
@@ -27,12 +22,7 @@ export class DatabaseService {
             log: ['warn', 'error'],
         });
         
-        // Initialize memory store for fallback (DEPRECATED - users migrated to ClientDataCache)
-        this.memoryStore = {
-            threads: new Map(), // DEPRECADO: solo para sync histórico
-            users: new Map(), // ELIMINADO: Migrado a ClientDataCache
-            lastSync: new Date()
-        };
+        // ELIMINADO: memoryStore completamente migrado a ClientDataCache unificado
     }
 
     // Helper para crear entrada de cache por defecto
@@ -307,20 +297,26 @@ export class DatabaseService {
                 logError('DATABASE_ERROR', `Error actualizando activity, usando memoria: ${error instanceof Error ? error.message : error}`, { userId, operation: 'updateThreadActivity' });
                 this.isConnected = false;
                 
-                // Fallback: actualizar en memoria
-                const existingThread = this.memoryStore.threads.get(userId);
-                if (existingThread) {
-                    existingThread.lastActivity = new Date();
-                    return true;
+                // Fallback: actualizar en cache
+                if (this.clientCache) {
+                    const cached = this.clientCache.get(userId);
+                    if (cached) {
+                        cached.lastActivity = new Date();
+                        this.clientCache.set(userId, cached);
+                        return true;
+                    }
                 }
                 return false;
             }
         } else {
-            // DB desconectada: actualizar en memoria
-            const existingThread = this.memoryStore.threads.get(userId);
-            if (existingThread) {
-                existingThread.lastActivity = new Date();
-                return true;
+            // DB desconectada: actualizar en cache
+            if (this.clientCache) {
+                const cached = this.clientCache.get(userId);
+                if (cached) {
+                    cached.lastActivity = new Date();
+                    this.clientCache.set(userId, cached);
+                    return true;
+                }
             }
             return false;
         }
@@ -449,41 +445,7 @@ export class DatabaseService {
     private async syncMemoryToDatabase(): Promise<void> {
         // DEPRECADO: Cache unificado no necesita sync manual
         // El ClientDataCache mantiene consistencia automáticamente
-        return;
-
-        logInfo('SYNC_START', `🔄 Sincronizando ${this.memoryStore.threads.size} threads de memoria a PostgreSQL...`, { threadsCount: this.memoryStore.threads.size });
-        let syncedCount = 0;
-
-        for (const [userId, threadData] of this.memoryStore.threads.entries()) {
-            try {
-                await this.prisma.clientView.upsert({
-                    where: { phoneNumber: userId },
-                    update: {
-                        threadId: threadData.threadId,
-                        chatId: threadData.chatId,
-                        userName: threadData.userName,
-                        lastActivity: threadData.lastActivity,
-                    },
-                    create: {
-                        phoneNumber: userId,
-                        threadId: threadData.threadId,
-                        chatId: threadData.chatId,
-                        userName: threadData.userName,
-                        lastActivity: threadData.lastActivity,
-                    }
-                });
-                syncedCount++;
-            } catch (error) {
-                logWarning('SYNC_ERROR', `⚠️ Error sincronizando thread ${userId}`, { userId, error: error instanceof Error ? error.message : error });
-            }
-        }
-
-        if (syncedCount > 0) {
-            logInfo('SYNC_COMPLETE', `✅ ${syncedCount} threads sincronizados a PostgreSQL`, { syncedCount });
-            // Clear synced data from memory
-            this.memoryStore.threads.clear();
-            this.memoryStore.lastSync = new Date();
-        }
+        logInfo('SYNC_DEPRECATED', `Sync deprecado - Cache unificado mantiene consistencia automática`);
     }
 
     public async forceSync(): Promise<void> {
@@ -493,8 +455,8 @@ export class DatabaseService {
     public getConnectionStatus(): { connected: boolean; mode: string; memoryItems: number } {
         return {
             connected: this.isConnected,
-            mode: this.isConnected ? 'PostgreSQL' : 'Memory Fallback',
-            memoryItems: this.memoryStore.threads.size
+            mode: this.isConnected ? 'PostgreSQL' : 'Cache Fallback',
+            memoryItems: this.clientCache?.getStats().size || 0
         };
     }
 
@@ -509,16 +471,19 @@ export class DatabaseService {
                 return null;
             }
         } else {
-            // Check memory store
-            const thread = this.memoryStore.threads.get(phoneNumber);
-            return thread ? {
-                phoneNumber,
-                name: thread.userName,
-                userName: thread.userName,
-                threadId: thread.threadId,
-                chatId: thread.chatId,
-                lastActivity: thread.lastActivity
-            } : null;
+            // Check cache
+            if (this.clientCache) {
+                const cached = this.clientCache.get(phoneNumber);
+                return cached ? {
+                    phoneNumber,
+                    name: cached.name,
+                    userName: cached.userName,
+                    threadId: cached.threadId,
+                    chatId: cached.chatId,
+                    lastActivity: cached.lastActivity
+                } : null;
+            }
+            return null;
         }
     }
 
@@ -635,12 +600,19 @@ export class DatabaseService {
                             threadTokenCount: 0
                         };
                         
-                        // Actualizar con datos del webhook preservando threadId existente
+                        // Actualizar con datos del webhook + BD preservando threadId existente
                         existingCacheData.name = result.name || existingCacheData.name;
                         existingCacheData.userName = result.userName || existingCacheData.userName;
                         existingCacheData.chatId = result.chatId || existingCacheData.chatId;
                         existingCacheData.lastActivity = result.lastActivity;
                         existingCacheData.cachedAt = new Date();
+                        
+                        // CRÍTICO: Sincronizar labels desde BD si no están en cache
+                        if (result.labels && (!existingCacheData.labels || existingCacheData.labels.length === 0)) {
+                            existingCacheData.labels = Array.isArray(result.labels) ? result.labels : 
+                                (typeof result.labels === 'string' ? result.labels.split('/').filter(Boolean) : []);
+                        }
+                        
                         // IMPORTANTE: Preservar threadId y threadTokenCount existentes
                         
                         this.clientCache.set(clientData.phoneNumber, existingCacheData);
