@@ -8,6 +8,8 @@ import type { ClientDataCache } from '../state/client-data-cache';
 import { logDatabaseOperation, logThreadUsage } from '../../utils/logging/integrations';
 import { setCacheSize } from '../../utils/logging/collectors';
 
+const MOD = 'database.service.ts';
+
 // ELIMINADO: MemoryStore interface - migrado a ClientDataCache unificado
 
 export class DatabaseService {
@@ -53,7 +55,7 @@ export class DatabaseService {
             await this.prisma.$connect();
             this.isConnected = true;
             this.connectionRetries = 0;
-            logInfo('DATABASE_CONNECTION', '🗄️ Conectado a la base de datos PostgreSQL.', {}, 'database.service.ts');
+            logInfo('DATABASE_CONNECTION', '🗄️ Conectado a la base de datos PostgreSQL.', {}, MOD);
             
             // Log técnico de sesión
             const { logSuccess } = require('../../utils/logging');
@@ -61,7 +63,7 @@ export class DatabaseService {
                 host: process.env.DB_HOST || 'localhost',
                 database: process.env.DB_NAME || 'unknown',
                 environment: process.env.NODE_ENV || 'development'
-            }, 'database.service.ts');
+            }, MOD);
             
             // Sync memory data to database if we were in fallback mode
             await this.syncMemoryToDatabase();
@@ -72,7 +74,7 @@ export class DatabaseService {
             logWarning('DATABASE_CONNECTION', `⚠️ Error conectando a PostgreSQL (intento ${this.connectionRetries}/${this.maxRetries})`, { error: error instanceof Error ? error.message : error });
             
             if (this.connectionRetries >= this.maxRetries) {
-                logInfo('DATABASE_FALLBACK', '🔄 Activando modo fallback a memoria...', {}, 'database.service.ts');
+                logInfo('DATABASE_FALLBACK', '🔄 Activando modo fallback a memoria...', {}, MOD);
                 // Don't throw error, continue in memory mode
             } else {
                 throw error;
@@ -117,60 +119,49 @@ export class DatabaseService {
                     lastActivity: new Date(),
                 };
 
-                try {
-                    // CRÍTICO: Usar phoneNumber como PK principal para evitar constraint conflicts
-                    await this.prisma.clientView.upsert({
-                        where: { phoneNumber: userId },
-                        update: clientViewData,
-                        create: {
-                            phoneNumber: userId,
-                            ...clientViewData
+                // RECONCILIACIÓN PREVIA: evitar constraint conflicts desde el origen
+                const byPhone = await this.prisma.clientView.findUnique({ where: { phoneNumber: userId } });
+                const cid = threadData.chatId;
+                const byChat = !byPhone && cid ? await this.prisma.clientView.findUnique({ where: { chatId: cid } }) : null;
+
+                // Detectar campos cruzados (log-only, sin alterar flujo)
+                if (byPhone && byChat && byPhone.phoneNumber !== byChat.phoneNumber) {
+                    logWarning('RECONCILE_CROSSED', 'Campos cruzados detectados', { 
+                        phone: byPhone.phoneNumber, 
+                        chat: byChat.chatId 
+                    }, MOD);
+                }
+
+                if (byPhone || byChat) {
+                    // Actualizar la fila existente (sin tocar phoneNumber/chatId)
+                    const existingPhone = (byPhone ?? byChat)!.phoneNumber;
+                    const { phoneNumber, chatId, ...safeData } = clientViewData as any;
+                    await this.prisma.clientView.update({ 
+                        where: { phoneNumber: existingPhone }, 
+                        data: safeData 
+                    });
+                    logInfo('RECONCILE_UPDATE', 'Registro actualizado por reconciliación', { 
+                        userId, 
+                        existingPhone, 
+                        op: 'setThread' 
+                    }, MOD);
+                } else {
+                    // No existe ninguno: crear con ambos únicos
+                    await this.prisma.clientView.create({
+                        data: { 
+                            phoneNumber: userId, 
+                            chatId: cid, 
+                            ...Object.fromEntries(Object.entries(clientViewData).filter(([k]) => k !== 'phoneNumber' && k !== 'chatId'))
                         }
                     });
-                } catch (error: any) {
-                    // MEJORADO: Manejo más robusto de constraint duplicado en chatId
-                    const msg = typeof error?.message === 'string' ? error.message : String(error);
-                    if (msg.includes('Unique constraint') && msg.includes('chatId')) {
-                        logWarning('CHATID_CONSTRAINT_ERROR', 'Resolviendo constraint duplicado de chatId', {
-                            userId,
-                            threadId: threadData.threadId,
-                            chatId: threadData.chatId,
-                            error: msg.substring(0, 200)
-                        });
-                        
-                        try {
-                            // Estrategia: solo actualizar campos no únicos si el registro ya existe
-                            const { chatId, ...restData } = clientViewData as any;
-                            await this.prisma.clientView.update({
-                                where: { phoneNumber: userId },
-                                data: restData // actualizar solo campos no únicos
-                            });
-                            
-                            logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto - solo update de campos seguros', { userId }, 'database.service.ts');
-                        } catch (updateError: any) {
-                            // Si el update falla, significa que el registro no existe, omitir chatId al crear
-                            const { chatId, ...restData } = clientViewData as any;
-                            await this.prisma.clientView.create({
-                                data: {
-                                    phoneNumber: userId,
-                                    ...restData
-                                    // chatId omitido para evitar constraint
-                                }
-                            });
-                            
-                            logInfo('CHATID_CONSTRAINT_RESOLVED', 'Constraint resuelto - creado sin chatId', { userId }, 'database.service.ts');
-                        }
-                    } else {
-                        logError('DATABASE_ERROR', `Error guardando thread en BD: ${msg}`, { userId, threadId: threadData.threadId, operation: 'setThread' }, 'database.service.ts');
-                        // Solo desconectar BD por errores de conectividad, no constraints
-                        if (msg.includes('connect') || msg.includes('timeout') || msg.includes('network')) {
-                            this.isConnected = false;
-                        }
-                        throw error;
-                    }
+                    logInfo('RECONCILE_CREATE', 'Nuevo registro creado por reconciliación', { 
+                        userId, 
+                        chatId: cid, 
+                        op: 'setThread' 
+                    }, MOD);
                 }
                 
-                logInfo('THREAD_SAVED_SIMPLE', `✅ Thread guardado con lógica simplificada: ${userId}`, { userId }, 'database.service.ts');
+                logInfo('THREAD_SAVED_SIMPLE', `✅ Thread guardado con lógica simplificada: ${userId}`, { userId }, MOD);
                 
                 // 🔧 NUEVO: Log compacto de thread usage
                 if (threadData.threadId) {
@@ -184,7 +175,7 @@ export class DatabaseService {
                     );
                 }
             } catch (error) {
-                logWarning('THREAD_SAVE_ERROR', `⚠️ Error guardando en PostgreSQL, usando cache unificado`, { error: error instanceof Error ? error.message : error }, 'database.service.ts');
+                logWarning('THREAD_SAVE_ERROR', `⚠️ Error guardando en PostgreSQL, usando cache unificado`, { error: error instanceof Error ? error.message : error }, MOD);
                 this.isConnected = false;
                 // Fallback to unified cache
                 if (this.clientCache) {
@@ -236,7 +227,7 @@ export class DatabaseService {
                         updateData.threadTokenCount = currentTokens + tokenCount;
                         logInfo('THREAD_TOKENS_ACCUMULATED_SIMPLE', `Thread reusado - tokens acumulados: ${currentTokens} + ${tokenCount}`, {
                             userId, threadId: currentThreadId, previousTokens: currentTokens, newTokens: tokenCount, total: currentTokens + tokenCount
-                        }, 'database.service.ts');
+                        }, MOD);
                     } else {
                         // THREAD NUEVO: Empezar desde tokens del run actual (lógica simplificada)
                         updateData.threadTokenCount = tokenCount;
@@ -247,7 +238,7 @@ export class DatabaseService {
                             threadId: currentThreadId, 
                             initialTokens: tokenCount,
                             reason: 'simplified_new_thread'
-                        }, 'database.service.ts');
+                        }, MOD);
                     }
                 } else if (tokenCount !== undefined && tokenCount <= 0) {
                     // Log cuando se skip por tokens inválidos
@@ -256,36 +247,39 @@ export class DatabaseService {
                         tokenCount,
                         threadId: currentThreadId,
                         reason: 'invalid_token_count'
-                    }, 'database.service.ts');
+                    }, MOD);
                 }
                 
-                try {
-                    await this.prisma.clientView.upsert({
-                        where: { phoneNumber: userId },
-                        update: updateData,
-                        create: {
-                            phoneNumber: userId,
-                            ...updateData
+                // RECONCILIACIÓN PREVIA: evitar constraint conflicts desde el origen
+                const byPhone = await this.prisma.clientView.findUnique({ where: { phoneNumber: userId } });
+                const cid = updateData.threadId; // En updateThreadActivity, chatId no está directamente disponible
+                const byChat = !byPhone && cid ? await this.prisma.clientView.findUnique({ where: { chatId: cid } }) : null;
+
+                if (byPhone || byChat) {
+                    // Actualizar la fila existente (sin tocar phoneNumber/chatId)
+                    const existingPhone = (byPhone ?? byChat)!.phoneNumber;
+                    const { phoneNumber, chatId, ...safeData } = updateData as any;
+                    await this.prisma.clientView.update({ 
+                        where: { phoneNumber: existingPhone }, 
+                        data: safeData 
+                    });
+                    logInfo('RECONCILE_UPDATE', 'Thread activity actualizado por reconciliación', { 
+                        userId, 
+                        existingPhone, 
+                        op: 'updateThreadActivity' 
+                    }, MOD);
+                } else {
+                    // No existe ninguno: crear registro básico
+                    await this.prisma.clientView.create({
+                        data: { 
+                            phoneNumber: userId, 
+                            ...Object.fromEntries(Object.entries(updateData).filter(([k]) => k !== 'phoneNumber' && k !== 'chatId'))
                         }
                     });
-                } catch (error: any) {
-                    const msg = typeof error?.message === 'string' ? error.message : String(error);
-                    if (msg.includes('Unique constraint') && msg.includes('chatId')) {
-                        logWarning('CONSTRAINT_ERROR', 'Constraint error recoverable, manteniendo operación', { userId, error: msg.substring(0, 100) }, 'database.service.ts');
-                        // Para updateThreadActivity, solo hacer update de campos seguros
-                        const { chatId, ...safeData } = updateData;
-                        await this.prisma.clientView.update({
-                            where: { phoneNumber: userId },
-                            data: safeData
-                        }).catch(() => {
-                            // Si update falla, el registro no existe, crear sin chatId
-                            this.prisma.clientView.create({
-                                data: { phoneNumber: userId, ...safeData }
-                            });
-                        });
-                    } else {
-                        throw error;
-                    }
+                    logInfo('RECONCILE_CREATE', 'Registro básico creado por reconciliación', { 
+                        userId, 
+                        op: 'updateThreadActivity' 
+                    }, MOD);
                 }
                 
                 // Actualizar cache si está disponible con manejo de errores
@@ -325,7 +319,7 @@ export class DatabaseService {
                 });
                 return true;
             } catch (error) {
-                logError('DATABASE_ERROR', `Error actualizando activity, usando memoria: ${error instanceof Error ? error.message : error}`, { userId, operation: 'updateThreadActivity' }, 'database.service.ts');
+                logError('DATABASE_ERROR', `Error actualizando activity, usando memoria: ${error instanceof Error ? error.message : error}`, { userId, operation: 'updateThreadActivity' }, MOD);
                 this.isConnected = false;
                 
                 // Fallback: actualizar en cache
@@ -395,7 +389,7 @@ export class DatabaseService {
                 
                 return result;
             } catch (error) {
-                logError('DATABASE_ERROR', `Error leyendo de PostgreSQL, usando cache: ${error instanceof Error ? error.message : error}`, { userId, operation: 'getThread' }, 'database.service.ts');
+                logError('DATABASE_ERROR', `Error leyendo de PostgreSQL, usando cache: ${error instanceof Error ? error.message : error}`, { userId, operation: 'getThread' }, MOD);
                 this.isConnected = false;
                 // Fallback to cache
                 if (this.clientCache) {
@@ -445,7 +439,7 @@ export class DatabaseService {
                 });
                 return true;
             } catch (error) {
-                logWarning('THREAD_DELETE_ERROR', `⚠️ Error eliminando thread de PostgreSQL, usando cache`, { error: error instanceof Error ? error.message : error }, 'database.service.ts');
+                logWarning('THREAD_DELETE_ERROR', `⚠️ Error eliminando thread de PostgreSQL, usando cache`, { error: error instanceof Error ? error.message : error }, MOD);
                 this.isConnected = false;
                 // Fallback to cache deletion
                 if (this.clientCache) {
@@ -476,7 +470,7 @@ export class DatabaseService {
     private async syncMemoryToDatabase(): Promise<void> {
         // DEPRECADO: Cache unificado no necesita sync manual
         // El ClientDataCache mantiene consistencia automáticamente
-        logInfo('SYNC_DEPRECATED', `Sync deprecado - Cache unificado mantiene consistencia automática`, {}, 'database.service.ts');
+        logInfo('SYNC_DEPRECATED', `Sync deprecado - Cache unificado mantiene consistencia automática`, {}, MOD);
     }
 
     public async forceSync(): Promise<void> {
@@ -497,7 +491,7 @@ export class DatabaseService {
             try {
                 return await this.prisma.clientView.findUnique({ where: { phoneNumber } });
             } catch (error) {
-                logError('DATABASE_ERROR', `Error buscando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'findUserByPhoneNumber' }, 'database.service.ts');
+                logError('DATABASE_ERROR', `Error buscando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'findUserByPhoneNumber' }, MOD);
                 this.isConnected = false;
                 return null;
             }
@@ -521,32 +515,30 @@ export class DatabaseService {
     public async getOrCreateUser(phoneNumber: string, name?: string) {
         if (this.isConnected) {
             try {
+                // RECONCILIACIÓN PREVIA: evitar constraint conflicts desde el origen
+                const byPhone = await this.prisma.clientView.findUnique({ where: { phoneNumber } });
+                // Para getOrCreateUser no hay chatId disponible, so solo verificar por phoneNumber
+                
                 let user;
-                try {
-                    user = await this.prisma.clientView.upsert({
-                        where: { phoneNumber },
-                        update: { name },
-                        create: { phoneNumber, name, lastActivity: new Date() },
+                if (byPhone) {
+                    // Actualizar la fila existente
+                    user = await this.prisma.clientView.update({ 
+                        where: { phoneNumber }, 
+                        data: { name } 
                     });
-                } catch (error: any) {
-                    const msg = typeof error?.message === 'string' ? error.message : String(error);
-                    if (msg.includes('Unique constraint') && msg.includes('chatId')) {
-                        logWarning('CONSTRAINT_ERROR', 'Constraint error in getOrCreateUser', { phoneNumber, error: msg.substring(0, 100) }, 'database.service.ts');
-                        // Para getOrCreateUser, solo intentar actualizar name si el registro existe
-                        try {
-                            user = await this.prisma.clientView.update({
-                                where: { phoneNumber },
-                                data: { name }
-                            });
-                        } catch (updateError) {
-                            // Si no existe, crear sin chatId
-                            user = await this.prisma.clientView.create({
-                                data: { phoneNumber, name, lastActivity: new Date() }
-                            });
-                        }
-                    } else {
-                        throw error;
-                    }
+                    logInfo('RECONCILE_UPDATE', 'Usuario actualizado por reconciliación', { 
+                        phoneNumber, 
+                        op: 'getOrCreateUser' 
+                    }, MOD);
+                } else {
+                    // No existe: crear nuevo (sin chatId para evitar conflicts)
+                    user = await this.prisma.clientView.create({
+                        data: { phoneNumber, name, lastActivity: new Date() }
+                    });
+                    logInfo('RECONCILE_CREATE', 'Usuario creado por reconciliación', { 
+                        phoneNumber, 
+                        op: 'getOrCreateUser' 
+                    }, MOD);
                 }
 
                 // Si el usuario fue recién creado o tiene datos incompletos, intentar enriquecerlo
@@ -556,7 +548,7 @@ export class DatabaseService {
 
                 return user;
             } catch (error) {
-                logError('DATABASE_ERROR', `Error creando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'createUser' }, 'database.service.ts');
+                logError('DATABASE_ERROR', `Error creando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'createUser' }, MOD);
                 this.isConnected = false;
             }
         }
@@ -622,55 +614,53 @@ export class DatabaseService {
                 if (updateData.name === clientData.phoneNumber) updateData.name = null;
                 if (updateData.userName === clientData.phoneNumber) updateData.userName = null;
                 
-                // Usar upsert por phoneNumber (PK) con protección de constraint único
+                // RECONCILIACIÓN PREVIA: evitar constraint conflicts desde el origen
+                const byPhone = await this.prisma.clientView.findUnique({ where: { phoneNumber: clientData.phoneNumber } });
+                const cid = clientData.chatId;
+                const byChat = !byPhone && cid ? await this.prisma.clientView.findUnique({ where: { chatId: cid } }) : null;
+
+                // Detectar campos cruzados (log-only)
+                if (byPhone && byChat && byPhone.phoneNumber !== byChat.phoneNumber) {
+                    logWarning('RECONCILE_CROSSED', 'Campos cruzados detectados en syncWhatsAppClient', { 
+                        phone: byPhone.phoneNumber, 
+                        chat: byChat.chatId,
+                        incoming: clientData.phoneNumber
+                    }, MOD);
+                }
+
                 let result;
-                try {
-                    result = await this.prisma.clientView.upsert({
-                        where: { phoneNumber: clientData.phoneNumber },
-                        update: updateData,
-                        create: {
+                if (byPhone || byChat) {
+                    // Actualizar la fila existente (sin tocar phoneNumber/chatId)
+                    const existingPhone = (byPhone ?? byChat)!.phoneNumber;
+                    const { phoneNumber, chatId, ...safeUpdateData } = updateData as any;
+                    result = await this.prisma.clientView.update({ 
+                        where: { phoneNumber: existingPhone }, 
+                        data: safeUpdateData 
+                    });
+                    logInfo('RECONCILE_UPDATE', 'Cliente actualizado por reconciliación', { 
+                        phoneNumber: clientData.phoneNumber, 
+                        existingPhone, 
+                        op: 'syncWhatsAppClient',
+                        hasChatId: !!cid 
+                    }, MOD);
+                } else {
+                    // No existe ninguno: crear con ambos únicos
+                    result = await this.prisma.clientView.create({
+                        data: {
                             phoneNumber: clientData.phoneNumber,
                             name: clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null,
                             userName: clientData.from_name !== clientData.phoneNumber ? clientData.from_name : 
                                      (clientData.userName !== clientData.phoneNumber ? clientData.userName : null),
-                            chatId: clientData.chatId,
+                            chatId: cid,
                             lastActivity: clientData.lastActivity,
-                            threadTokenCount: 0 // Inicializar contador tokens
+                            threadTokenCount: 0
                         }
                     });
-                } catch (error: any) {
-                    const msg = typeof error?.message === 'string' ? error.message : String(error);
-                    if (msg.includes('Unique constraint') && msg.includes('chatId')) {
-                        logWarning('CONSTRAINT_ERROR', 'Constraint error recoverable, manteniendo operación', { 
-                            phoneNumber: clientData.phoneNumber, 
-                            chatId: clientData.chatId,
-                            error: msg.substring(0, 100) 
-                        }, 'database.service.ts');
-                        
-                        // Estrategia para syncWhatsAppClient: omitir chatId si hay conflicto
-                        const { chatId, ...safeUpdateData } = updateData;
-                        try {
-                            result = await this.prisma.clientView.update({
-                                where: { phoneNumber: clientData.phoneNumber },
-                                data: safeUpdateData
-                            });
-                        } catch (updateError) {
-                            // Si no existe, crear sin chatId
-                            result = await this.prisma.clientView.create({
-                                data: {
-                                    phoneNumber: clientData.phoneNumber,
-                                    name: clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null,
-                                    userName: clientData.from_name !== clientData.phoneNumber ? clientData.from_name : 
-                                             (clientData.userName !== clientData.phoneNumber ? clientData.userName : null),
-                                    // chatId omitido para evitar constraint
-                                    lastActivity: clientData.lastActivity,
-                                    threadTokenCount: 0
-                                }
-                            });
-                        }
-                    } else {
-                        throw error;
-                    }
+                    logInfo('RECONCILE_CREATE', 'Cliente creado por reconciliación', { 
+                        phoneNumber: clientData.phoneNumber, 
+                        chatId: cid, 
+                        op: 'syncWhatsAppClient' 
+                    }, MOD);
                 }
                 
                 // NUEVO: Sincronizar clientCache después de BD update exitoso
@@ -713,14 +703,14 @@ export class DatabaseService {
                 
                 return result;
             } catch (error) {
-                logError('DATABASE_ERROR', `Error guardando cliente en BD: ${error instanceof Error ? error.message : error}`, { phoneNumber: clientData.phoneNumber, operation: 'saveClient' }, 'database.service.ts');
+                logError('DATABASE_ERROR', `Error guardando cliente en BD: ${error instanceof Error ? error.message : error}`, { phoneNumber: clientData.phoneNumber, operation: 'saveClient' }, MOD);
                 
                 // Para constraint errors, no desconectar BD inmediatamente - es recoverable
                 if (error instanceof Error && error.message.includes('Unique constraint failed')) {
                     logWarning('CONSTRAINT_ERROR_RECOVERABLE', `Constraint error recoverable, manteniendo conexión BD`, { 
                         phoneNumber: clientData.phoneNumber, 
                         error: error.message 
-                    }, 'database.service.ts');
+                    }, MOD);
                 } else {
                     // Otros errores sí marcan BD como desconectada
                     this.isConnected = false;
@@ -740,7 +730,7 @@ export class DatabaseService {
                 Object.assign(cached, clientData);
                 this.clientCache.set(clientData.phoneNumber, cached);
             }
-            logInfo('CLIENT_CACHE_SAVE', `💾 Cliente guardado en cache unificado: ${clientData.phoneNumber}`, { phoneNumber: clientData.phoneNumber }, 'database.service.ts');
+            logInfo('CLIENT_CACHE_SAVE', `💾 Cliente guardado en cache unificado: ${clientData.phoneNumber}`, { phoneNumber: clientData.phoneNumber }, MOD);
         }
     }
 
@@ -781,7 +771,7 @@ export class DatabaseService {
                     cacheSize: this.clientCache?.getStats().size || 0
                 };
             } catch (error) {
-                logWarning('STATS_ERROR', `⚠️ Error obteniendo estadísticas de PostgreSQL`, { error: error instanceof Error ? error.message : error }, 'database.service.ts');
+                logWarning('STATS_ERROR', `⚠️ Error obteniendo estadísticas de PostgreSQL`, { error: error instanceof Error ? error.message : error }, MOD);
                 this.isConnected = false;
             }
         }
@@ -809,9 +799,9 @@ export class DatabaseService {
                     where: { phoneNumber },
                     data
                 });
-                logInfo('DATABASE_UPDATE', `Cliente actualizado: ${phoneNumber}`, { phoneNumber, operation: 'updateClient' }, 'database.service.ts');
+                logInfo('DATABASE_UPDATE', `Cliente actualizado: ${phoneNumber}`, { phoneNumber, operation: 'updateClient' }, MOD);
             } catch (error) {
-                logError('DATABASE_ERROR', `Error actualizando cliente ${phoneNumber}`, { phoneNumber, operation: 'updateClient', error: error instanceof Error ? error.message : error }, 'database.service.ts');
+                logError('DATABASE_ERROR', `Error actualizando cliente ${phoneNumber}`, { phoneNumber, operation: 'updateClient', error: error instanceof Error ? error.message : error }, MOD);
                 throw error;
             }
         } else {
@@ -853,7 +843,7 @@ export class DatabaseService {
                             newTokens: tokenCount,
                             diff,
                             reason: 'delayed_update_catchup'
-                        }, 'database.service.ts');
+                        }, MOD);
                     }
                 }
                 
@@ -882,22 +872,22 @@ export class DatabaseService {
                     tokenCount,
                     previousTokens: currentDbCount,
                     increment: tokenCount - currentDbCount
-                }, 'database.service.ts');
+                }, MOD);
             } catch (error) {
-                logWarning('TOKEN_COUNT_ERROR', `⚠️ Error actualizando token count para ${phoneNumber}`, { phoneNumber, tokenCount, error }, 'database.service.ts');
+                logWarning('TOKEN_COUNT_ERROR', `⚠️ Error actualizando token count para ${phoneNumber}`, { phoneNumber, tokenCount, error }, MOD);
                 // Si hay error, marcar como desconectado para intentar reconectar
                 this.isConnected = false;
             }
         } else {
             // Intentar reconectar antes de saltar
-            logInfo('BD_RECONNECT_ATTEMPT', `Intentando reconectar BD para token update: ${phoneNumber}`, { phoneNumber, tokenCount }, 'database.service.ts');
+            logInfo('BD_RECONNECT_ATTEMPT', `Intentando reconectar BD para token update: ${phoneNumber}`, { phoneNumber, tokenCount }, MOD);
             await this.connect();
             
             if (this.isConnected) {
                 // Reintentar después de reconexión exitosa
                 return this.updateThreadTokenCount(phoneNumber, tokenCount);
             } else {
-                logWarning('TOKEN_COUNT_SKIP', `Saltando actualización de tokens: BD desconectada`, { phoneNumber, tokenCount }, 'database.service.ts');
+                logWarning('TOKEN_COUNT_SKIP', `Saltando actualización de tokens: BD desconectada`, { phoneNumber, tokenCount }, MOD);
             }
         }
     }
@@ -929,7 +919,7 @@ export class DatabaseService {
             const whapiToken = process.env.WHAPI_TOKEN;
 
             if (!whapiToken) {
-                logWarning('WHAPI_ENRICHMENT', 'WHAPI_TOKEN no disponible para enriquecimiento', { phoneNumber, operation: 'enrichUserFromWhapi' }, 'database.service.ts');
+                logWarning('WHAPI_ENRICHMENT', 'WHAPI_TOKEN no disponible para enriquecimiento', { phoneNumber, operation: 'enrichUserFromWhapi' }, MOD);
                 return;
             }
 
@@ -942,7 +932,7 @@ export class DatabaseService {
             });
 
             if (!response.ok) {
-                logWarning('WHAPI_ENRICHMENT', `Error ${response.status} enriqueciendo usuario ${phoneNumber}`, { phoneNumber, statusCode: response.status, operation: 'enrichUserFromWhapi' }, 'database.service.ts');
+                logWarning('WHAPI_ENRICHMENT', `Error ${response.status} enriqueciendo usuario ${phoneNumber}`, { phoneNumber, statusCode: response.status, operation: 'enrichUserFromWhapi' }, MOD);
                 return;
             }
 
@@ -972,7 +962,7 @@ export class DatabaseService {
                         data: updateData
                     });
 
-                    logInfo('USER_ENRICHMENT', `Labels actualizados automáticamente: ${phoneNumber} → ${labels.length} etiquetas`, { phoneNumber, labelsCount: labels.length, source: 'whapi_get', operation: 'enrichUserFromWhapi' }, 'database.service.ts');
+                    logInfo('USER_ENRICHMENT', `Labels actualizados automáticamente: ${phoneNumber} → ${labels.length} etiquetas`, { phoneNumber, labelsCount: labels.length, source: 'whapi_get', operation: 'enrichUserFromWhapi' }, MOD);
 
                     // 🔧 NUEVO: Log compacto de operación DB
                     logDatabaseOperation(
@@ -985,7 +975,7 @@ export class DatabaseService {
                 }
             }
         } catch (error) {
-            logError('WHAPI_ENRICHMENT', `Error enriqueciendo usuario ${phoneNumber}`, { phoneNumber, operation: 'enrichUserFromWhapi', error: error instanceof Error ? error.message : error }, 'database.service.ts');
+            logError('WHAPI_ENRICHMENT', `Error enriqueciendo usuario ${phoneNumber}`, { phoneNumber, operation: 'enrichUserFromWhapi', error: error instanceof Error ? error.message : error }, MOD);
         }
     }
 }
