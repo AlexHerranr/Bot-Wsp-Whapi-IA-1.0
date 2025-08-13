@@ -124,3 +124,15 @@ model Leads {
   @@index([lastContactAt])     // Leads sin gestionar
   @@index([nextFollowUp])      // Agenda seguimiento
 }
+
+// 🤖 IA CRM CLIENTES - Gestión comercial independiente
+model IA_CMR_Clientes {
+  phoneNumber        String    @id
+  profileStatus      String?   // VIP, Regular, Problemático, etc.
+  proximaAccion      String?   // Llamar, Email, WhatsApp, etc.
+  fechaProximaAccion DateTime? // Cuándo hacer seguimiento
+  prioridad          Int?      // 1=Alta, 2=Media, 3=Baja
+
+  @@index([prioridad])
+  @@index([fechaProximaAccion])
+}
