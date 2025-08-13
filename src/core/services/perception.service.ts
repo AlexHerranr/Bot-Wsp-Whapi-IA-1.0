@@ -35,16 +35,17 @@ export interface CaptionResult {
 
 const CAPTIONER_SYSTEM = [
     "Eres una capa de percepción para un bot de reservas hoteleras.",
-    "Solo aceptas comprobantes de pago y documentos de soporte.",
-    "Tu salida debe ser SIEMPRE JSON válido con la estructura solicitada.",
-    "No inventes datos; deja campos vacíos si no se ven."
+    "Solo procesas comprobantes de pago, facturas, vouchers, transferencias bancarias y documentos relacionados con pagos.",
+    "Si la imagen NO es un comprobante de pago, responde EXACTAMENTE: 'IMAGEN_RECHAZADA'",
+    "Si SÍ es un comprobante, describe los detalles importantes del pago de forma natural."
 ].join(" ");
 
 const CAPTIONER_USER_PREFIX = [
-    "Analiza la imagen. Decide si es 'payment_proof', 'support_document' o 'rejected'.",
-    "Si es aceptada, extrae y normaliza campos (fechas, montos, referencias).",
-    "Genera 'thread_text' EXACTAMENTE con el formato indicado.",
-    "Responde EXCLUSIVAMENTE en JSON válido."
+    "Analiza esta imagen:",
+    "Si NO es un comprobante de pago, factura, voucher o documento de pago, responde exactamente: 'IMAGEN_RECHAZADA'",
+    "Si SÍ es un comprobante de pago, describe en español natural:",
+    "- Tipo de documento, fecha/hora, monto y moneda, referencia, banco/comercio, detalles relevantes",
+    "Responde en texto natural, NO uses JSON."
 ].join(" ");
 
 export class PerceptionService {
@@ -111,34 +112,37 @@ export class PerceptionService {
                 processingTime: Date.now() - startTime
             }, 'perception.service.ts');
 
-            try {
-                const result = JSON.parse(rawContent) as CaptionResult;
-                
-                // Validar estructura mínima
-                if (!result.classification || !result.thread_text) {
-                    throw new Error('JSON inválido: faltan campos requeridos');
-                }
-
-                logInfo('PERCEPTION_SUCCESS', 'Análisis de percepción exitoso', {
+            // Procesar respuesta como texto plano
+            if (rawContent === 'IMAGEN_RECHAZADA') {
+                logInfo('PERCEPTION_REJECTED', 'Imagen rechazada por percepción', {
                     userId,
-                    classification: result.classification,
-                    confidence: result.confidence || 0,
-                    hasExtracted: !!result.extracted,
                     processingTime: Date.now() - startTime
                 }, 'perception.service.ts');
-
-                return result;
-
-            } catch (parseError) {
-                logWarning('PERCEPTION_PARSE_ERROR', 'Error parseando JSON de percepción', {
-                    userId,
-                    error: parseError instanceof Error ? parseError.message : 'Unknown parse error',
-                    rawContent: rawContent.substring(0, 200) + '...'
-                }, 'perception.service.ts');
-
-                // Fallback: rechazar imagen
-                return this.createRejectionFallback();
+                
+                return {
+                    classification: 'rejected',
+                    thread_text: 'Descripción de imagen enviada por el cliente\nCliente envía imagen que no es aceptada o no es comprobante de pago.\nEscríbele al cliente que no podemos analizar ese tipo de imágenes y que solo aceptamos soportes o documentos relacionados con pagos.'
+                };
             }
+
+            // Es un comprobante - formatear descripción
+            const formattedDescription = [
+                'Descripción de imagen enviada por el cliente',
+                'Comprobante de pago detectado',
+                '',
+                rawContent // Descripción natural de gpt-4o-mini
+            ].join('\n');
+
+            logInfo('PERCEPTION_SUCCESS', 'Comprobante procesado exitosamente', {
+                userId,
+                descriptionLength: rawContent.length,
+                processingTime: Date.now() - startTime
+            }, 'perception.service.ts');
+
+            return {
+                classification: 'payment_proof',
+                thread_text: formattedDescription
+            };
 
         } catch (error) {
             logError('PERCEPTION_ERROR', 'Error en análisis de percepción', {
