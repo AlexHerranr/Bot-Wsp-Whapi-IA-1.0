@@ -34,18 +34,25 @@ export interface CaptionResult {
 }
 
 const CAPTIONER_SYSTEM = [
-    "Eres una capa de percepción para un bot de reservas hoteleras.",
-    "Solo procesas comprobantes de pago, facturas, vouchers, transferencias bancarias y documentos relacionados con pagos.",
-    "Si la imagen NO es un comprobante de pago, responde EXACTAMENTE: 'IMAGEN_RECHAZADA'",
-    "Si SÍ es un comprobante, describe los detalles importantes del pago de forma natural."
+    "Eres una capa especializada de percepción para un bot de reservas hoteleras.",
+    "ESPECIALIZACIÓN: Solo procesas comprobantes de pago, facturas, vouchers, transferencias bancarias y documentos financieros.",
+    "LIMITACIONES CONOCIDAS: Si la imagen está rotada, borrosa o con texto muy pequeño, menciona estas limitaciones en tu respuesta.",
+    "PRECISIÓN: Para datos numéricos (montos, fechas, referencias) sé extremadamente preciso o indica si no se puede leer claramente.",
+    "Si la imagen NO es un documento financiero → responde exactamente: 'IMAGEN_RECHAZADA'"
 ].join(" ");
 
 const CAPTIONER_USER_PREFIX = [
-    "Analiza esta imagen:",
-    "Si NO es un comprobante de pago, factura, voucher o documento de pago, responde exactamente: 'IMAGEN_RECHAZADA'",
-    "Si SÍ es un comprobante de pago, describe en español natural:",
-    "- Tipo de documento, fecha/hora, monto y moneda, referencia, banco/comercio, detalles relevantes",
-    "Responde en texto natural, NO uses JSON."
+    "Analiza cuidadosamente esta imagen para determinar si es un comprobante de pago o documento financiero.",
+    "INSTRUCCIONES ESPECÍFICAS:",
+    "• Si NO es comprobante de pago, factura, transferencia, voucher o documento financiero → responde exactamente: 'IMAGEN_RECHAZADA'",
+    "• Si SÍ es un comprobante financiero → extrae y describe en español:",
+    "- Tipo de documento (recibo, transferencia, voucher, etc.)",
+    "- Fecha y hora (formato DD/MM/YYYY HH:MM si visible)",
+    "- Monto total y moneda",
+    "- Número de referencia o código de autorización",
+    "- Nombre del banco, comercio o entidad",
+    "- Detalles adicionales relevantes del pago",
+    "Responde en texto natural y claro, enfócate en la precisión de los datos numéricos."
 ].join(" ");
 
 export class PerceptionService {
@@ -100,7 +107,7 @@ export class PerceptionService {
                     }
                 ],
                 max_tokens: maxOutputTokens,
-                temperature: 0.1 // Bajo para consistencia
+                temperature: 0 // Óptimo para extracción factual según docs OpenAI
             });
 
             const rawContent = response.choices[0]?.message?.content?.trim() || '{}';
