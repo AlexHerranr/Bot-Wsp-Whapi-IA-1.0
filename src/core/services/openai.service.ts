@@ -9,6 +9,7 @@ import { logInfo, logSuccess, logError, logWarning, logDebug } from '../../utils
 // 🔧 NUEVO: Importar logging compacto
 import { logOpenAIPromptSent, logTokenUsage, logMessageFlowComplete } from '../../utils/logging/integrations';
 import { DatabaseService } from './database.service';
+import { PerceptionService } from './perception.service';
 
 export interface OpenAIServiceConfig {
     apiKey: string;
@@ -41,6 +42,7 @@ export class OpenAIService implements IOpenAIService {
     private currentChatId?: string; // Chat ID actual para mensajes interinos
     private databaseService?: DatabaseService; // Servicio de BD para resets de tokens
     private static activeOpenAICalls: number = 0; // Contador global de llamadas concurrentes
+    private perceptionService: PerceptionService; // Capa de percepción para imágenes
     private static readonly MAX_CONCURRENT_CALLS = 50; // Límite para 100 usuarios
 
     constructor(
@@ -66,6 +68,7 @@ export class OpenAIService implements IOpenAIService {
         this.functionRegistry = functionRegistry;
         this.whatsappService = whatsappService;
         this.databaseService = databaseService;
+        this.perceptionService = new PerceptionService();
     }
 
 
@@ -830,24 +833,53 @@ export class OpenAIService implements IOpenAIService {
     }
 
     private async addMessageToThread(threadId: string, message: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<void> {
-        // Crear contenido multimodal si hay imagen
-        let content: any;
+        let content: string;
         
         if (imageMessage) {
-            // Formato multimodal para assistant
-            content = [
-                {
-                    type: 'text',
-                    text: imageMessage.caption || message || 'Analiza esta imagen en el contexto de nuestros servicios hoteleros'
-                },
-                {
-                    type: 'image_url',
-                    image_url: {
-                        url: imageMessage.imageUrl,
-                        detail: 'high'
-                    }
-                }
-            ];
+            // NUEVA LÓGICA: Usar capa de percepción en lugar de envío directo
+            logInfo('PERCEPTION_PROCESSING', 'Procesando imagen con capa de percepción', {
+                imageUrl: imageMessage.imageUrl.substring(0, 50) + '...',
+                caption: imageMessage.caption
+            }, 'openai.service.ts');
+
+            try {
+                // Analizar imagen con capa de percepción
+                const perceptionResult = await this.perceptionService.analyzePaymentImage(
+                    imageMessage.imageUrl,
+                    'user_context' // Simplificado, no necesitamos userId aquí
+                );
+
+                // Combinar mensaje del usuario con resultado de percepción
+                const userText = imageMessage.caption || message || '';
+                const combinedContent = [
+                    userText || '(sin texto del cliente)',
+                    '',
+                    perceptionResult.thread_text
+                ].join('\n');
+
+                content = combinedContent;
+
+                logInfo('PERCEPTION_SUCCESS', 'Imagen procesada exitosamente por percepción', {
+                    classification: perceptionResult.classification,
+                    confidence: perceptionResult.confidence || 0,
+                    hasExtracted: !!perceptionResult.extracted,
+                    textLength: combinedContent.length
+                }, 'openai.service.ts');
+
+            } catch (error) {
+                logError('PERCEPTION_FAILURE', 'Error en capa de percepción, usando fallback', {
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                    imageUrl: imageMessage.imageUrl.substring(0, 50) + '...'
+                }, 'openai.service.ts');
+
+                // Fallback: mensaje simple sin procesamiento de imagen
+                content = [
+                    imageMessage.caption || message || '',
+                    '',
+                    'Descripción de imagen enviada por el cliente',
+                    'Error al procesar imagen. Escríbele al cliente que hubo un problema técnico y que intente enviar la imagen nuevamente.'
+                ].join('\n');
+            }
         } else {
             // Solo texto como antes
             content = message;
@@ -882,53 +914,12 @@ export class OpenAIService implements IOpenAIService {
                 assistant_id: this.config.assistantId
             };
             
-            if (hasImage) {
-                // SOLUCIÓN DEFINITIVA: Crear run sin Assistant para evitar reasoning_effort heredado
-                runParams.model = 'gpt-4o-mini';
-                delete runParams.assistant_id;
-                // Replicar configuración del Assistant manualmente SIN reasoning_effort
-                runParams.instructions = `Eres un asistente especializado en reservas hoteleras. Ayudas a los clientes con:
-- Información sobre disponibilidad de apartamentos
-- Consultas de precios y tarifas  
-- Gestión de reservas y modificaciones
-- Recomendaciones personalizadas
-
-Siempre responde de manera profesional, amigable y útil.`;
-                runParams.tools = [
-                    {
-                        type: "function",
-                        function: {
-                            name: "check_availability",
-                            description: "Verifica disponibilidad de apartamentos en fechas específicas",
-                            parameters: {
-                                type: "object",
-                                properties: {
-                                    arrival: { type: "string", description: "Fecha de llegada (YYYY-MM-DD)" },
-                                    departure: { type: "string", description: "Fecha de salida (YYYY-MM-DD)" },
-                                    guests: { type: "integer", description: "Número de huéspedes" }
-                                },
-                                required: ["arrival", "departure", "guests"]
-                            }
-                        }
-                    }
-                ];
-                logInfo('MODEL_OVERRIDE', 'Usando gpt-4o-mini standalone para thread con contenido visual', {
-                    threadId,
-                    assistantId: 'standalone_no_assistant',
-                    overrideModel: 'gpt-4o-mini',
-                    reasoningEffort: 'not_set',
-                    hasCurrentImage,
-                    hasImageHistory
-                }, 'openai.service.ts');
-            } else {
-                // Usar modelo por defecto del Assistant (configurado en OpenAI Dashboard)
-                logInfo('MODEL_DEFAULT', 'Usando modelo por defecto del Assistant', {
-                    threadId,
-                    assistantId: this.config.assistantId,
-                    hasCurrentImage: hasCurrentImage,
-                    hasImageHistory: hasImageHistory
-                }, 'openai.service.ts');
-            }
+            // NO override de modelo - usar Assistant tal como está configurado
+            // Las imágenes ahora se procesan con capa de percepción antes de llegar aquí
+            logInfo('MODEL_DEFAULT', 'Usando configuración por defecto del Assistant', {
+                threadId,
+                assistantId: this.config.assistantId
+            }, 'openai.service.ts');
             
             const run = await openAIWithRetry(
                 () => this.openai.beta.threads.runs.create(threadId, runParams),
