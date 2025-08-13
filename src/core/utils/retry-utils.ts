@@ -107,6 +107,15 @@ export async function openAIWithRetry<T>(
         try {
             return await operation();
         } catch (error: any) {
+            // Log del error real para debugging
+            console.error('OPENAI_ERROR_DETAIL:', {
+                status: error.status,
+                code: error.code,
+                message: error.message,
+                type: error.type,
+                param: error.param
+            });
+            
             // Rate limit específico de OpenAI
             if (error.status === 429 || error.code === 'rate_limit_exceeded') {
                 throw new Error(`OpenAI rate limit: ${error.message}`);

@@ -883,13 +883,13 @@ export class OpenAIService implements IOpenAIService {
             };
             
             if (hasImage) {
-                // Override to o4-mini for images or threads with image history (más barato)
-                runParams.model = 'o4-mini';
+                // Override to gpt-4o-mini for images or threads with image history
+                runParams.model = 'gpt-4o-mini';
                 // Quitar reasoning_effort explícito para evitar invalid_request_error
-                logInfo('MODEL_OVERRIDE', 'Usando o4-mini para thread con contenido visual', {
+                logInfo('MODEL_OVERRIDE', 'Usando gpt-4o-mini para thread con contenido visual', {
                     threadId,
                     assistantId: this.config.assistantId,
-                    overrideModel: 'o4-mini',
+                    overrideModel: 'gpt-4o-mini',
                     reasoningEffort: 'not_set',
                     hasCurrentImage,
                     hasImageHistory
