@@ -57,6 +57,8 @@ const CAPTIONER_USER_PREFIX = [
 
 export class PerceptionService {
     private openai: OpenAI;
+    private static activePerceptionCalls: number = 0;
+    private static readonly MAX_CONCURRENT_PERCEPTION = 10; // Crítico: Limitar para evitar rate-limits
 
     constructor() {
         this.openai = new OpenAI({
@@ -71,6 +73,22 @@ export class PerceptionService {
     ): Promise<CaptionResult> {
         const startTime = Date.now();
         
+        // CRÍTICO: Control de concurrencia para rate-limits
+        if (PerceptionService.activePerceptionCalls >= PerceptionService.MAX_CONCURRENT_PERCEPTION) {
+            logWarning('PERCEPTION_RATE_LIMIT', 'Rate limit percepción alcanzado', {
+                userId,
+                activeCallsPrecheck: PerceptionService.activePerceptionCalls,
+                maxAllowed: PerceptionService.MAX_CONCURRENT_PERCEPTION
+            }, 'perception.service.ts');
+
+            return {
+                classification: 'rejected',
+                thread_text: 'Descripción de imagen enviada por el cliente\nSistema temporalmente ocupado. Intenta enviar la imagen nuevamente en unos segundos.'
+            };
+        }
+
+        PerceptionService.activePerceptionCalls++;
+
         try {
             logInfo('PERCEPTION_START', 'Iniciando análisis de percepción', {
                 userId,
@@ -106,7 +124,7 @@ export class PerceptionService {
                         ]
                     }
                 ],
-                max_tokens: maxOutputTokens,
+                max_tokens: Math.min(maxOutputTokens, 300), // Crítico: Reducir latencia para comprobantes
                 temperature: 0 // Óptimo para extracción factual según docs OpenAI
             });
 
@@ -115,7 +133,8 @@ export class PerceptionService {
             logInfo('PERCEPTION_RAW', 'Respuesta cruda de percepción', {
                 userId,
                 rawLength: rawContent.length,
-                fullResponse: rawContent, // Ver contenido completo
+                // CRÍTICO: No exponer datos bancarios en producción
+                preview: process.env.NODE_ENV === 'development' ? rawContent : rawContent.substring(0, 50) + '...',
                 processingTime: Date.now() - startTime
             }, 'perception.service.ts');
 
@@ -160,6 +179,9 @@ export class PerceptionService {
 
             // Fallback: rechazar imagen
             return this.createRejectionFallback();
+        } finally {
+            // CRÍTICO: Decrementar contador en todos los casos
+            PerceptionService.activePerceptionCalls = Math.max(0, PerceptionService.activePerceptionCalls - 1);
         }
     }
 
