@@ -45,6 +45,7 @@ export async function syncSingleBooking(externalId: string): Promise<void> {
 }
 
 export async function syncCancelledReservations(dateFrom?: string, dateTo?: string): Promise<{ processed: number; upserted: number }> {
+  const startTime = Date.now();
   logger.info({ dateFrom, dateTo }, 'Starting cancelled reservations sync');
   
   const cancelledStatuses = ['cancelled', 'black'];
@@ -85,11 +86,13 @@ export async function syncCancelledReservations(dateFrom?: string, dateTo?: stri
     upserted++;
   }
 
-  logger.info({ processed, upserted }, 'Cancelled reservations sync completed');
+  const duration = Date.now() - startTime;
+  logger.info({ processed, upserted, duration, rate: Math.round(processed / (duration / 1000)) }, 'Cancelled reservations sync completed');
   return { processed, upserted };
 }
 
 export async function syncLeadsAndConfirmed(dateFrom?: string, dateTo?: string): Promise<{ confirmed: number; leads: number; skipped: number }> {
+  const startTime = Date.now();
   logger.info({ dateFrom, dateTo }, 'Starting leads and confirmed sync');
 
   const today = new Date();
@@ -187,7 +190,15 @@ export async function syncLeadsAndConfirmed(dateFrom?: string, dateTo?: string):
     }
   }
 
-  logger.info({ confirmedCount, leadsCount, skippedCount }, 'Leads and confirmed sync completed');
+  const duration = Date.now() - startTime;
+  const totalProcessed = confirmedCount + leadsCount;
+  logger.info({ 
+    confirmed: confirmedCount, 
+    leads: leadsCount, 
+    skipped: skippedCount, 
+    duration, 
+    rate: Math.round(totalProcessed / (duration / 1000))
+  }, 'Leads and confirmed sync completed');
   return { confirmed: confirmedCount, leads: leadsCount, skipped: skippedCount };
 }
 
