@@ -112,7 +112,11 @@
       "Bash(RAILWAY_COMPACT_LOGS=true node test-logging-sources.js)",
       "Bash(git reset:*)",
       "WebFetch(domain:whapi.cloud)",
-      "Bash(where railway)"
+      "Bash(where railway)",
+      "Bash(xcopy:*)",
+      "WebSearch",
+      "Bash(docker-compose up:*)",
+      "Bash(docker compose:*)"
     ],
     "deny": []
   }
