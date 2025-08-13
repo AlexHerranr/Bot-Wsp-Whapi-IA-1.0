@@ -22,7 +22,7 @@ export class ApartmentDataService {
       const startTime = Date.now();
       
       // Consulta bulk optimizada
-      const apartments = await prisma.hotelApartment.findMany({
+      const apartments = await prisma.apartamentos.findMany({
         where: {
           roomId: {
             in: roomIds
@@ -71,7 +71,7 @@ export class ApartmentDataService {
   // Método para crear/actualizar apartamento (para administración)
   async upsertApartment(data: ApartmentDetails): Promise<ApartmentDetails | null> {
     try {
-      const apartment = await prisma.hotelApartment.upsert({
+      const apartment = await prisma.apartamentos.upsert({
         where: { roomId: data.roomId },
         create: {
           propertyId: data.propertyId,

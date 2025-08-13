@@ -120,9 +120,9 @@ export class DatabaseService {
                 };
 
                 // RECONCILIACIÓN PREVIA: evitar constraint conflicts desde el origen
-                const byPhone = await this.prisma.clientView.findUnique({ where: { phoneNumber: userId } });
+                const byPhone = await this.prisma.whatsApp.findUnique({ where: { phoneNumber: userId } });
                 const cid = threadData.chatId;
-                const byChat = !byPhone && cid ? await this.prisma.clientView.findUnique({ where: { chatId: cid } }) : null;
+                const byChat = !byPhone && cid ? await this.prisma.whatsApp.findUnique({ where: { chatId: cid } }) : null;
 
                 // Detectar campos cruzados (log-only, sin alterar flujo)
                 if (byPhone && byChat && byPhone.phoneNumber !== byChat.phoneNumber) {
@@ -136,7 +136,7 @@ export class DatabaseService {
                     // Actualizar la fila existente (sin tocar phoneNumber/chatId)
                     const existingPhone = (byPhone ?? byChat)!.phoneNumber;
                     const { phoneNumber, chatId, ...safeData } = clientViewData as any;
-                    await this.prisma.clientView.update({ 
+                    await this.prisma.whatsApp.update({ 
                         where: { phoneNumber: existingPhone }, 
                         data: safeData 
                     });
@@ -147,7 +147,7 @@ export class DatabaseService {
                     }, MOD);
                 } else {
                     // No existe ninguno: crear con ambos únicos
-                    await this.prisma.clientView.create({
+                    await this.prisma.whatsApp.create({
                         data: { 
                             phoneNumber: userId, 
                             chatId: cid, 
@@ -216,7 +216,7 @@ export class DatabaseService {
                 // Si se proporciona token count válido, manejar según thread nuevo vs reusado
                 if (tokenCount !== undefined && tokenCount > 0 && currentThreadId) {
                     // Obtener datos actuales para verificar si es el mismo thread
-                    const current = await this.prisma.clientView.findUnique({
+                    const current = await this.prisma.whatsApp.findUnique({
                         where: { phoneNumber: userId },
                         select: { threadTokenCount: true, threadId: true }
                     });
@@ -251,15 +251,15 @@ export class DatabaseService {
                 }
                 
                 // RECONCILIACIÓN PREVIA: evitar constraint conflicts desde el origen
-                const byPhone = await this.prisma.clientView.findUnique({ where: { phoneNumber: userId } });
+                const byPhone = await this.prisma.whatsApp.findUnique({ where: { phoneNumber: userId } });
                 const cid = updateData.threadId; // En updateThreadActivity, chatId no está directamente disponible
-                const byChat = !byPhone && cid ? await this.prisma.clientView.findUnique({ where: { chatId: cid } }) : null;
+                const byChat = !byPhone && cid ? await this.prisma.whatsApp.findUnique({ where: { chatId: cid } }) : null;
 
                 if (byPhone || byChat) {
                     // Actualizar la fila existente (sin tocar phoneNumber/chatId)
                     const existingPhone = (byPhone ?? byChat)!.phoneNumber;
                     const { phoneNumber, chatId, ...safeData } = updateData as any;
-                    await this.prisma.clientView.update({ 
+                    await this.prisma.whatsApp.update({ 
                         where: { phoneNumber: existingPhone }, 
                         data: safeData 
                     });
@@ -270,7 +270,7 @@ export class DatabaseService {
                     }, MOD);
                 } else {
                     // No existe ninguno: crear registro básico
-                    await this.prisma.clientView.create({
+                    await this.prisma.whatsApp.create({
                         data: { 
                             phoneNumber: userId, 
                             ...Object.fromEntries(Object.entries(updateData).filter(([k]) => k !== 'phoneNumber' && k !== 'chatId'))
@@ -351,7 +351,7 @@ export class DatabaseService {
         const getStart = Date.now(); // 🔧 NUEVO: Capturar tiempo inicio
         if (this.isConnected) {
             try {
-                const client = await this.prisma.clientView.findUnique({
+                const client = await this.prisma.whatsApp.findUnique({
                     where: { phoneNumber: userId }
                 });
 
@@ -430,7 +430,7 @@ export class DatabaseService {
         if (this.isConnected) {
             try {
                 // Clear thread ID from database (but keep client record)
-                await this.prisma.clientView.update({
+                await this.prisma.whatsApp.update({
                     where: { phoneNumber: userId },
                     data: { 
                         threadId: null,
@@ -489,7 +489,7 @@ export class DatabaseService {
     public async findUserByPhoneNumber(phoneNumber: string) {
         if (this.isConnected) {
             try {
-                return await this.prisma.clientView.findUnique({ where: { phoneNumber } });
+                return await this.prisma.whatsApp.findUnique({ where: { phoneNumber } });
             } catch (error) {
                 logError('DATABASE_ERROR', `Error buscando usuario en PostgreSQL: ${error instanceof Error ? error.message : error}`, { phoneNumber, operation: 'findUserByPhoneNumber' }, MOD);
                 this.isConnected = false;
@@ -516,13 +516,13 @@ export class DatabaseService {
         if (this.isConnected) {
             try {
                 // RECONCILIACIÓN PREVIA: evitar constraint conflicts desde el origen
-                const byPhone = await this.prisma.clientView.findUnique({ where: { phoneNumber } });
+                const byPhone = await this.prisma.whatsApp.findUnique({ where: { phoneNumber } });
                 // Para getOrCreateUser no hay chatId disponible, so solo verificar por phoneNumber
                 
                 let user;
                 if (byPhone) {
                     // Actualizar la fila existente
-                    user = await this.prisma.clientView.update({ 
+                    user = await this.prisma.whatsApp.update({ 
                         where: { phoneNumber }, 
                         data: { name } 
                     });
@@ -532,7 +532,7 @@ export class DatabaseService {
                     }, MOD);
                 } else {
                     // No existe: crear nuevo (sin chatId para evitar conflicts)
-                    user = await this.prisma.clientView.create({
+                    user = await this.prisma.whatsApp.create({
                         data: { phoneNumber, name, lastActivity: new Date() }
                     });
                     logInfo('RECONCILE_CREATE', 'Usuario creado por reconciliación', { 
@@ -584,7 +584,7 @@ export class DatabaseService {
         if (this.isConnected) {
             try {
                 // Primero obtener datos existentes para comparar discrepancias
-                const existingClient = await this.prisma.clientView.findUnique({
+                const existingClient = await this.prisma.whatsApp.findUnique({
                     where: { phoneNumber: clientData.phoneNumber }
                 });
                 
@@ -615,9 +615,9 @@ export class DatabaseService {
                 if (updateData.userName === clientData.phoneNumber) updateData.userName = null;
                 
                 // RECONCILIACIÓN PREVIA: evitar constraint conflicts desde el origen
-                const byPhone = await this.prisma.clientView.findUnique({ where: { phoneNumber: clientData.phoneNumber } });
+                const byPhone = await this.prisma.whatsApp.findUnique({ where: { phoneNumber: clientData.phoneNumber } });
                 const cid = clientData.chatId;
-                const byChat = !byPhone && cid ? await this.prisma.clientView.findUnique({ where: { chatId: cid } }) : null;
+                const byChat = !byPhone && cid ? await this.prisma.whatsApp.findUnique({ where: { chatId: cid } }) : null;
 
                 // Detectar campos cruzados (log-only)
                 if (byPhone && byChat && byPhone.phoneNumber !== byChat.phoneNumber) {
@@ -633,7 +633,7 @@ export class DatabaseService {
                     // Actualizar la fila existente (sin tocar phoneNumber/chatId)
                     const existingPhone = (byPhone ?? byChat)!.phoneNumber;
                     const { phoneNumber, chatId, ...safeUpdateData } = updateData as any;
-                    result = await this.prisma.clientView.update({ 
+                    result = await this.prisma.whatsApp.update({ 
                         where: { phoneNumber: existingPhone }, 
                         data: safeUpdateData 
                     });
@@ -645,7 +645,7 @@ export class DatabaseService {
                     }, MOD);
                 } else {
                     // No existe ninguno: crear con ambos únicos
-                    result = await this.prisma.clientView.create({
+                    result = await this.prisma.whatsApp.create({
                         data: {
                             phoneNumber: clientData.phoneNumber,
                             name: clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null,
@@ -750,7 +750,7 @@ export class DatabaseService {
         // Limpiar clientes inactivos después de 30 días
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         
-        await this.prisma.clientView.deleteMany({
+        await this.prisma.whatsApp.deleteMany({
             where: {
                 lastActivity: { lt: thirtyDaysAgo }
             }
@@ -761,7 +761,7 @@ export class DatabaseService {
     public async getStats(): Promise<any> {
         if (this.isConnected) {
             try {
-                const clientCount = await this.prisma.clientView.count();
+                const clientCount = await this.prisma.whatsApp.count();
                 return {
                     users: clientCount,
                     threads: clientCount,
@@ -795,7 +795,7 @@ export class DatabaseService {
     public async updateClient(phoneNumber: string, data: any): Promise<void> {
         if (this.isConnected) {
             try {
-                await this.prisma.clientView.update({
+                await this.prisma.whatsApp.update({
                     where: { phoneNumber },
                     data
                 });
@@ -826,7 +826,7 @@ export class DatabaseService {
         if (this.isConnected) {
             try {
                 // Obtener conteo actual de BD para detectar lag/inconsistencias
-                const currentData = await this.prisma.clientView.findUnique({ 
+                const currentData = await this.prisma.whatsApp.findUnique({ 
                     where: { phoneNumber }, 
                     select: { threadTokenCount: true } 
                 });
@@ -847,7 +847,7 @@ export class DatabaseService {
                     }
                 }
                 
-                await this.prisma.clientView.update({
+                await this.prisma.whatsApp.update({
                     where: { phoneNumber },
                     data: { threadTokenCount: tokenCount }
                 });
@@ -941,7 +941,7 @@ export class DatabaseService {
 
             // Solo procesar labels - names ya vienen del webhook
             if (labels.length > 0) {
-                const existingClient = await this.prisma.clientView.findUnique({
+                const existingClient = await this.prisma.whatsApp.findUnique({
                     where: { phoneNumber }
                 });
                 
@@ -957,7 +957,7 @@ export class DatabaseService {
                 
                 // Solo hacer update si hay cambios
                 if (Object.keys(updateData).length > 0) {
-                    await this.prisma.clientView.update({
+                    await this.prisma.whatsApp.update({
                         where: { phoneNumber },
                         data: updateData
                     });

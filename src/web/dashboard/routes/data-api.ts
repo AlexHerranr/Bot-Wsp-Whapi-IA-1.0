@@ -14,14 +14,14 @@ router.get('/data', async (req, res) => {
         const stats = await dbService.getStats();
         
         // Obtener clientes
-        const clients = await dbService['prisma'].clientView.findMany({
+        const clients = await dbService['prisma'].whatsApp.findMany({
             orderBy: { lastActivity: 'desc' }
         });
         
         // Calcular clientes activos hoy
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const activeToday = await dbService['prisma'].clientView.count({
+        const activeToday = await dbService['prisma'].whatsApp.count({
             where: {
                 lastActivity: {
                     gte: today
@@ -148,7 +148,7 @@ router.delete('/users/:id', async (req, res) => {
         await dbService.connect();
         
         // Eliminar cliente
-        await dbService['prisma'].clientView.delete({
+        await dbService['prisma'].whatsApp.delete({
             where: { phoneNumber: id }
         });
         
@@ -176,7 +176,7 @@ router.get('/export/csv', async (req: any, res: any) => {
             case 'users':
             case 'threads':
             case 'messages':
-                data = await dbService['prisma'].clientView.findMany();
+                data = await dbService['prisma'].whatsApp.findMany();
                 filename = 'clientes.csv';
                 break;
             default:
