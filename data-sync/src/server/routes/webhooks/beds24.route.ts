@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { logger } from '../../../utils/logger';
 import { addWebhookJob } from '../../../infra/queues/queue.manager';
+import { metricsHelpers } from '../../../infra/metrics/prometheus';
 
 // TODO: Implement HMAC verification
 function verifyHmac(req: Request, res: Response, next: Function) {
@@ -35,6 +36,9 @@ export function registerBeds24Webhook(router: Router): void {
         action, 
         status 
       }, 'Webhook received');
+
+      // Record webhook metrics
+      metricsHelpers.recordWebhook('beds24', action);
 
       // Encolar job para procesamiento asíncrono
       if (action === 'created' || action === 'modified' || action === 'cancelled') {

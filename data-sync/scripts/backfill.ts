@@ -6,7 +6,7 @@ import { connectRedis } from '../src/infra/redis/redis.client';
 import { addBulkSyncJob, getQueueStats } from '../src/infra/queues/queue.manager';
 import { logger } from '../src/utils/logger';
 
-config({ path: '.env' });
+config({ path: '.env', override: true });
 
 interface BackfillOptions {
   type: 'cancelled' | 'leads' | 'all';

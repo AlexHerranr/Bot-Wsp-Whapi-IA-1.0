@@ -14,6 +14,7 @@ import {
   syncCancelledReservations, 
   syncLeadsAndConfirmed 
 } from '../../providers/beds24/sync';
+import { metricsHelpers } from '../metrics/prometheus';
 
 // Configuración de colas
 const QUEUE_CONFIG = {
@@ -40,7 +41,7 @@ export const beds24Worker = new Worker<JobData>(
   'beds24-sync',
   async (job: Job<JobData>) => {
     const { data } = job;
-    const startTime = Date.now();
+    const startTime = metricsHelpers.recordJobStart(data.type);
     
     logger.info({ 
       jobId: job.id, 
@@ -53,6 +54,7 @@ export const beds24Worker = new Worker<JobData>(
       if (data.type === 'webhook') {
         const webhookData = data as WebhookJob;
         await syncSingleBooking(webhookData.bookingId);
+        metricsHelpers.recordJobComplete(data.type, startTime, 'success');
         logger.info({ 
           jobId: job.id, 
           bookingId: webhookData.bookingId,
@@ -62,6 +64,7 @@ export const beds24Worker = new Worker<JobData>(
       } else if (data.type === 'single') {
         const singleData = data as SingleSyncJob;
         await syncSingleBooking(singleData.bookingId);
+        metricsHelpers.recordJobComplete(data.type, startTime, 'success');
         logger.info({ 
           jobId: job.id, 
           bookingId: singleData.bookingId,
@@ -71,6 +74,8 @@ export const beds24Worker = new Worker<JobData>(
       } else if (data.type === 'cancelled') {
         const bulkData = data as BulkSyncJob;
         await syncCancelledReservations(bulkData.dateFrom, bulkData.dateTo);
+        metricsHelpers.recordJobComplete(data.type, startTime, 'success');
+        metricsHelpers.recordReservationSync('cancelled', 'success');
         logger.info({ 
           jobId: job.id, 
           dateFrom: bulkData.dateFrom, 
@@ -81,6 +86,8 @@ export const beds24Worker = new Worker<JobData>(
       } else if (data.type === 'leads') {
         const bulkData = data as BulkSyncJob;
         await syncLeadsAndConfirmed(bulkData.dateFrom, bulkData.dateTo);
+        metricsHelpers.recordJobComplete(data.type, startTime, 'success');
+        metricsHelpers.recordReservationSync('leads', 'success');
         logger.info({ 
           jobId: job.id, 
           dateFrom: bulkData.dateFrom, 
@@ -92,6 +99,7 @@ export const beds24Worker = new Worker<JobData>(
       }
       
     } catch (error: any) {
+      metricsHelpers.recordJobComplete(data.type, startTime, 'failed');
       logger.error({ 
         jobId: job.id, 
         error: error.message,
@@ -214,7 +222,7 @@ export async function getQueueStats(): Promise<QueueStats> {
     beds24Queue.getDelayedCount(),
   ]);
 
-  return {
+  const stats = {
     waiting,
     active,
     completed,
@@ -222,6 +230,11 @@ export async function getQueueStats(): Promise<QueueStats> {
     delayed,
     total: waiting + active + completed + failed + delayed,
   };
+
+  // Update Prometheus metrics
+  await metricsHelpers.updateQueueMetrics(stats);
+
+  return stats;
 }
 
 export async function getJobById(jobId: string): Promise<Job | null> {

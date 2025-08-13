@@ -118,11 +118,11 @@ async function syncCancelledBooking(bookingData: any): Promise<{
   table: 'ReservationsCancelled';
 }> {
   try {
-    const existing = await prisma.reservasCanceladas.findUnique({
+    const existing = await prisma.reservas.findUnique({
       where: { bookingId: bookingData.bookingId }
     });
 
-    await prisma.reservasCanceladas.upsert({
+    await prisma.reservas.upsert({
       where: { bookingId: bookingData.bookingId },
       create: {
         ...bookingData,

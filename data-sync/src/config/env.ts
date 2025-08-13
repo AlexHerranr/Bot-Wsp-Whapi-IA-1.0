@@ -18,8 +18,13 @@ const envSchema = z.object({
   REDIS_PASSWORD: z.string().optional(),
   
   // Optional logging configuration
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'development']).transform((val) => val === 'development' ? 'debug' : val),
   LOG_PRETTY: z.boolean().default(false),
+  
+  // Monitoring and metrics
+  PROMETHEUS_ENABLED: z.coerce.boolean().default(true),
+  SWAGGER_ENABLED: z.coerce.boolean().default(true),
+  METRICS_PREFIX: z.string().default('data_sync_'),
 });
 
 function parseEnv() {
