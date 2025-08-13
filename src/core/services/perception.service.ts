@@ -133,8 +133,8 @@ export class PerceptionService {
             logInfo('PERCEPTION_RAW', 'Respuesta cruda de percepción', {
                 userId,
                 rawLength: rawContent.length,
-                // CRÍTICO: No exponer datos bancarios en producción
-                preview: process.env.NODE_ENV === 'development' ? rawContent : rawContent.substring(0, 50) + '...',
+                // Ver contenido completo para debug temporal
+                fullResponse: rawContent,
                 processingTime: Date.now() - startTime
             }, 'perception.service.ts');
 
