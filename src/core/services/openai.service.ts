@@ -224,10 +224,9 @@ export class OpenAIService implements IOpenAIService {
                 hasQuotedContent: message.includes('Cliente responde a este mensaje:')
             });
 
-            // Step 3: Check if thread has image history and create run
-            const hasImageHistory = await this.checkThreadForImages(threadId);
-            const needsImageModel = !!imageMessage || hasImageHistory;
-            let runResult = await this.createAndMonitorRun(threadId, userName, needsImageModel, !!imageMessage, hasImageHistory);
+            // Step 3: Create run - NO verificar historial de imágenes 
+            // La capa de percepción convierte imágenes a texto, siempre enviamos texto al thread
+            let runResult = await this.createAndMonitorRun(threadId, userName, false, false, false);
 
             // Retry simple en caso de fallo del run
             if (!runResult.success) {
@@ -240,7 +239,7 @@ export class OpenAIService implements IOpenAIService {
 
                 // Pequeño delay para evitar mismo estado inmediato
                 await this.sleep(500);
-                const retryResult = await this.createAndMonitorRun(threadId, userName, needsImageModel, !!imageMessage, hasImageHistory);
+                const retryResult = await this.createAndMonitorRun(threadId, userName, false, false, false);
 
                 if (!retryResult.success) {
                     const fallbackText = 'Perdón, tuve un inconveniente técnico y no pude responder ahora. ¿Podrías repetir tu mensaje?';
