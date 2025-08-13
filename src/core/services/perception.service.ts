@@ -107,6 +107,7 @@ export class PerceptionService {
             logInfo('PERCEPTION_RAW', 'Respuesta cruda de percepción', {
                 userId,
                 rawLength: rawContent.length,
+                fullResponse: rawContent, // Ver contenido completo
                 processingTime: Date.now() - startTime
             }, 'perception.service.ts');
 
