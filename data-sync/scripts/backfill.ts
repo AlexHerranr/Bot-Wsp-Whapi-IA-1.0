@@ -59,6 +59,7 @@ async function main() {
   }
 
   await connectPrisma();
+  logger.info('Prisma client fully initialized');
 
   try {
     if (options.type === 'cancelled' || options.type === 'all') {
@@ -77,6 +78,10 @@ async function main() {
   } catch (error: any) {
     logger.error({ error: error.message }, 'Backfill operation failed');
     process.exit(1);
+  } finally {
+    const { prisma } = await import('../src/infra/db/prisma.client');
+    await prisma.$disconnect();
+    logger.info('Prisma client disconnected');
   }
 }
 
