@@ -116,7 +116,10 @@
       "Bash(xcopy:*)",
       "WebSearch",
       "Bash(docker-compose up:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(robocopy:*)",
+      "Bash(copy improve-leads-structure.ts beds24-sync-service\\scripts\\)",
+      "Bash(copy improve-leads-structure.ts beds24-sync-service\\migration-scripts\\)"
     ],
     "deny": []
   }
