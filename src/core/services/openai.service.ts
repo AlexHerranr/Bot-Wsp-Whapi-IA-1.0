@@ -883,13 +883,39 @@ export class OpenAIService implements IOpenAIService {
             };
             
             if (hasImage) {
-                // SOLUCIÓN ALTERNATIVA: Usar gpt-4o en lugar de gpt-4o-mini para compatibilidad
-                runParams.model = 'gpt-4o';  // gpt-4o SÍ soporta reasoning_effort
-                // Mantener Assistant ID para preservar function calling y tools
-                logInfo('MODEL_OVERRIDE', 'Usando gpt-4o para thread con contenido visual', {
+                // SOLUCIÓN DEFINITIVA: Crear run sin Assistant para evitar reasoning_effort heredado
+                runParams.model = 'gpt-4o-mini';
+                delete runParams.assistant_id;
+                // Replicar configuración del Assistant manualmente SIN reasoning_effort
+                runParams.instructions = `Eres un asistente especializado en reservas hoteleras. Ayudas a los clientes con:
+- Información sobre disponibilidad de apartamentos
+- Consultas de precios y tarifas  
+- Gestión de reservas y modificaciones
+- Recomendaciones personalizadas
+
+Siempre responde de manera profesional, amigable y útil.`;
+                runParams.tools = [
+                    {
+                        type: "function",
+                        function: {
+                            name: "check_availability",
+                            description: "Verifica disponibilidad de apartamentos en fechas específicas",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    arrival: { type: "string", description: "Fecha de llegada (YYYY-MM-DD)" },
+                                    departure: { type: "string", description: "Fecha de salida (YYYY-MM-DD)" },
+                                    guests: { type: "integer", description: "Número de huéspedes" }
+                                },
+                                required: ["arrival", "departure", "guests"]
+                            }
+                        }
+                    }
+                ];
+                logInfo('MODEL_OVERRIDE', 'Usando gpt-4o-mini standalone para thread con contenido visual', {
                     threadId,
-                    assistantId: this.config.assistantId,
-                    overrideModel: 'gpt-4o',
+                    assistantId: 'standalone_no_assistant',
+                    overrideModel: 'gpt-4o-mini',
                     reasoningEffort: 'not_set',
                     hasCurrentImage,
                     hasImageHistory
