@@ -124,7 +124,10 @@
       "Bash(start http://localhost:5556)",
       "Bash(start http://localhost:5557)",
       "Bash(BEDS24_TOKEN=gLNPEkfnMxbKUEVPbvy7EWq/NA6cMLJ31QzPEKJlMAdk6eLSBFzSDj/puTp3HRcTeW6eu8ouWisupA/uKgWZ0DQUmZEisQe1yqz/EiS7lmUp2ScXEMmxoNgLmHHeEWAKhNcSIdKXjYpwtUxBYR7Zcrm9j8X0XBYinnPxsm5Kphg= BEDS24_API_URL=https://api.beds24.com/v2 npx tsx get-properties-fixed.ts)",
-      "Bash(start http://localhost:5558)"
+      "Bash(start http://localhost:5558)",
+      "Bash(git branch:*)",
+      "Bash(pwsh:*)",
+      "Bash(npm ls:*)"
     ],
     "deny": []
   }
