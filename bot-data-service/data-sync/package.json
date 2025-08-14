@@ -1,7 +1,8 @@
 {
-  "name": "data-sync",
-  "version": "0.1.0",
+  "name": "bot-data-service",
+  "version": "1.0.0",
   "private": true,
+  "description": "Data synchronization service for TeAlquilamos WhatsApp Bot - handles multiple data sources (Beds24, Whapi, etc.)",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",

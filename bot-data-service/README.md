@@ -1,22 +1,48 @@
-# 🚀 Beds24 Sync Service
+# 🚀 Bot Data Service
 
-Servicio independiente de sincronización con Beds24 API, diseñado para escalabilidad y observabilidad avanzada.
+**Servicio de datos del ecosistema TeAlquilamos WhatsApp Bot** - maneja sincronización multi-fuente con APIs externas (Beds24, Whapi, futuras integraciones), diseñado para escalabilidad y observabilidad avanzada.
+
+## 🎯 **Propósito**
+
+Bot Data Service es el **sistema nervioso de datos** del bot de WhatsApp, encargado de:
+- 🔄 **Sincronización bidireccional** con múltiples fuentes de datos
+- 📊 **Procesamiento de webhooks** en tiempo real
+- 🏨 **Gestión de reservas y leads** centralizados
+- 📈 **Observabilidad completa** con métricas y monitoring
 
 ## 🏗️ **Arquitectura**
 
+```
+┌─────────────────┐    📊 Data    ┌─────────────────┐
+│                 │ ◄─────────────► │                 │
+│ TeAlquilamos    │                │ Bot Data        │
+│ WhatsApp Bot    │                │ Service         │
+│                 │ ◄─────────────► │                 │
+└─────────────────┘    Webhooks    └─────────────────┘
+                                           │
+                                           ▼
+                                   ┌─────────────────┐
+                                   │  External APIs  │
+                                   │ • Beds24        │
+                                   │ • Whapi         │
+                                   │ • Future APIs   │
+                                   └─────────────────┘
+```
+
+### **Componentes**
 - **`data-sync/`** - Servicio principal BullMQ + Prometheus + OpenAPI
 - **`migration-scripts/`** - Scripts de migración y optimización de BD
 - **`docs/`** - Documentación técnica
-- **`prisma/`** - Esquema de base de datos independiente
+- **`prisma/`** - Esquema de base de datos
 
 ## ⚡ **Características**
 
-- **🔄 BullMQ**: Colas distribuidas con retry automático
-- **📊 Prometheus**: 15+ métricas de performance y negocio
-- **📚 OpenAPI**: Documentación interactiva Swagger
-- **🏥 Health Checks**: Monitoreo de Redis, DB, y queues
-- **🔍 Monitoring**: Script avanzado con alertas automáticas
-- **🐳 Docker**: Redis local para desarrollo
+- **🔄 Multi-Source Integration**: Beds24, Whapi, y futuras APIs
+- **📊 Prometheus Metrics**: 15+ métricas de performance y negocio
+- **📚 OpenAPI Documentation**: Documentación interactiva Swagger
+- **🏥 Health Monitoring**: Redis, DB, y queue status
+- **🔍 Advanced Monitoring**: Script con alertas automáticas
+- **🐳 Docker Ready**: Redis local para desarrollo
 
 ## 🚀 **Inicio Rápido**
 
@@ -81,16 +107,6 @@ npm run monitor:continuous      # Monitoreo continuo
 npm run monitor:json           # Output JSON
 ```
 
-## 🔧 **Configuración de Entorno**
-
-Ver `.env.example` para variables requeridas:
-
-- **DATABASE_URL**: PostgreSQL connection
-- **BEDS24_TOKEN**: Long life token de Beds24
-- **REDIS_URL**: Redis para colas y cache
-- **PROMETHEUS_ENABLED**: Habilitar métricas
-- **SWAGGER_ENABLED**: Habilitar documentación
-
 ## 📈 **Endpoints API**
 
 ### **Core**
@@ -104,6 +120,20 @@ Ver `.env.example` para variables requeridas:
 
 ### **Webhooks**
 - `POST /api/webhooks/beds24` - Webhook Beds24
+- `POST /api/webhooks/whapi` - Webhook Whapi (futuro)
+
+## 🔄 **Fuentes de Datos**
+
+### **Actuales**
+- **Beds24**: Reservas, disponibilidad, propiedades
+- **Whapi**: Mensajes, clientes, contexto conversacional
+- **Bot Database**: Estados, threads, cache
+
+### **Futuras**
+- **Airbnb**: Listings y reservas
+- **Booking.com**: Channel management
+- **Stripe**: Pagos y billing
+- **Google Calendar**: Sincronización disponibilidad
 
 ## 🧪 **Testing**
 
@@ -111,6 +141,12 @@ Ver `.env.example` para variables requeridas:
 npm test              # Tests unitarios
 npm run test:coverage # Coverage report
 ```
+
+Tests incluyen:
+- ✅ Health checks
+- ✅ Configuration validation
+- ✅ Sync logic validation
+- ✅ Webhook processing
 
 ## 📋 **Scripts de Migración**
 
@@ -123,14 +159,16 @@ En `migration-scripts/`:
 npx tsx migration-scripts/script-name.ts
 ```
 
-## ⚠️ **Conflictos Conocidos**
+## ⚠️ **Configuración de BD Compartida**
 
-**IMPORTANTE**: Lee `CONFLICTOS_Y_CONSIDERACIONES.md` antes de deploy a producción.
+**IMPORTANTE**: Lee `ESTRATEGIA_BD_COMPARTIDA.md` para entender la arquitectura.
 
-**Resumen**:
-- 🟡 **Database compartida** con bot principal
-- 🟡 **Token Beds24 compartido** 
-- 🟡 **Redis compartido** (usar prefijos diferentes)
+**Estrategia actual**:
+- 🟡 **Database compartida** con bot principal (intencional)
+- 🟡 **APIs compartidas** (Beds24, Whapi)
+- 🟡 **Redis compartido** con prefijos diferentes
+
+Esta estrategia permite **zero downtime** y **desarrollo ágil**.
 
 ## 🐳 **Docker**
 
@@ -188,4 +226,4 @@ MIT License - Ver archivo LICENSE para detalles.
 
 ---
 
-**🔗 Parte del ecosistema TeAlquilamos Bot**
+**🔗 Parte integral del ecosistema TeAlquilamos WhatsApp Bot**

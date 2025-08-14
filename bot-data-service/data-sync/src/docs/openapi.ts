@@ -5,12 +5,12 @@ const options: swaggerJSDoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Data Sync API',
+      title: 'Bot Data Service API',
       version: '1.0.0',
-      description: 'BullMQ-powered data synchronization service for Beds24 integration',
+      description: 'Multi-source data synchronization service for TeAlquilamos WhatsApp Bot',
       contact: {
-        name: 'Data Sync API Support',
-        email: 'support@example.com',
+        name: 'Bot Data Service Support',
+        email: 'support@tealquilamos.com',
       },
       license: {
         name: 'MIT',
