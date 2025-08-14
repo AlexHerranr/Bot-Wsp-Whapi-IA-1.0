@@ -22,11 +22,21 @@ export const SingleSyncJobSchema = z.object({
   priority: z.enum(['low', 'normal', 'high']).default('normal'),
 });
 
+export const WhapiJobSchema = z.object({
+  type: z.literal('whapi'),
+  source: z.literal('whapi'),
+  webhookType: z.string(),
+  data: z.any(),
+  timestamp: z.date().default(() => new Date()),
+  priority: z.enum(['low', 'normal', 'high']).default('normal'),
+});
+
 export type WebhookJob = z.infer<typeof WebhookJobSchema>;
 export type BulkSyncJob = z.infer<typeof BulkSyncJobSchema>;
 export type SingleSyncJob = z.infer<typeof SingleSyncJobSchema>;
+export type WhapiJob = z.infer<typeof WhapiJobSchema>;
 
-export type JobData = WebhookJob | BulkSyncJob | SingleSyncJob;
+export type JobData = WebhookJob | BulkSyncJob | SingleSyncJob | WhapiJob;
 
 // Job options para BullMQ
 export interface QueueJobOptions {

@@ -6,6 +6,7 @@ import {
   WebhookJob, 
   BulkSyncJob, 
   SingleSyncJob,
+  WhapiJob,
   QueueStats,
   QueueJobOptions
 } from '../../types/jobs.types';
@@ -94,6 +95,17 @@ export const beds24Worker = new Worker<JobData>(
           dateTo: bulkData.dateTo,
           duration: Date.now() - startTime
         }, 'Leads sync completed');
+        
+      } else if (data.type === 'whapi') {
+        const whapiData = data as WhapiJob;
+        // TODO: Implement Whapi processing logic here
+        logger.info({ 
+          jobId: job.id, 
+          webhookType: whapiData.webhookType,
+          duration: Date.now() - startTime
+        }, 'Whapi webhook processed (placeholder)');
+        metricsHelpers.recordJobComplete(data.type, startTime, 'success');
+        
       } else {
         throw new Error(`Unknown job type: ${(data as any).type}`);
       }

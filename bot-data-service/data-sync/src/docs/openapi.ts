@@ -350,6 +350,50 @@ export const swaggerSpec = swaggerJSDoc(options);
 
 /**
  * @swagger
+ * /api/webhooks/whapi:
+ *   post:
+ *     summary: Receive webhook from Whapi
+ *     tags: [Webhooks]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [type, data]
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [message, message_status, client_ready]
+ *                 description: Type of Whapi event
+ *                 example: message
+ *               data:
+ *                 type: object
+ *                 description: Event data payload
+ *                 example: {"from": "1234567890", "text": "Hello"}
+ *     responses:
+ *       200:
+ *         description: Webhook accepted and queued for processing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/WebhookResponse'
+ *       400:
+ *         description: Invalid webhook data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
  * /api/admin/queues/stats:
  *   get:
  *     summary: Get queue statistics
