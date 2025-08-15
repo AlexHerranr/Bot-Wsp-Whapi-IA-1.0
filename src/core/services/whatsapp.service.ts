@@ -130,7 +130,7 @@ export class WhatsappService {
                 input: chunk,
                 response_format: 'opus', // ← Más liviano para WhatsApp
                 speed: 1.0,
-                instructions: "Habla en español latino neutro, ritmo conversacional natural, entonación descendente al final de frases. Evita anglicismos."
+                instructions: "Habla como agente de reservas colombiano de la costa caribeña, tono cálido y profesional sin exagerar. Ritmo conversacional natural, pausas relajadas. Acento costeño sutil, evita jerga extrema."
                 
                 // BACKUP - Configuración anterior (revertir si hay problemas):
                 // model: 'tts-1-hd',
