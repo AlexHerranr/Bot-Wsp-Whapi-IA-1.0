@@ -125,16 +125,22 @@ export class WhatsappService {
 
             const startTime = Date.now();
             const ttsResponse = await this.openai.audio.speech.create({
-                model: 'tts-1-hd',
-                voice: 'coral', // ← Optimizada para español (mejor entonación, per docs y tests)
+                model: 'gpt-4o-mini-tts',
+                voice: 'coral',
                 input: chunk,
-                response_format: 'mp3',
-                speed: 0.9 // ← Velocidad reducida para claridad, evita gibberish
+                response_format: 'opus', // ← Más liviano para WhatsApp
+                speed: 1.0,
+                instructions: "Habla en español latino neutro, ritmo conversacional natural, entonación descendente al final de frases. Evita anglicismos."
+                
+                // BACKUP - Configuración anterior (revertir si hay problemas):
+                // model: 'tts-1-hd',
+                // response_format: 'mp3',
+                // (sin instructions parameter)
             });
 
             const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
             const base64Audio = audioBuffer.toString('base64');
-            const audioDataUrl = `data:audio/mp3;base64,${base64Audio}`;
+            const audioDataUrl = `data:audio/opus;base64,${base64Audio}`;
 
             const payload: any = { to: chatId, media: audioDataUrl };
             if (i === 0 && quotedMessageId) {
