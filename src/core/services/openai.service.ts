@@ -57,7 +57,7 @@ export class OpenAIService implements IOpenAIService {
             apiKey: config.apiKey,
             assistantId: config.assistantId,
             maxRunTime: config.maxRunTime ?? 120000, // 2 minutes
-            pollingInterval: config.pollingInterval ?? 1500, // 1.5 seconds (reducido de 2s)
+            pollingInterval: config.pollingInterval ?? parseInt(process.env.POLLING_INTERVAL || '1000'), // Configurable via env, default 1000ms
             maxPollingAttempts: config.maxPollingAttempts ?? 40, // 40 intentos (reducido de 60)
             enableThreadCache: config.enableThreadCache ?? true
         };
@@ -186,8 +186,23 @@ export class OpenAIService implements IOpenAIService {
                 isNewThread = true;
             }
 
-            // Step 2: Add message to thread (with optional image)
-            await this.addMessageToThread(threadId, message, imageMessage);
+            // Step 2: Verificar y cancelar runs activos antes de agregar mensaje
+            const runs = await this.openai.beta.threads.runs.list(threadId, { limit: 1 });
+            if (runs.data[0]?.status === 'in_progress' || runs.data[0]?.status === 'requires_action') {
+                await this.cancelRun(threadId, runs.data[0].id);
+            }
+            
+            // Add message to thread (with optional image) con retry
+            try {
+                await this.addMessageToThread(threadId, message, imageMessage);
+            } catch (e: any) {
+                if (e.message && e.message.includes('while a run is active')) {
+                    await this.sleep(2000); // Delay y reintenta una vez
+                    await this.addMessageToThread(threadId, message, imageMessage);
+                } else {
+                    throw e;
+                }
+            }
             
             // 📤 NUEVO: Log completo del prompt enviado a OpenAI (compactado en una línea)
             const flattenedMessage = message
@@ -964,6 +979,11 @@ export class OpenAIService implements IOpenAIService {
         const pollingStartTime = Date.now();
 
         while (attempts < this.config.maxPollingAttempts) {
+            // Timeout para polling después de tool outputs (configurable, default 45s para functions lentas)
+            const timeoutMs = parseInt(process.env.POLLING_TIMEOUT_MS || '45000');
+            if (Date.now() - pollingStartTime > timeoutMs) {
+                throw new Error('Polling timeout after tool outputs');
+            }
             try {
                 const run = await openAIWithRetry(
                     () => this.openai.beta.threads.runs.retrieve(threadId, runId),
@@ -1000,8 +1020,9 @@ export class OpenAIService implements IOpenAIService {
                     backoffDelay = this.config.pollingInterval;
                 }
 
-                // Log crítico: Polling de run con delay dinámico
-                if (attempts % 5 === 0 || run.status !== 'in_progress') { // Log cada 5 intentos o cuando cambia estado
+                // Log crítico: Polling de run con delay dinámico (solo si elapsed > 5s para evitar spam)
+                const elapsedTime = Date.now() - pollingStartTime;
+                if ((elapsedTime > 5000 && attempts % 3 === 0) || run.status !== 'in_progress') { 
                     logInfo('OPENAI_POLLING', `Esperando respuesta - status: ${run.status}`, {
                         threadId,
                         runId,
@@ -1009,7 +1030,7 @@ export class OpenAIService implements IOpenAIService {
                         attempts: attempts + 1,
                         maxAttempts: this.config.maxPollingAttempts,
                         backoffDelay,
-                        elapsedTime: Date.now() - pollingStartTime
+                        elapsedTime
                     });
                 }
 
@@ -1355,6 +1376,22 @@ export class OpenAIService implements IOpenAIService {
         const lastMessage = messages.data[0];
         
         if (!lastMessage || lastMessage.role !== 'assistant') {
+            // Intentar recuperar mensajes previos si no hay nuevo
+            const prevMessages = await this.openai.beta.threads.messages.list(threadId, { limit: 2 });
+            const prevAssistantMsg = prevMessages.data.find(msg => msg.role === 'assistant');
+            if (prevAssistantMsg) {
+                const prevTextContent = prevAssistantMsg.content.find(c => c.type === 'text');
+                const recoveredMsg = (prevTextContent as any)?.text?.value || '';
+                if (recoveredMsg) {
+                    logInfo('RECOVERED_PREV', 'Respuesta recuperada de mensaje anterior', {
+                        threadId,
+                        recoveredLength: recoveredMsg.length,
+                        reason: 'no_current_assistant_message'
+                    });
+                }
+                return recoveredMsg;
+            }
+            
             logInfo('NO_ASSISTANT_MESSAGE', 'No assistant message found, returning empty silently');
             return ''; // Retorna vacío como en el antiguo, para no enviar respuesta automática
         }
