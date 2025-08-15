@@ -43,7 +43,7 @@ export class OpenAIService implements IOpenAIService {
     private databaseService?: DatabaseService; // Servicio de BD para resets de tokens
     private static activeOpenAICalls: number = 0; // Contador global de llamadas concurrentes
     private perceptionService: PerceptionService; // Capa de percepción para imágenes
-    private static readonly MAX_CONCURRENT_CALLS = 50; // Límite para 100 usuarios
+    private static readonly MAX_CONCURRENT_CALLS = 75; // Optimizado para 100 usuarios
 
     constructor(
         config: OpenAIServiceConfig,
@@ -57,8 +57,8 @@ export class OpenAIService implements IOpenAIService {
             apiKey: config.apiKey,
             assistantId: config.assistantId,
             maxRunTime: config.maxRunTime ?? 120000, // 2 minutes
-            pollingInterval: config.pollingInterval ?? 1500, // 1.5 seconds (reducido de 2s)
-            maxPollingAttempts: config.maxPollingAttempts ?? 40, // 40 intentos (reducido de 60)
+            pollingInterval: config.pollingInterval ?? 1000, // 1 second (optimizado para 100 usuarios)
+            maxPollingAttempts: config.maxPollingAttempts ?? 25, // 25 intentos (optimizado para 100 usuarios)
             enableThreadCache: config.enableThreadCache ?? true
         };
 
@@ -213,6 +213,11 @@ export class OpenAIService implements IOpenAIService {
             const first15Words = flattenedMessage.split(' ').slice(0, 15).join(' ');
             console.info(`[OPENAI_RAW_CONTENT] ${userId}: "${first15Words}..." (${flattenedMessage.length}ch total)`);
             
+            // Log completo condicional para debugging
+            if (process.env.DEBUG_FULL_CONTENT === 'true') {
+                console.log(`[FULL_PROMPT] ${userId}:`, flattenedMessage);
+            }
+            
             // Mantener el log anterior para compatibilidad  
             logInfo('OPENAI_MESSAGE_SENT', 'Mensaje enviado al thread de OpenAI', {
                 userId,
@@ -323,6 +328,11 @@ export class OpenAIService implements IOpenAIService {
                     containsAudioError,
                     timestamp: new Date().toISOString()
                 });
+                
+                // Log completo condicional para debugging
+                if (process.env.DEBUG_FULL_CONTENT === 'true') {
+                    console.log(`[FULL_RESPONSE] ${userId}:`, response.trim());
+                }
                 
                 // Advertencia específica solo si realmente es un error de procesamiento de audio
                 if (containsAudioError) {

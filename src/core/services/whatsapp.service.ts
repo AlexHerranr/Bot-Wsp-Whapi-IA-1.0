@@ -125,10 +125,11 @@ export class WhatsappService {
 
             const startTime = Date.now();
             const ttsResponse = await this.openai.audio.speech.create({
-                model: 'tts-1',
-                voice: 'nova',
+                model: 'tts-1-hd',
+                voice: 'coral', // ← Optimizada para español (mejor entonación, per docs y tests)
                 input: chunk,
-                response_format: 'mp3'
+                response_format: 'mp3',
+                speed: 0.9 // ← Velocidad reducida para claridad, evita gibberish
             });
 
             const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
