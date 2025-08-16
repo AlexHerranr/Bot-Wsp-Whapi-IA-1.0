@@ -130,7 +130,7 @@ export class WhatsappService {
                 input: chunk,
                 response_format: 'opus', // ← Más liviano para WhatsApp
                 speed: 1.0,
-                instructions: "Habla como agente de reservas colombiano de la costa caribeña, tono cálido y profesional sin exagerar. Ritmo conversacional natural, pausas relajadas. Acento costeño sutil, evita jerga extrema."
+                instructions: "Habla normal y natural, como conversación en persona. Acento Cartagena Colombia neutro, nada exagerado. Incluye pausas naturales tipo 'em...', 'pues...', como hablan las personas reales. Nada expresivo."
                 
                 // BACKUP - Configuración anterior (revertir si hay problemas):
                 // model: 'tts-1-hd',
