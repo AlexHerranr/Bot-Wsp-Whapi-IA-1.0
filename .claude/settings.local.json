@@ -121,6 +121,9 @@
       "Bash(copy improve-leads-structure.ts beds24-sync-service\\scripts\\)",
       "Bash(copy improve-leads-structure.ts beds24-sync-service\\migration-scripts\\)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "C:\\Users\\alex-\\bot-data-service"
+    ]
   }
 }
