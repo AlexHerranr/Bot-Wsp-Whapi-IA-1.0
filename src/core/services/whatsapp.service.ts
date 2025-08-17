@@ -292,6 +292,16 @@ export class WhatsappService {
         // CRÍTICO: Marcar contenido como enviado para prevenir duplicados texto/voz
         this.mediaManager.addBotSentContent(chatId, message);
         
+        // CRÍTICO: Marcar IDs de mensajes como enviados por el bot (para detectar quotes)
+        collectedIds.forEach(id => {
+            this.mediaManager.addBotSentMessage(id);
+            logInfo('BOT_MESSAGE_ID_STORED', 'ID de mensaje del bot guardado', { 
+                chatId, 
+                messageId: id,
+                type: 'voice'
+            });
+        });
+        
         // Log de confirmación de citación para voz
         if (quotedMessageId) {
             logInfo('QUOTE_ATTEMPT_VOICE', 'Citación enviada en nota de voz', { 
@@ -452,6 +462,16 @@ export class WhatsappService {
 
         // CRÍTICO: Marcar contenido como enviado para prevenir duplicados
         this.mediaManager.addBotSentContent(chatId, message);
+        
+        // CRÍTICO: Marcar IDs de mensajes como enviados por el bot (para detectar quotes)
+        collectedIds.forEach(id => {
+            this.mediaManager.addBotSentMessage(id);
+            logInfo('BOT_MESSAGE_ID_STORED', 'ID de mensaje del bot guardado', { 
+                chatId, 
+                messageId: id,
+                type: 'text'
+            });
+        });
         
         // Log de confirmación de citación para texto
         if (quotedMessageId) {

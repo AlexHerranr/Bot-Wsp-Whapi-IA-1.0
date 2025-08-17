@@ -554,16 +554,16 @@ export class WebhookProcessor {
                         
                         // Solo procesar citación si usuario explícitamente citó otro mensaje
                         if (message.context?.quoted_id) {
-                            // CRITICAL FIX: Si usuario cita mensaje del bot, bot debe citar mensaje del usuario
+                            // CRITICAL FIX: Si usuario cita mensaje del bot, bot NO debe citar nada
                             if (this.mediaManager.isBotSentMessage(message.context.quoted_id)) {
-                                // Usuario citó mensaje del bot → bot debe citar mensaje del usuario
-                                quotedId = message.id;
-                                logInfo('QUOTE_FIXED', 'Usuario citó bot, corrigiendo para citar al usuario', {
+                                // Usuario citó mensaje del bot → bot NO cita (conversación natural)
+                                quotedId = undefined;
+                                logInfo('QUOTE_BOT_IGNORED', 'Usuario citó bot, no citando de vuelta (natural)', {
                                     userId,
                                     userName,
                                     originalQuotedId: message.context.quoted_id,
-                                    newQuotedId: message.id,
-                                    messageType: 'text'
+                                    messageType: 'text',
+                                    reason: 'avoid_bot_loop'
                                 });
                             } else {
                                 // Usuario citó mensaje de otro usuario → mantener citación original
@@ -649,16 +649,16 @@ export class WebhookProcessor {
                             
                             // Solo procesar citación si usuario explícitamente citó otro mensaje
                             if (message.context?.quoted_id) {
-                                // CRITICAL FIX: Si usuario cita mensaje del bot, bot debe citar mensaje del usuario
+                                // CRITICAL FIX: Si usuario cita mensaje del bot, bot NO debe citar nada
                                 if (this.mediaManager.isBotSentMessage(message.context.quoted_id)) {
-                                    // Usuario citó mensaje del bot → bot debe citar mensaje del usuario
-                                    quotedId = message.id;
-                                    logInfo('QUOTE_FIXED', 'Usuario citó bot, corrigiendo para citar al usuario', {
+                                    // Usuario citó mensaje del bot → bot NO cita (conversación natural)
+                                    quotedId = undefined;
+                                    logInfo('QUOTE_BOT_IGNORED', 'Usuario citó bot, no citando de vuelta (natural)', {
                                         userId,
                                         userName,
                                         originalQuotedId: message.context.quoted_id,
-                                        newQuotedId: message.id,
-                                        messageType: 'voice'
+                                        messageType: 'voice',
+                                        reason: 'avoid_bot_loop'
                                     });
                                 } else {
                                     // Usuario citó mensaje de otro usuario → mantener citación original
