@@ -302,6 +302,9 @@ export class BufferManager implements IBufferManager {
         this.activeRuns.set(userId, true); // Marcar como activo
         this.activeRunTimestamps.set(userId, Date.now()); // Timestamp para timeout de seguridad
 
+        const messagesToProcess = [...buffer.messages];
+        const { chatId, userName } = buffer;
+
         // CITACIÓN AUTO: Detectar si hay mensaje marcado para citación durante run
         const isDuringRunPending = !!buffer.duringRunMsgId;
         if (isDuringRunPending) {
@@ -312,9 +315,6 @@ export class BufferManager implements IBufferManager {
                 messageCount: buffer.messages.length
             });
         }
-
-        const messagesToProcess = [...buffer.messages];
-        const { chatId, userName } = buffer;
         const pendingImage = buffer.pendingImage;
         const duringRunMsgId = buffer.duringRunMsgId;
         
