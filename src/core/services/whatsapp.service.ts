@@ -153,41 +153,9 @@ export class WhatsappService {
                 .trim();
             const chunk = sanitizedChunk.slice(0, 8000); // límite seguro para TTS
 
-            // TIMING HUMANO: Activado para voz con condicional inteligente
-            if (i === 0 || voiceChunks.length > 1) {  // Presencia en primero y si >1 chunk (natural)
-                const delay = this.calculateHumanDelayForChunk(chunk.length, 'voice');
-                
-                // Enviar presencia antes del delay
-                await this.sendRecordingIndicator(chatId);
-                logInfo('PRESENCE_CHUNK_VOICE', 'Grabando enviado para chunk', { 
-                    chatId, 
-                    chunkIndex: i + 1, 
-                    totalChunks: voiceChunks.length,
-                    delay 
-                });
-                
-                // Delay con timeout defensivo
-                await Promise.race([
-                    new Promise(resolve => setTimeout(resolve, delay)),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Voice chunk delay timeout')), 3000))
-                ]).catch(err => logInfo('VOICE_CHUNK_TIMEOUT', 'Timeout en delay voz chunk, continuando', { 
-                    chunkIndex: i + 1, 
-                    delay, 
-                    error: err.message 
-                }));
-            } else {
-                // Para chunks secundarios sin delay extra, solo presencia original
-                await this.sendRecordingIndicator(chatId);
-            }
-            logInfo('INDICATOR_SENT', 'Indicador de grabación enviado exitosamente', {
-                userId: shortUserId,
-                chatId,
-                indicatorType: 'recording',
-                part: i + 1,
-                totalParts: voiceChunks.length
-            }, 'whatsapp.service.ts');
-
             const startTime = Date.now();
+            
+            // PASO 1: Generar TTS primero para conocer duración real
             const ttsResponse = await this.openai.audio.speech.create({
                 model: 'gpt-4o-mini-tts',
                 voice: 'coral',
@@ -205,6 +173,56 @@ export class WhatsappService {
             const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
             const base64Audio = audioBuffer.toString('base64');
             const audioDataUrl = `data:audio/opus;base64,${base64Audio}`;
+
+            // PASO 2: TIMING HUMANO - Calcular duración real del audio generado
+            const estimatedWords = chunk.length / 5; // ~5 chars por palabra promedio español
+            const speechRateWordsPerSecond = 2.8; // ~168 WPM para voz coral natural
+            const audioDurationMs = Math.round((estimatedWords / speechRateWordsPerSecond) * 1000);
+            
+            logInfo('AUDIO_DURATION_CALCULATED', 'Duración de audio calculada', {
+                chunkLength: chunk.length,
+                estimatedWords: Math.round(estimatedWords),
+                audioDurationMs,
+                audioSizeBytes: audioBuffer.length
+            });
+
+            // PASO 3: TIMING HUMANO - Usar duración del audio como delay natural
+            if (i === 0 || voiceChunks.length > 1) {  // Presencia en primero y si >1 chunk (natural)
+                
+                // Enviar presencia "grabando..." por la duración del audio
+                await this.sendRecordingIndicator(chatId);
+                logInfo('PRESENCE_CHUNK_VOICE', 'Grabando enviado por duración real del audio', { 
+                    chatId, 
+                    chunkIndex: i + 1, 
+                    totalChunks: voiceChunks.length,
+                    audioDurationMs,
+                    chunkLength: chunk.length
+                });
+                
+                // Delay = duración del audio (natural)
+                const maxDelayMs = 8000; // Cap máximo 8s por seguridad
+                const finalDelayMs = Math.min(audioDurationMs, maxDelayMs);
+                
+                await Promise.race([
+                    new Promise(resolve => setTimeout(resolve, finalDelayMs)),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Voice chunk delay timeout')), maxDelayMs + 1000))
+                ]).catch(err => logInfo('VOICE_CHUNK_TIMEOUT', 'Timeout en delay voz chunk, continuando', { 
+                    chunkIndex: i + 1, 
+                    audioDurationMs: finalDelayMs, 
+                    error: err.message 
+                }));
+            } else {
+                // Para chunks secundarios sin delay extra, solo presencia original
+                await this.sendRecordingIndicator(chatId);
+            }
+            
+            logInfo('INDICATOR_SENT', 'Indicador de grabación enviado exitosamente', {
+                userId: shortUserId,
+                chatId,
+                indicatorType: 'recording',
+                part: i + 1,
+                totalParts: voiceChunks.length
+            }, 'whatsapp.service.ts');
 
             const payload: any = { to: chatId, media: audioDataUrl };
             if (i === 0 && quotedMessageId) {
