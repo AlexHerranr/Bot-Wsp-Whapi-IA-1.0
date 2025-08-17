@@ -14,7 +14,7 @@ export class BufferManager implements IBufferManager {
         private getUserState?: (userId: string) => { isTyping: boolean; isRecording: boolean; lastActivity?: number } | undefined
     ) {}
 
-    public addMessage(userId: string, messageText: string, chatId: string, userName: string, quotedMessageId?: string): void {
+    public addMessage(userId: string, messageText: string, chatId: string, userName: string, quotedMessageId?: string, currentMessageId?: string): void {
         let buffer = this.buffers.get(userId);
         if (!buffer) {
             buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null, quotedMessageId } as any;
@@ -42,13 +42,14 @@ export class BufferManager implements IBufferManager {
         
         // CITACIÓN AUTO: Marcar mensaje para citación si hay run activo
         if (this.activeRuns.get(userId)) {
-            buffer.duringRunMsgId = quotedMessageId || 'auto-during-run'; // Usa ID real si disponible, o placeholder válido
+            buffer.duringRunMsgId = currentMessageId || 'auto-during-run'; // Usa ID del mensaje actual para citación durante run
             logInfo('CITACION_AUTO_MARK', 'Mensaje marcado para citación auto durante run', { 
                 userId, 
                 userName,
                 duringRunMsgId: buffer.duringRunMsgId,
                 messagePreview: messageText.substring(0, 80),
-                hasRealId: !!quotedMessageId
+                hasRealId: !!currentMessageId,
+                reason: 'active_run_detected'
             });
         }
         

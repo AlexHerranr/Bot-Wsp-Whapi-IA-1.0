@@ -475,7 +475,7 @@ export class CoreBot {
                     }, 'bot.ts');
                     // Reencolar el mensaje para procesarlo después y no perderlo
                     try {
-                        this.bufferManager.addMessage(userId, combinedText, chatId, userName);
+                        this.bufferManager.addMessage(userId, combinedText, chatId, userName, undefined, undefined);
                         this.bufferManager.setIntelligentTimer(userId, 'message');
                         logInfo('BUFFER_REQUEUED', 'Mensaje reencolado por run activo', {
                             userId,

@@ -549,9 +549,36 @@ export class WebhookProcessor {
                         });
                         
                         this.terminalLog.message(userName, message.text.body);
-                        // CITACIÓN AUTO: Propagar quotedId al buffer si existe, o usar ID del mensaje actual para duringRun
-                        const quotedId = message.context?.quoted_id || message.id;
-                        this.bufferManager.addMessage(userId, messageContent, normalizedChatId, userName, quotedId);
+                        // CITACIÓN AUTO: Solo propagar quotedId si usuario cita OTRO mensaje, NO citación automática
+                        let quotedId = undefined;
+                        
+                        // Solo procesar citación si usuario explícitamente citó otro mensaje
+                        if (message.context?.quoted_id) {
+                            // CRITICAL FIX: Si usuario cita mensaje del bot, bot debe citar mensaje del usuario
+                            if (this.mediaManager.isBotSentMessage(message.context.quoted_id)) {
+                                // Usuario citó mensaje del bot → bot debe citar mensaje del usuario
+                                quotedId = message.id;
+                                logInfo('QUOTE_FIXED', 'Usuario citó bot, corrigiendo para citar al usuario', {
+                                    userId,
+                                    userName,
+                                    originalQuotedId: message.context.quoted_id,
+                                    newQuotedId: message.id,
+                                    messageType: 'text'
+                                });
+                            } else {
+                                // Usuario citó mensaje de otro usuario → mantener citación original
+                                quotedId = message.context.quoted_id;
+                                logInfo('QUOTE_USER_TO_USER', 'Usuario citó otro usuario, manteniendo citación', {
+                                    userId,
+                                    userName,
+                                    quotedId: message.context.quoted_id,
+                                    messageType: 'text'
+                                });
+                            }
+                        }
+                        // NOTA: message.id se pasa por separado para duringRun en buffer-manager
+                        
+                        this.bufferManager.addMessage(userId, messageContent, normalizedChatId, userName, quotedId, message.id);
                     }
                     break;
 
@@ -617,9 +644,36 @@ export class WebhookProcessor {
                                 hasQuoted: !!(message.context && message.context.quoted_id)
                             });
                             
-                            // CITACIÓN AUTO: Propagar quotedId al buffer si existe, o usar ID del mensaje actual para duringRun
-                            const quotedId = message.context?.quoted_id || message.id;
-                            this.bufferManager.addMessage(userId, finalMessage, normalizedChatId, userName, quotedId);
+                            // CITACIÓN AUTO: Solo propagar quotedId si usuario cita OTRO mensaje, NO citación automática
+                            let quotedId = undefined;
+                            
+                            // Solo procesar citación si usuario explícitamente citó otro mensaje
+                            if (message.context?.quoted_id) {
+                                // CRITICAL FIX: Si usuario cita mensaje del bot, bot debe citar mensaje del usuario
+                                if (this.mediaManager.isBotSentMessage(message.context.quoted_id)) {
+                                    // Usuario citó mensaje del bot → bot debe citar mensaje del usuario
+                                    quotedId = message.id;
+                                    logInfo('QUOTE_FIXED', 'Usuario citó bot, corrigiendo para citar al usuario', {
+                                        userId,
+                                        userName,
+                                        originalQuotedId: message.context.quoted_id,
+                                        newQuotedId: message.id,
+                                        messageType: 'voice'
+                                    });
+                                } else {
+                                    // Usuario citó mensaje de otro usuario → mantener citación original
+                                    quotedId = message.context.quoted_id;
+                                    logInfo('QUOTE_USER_TO_USER', 'Usuario citó otro usuario, manteniendo citación', {
+                                        userId,
+                                        userName,
+                                        quotedId: message.context.quoted_id,
+                                        messageType: 'voice'
+                                    });
+                                }
+                            }
+                            // NOTA: message.id se pasa por separado para duringRun en buffer-manager
+                            
+                            this.bufferManager.addMessage(userId, finalMessage, normalizedChatId, userName, quotedId, message.id);
                         } else {
                             this.terminalLog.voiceError(userName, result.error || 'Transcription failed');
                             
