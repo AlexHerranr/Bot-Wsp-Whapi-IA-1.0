@@ -549,41 +549,8 @@ export class WebhookProcessor {
                         });
                         
                         this.terminalLog.message(userName, message.text.body);
-                        // CITACIÓN AUTO: Solo propagar quotedId si usuario cita OTRO mensaje, NO citación automática
-                        let quotedId = undefined;
-                        
-                        // Solo procesar citación si usuario explícitamente citó otro mensaje
-                        if (message.context?.quoted_id) {
-                            const quotedContent = message.context.quoted_content?.body || '';
-                            
-                            // CRITICAL FIX: Verificar si usuario cita mensaje del bot (ID + contenido)
-                            const isBotMessageById = this.mediaManager.isBotSentMessage(message.context.quoted_id);
-                            const isBotMessageByContent = this.mediaManager.isBotSentContent(normalizedChatId, quotedContent);
-                            
-                            if (isBotMessageById || isBotMessageByContent) {
-                                // Usuario citó mensaje del bot → bot NO cita (conversación natural)
-                                quotedId = undefined;
-                                logInfo('QUOTE_BOT_IGNORED', 'Usuario citó bot, no citando de vuelta (natural)', {
-                                    userId,
-                                    userName,
-                                    originalQuotedId: message.context.quoted_id,
-                                    quotedContent: quotedContent.substring(0, 80),
-                                    detectedBy: isBotMessageById ? 'id' : 'content',
-                                    messageType: 'text',
-                                    reason: 'avoid_bot_loop'
-                                });
-                            } else {
-                                // Usuario citó mensaje de otro usuario → mantener citación original
-                                quotedId = message.context.quoted_id;
-                                logInfo('QUOTE_USER_TO_USER', 'Usuario citó otro usuario, manteniendo citación', {
-                                    userId,
-                                    userName,
-                                    quotedId: message.context.quoted_id,
-                                    quotedContent: quotedContent.substring(0, 80),
-                                    messageType: 'text'
-                                });
-                            }
-                        }
+                        // CITACIÓN SIMPLIFICADA: Solo durante run activo, nada más
+                        const quotedId = undefined; // NUNCA citar por quotes del usuario
                         // NOTA: message.id se pasa por separado para duringRun en buffer-manager
                         
                         this.bufferManager.addMessage(userId, messageContent, normalizedChatId, userName, quotedId, message.id);
@@ -652,41 +619,8 @@ export class WebhookProcessor {
                                 hasQuoted: !!(message.context && message.context.quoted_id)
                             });
                             
-                            // CITACIÓN AUTO: Solo propagar quotedId si usuario cita OTRO mensaje, NO citación automática
-                            let quotedId = undefined;
-                            
-                            // Solo procesar citación si usuario explícitamente citó otro mensaje
-                            if (message.context?.quoted_id) {
-                                const quotedContent = message.context.quoted_content?.body || '';
-                                
-                                // CRITICAL FIX: Verificar si usuario cita mensaje del bot (ID + contenido)
-                                const isBotMessageById = this.mediaManager.isBotSentMessage(message.context.quoted_id);
-                                const isBotMessageByContent = this.mediaManager.isBotSentContent(normalizedChatId, quotedContent);
-                                
-                                if (isBotMessageById || isBotMessageByContent) {
-                                    // Usuario citó mensaje del bot → bot NO cita (conversación natural)
-                                    quotedId = undefined;
-                                    logInfo('QUOTE_BOT_IGNORED', 'Usuario citó bot, no citando de vuelta (natural)', {
-                                        userId,
-                                        userName,
-                                        originalQuotedId: message.context.quoted_id,
-                                        quotedContent: quotedContent.substring(0, 80),
-                                        detectedBy: isBotMessageById ? 'id' : 'content',
-                                        messageType: 'voice',
-                                        reason: 'avoid_bot_loop'
-                                    });
-                                } else {
-                                    // Usuario citó mensaje de otro usuario → mantener citación original
-                                    quotedId = message.context.quoted_id;
-                                    logInfo('QUOTE_USER_TO_USER', 'Usuario citó otro usuario, manteniendo citación', {
-                                        userId,
-                                        userName,
-                                        quotedId: message.context.quoted_id,
-                                        quotedContent: quotedContent.substring(0, 80),
-                                        messageType: 'voice'
-                                    });
-                                }
-                            }
+                            // CITACIÓN SIMPLIFICADA: Solo durante run activo, nada más
+                            const quotedId = undefined; // NUNCA citar por quotes del usuario
                             // NOTA: message.id se pasa por separado para duringRun en buffer-manager
                             
                             this.bufferManager.addMessage(userId, finalMessage, normalizedChatId, userName, quotedId, message.id);

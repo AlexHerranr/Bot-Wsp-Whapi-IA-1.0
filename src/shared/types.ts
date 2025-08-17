@@ -50,8 +50,7 @@ export interface MessageBuffer {
     timer: NodeJS.Timeout | null;
     isVoice?: boolean;
     pendingImage?: { type: 'image', imageUrl: string, caption: string } | null;
-    quotedMessageId?: string;
-    duringRunMsgId?: string; // ID para citación auto durante run activo
+    duringRunMsgId?: string; // ID para citación auto durante run activo - ÚNICO SISTEMA DE CITACIÓN
 }
 
 // Registro de Threads en Persistencia

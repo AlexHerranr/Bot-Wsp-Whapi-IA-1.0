@@ -17,13 +17,13 @@ export class BufferManager implements IBufferManager {
     public addMessage(userId: string, messageText: string, chatId: string, userName: string, quotedMessageId?: string, currentMessageId?: string): void {
         let buffer = this.buffers.get(userId);
         if (!buffer) {
-            buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null, quotedMessageId } as any;
+            buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null } as any;
             this.buffers.set(userId, buffer);
             logInfo('BUFFER_CREATED', 'Buffer creado para mensaje', { userId, userName, reason: 'new_message' }, 'buffer-manager.ts');
         } else {
             if (userName && userName !== 'Usuario') buffer.userName = userName;
             if (chatId && !buffer.chatId) buffer.chatId = chatId;
-            if (quotedMessageId) buffer.quotedMessageId = quotedMessageId;
+            // SIMPLIFICADO: quotedMessageId eliminado - solo duringRunMsgId
         }
 
         if (buffer.messages.length >= MAX_BUFFER_MESSAGES) {
@@ -61,7 +61,7 @@ export class BufferManager implements IBufferManager {
         // Analizar tipos de mensajes en el buffer
         const textCount = buffer.messages.filter(msg => !msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
         const voiceCount = buffer.messages.filter(msg => msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
-        const currentCombined = this.smartCombineMessages(buffer.messages, buffer.quotedMessageId, buffer.duringRunMsgId);
+        const currentCombined = this.smartCombineMessages(buffer.messages);
         
         // ✅ Log específico del estado del buffer
         if (buffer.messages.length > 0) {
@@ -69,11 +69,10 @@ export class BufferManager implements IBufferManager {
                 userId,
                 userName,
                 messageCount: buffer.messages.length,
-                hasQuotedId: !!buffer.quotedMessageId,
-                quotedId: buffer.quotedMessageId || null,
                 combinedPreview: currentCombined.substring(0, 80),
                 textCount,
-                voiceCount
+                voiceCount,
+                hasDuringRunFlag: !!buffer.duringRunMsgId
             });
         }
         const preview20Words = currentCombined.split(' ').slice(0, 20).join(' ') + (currentCombined.split(' ').length > 20 ? '...' : '');
@@ -327,7 +326,7 @@ export class BufferManager implements IBufferManager {
             buffer.timer = null;
         }
 
-        const combinedText = this.smartCombineMessages(messagesToProcess, buffer.quotedMessageId, duringRunMsgId).trim();
+        const combinedText = this.smartCombineMessages(messagesToProcess).trim();
 
         logSuccess('BUFFER_GROUPED', 'Procesando idea completa agrupada', {
             userId,
@@ -385,10 +384,9 @@ export class BufferManager implements IBufferManager {
         }
     }
 
-    private smartCombineMessages(messages: string[], quotedMessageId?: string, duringRunMsgId?: string): string {
-        // ✅ Buffer solo concatena mensajes, NO inyecta IDs internos ni frases de cita
-        // La frase "Cliente responde a este mensaje" ya viene formateada desde webhook-processor
-        // duringRunMsgId se pasa al whatsapp.service.ts para citación automática
+    private smartCombineMessages(messages: string[]): string {
+        // ✅ Buffer solo concatena mensajes - SIMPLIFICADO
+        // duringRunMsgId se maneja por separado para citación automática
         if (messages.length <= 1) {
             return messages[0] || '';
         }

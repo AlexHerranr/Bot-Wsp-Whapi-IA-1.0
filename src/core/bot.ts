@@ -733,27 +733,8 @@ export class CoreBot {
                     }, 'bot.ts');
                 }
 
-                // ✅ Decidir si citar usando heurística y respetar reply humano
-                const currentBuffer = this.bufferManager.getBuffer(userId);
-                const quotedFromUser = currentBuffer?.quotedMessageId;
-
-                // Detectar si el mensaje venía con contexto quoted (texto o voz) sin ancla al inicio
-                const hasQuotedContext = /cliente responde(?: con nota de voz)? a este mensaje:/i.test(combinedText);
-
-                // Normalizar texto removiendo encabezados de cita de texto o voz
-                const normalized = combinedText.replace(
-                    /Cliente responde (?:con nota de voz )?a este mensaje:.*?\n+(?:Mensaje del cliente|Transcripción de la nota de voz):\s*/is,
-                    ''
-                ).trim();
-
-                // Heurística solo para casos sin quotedId
-                const shouldQuote = this.shouldQuoteResponse(normalized, (pendingImages.length > 0) || hasQuotedContext);
-
-                // Refuerzo por deícticos en la respuesta de la IA
-                const aiRefersToIt = /\b(este|esta|ese|esa|eso|aquel)\b/i.test(finalResponse);
-
-                // Si el usuario respondió con "reply", citamos siempre
-                const quotedToSend = quotedFromUser || undefined;
+                // CITACIÓN SIMPLIFICADA: Solo durante run activo
+                const quotedToSend = undefined; // NUNCA citar por lógica heurística
                 
                 // ✅ Log específico de decisión de citado
                 logInfo('QUOTE_DECISION', 'Decisión de citado calculada', {
@@ -761,11 +742,10 @@ export class CoreBot {
                     userName,
                     willQuote: !!quotedToSend,
                     quotedId: quotedToSend || null,
-                    shouldQuote,
-                    aiRefersToIt,
                     hasImage: pendingImages.length > 0,
                     userTextLength: combinedText.length,
-                    aiResponsePreview: finalResponse.substring(0, 80)
+                    aiResponsePreview: finalResponse.substring(0, 80),
+                    citationMode: 'only_during_run'
                 });
 
                 // Liberar el gate de 'run activo' antes de enviar chunks de WhatsApp
@@ -781,15 +761,8 @@ export class CoreBot {
                 );
                 
                 if (messageResult.success) {
-                    // Limpiar quotedMessageId después de uso exitoso para evitar rebotes
-                    if (quotedToSend) {
-                        try {
-                            const buffer = this.bufferManager.getBuffer(userId);
-                            if (buffer) {
-                                buffer.quotedMessageId = undefined as any;
-                            }
-                        } catch {}
-                    }
+                    // ELIMINADO: Lógica de limpieza quotedMessageId innecesaria - solo citamos durante run activo
+                    // quotedToSend siempre es undefined ahora
                     
                     // Registrar IDs reales devueltos por WHAPI para evitar eco/loops
                     if (messageResult.messageIds && messageResult.messageIds.length > 0) {
@@ -938,17 +911,12 @@ export class CoreBot {
     }
 
     /**
-     * ✅ Heurística para decidir cuándo citar al responder
+     * ❌ DESHABILITADO: Heurística de citación removida - solo durante run activo
      */
-    private shouldQuoteResponse(userText: string, hasMedia: boolean): boolean {
-        if (!userText) return false;
-        
-        const trimmed = userText.trim();
-        const isShort = trimmed.length < 60;
-        const hasDeictics = /\b(este|esta|ese|esa|eso|aquel)\b/i.test(trimmed);
-        
-        return hasMedia || isShort || hasDeictics;
-    }
+    // private shouldQuoteResponse(userText: string, hasMedia: boolean): boolean {
+    //     // Función removida - solo citación durante run activo
+    //     return false;
+    // }
 
     private buildContextualMessage(
         userName: string, 
