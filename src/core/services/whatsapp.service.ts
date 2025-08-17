@@ -64,18 +64,30 @@ export class WhatsappService {
         message: string, 
         userState: UserState,
         isQuoteOrPrice: boolean, // Lógica de validación que vendrá del plugin
-        quotedMessageId?: string // ID del mensaje a citar/responder
+        quotedMessageId?: string, // ID del mensaje a citar/responder  
+        duringRunMsgId?: string // ID para citación auto durante run activo
     ): Promise<{ success: boolean; sentAsVoice: boolean; messageIds?: string[] }> {
         if (!message || message.trim() === '') {
             this.terminalLog.error(`Intento de enviar mensaje vacío a ${chatId}`);
             return { success: false, sentAsVoice: false }; // No se envió nada
         }
 
+        // CITACIÓN AUTO: Priorizar duringRunMsgId sobre quotedMessageId
+        let finalQuotedId = quotedMessageId; // User-quote primero
+        if (duringRunMsgId) { // Sobrescribe si duringRun
+            finalQuotedId = duringRunMsgId;
+            logInfo('QUOTE_AUTO_PRIORITY', 'Usando citación auto during run', { 
+                chatId, 
+                finalQuotedId,
+                originalQuotedId: quotedMessageId 
+            });
+        }
+
         const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && userState.lastInputVoice && !isQuoteOrPrice;
 
         if (shouldUseVoice) {
             try {
-                const voiceResult = await this.sendVoiceMessage(chatId, message, quotedMessageId);
+                const voiceResult = await this.sendVoiceMessage(chatId, message, finalQuotedId);
                 if (voiceResult.success) {
                     return { success: true, sentAsVoice: true, messageIds: voiceResult.messageIds };
                 }
@@ -87,7 +99,7 @@ export class WhatsappService {
         }
 
         // Si llega aquí, se envía como texto (no resetea flag de voz)
-        const textResult = await this.sendTextMessage(chatId, message, isQuoteOrPrice, quotedMessageId);
+        const textResult = await this.sendTextMessage(chatId, message, isQuoteOrPrice, finalQuotedId);
         return { success: textResult.success, sentAsVoice: false, messageIds: textResult.messageIds };
     }
 
@@ -145,6 +157,11 @@ export class WhatsappService {
             const payload: any = { to: chatId, media: audioDataUrl };
             if (i === 0 && quotedMessageId) {
                 payload.quoted = quotedMessageId;
+                logInfo('PAYLOAD_QUOTED_VOICE', 'Payload con quoted agregado para voz', { 
+                    chatId, 
+                    quotedId: quotedMessageId,
+                    part: i + 1 
+                });
             }
 
             const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/voice`, {
@@ -222,6 +239,16 @@ export class WhatsappService {
 
         // CRÍTICO: Marcar contenido como enviado para prevenir duplicados texto/voz
         this.mediaManager.addBotSentContent(chatId, message);
+        
+        // Log de confirmación de citación para voz
+        if (quotedMessageId) {
+            logInfo('QUOTE_ATTEMPT_VOICE', 'Citación enviada en nota de voz', { 
+                chatId, 
+                quotedId: quotedMessageId,
+                messagePreview: message.substring(0, 100),
+                totalParts: voiceChunks.length
+            });
+        }
         
         return { success: true, messageIds: collectedIds };
     }
@@ -307,6 +334,11 @@ export class WhatsappService {
             // Solo agregar quoted en el primer chunk si se proporciona
             if (i === 0 && quotedMessageId) {
                 messageBody.quoted = quotedMessageId;
+                logInfo('PAYLOAD_QUOTED_TEXT', 'Payload con quoted agregado para texto', { 
+                    chatId, 
+                    quotedId: quotedMessageId,
+                    chunkNumber: i + 1 
+                });
             }
 
             const attemptStart = Date.now();
@@ -355,6 +387,16 @@ export class WhatsappService {
 
         // CRÍTICO: Marcar contenido como enviado para prevenir duplicados
         this.mediaManager.addBotSentContent(chatId, message);
+        
+        // Log de confirmación de citación para texto
+        if (quotedMessageId) {
+            logInfo('QUOTE_ATTEMPT_TEXT', 'Citación enviada en mensaje de texto', { 
+                chatId, 
+                quotedId: quotedMessageId,
+                messagePreview: message.substring(0, 100),
+                totalChunks: chunks.length
+            });
+        }
         
         return { success: true, messageIds: collectedIds };
     }

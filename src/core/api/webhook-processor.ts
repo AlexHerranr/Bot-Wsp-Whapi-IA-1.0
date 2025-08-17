@@ -549,8 +549,8 @@ export class WebhookProcessor {
                         });
                         
                         this.terminalLog.message(userName, message.text.body);
-                        // Propagar quotedId al buffer si existe
-                        const quotedId = message.context?.quoted_id;
+                        // CITACIÓN AUTO: Propagar quotedId al buffer si existe, o usar ID del mensaje actual para duringRun
+                        const quotedId = message.context?.quoted_id || message.id;
                         this.bufferManager.addMessage(userId, messageContent, normalizedChatId, userName, quotedId);
                     }
                     break;
@@ -617,7 +617,8 @@ export class WebhookProcessor {
                                 hasQuoted: !!(message.context && message.context.quoted_id)
                             });
                             
-                            const quotedId = message.context?.quoted_id;
+                            // CITACIÓN AUTO: Propagar quotedId al buffer si existe, o usar ID del mensaje actual para duringRun
+                            const quotedId = message.context?.quoted_id || message.id;
                             this.bufferManager.addMessage(userId, finalMessage, normalizedChatId, userName, quotedId);
                         } else {
                             this.terminalLog.voiceError(userName, result.error || 'Transcription failed');

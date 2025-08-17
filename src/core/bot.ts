@@ -223,7 +223,7 @@ export class CoreBot {
 
     }
 
-    private async processBufferCallback(userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<void> {
+    private async processBufferCallback(userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }, duringRunMsgId?: string): Promise<void> {
         // Check for recent errors to prevent secondary buffer processing during error recovery
         if (this.lastError[userId] && Date.now() - this.lastError[userId].time < 5000) {
             logWarning('BUFFER_SKIP_RECENT_ERROR', 'Saltando procesamiento de buffer secundario por error reciente', {
@@ -776,7 +776,8 @@ export class CoreBot {
                     finalResponse,
                     userState,
                     isQuoteOrPrice,
-                    quotedToSend
+                    quotedToSend,
+                    duringRunMsgId  // CITACIÓN AUTO: Pasar ID para citación durante run
                 );
                 
                 if (messageResult.success) {

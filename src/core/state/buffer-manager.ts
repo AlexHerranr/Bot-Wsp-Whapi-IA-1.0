@@ -10,7 +10,7 @@ export class BufferManager implements IBufferManager {
     private activeRunTimestamps: Map<string, number> = new Map(); // Timestamps para timeout de seguridad
 
     constructor(
-        private processCallback: (userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }) => Promise<void>,
+        private processCallback: (userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }, duringRunMsgId?: string) => Promise<void>,
         private getUserState?: (userId: string) => { isTyping: boolean; isRecording: boolean; lastActivity?: number } | undefined
     ) {}
 
@@ -40,6 +40,18 @@ export class BufferManager implements IBufferManager {
         buffer.messages.push(messageText);
         buffer.lastActivity = Date.now();
         
+        // CITACIÓN AUTO: Marcar mensaje para citación si hay run activo
+        if (this.activeRuns.get(userId)) {
+            buffer.duringRunMsgId = quotedMessageId || 'auto-during-run'; // Usa ID real si disponible, o placeholder válido
+            logInfo('CITACION_AUTO_MARK', 'Mensaje marcado para citación auto durante run', { 
+                userId, 
+                userName,
+                duringRunMsgId: buffer.duringRunMsgId,
+                messagePreview: messageText.substring(0, 80),
+                hasRealId: !!quotedMessageId
+            });
+        }
+        
         // Marcar como voice si el mensaje contiene audio
         if (messageText.includes('(Nota de Voz Transcrita por Whisper)')) {
             buffer.isVoice = true;
@@ -48,7 +60,7 @@ export class BufferManager implements IBufferManager {
         // Analizar tipos de mensajes en el buffer
         const textCount = buffer.messages.filter(msg => !msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
         const voiceCount = buffer.messages.filter(msg => msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
-        const currentCombined = this.smartCombineMessages(buffer.messages, buffer.quotedMessageId);
+        const currentCombined = this.smartCombineMessages(buffer.messages, buffer.quotedMessageId, buffer.duringRunMsgId);
         
         // ✅ Log específico del estado del buffer
         if (buffer.messages.length > 0) {
@@ -290,9 +302,21 @@ export class BufferManager implements IBufferManager {
         this.activeRuns.set(userId, true); // Marcar como activo
         this.activeRunTimestamps.set(userId, Date.now()); // Timestamp para timeout de seguridad
 
+        // CITACIÓN AUTO: Detectar si hay mensaje marcado para citación durante run
+        const isDuringRunPending = !!buffer.duringRunMsgId;
+        if (isDuringRunPending) {
+            logInfo('BUFFER_PENDING_DURING_RUN', 'Procesando con citación auto', { 
+                userId, 
+                userName,
+                duringRunMsgId: buffer.duringRunMsgId,
+                messageCount: buffer.messages.length
+            });
+        }
+
         const messagesToProcess = [...buffer.messages];
         const { chatId, userName } = buffer;
         const pendingImage = buffer.pendingImage;
+        const duringRunMsgId = buffer.duringRunMsgId;
         
         buffer.messages = [];
         buffer.pendingImage = null;
@@ -302,7 +326,7 @@ export class BufferManager implements IBufferManager {
             buffer.timer = null;
         }
 
-        const combinedText = this.smartCombineMessages(messagesToProcess, buffer.quotedMessageId).trim();
+        const combinedText = this.smartCombineMessages(messagesToProcess, buffer.quotedMessageId, duringRunMsgId).trim();
 
         logSuccess('BUFFER_GROUPED', 'Procesando idea completa agrupada', {
             userId,
@@ -320,7 +344,7 @@ export class BufferManager implements IBufferManager {
         });
 
         try {
-            await this.processCallback(userId, combinedText || '📷 Imagen recibida', chatId, userName, pendingImage || undefined);
+            await this.processCallback(userId, combinedText || '📷 Imagen recibida', chatId, userName, pendingImage || undefined, duringRunMsgId);
         } catch (error) {
             logWarning('BUFFER_PROCESS_ERROR', 'Error procesando buffer', {
                 userId,
@@ -331,8 +355,14 @@ export class BufferManager implements IBufferManager {
             this.activeRuns.delete(userId); // Liberar
             this.activeRunTimestamps.delete(userId); // Limpiar timestamp
             
-            // CRÍTICO: Verificar si llegaron mensajes nuevos mientras procesábamos
+            // LIMPIEZA: Reset flag duringRunMsgId para evitar carry-over
             const currentBuffer = this.buffers.get(userId);
+            if (currentBuffer) {
+                currentBuffer.duringRunMsgId = undefined;
+                logInfo('FLAG_RESET', 'duringRunMsgId reseteado post-procesamiento', { userId });
+            }
+            
+            // CRÍTICO: Verificar si llegaron mensajes nuevos mientras procesábamos
             if (currentBuffer && currentBuffer.messages.length > 0) {
                 // Hay mensajes pendientes que llegaron durante el procesamiento
                 logInfo('BUFFER_PENDING_AFTER_RUN', 'Mensajes pendientes detectados después del run', {
@@ -354,9 +384,10 @@ export class BufferManager implements IBufferManager {
         }
     }
 
-    private smartCombineMessages(messages: string[], quotedMessageId?: string): string {
+    private smartCombineMessages(messages: string[], quotedMessageId?: string, duringRunMsgId?: string): string {
         // ✅ Buffer solo concatena mensajes, NO inyecta IDs internos ni frases de cita
         // La frase "Cliente responde a este mensaje" ya viene formateada desde webhook-processor
+        // duringRunMsgId se pasa al whatsapp.service.ts para citación automática
         if (messages.length <= 1) {
             return messages[0] || '';
         }

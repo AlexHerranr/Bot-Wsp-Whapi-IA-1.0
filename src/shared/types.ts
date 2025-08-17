@@ -51,6 +51,7 @@ export interface MessageBuffer {
     isVoice?: boolean;
     pendingImage?: { type: 'image', imageUrl: string, caption: string } | null;
     quotedMessageId?: string;
+    duringRunMsgId?: string; // ID para citación auto durante run activo
 }
 
 // Registro de Threads en Persistencia
