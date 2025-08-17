@@ -554,14 +554,21 @@ export class WebhookProcessor {
                         
                         // Solo procesar citación si usuario explícitamente citó otro mensaje
                         if (message.context?.quoted_id) {
-                            // CRITICAL FIX: Si usuario cita mensaje del bot, bot NO debe citar nada
-                            if (this.mediaManager.isBotSentMessage(message.context.quoted_id)) {
+                            const quotedContent = message.context.quoted_content?.body || '';
+                            
+                            // CRITICAL FIX: Verificar si usuario cita mensaje del bot (ID + contenido)
+                            const isBotMessageById = this.mediaManager.isBotSentMessage(message.context.quoted_id);
+                            const isBotMessageByContent = this.mediaManager.isBotSentContent(normalizedChatId, quotedContent);
+                            
+                            if (isBotMessageById || isBotMessageByContent) {
                                 // Usuario citó mensaje del bot → bot NO cita (conversación natural)
                                 quotedId = undefined;
                                 logInfo('QUOTE_BOT_IGNORED', 'Usuario citó bot, no citando de vuelta (natural)', {
                                     userId,
                                     userName,
                                     originalQuotedId: message.context.quoted_id,
+                                    quotedContent: quotedContent.substring(0, 80),
+                                    detectedBy: isBotMessageById ? 'id' : 'content',
                                     messageType: 'text',
                                     reason: 'avoid_bot_loop'
                                 });
@@ -572,6 +579,7 @@ export class WebhookProcessor {
                                     userId,
                                     userName,
                                     quotedId: message.context.quoted_id,
+                                    quotedContent: quotedContent.substring(0, 80),
                                     messageType: 'text'
                                 });
                             }
@@ -649,14 +657,21 @@ export class WebhookProcessor {
                             
                             // Solo procesar citación si usuario explícitamente citó otro mensaje
                             if (message.context?.quoted_id) {
-                                // CRITICAL FIX: Si usuario cita mensaje del bot, bot NO debe citar nada
-                                if (this.mediaManager.isBotSentMessage(message.context.quoted_id)) {
+                                const quotedContent = message.context.quoted_content?.body || '';
+                                
+                                // CRITICAL FIX: Verificar si usuario cita mensaje del bot (ID + contenido)
+                                const isBotMessageById = this.mediaManager.isBotSentMessage(message.context.quoted_id);
+                                const isBotMessageByContent = this.mediaManager.isBotSentContent(normalizedChatId, quotedContent);
+                                
+                                if (isBotMessageById || isBotMessageByContent) {
                                     // Usuario citó mensaje del bot → bot NO cita (conversación natural)
                                     quotedId = undefined;
                                     logInfo('QUOTE_BOT_IGNORED', 'Usuario citó bot, no citando de vuelta (natural)', {
                                         userId,
                                         userName,
                                         originalQuotedId: message.context.quoted_id,
+                                        quotedContent: quotedContent.substring(0, 80),
+                                        detectedBy: isBotMessageById ? 'id' : 'content',
                                         messageType: 'voice',
                                         reason: 'avoid_bot_loop'
                                     });
@@ -667,6 +682,7 @@ export class WebhookProcessor {
                                         userId,
                                         userName,
                                         quotedId: message.context.quoted_id,
+                                        quotedContent: quotedContent.substring(0, 80),
                                         messageType: 'voice'
                                     });
                                 }

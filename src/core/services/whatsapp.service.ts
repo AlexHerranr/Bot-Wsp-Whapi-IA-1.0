@@ -446,17 +446,53 @@ export class WhatsappService {
             // Intentar capturar ID del mensaje enviado por WHAPI
             try {
                 const data: any = await response.clone().json();
+                
+                // DEBUG: Log completo de respuesta WHAPI para entender formato
+                logInfo('WHAPI_RESPONSE_DEBUG', 'Respuesta completa de WHAPI', {
+                    chatId,
+                    chunkIndex: i + 1,
+                    responseKeys: data ? Object.keys(data) : [],
+                    responseData: JSON.stringify(data).substring(0, 300),
+                    hasId: !!data?.id,
+                    hasMessages: !!data?.messages,
+                    messagesLength: Array.isArray(data?.messages) ? data.messages.length : 0
+                });
+                
                 if (data) {
                     if (Array.isArray(data.messages)) {
                         for (const m of data.messages) {
-                            if (m?.id) collectedIds.push(String(m.id));
+                            if (m?.id) {
+                                collectedIds.push(String(m.id));
+                                logInfo('WHAPI_ID_EXTRACTED', 'ID extraído de messages array', {
+                                    chatId,
+                                    extractedId: m.id,
+                                    chunkIndex: i + 1
+                                });
+                            }
                         }
                     } else if (data.id) {
                         collectedIds.push(String(data.id));
+                        logInfo('WHAPI_ID_EXTRACTED', 'ID extraído directamente', {
+                            chatId,
+                            extractedId: data.id,
+                            chunkIndex: i + 1
+                        });
                     }
+                    
+                    // Log final de IDs colectados
+                    logInfo('WHAPI_IDS_COLLECTED', 'IDs colectados para chunk', {
+                        chatId,
+                        chunkIndex: i + 1,
+                        collectedCount: collectedIds.length,
+                        ids: collectedIds
+                    });
                 }
-            } catch {
-                // Ignorar si no hay JSON o formato distinto
+            } catch (parseError) {
+                logInfo('WHAPI_JSON_PARSE_ERROR', 'Error parseando respuesta WHAPI', {
+                    chatId,
+                    chunkIndex: i + 1,
+                    error: parseError instanceof Error ? parseError.message : String(parseError)
+                });
             }
         }
 
