@@ -295,9 +295,14 @@ export class WebhookProcessor {
                 const hasNoLabels = !(clientData as any).labels;
                 shouldEnrichAsync = hasNoLabels;
             } else {
-                // Usuario nuevo → siempre necesita update y enriquecimiento
+                // Usuario nuevo → siempre necesita update y enriquecimiento SÍNCRONO
                 clientNeedsUpdate = true;
-                shouldEnrichAsync = true;
+                shouldEnrichAsync = false; // CAMBIO: Para nuevos usuarios, enriquecer síncronamente
+                
+                logInfo('NEW_USER_SYNC_ENRICHMENT', 'Usuario nuevo detectado - enriquecimiento síncrono', {
+                    phoneNumber,
+                    reason: 'avoid_NOHAYREGISTRO_in_first_message'
+                });
             }
         } catch (error) {
             console.warn(`⚠️ Error obteniendo nombre del contacto ${phoneNumber}:`, error);
@@ -547,9 +552,35 @@ export class WebhookProcessor {
         // Programar actualización delayed de BD (10 minutos después)
         this.delayedActivityService.scheduleUpdate(phoneNumber);
         
-        // ELIMINADO: getOrCreateUser redundante - upsertClient ya maneja creación/actualización
-        // La llamada a upsertClient() arriba ya crea/actualiza el usuario con datos del webhook
-        // No necesitamos llamada separada que pueda sobrescribir datos inmediatos del webhook
+        // ENRIQUECIMIENTO SÍNCRONO para usuarios nuevos (evita NOHAYREGISTRO en primer mensaje)
+        if (!shouldEnrichAsync && clientNeedsUpdate) {
+            try {
+                logInfo('SYNC_ENRICHMENT_START', 'Enriquecimiento síncrono para usuario nuevo', {
+                    phoneNumber,
+                    reason: 'first_message_context_complete'
+                });
+                
+                await this.databaseService.enrichUserFromWhapi(phoneNumber);
+                
+                // Actualizar userName con datos enriquecidos para este procesamiento
+                const enrichedData = await this.databaseService.findUserByPhoneNumber(phoneNumber);
+                if (enrichedData) {
+                    userName = enrichedData.name || enrichedData.userName || userName;
+                    logInfo('SYNC_ENRICHMENT_COMPLETE', 'Usuario enriquecido síncronamente', {
+                        phoneNumber,
+                        enrichedName: enrichedData.name,
+                        enrichedUserName: enrichedData.userName,
+                        finalUserName: userName,
+                        labelsCount: (enrichedData as any).labels ? (enrichedData as any).labels.split('/').length : 0
+                    });
+                }
+            } catch (error) {
+                logWarning('SYNC_ENRICHMENT_ERROR', 'Error en enriquecimiento síncrono, continuando', {
+                    phoneNumber,
+                    error: error instanceof Error ? error.message : String(error)
+                });
+            }
+        }
 
         try {
 
