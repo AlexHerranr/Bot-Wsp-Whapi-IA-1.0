@@ -191,7 +191,7 @@ export class WhatsappService {
                 
                 // Enviar presencia "grabando..." por la duración del audio
                 await this.sendRecordingIndicator(chatId);
-                logInfo('PRESENCE_CHUNK_VOICE', 'Grabando enviado por duración real del audio', { 
+                logInfo('PRESENCE_CHUNK_VOICE', `🎙️ch${i+1}/${voiceChunks.length}:${audioDurationMs}ms`, { 
                     chatId, 
                     chunkIndex: i + 1, 
                     totalChunks: voiceChunks.length,
@@ -388,7 +388,7 @@ export class WhatsappService {
             
             // Envía presencia inmediatamente antes del chunk
             await this.sendTypingIndicator(chatId);
-            logInfo('PRESENCE_CHUNK_TEXT', 'Escribiendo enviado para chunk', { 
+            logInfo('PRESENCE_CHUNK_TEXT', `✍️ch${i+1}/${chunks.length}:${delay}ms`, { 
                 chatId, 
                 chunkIndex: i + 1, 
                 totalChunks: chunks.length, 
@@ -697,11 +697,10 @@ export class WhatsappService {
         let delay = Math.ceil(chunkLength / 8) * delayPer8Chars;
         const maxDelayPerChunk = 2000;  // Cap 2s por chunk para evitar acumulaciones/cuelgues
         delay = Math.min(delay, maxDelayPerChunk);
-        logInfo('HUMAN_DELAY_CHUNK', 'Delay por chunk calculado', { 
+        logInfo('HUMAN_DELAY_CHUNK', `${mode}:${chunkLength}ch=${delay}ms`, { 
             mode, 
             chunkLength, 
-            delay, 
-            formula: `ceil(${chunkLength}/8)*1000 = ${Math.ceil(chunkLength / 8) * 1000}ms` 
+            delay 
         });
         return delay;
     }

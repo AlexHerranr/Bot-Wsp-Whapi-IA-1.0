@@ -256,6 +256,22 @@ export class WebhookProcessor {
         const webhookChatName = (message as any).chat_name; // Nombre guardado del chat
         const webhookFromName = (message as any).from_name; // Display name del perfil
         
+        // Extraer datos adicionales del webhook
+        const webhookTimestamp = message.timestamp ? new Date(message.timestamp * 1000) : new Date(); // Unix timestamp a Date
+        const webhookSource = message.source || 'unknown'; // Origen del mensaje
+        
+        // DEBUG: Log valores reales del webhook para detectar problema
+        logInfo('WEBHOOK_NAMES_DEBUG', 'Nombres extraídos del webhook', {
+            phoneNumber,
+            webhookChatName: webhookChatName || 'null',
+            webhookFromName: webhookFromName || 'null',
+            webhookTimestamp: webhookTimestamp.toISOString(),
+            webhookSource,
+            rawChatName: JSON.stringify((message as any).chat_name),
+            rawFromName: JSON.stringify((message as any).from_name),
+            messageKeys: Object.keys(message || {}).slice(0, 12)
+        });
+        
         // Obtener datos del cliente desde cache/BD
         let userName = 'Usuario'; // Fallback por defecto
         let shouldEnrichAsync = false;
@@ -291,15 +307,38 @@ export class WebhookProcessor {
 
         // Actualizar BD si el webhook tiene datos más nuevos (y no son solo phoneNumber)
         const hasValidChatName = webhookChatName && webhookChatName !== phoneNumber;
-        const hasValidFromName = webhookFromName && webhookFromName !== phoneNumber;
+        
+        // ULTRA PERMISIVO: from_name se guarda tal como viene, solo rechazar si es exactamente igual al phoneNumber
+        const hasValidFromName = webhookFromName && 
+                                webhookFromName.trim() !== '' &&
+                                webhookFromName !== phoneNumber;
+
+        // DEBUG: Log validación de nombres para debugging
+        logInfo('WEBHOOK_NAME_VALIDATION', 'Validación de nombres del webhook', {
+            phoneNumber,
+            chat_name: {
+                value: webhookChatName || 'null',
+                isValid: !!(webhookChatName && webhookChatName !== phoneNumber),
+                reason: !webhookChatName ? 'null' : 
+                       webhookChatName === phoneNumber ? 'equals_phoneNumber' : 'valid'
+            },
+            from_name: {
+                value: webhookFromName || 'null', 
+                isValid: hasValidFromName,
+                equalsPhoneNumber: webhookFromName === phoneNumber,
+                reason: !webhookFromName ? 'null' :
+                       webhookFromName.trim() === '' ? 'empty_string' :
+                       webhookFromName === phoneNumber ? 'equals_phoneNumber' : 'valid'
+            }
+        });
         
         if (clientNeedsUpdate && (hasValidChatName || hasValidFromName)) {
             try {
                 await this.databaseService.upsertClient({
                     phoneNumber,
-                    userName: userName || 'Usuario', // Fallback limpio
+                    userName: phoneNumber, // ✅ CORREGIDO: Usar phoneNumber original como userName legacy
                     chatId: chatId || `${phoneNumber}@s.whatsapp.net`,
-                    lastActivity: new Date(),
+                    lastActivity: webhookTimestamp, // ✅ MEJORADO: Usar timestamp real del mensaje
                     chat_name: hasValidChatName ? webhookChatName : null,
                     from_name: hasValidFromName ? webhookFromName : null
                 });
@@ -318,15 +357,20 @@ export class WebhookProcessor {
                 
                 // Log debug para trazabilidad de nombres filtrados
                 if (webhookChatName && !hasValidChatName) {
-                    logDebug('NAME_SKIPPED', 'chat_name inválido (phoneNumber), seteado null', { 
+                    logInfo('CHAT_NAME_SKIPPED', 'chat_name inválido, seteado null', { 
                         phoneNumber, 
-                        skipped_name: webhookChatName 
+                        skipped_name: webhookChatName,
+                        reason: webhookChatName === phoneNumber ? 'equals_phoneNumber' : 'other'
                     });
                 }
                 if (webhookFromName && !hasValidFromName) {
-                    logDebug('NAME_SKIPPED', 'from_name inválido (phoneNumber), seteado null', { 
+                    logInfo('FROM_NAME_SKIPPED', 'from_name inválido, seteado null', { 
                         phoneNumber, 
-                        skipped_name: webhookFromName 
+                        skipped_name: webhookFromName,
+                        equalsPhoneNumber: webhookFromName === phoneNumber,
+                        isEmpty: webhookFromName.trim() === '',
+                        reason: webhookFromName === phoneNumber ? 'equals_phoneNumber' : 
+                               webhookFromName.trim() === '' ? 'empty_string' : 'other'
                     });
                 }
             } catch (error) {
@@ -497,22 +541,15 @@ export class WebhookProcessor {
             chatId: normalizedChatId,
             isTyping: false,
             isRecording: false,
-            lastActivity: Date.now()
+            lastActivity: webhookTimestamp.getTime() // ✅ MEJORADO: Usar timestamp real del mensaje
         });
         
         // Programar actualización delayed de BD (10 minutos después)
         this.delayedActivityService.scheduleUpdate(phoneNumber);
         
-        // Mantener upsert inmediato solo para datos críticos (phoneNumber, chatId, userName)
-        // pero SIN actualizar lastActivity (se hará con delay)
-        if (this.databaseService) {
-            // Solo crear/actualizar registro básico sin lastActivity
-            const existing = await this.databaseService.findUserByPhoneNumber(phoneNumber);
-            if (!existing) {
-                // Usuario nuevo - crear registro básico
-                await this.databaseService.getOrCreateUser(phoneNumber, userName);
-            }
-        }
+        // ELIMINADO: getOrCreateUser redundante - upsertClient ya maneja creación/actualización
+        // La llamada a upsertClient() arriba ya crea/actualiza el usuario con datos del webhook
+        // No necesitamos llamada separada que pueda sobrescribir datos inmediatos del webhook
 
         try {
 
@@ -526,15 +563,28 @@ export class WebhookProcessor {
                         
                         // Detectar si es una respuesta/quote y formatear para OpenAI
                         if (message.context && message.context.quoted_id) {
-                            const quotedContent = message.context.quoted_content?.body || '[mensaje citado]';
+                            // MEJORADO: Manejo robusto del contenido citado para mensajes del bot
+                            let quotedContent = message.context.quoted_content?.body || 
+                                               message.context.quoted_content?.text ||
+                                               message.context.quoted_text ||
+                                               '[mensaje citado - contenido no disponible]';
+                            
+                            // Si es mensaje del bot y no hay contenido, usar un placeholder más específico
+                            if (quotedContent === '[mensaje citado - contenido no disponible]' && 
+                                this.mediaManager.isBotSentMessage(message.context.quoted_id)) {
+                                quotedContent = '[mensaje del asistente citado]';
+                            }
+                            
                             messageContent = `Cliente responde a este mensaje: ${quotedContent}\n\nMensaje del cliente: ${message.text.body}`;
                             
                             // ✅ Log específico de mensaje citado detectado
-                            logInfo('QUOTED_DETECTED', 'Mensaje citado detectado desde webhook', {
+                            logInfo('QUOTED_TEXT_DETECTED', 'Mensaje citado detectado desde webhook', {
                                 userId,
                                 quotedId: message.context.quoted_id,
                                 quotedPreview: quotedContent.substring(0, 80),
-                                originalMessage: message.text.body.substring(0, 80)
+                                originalMessage: message.text.body.substring(0, 80),
+                                hasQuotedBody: !!message.context.quoted_content?.body,
+                                isQuotingBot: this.mediaManager.isBotSentMessage(message.context.quoted_id)
                             });
                         }
                         
@@ -545,6 +595,8 @@ export class WebhookProcessor {
                             chatId,
                             messageType: 'text',
                             messageId: message.id,
+                            source: webhookSource, // ✅ MEJORADO: Origen del mensaje
+                            timestamp: webhookTimestamp.toISOString(), // ✅ MEJORADO: Timestamp real
                             body: message.text.body.substring(0, 100)
                         });
                         
@@ -572,6 +624,8 @@ export class WebhookProcessor {
                         chatId,
                         messageType: 'voice',
                         messageId: message.id,
+                        source: webhookSource, // ✅ MEJORADO: Origen del mensaje
+                        timestamp: webhookTimestamp.toISOString(), // ✅ MEJORADO: Timestamp real
                         hasQuoted: !!(message.context && message.context.quoted_id)
                     });
                     
@@ -585,16 +639,28 @@ export class WebhookProcessor {
                             
                             // CRÍTICO: Detectar si es una respuesta/quote y formatear para OpenAI (igual que con texto)
                             if (message.context && message.context.quoted_id) {
-                                const quotedContent = message.context.quoted_content?.body || '[mensaje citado]';
+                                // MEJORADO: Manejo robusto del contenido citado para mensajes del bot
+                                let quotedContent = message.context.quoted_content?.body || 
+                                                   message.context.quoted_content?.text ||
+                                                   message.context.quoted_text ||
+                                                   '[mensaje citado - contenido no disponible]';
+                                
+                                // Si es mensaje del bot y no hay contenido, usar un placeholder más específico
+                                if (quotedContent === '[mensaje citado - contenido no disponible]' && 
+                                    this.mediaManager.isBotSentMessage(message.context.quoted_id)) {
+                                    quotedContent = '[mensaje del asistente citado]';
+                                }
+                                
                                 finalMessage = `Cliente responde con nota de voz a este mensaje: ${quotedContent}\n\nTranscripción de la nota de voz: ${result.result}`;
                                 
                                 // ✅ Log específico de nota de voz citada detectada
-                                logInfo('QUOTED_DETECTED', 'Nota de voz citada detectada desde webhook', {
+                                logInfo('QUOTED_VOICE_DETECTED', 'Nota de voz citada detectada desde webhook', {
                                     userId,
                                     quotedId: message.context.quoted_id,
                                     quotedPreview: quotedContent.substring(0, 80),
                                     transcription: result.result.substring(0, 80),
-                                    messageType: 'voice'
+                                    hasQuotedBody: !!message.context.quoted_content?.body,
+                                    isQuotingBot: this.mediaManager.isBotSentMessage(message.context.quoted_id)
                                 });
                             }
 
@@ -647,7 +713,9 @@ export class WebhookProcessor {
                         userName,
                         chatId,
                         messageType: 'image',
-                        messageId: message.id
+                        messageId: message.id,
+                        source: webhookSource, // ✅ MEJORADO: Origen del mensaje
+                        timestamp: webhookTimestamp.toISOString() // ✅ MEJORADO: Timestamp real
                     }, 'webhook-processor.ts');
                     
                     if (message.image && message.image.link) {

@@ -401,13 +401,48 @@ export class CoreBot {
                 }, 'bot.ts');
             }
             
-            // 3. Construir mensaje contextual con formato temporal
+            // 3. CONTEXTUALIZACIÓN INTELIGENTE: Decidir si incluir contexto del cliente
+            const needsClientContext = this.clientDataCache.needsContextUpdate(
+                userId, 
+                clientData?.name || null,      // chat_name (nombre del contacto)
+                clientData?.userName || null,  // from_name (nombre del perfil)  
+                labels
+            );
+            
             const contextualMessage = this.buildContextualMessage(
                 userName,
                 clientData?.name || null,
                 labels,
-                combinedText
+                combinedText,
+                needsClientContext  // Solo incluir cliente+tags si es necesario
             );
+
+            // Marcar contexto como enviado si se incluyó
+            if (needsClientContext) {
+                this.clientDataCache.markContextSent(
+                    userId, 
+                    clientData?.name || null,      // chat_name (nombre del contacto)
+                    clientData?.userName || null,  // from_name (nombre del perfil)
+                    labels
+                );
+                logInfo('CONTEXT_SENT', 'Contexto completo enviado a OpenAI', {
+                    userId,
+                    userName,
+                    contactName: clientData?.name || null,     // chat_name (contacto guardado)
+                    profileName: clientData?.userName || null, // from_name (perfil WhatsApp)
+                    labelsCount: labels.length,
+                    labels: labels.slice(0, 3), // Primeros 3 labels para debug
+                    reason: !this.clientDataCache.has(userId) ? 'new_user' : 
+                            !this.clientDataCache.get(userId)?.contextSent ? 'first_message_post_restart' : 
+                            'context_changed'
+                });
+            } else {
+                logInfo('CONTEXT_SIMPLIFIED', 'Contexto simplificado enviado a OpenAI', {
+                    userId,
+                    userName,
+                    reason: 'context_already_sent'
+                });
+            }
             
             // Log detallado del mensaje que se enviará a OpenAI
             logInfo('OPENAI_MESSAGE_PREPARED', 'Mensaje preparado para OpenAI', {
@@ -922,7 +957,8 @@ export class CoreBot {
         userName: string, 
         displayName: string | null, 
         labels: string[], 
-        message: string
+        message: string,
+        includeClientContext: boolean = true // NUEVO: Flag para incluir contexto del cliente
     ): string {
         // Formato de fecha colombiana simplificado
         const now = new Date();
@@ -936,7 +972,19 @@ export class CoreBot {
             hour12: true
         }).format(now);
 
-        // Detectar si no hay registro en BD
+        // CONTEXTUALIZACIÓN INTELIGENTE: Solo incluir datos del cliente cuando sea necesario
+        const alreadyQuoted = /cliente responde a este mensaje/i.test(message);
+        
+        if (!includeClientContext) {
+            // FORMATO SIMPLIFICADO: Solo hora actual + mensaje
+            const contextualMessage = `Hora actual: ${colombianTime}
+
+${alreadyQuoted ? message : `Mensaje del cliente:
+${message}`}`;
+            return contextualMessage;
+        }
+
+        // FORMATO COMPLETO: Incluir contexto del cliente (primer mensaje o cambios)
         const hasDBRecord = displayName && displayName !== userName && displayName !== 'Usuario';
         const hasLabels = labels.length > 0;
         
@@ -946,7 +994,7 @@ export class CoreBot {
 Tags: NOHAYREGISTRO
 Hora actual: ${colombianTime}
 
-${/cliente responde a este mensaje/i.test(message) ? message : `Mensaje del cliente:
+${alreadyQuoted ? message : `Mensaje del cliente:
 ${message}`}`;
             return contextualMessage;
         }
@@ -963,7 +1011,6 @@ ${message}`}`;
             : 'Sin tags';
 
         // Formatear el mensaje contextual (formato compacto)
-        const alreadyQuoted = /cliente responde a este mensaje/i.test(message);
         const contextualMessage = `Cliente: ${clientName}
 Tags: ${tagsText}
 Hora actual: ${colombianTime}
@@ -977,6 +1024,13 @@ ${message}`}`;
     public async start() {
         try {
             await this.databaseService.connect();
+            
+            // CONTEXTUALIZACIÓN INTELIGENTE: Reset flags post-reinicio
+            this.clientDataCache.clear(); // Limpiar cache para forzar contexto completo
+            logInfo('CONTEXT_CACHE_RESET', 'Cache limpiado post-reinicio para contextualización fresca', {
+                reason: 'bot_restart_context_reset'
+            });
+            
             this.setupCleanupTasks();
             
             this.server.listen(this.config.port, this.config.host, () => {

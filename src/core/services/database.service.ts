@@ -602,17 +602,30 @@ export class DatabaseService {
                     updateData.name = clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null;
                 }
                 
-                // USERNAME (from_name): Solo actualizar si hay discrepancia o está vacío  
+                // USERNAME (from_name): ULTRA PERMISIVO - usar from_name tal como viene
                 if (clientData.from_name && clientData.from_name !== existingClient?.userName) {
-                    updateData.userName = clientData.from_name !== clientData.phoneNumber ? clientData.from_name : null;
+                    // Solo rechazar si es exactamente igual al phoneNumber, todo lo demás se acepta
+                    updateData.userName = (clientData.from_name !== clientData.phoneNumber) ? clientData.from_name : null;
+                    logInfo('USERNAME_UPDATE_FROM_NAME', 'Actualizando userName desde from_name', {
+                        phoneNumber: clientData.phoneNumber,
+                        from_name: clientData.from_name,
+                        existingUserName: existingClient?.userName,
+                        newUserName: updateData.userName,
+                        rejectedReason: (clientData.from_name === clientData.phoneNumber) ? 'equals_phoneNumber' : 'accepted'
+                    });
                 } else if (!existingClient?.userName) {
-                    // Fallback: usar userName original si no hay from_name
-                    updateData.userName = clientData.userName !== clientData.phoneNumber ? clientData.userName : null;
+                    // Fallback: usar userName original si no hay from_name (ultra permisivo)
+                    updateData.userName = (clientData.userName !== clientData.phoneNumber) ? clientData.userName : null;
+                    logInfo('USERNAME_UPDATE_FALLBACK', 'Actualizando userName desde fallback', {
+                        phoneNumber: clientData.phoneNumber,
+                        fallbackUserName: clientData.userName,
+                        newUserName: updateData.userName,
+                        rejectedReason: (clientData.userName === clientData.phoneNumber) ? 'equals_phoneNumber' : 'accepted',
+                        reason: 'no_from_name_or_no_existing'
+                    });
                 }
                 
-                // Limpieza adicional: Si los valores finales son phoneNumber, mantenerlos null
-                if (updateData.name === clientData.phoneNumber) updateData.name = null;
-                if (updateData.userName === clientData.phoneNumber) updateData.userName = null;
+                // ULTRA PERMISIVO: No hay limpieza adicional - se acepta tal como viene
                 
                 // RECONCILIACIÓN PREVIA: evitar constraint conflicts desde el origen
                 const byPhone = await this.prisma.whatsApp.findUnique({ where: { phoneNumber: clientData.phoneNumber } });
@@ -644,13 +657,13 @@ export class DatabaseService {
                         hasChatId: !!cid 
                     }, MOD);
                 } else {
-                    // No existe ninguno: crear con ambos únicos
+                    // No existe ninguno: crear con lógica ultra permisiva
                     result = await this.prisma.whatsApp.create({
                         data: {
                             phoneNumber: clientData.phoneNumber,
-                            name: clientData.chat_name !== clientData.phoneNumber ? clientData.chat_name : null,
-                            userName: clientData.from_name !== clientData.phoneNumber ? clientData.from_name : 
-                                     (clientData.userName !== clientData.phoneNumber ? clientData.userName : null),
+                            name: (clientData.chat_name && clientData.chat_name !== clientData.phoneNumber) ? clientData.chat_name : null,
+                            userName: (clientData.from_name && clientData.from_name !== clientData.phoneNumber) ? clientData.from_name : 
+                                     ((clientData.userName && clientData.userName !== clientData.phoneNumber) ? clientData.userName : null),
                             chatId: cid,
                             lastActivity: clientData.lastActivity,
                             threadTokenCount: 0
@@ -658,7 +671,11 @@ export class DatabaseService {
                     });
                     logInfo('RECONCILE_CREATE', 'Cliente creado por reconciliación', { 
                         phoneNumber: clientData.phoneNumber, 
-                        chatId: cid, 
+                        chatId: cid,
+                        finalName: result.name,
+                        finalUserName: result.userName,
+                        chat_name_input: clientData.chat_name,
+                        from_name_input: clientData.from_name,
                         op: 'syncWhatsAppClient' 
                     }, MOD);
                 }

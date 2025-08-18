@@ -13,6 +13,8 @@ export interface ClientData {
     // Metadata del caché
     cachedAt: Date;
     needsSync: boolean;
+    contextSent?: boolean; // NUEVO: Flag para contexto ya enviado post-reinicio
+    lastContextHash?: string; // NUEVO: Hash para detectar cambios en nombre/tags
 }
 
 export class ClientDataCache {
@@ -51,15 +53,15 @@ export class ClientDataCache {
         const cached = this.get(phoneNumber);
         if (!cached) return true; // No hay caché, necesita consultar BD
 
-        // Comparar chat_name del webhook con caché (nombre guardado)
-        if (webhookChatName && webhookChatName !== 'Usuario' && webhookChatName !== phoneNumber) {
+        // ULTRA PERMISIVO: Comparar chat_name del webhook con caché (nombre guardado)
+        if (webhookChatName && webhookChatName.trim() !== '' && webhookChatName !== phoneNumber) {
             if (cached.name !== webhookChatName) {
                 return true; // Nombre diferente, necesita actualizar
             }
         }
 
-        // Comparar from_name del webhook con caché (display name)
-        if (webhookFromName && webhookFromName !== 'Usuario' && webhookFromName !== phoneNumber) {
+        // ULTRA PERMISIVO: Comparar from_name del webhook con caché (display name)  
+        if (webhookFromName && webhookFromName.trim() !== '' && webhookFromName !== phoneNumber) {
             if (cached.userName !== webhookFromName) {
                 return true; // UserName diferente, necesita actualizar
             }
@@ -178,5 +180,53 @@ export class ClientDataCache {
             }
         }
         return cleaned;
+    }
+
+    /**
+     * CONTEXTUALIZACIÓN INTELIGENTE: Verificar si necesita enviar contexto completo
+     */
+    public needsContextUpdate(phoneNumber: string, currentName: string | null, currentUserName: string | null, currentLabels: string[]): boolean {
+        const cached = this.get(phoneNumber);
+        if (!cached) return true; // Nuevo usuario, necesita contexto completo
+        
+        // Si nunca se envió contexto post-reinicio
+        if (!cached.contextSent) return true;
+        
+        // Calcular hash actual del contexto (incluye AMBOS nombres)
+        const currentContextHash = this.calculateContextHash(currentName, currentUserName, currentLabels);
+        
+        // Si cambió cualquiera de los nombres o tags
+        if (cached.lastContextHash !== currentContextHash) return true;
+        
+        return false; // No necesita contexto, ya está enviado y sin cambios
+    }
+
+    /**
+     * CONTEXTUALIZACIÓN INTELIGENTE: Marcar contexto como enviado
+     */
+    public markContextSent(phoneNumber: string, name: string | null, userName: string | null, labels: string[]): void {
+        const cached = this.get(phoneNumber);
+        if (cached) {
+            cached.contextSent = true;
+            cached.lastContextHash = this.calculateContextHash(name, userName, labels);
+            cached.cachedAt = new Date(); // Actualizar timestamp
+            this.cache.set(phoneNumber, cached);
+        }
+    }
+
+    /**
+     * CONTEXTUALIZACIÓN INTELIGENTE: Calcular hash del contexto
+     */
+    private calculateContextHash(name: string | null, userName: string | null, labels: string[]): string {
+        // INCLUIR AMBOS NOMBRES: chat_name (name) + from_name (userName) + labels
+        const contextString = `${name || 'null'}|${userName || 'null'}|${labels.sort().join(',')}`;
+        // Hash simple pero efectivo
+        let hash = 0;
+        for (let i = 0; i < contextString.length; i++) {
+            const char = contextString.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return hash.toString();
     }
 }
