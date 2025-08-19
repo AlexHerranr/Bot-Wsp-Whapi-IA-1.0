@@ -481,6 +481,7 @@ export class WebhookProcessor {
             
             // Ignorar mensajes interinos conocidos enviados por el bot durante function calling
             const interimPhrases = [
+                'Permítame y consulto en mi sistema',
                 'Permíteme y consulto en nuestro sistema',
                 'Buscando habitaciones disponibles',
                 'Calculando precios y ofertas',

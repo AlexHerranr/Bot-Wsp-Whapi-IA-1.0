@@ -16,14 +16,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import type { FunctionDefinition } from '../types/function-types.js';
-
-// Logging simple para el sistema
-const logInfo = (category: string, message: string, data: any = {}, file: string = '') => 
-  console.log(`[INFO] ${category}: ${message}`, data);
-const logError = (category: string, message: string, data: any = {}, file: string = '') => 
-  console.error(`[ERROR] ${category}: ${message}`, data);
-const logSuccess = (category: string, message: string, data: any = {}, file: string = '') => 
-  console.log(`[SUCCESS] ${category}: ${message}`, data);
+import { logInfo, logError, logSuccess } from '../../utils/logging';
 
 // Using imported FunctionDefinition from types/function-types.ts
 
@@ -476,12 +469,17 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
                 }
             }
             
-            return {
+            // 📋 AUDIT LOG: Final response sent to OpenAI
+            const finalResponse: BookingResult = {
                 success: true,
-                message: combinedMessage, // Mensaje formateado con todas las reservas
+                message: combinedMessage,
                 booking: processedBookings.length === 1 ? processedBookings[0] : processedBookings,
                 source: 'beds24'
             };
+            
+            logInfo('BOOKING_TO_OPENAI', JSON.stringify(finalResponse), {}, 'check-booking-details.ts');
+            
+            return finalResponse;
         }
 
         // No encontrada
@@ -534,6 +532,10 @@ async function searchInBeds24(firstName: string, lastName: string, checkInDate: 
         }
 
         const apiResponse = await response.json();
+        
+        // 📋 AUDIT LOG: Raw API Response from Beds24 /bookings
+        logInfo('BEDS24_BOOKINGS_RAW', JSON.stringify(apiResponse), {}, 'check-booking-details.ts');
+        
         const bookings = (apiResponse as any).data || [];
         const bookingsArray = Array.isArray(bookings) ? bookings : [];
 

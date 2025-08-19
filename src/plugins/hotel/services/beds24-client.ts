@@ -135,6 +135,9 @@ export class Beds24Client {
 
             const data: Beds24ApiResponse = await response.json() as Beds24ApiResponse;
             const duration = Date.now() - startTime;
+            
+            // 📋 AUDIT LOG: Raw API Response (compacto)
+            logInfo('BEDS24_RAW_RESPONSE', JSON.stringify(data), {}, 'beds24-client.ts');
 
             logBeds24ResponseDetail(`Response: ${response.status}`, {
                 status: response.status,
@@ -177,6 +180,9 @@ export class Beds24Client {
 
             // Formatear respuesta enriquecida para OpenAI
             const formattedResponse = this.formatEnrichedResponse(enrichedApartments, options);
+            
+            // 📋 AUDIT LOG: Data sent to OpenAI (compacto)
+            logInfo('TO_OPENAI_DATA', formattedResponse, {}, 'beds24-client.ts');
 
             logSuccess('BEDS24_CLIENT', 'Disponibilidad obtenida exitosamente', {
                 apartmentsFound: availableApartments.length,

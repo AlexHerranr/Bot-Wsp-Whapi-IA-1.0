@@ -1045,12 +1045,13 @@ export class OpenAIService implements IOpenAIService {
                             const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
                             
                             // Lista de funciones que requieren mensajes interinos
-                            const slowFunctions = ['check_availability', 'search_rooms', 'calculate_pricing', 'process_booking'];
+                            const slowFunctions = ['check_availability', 'check_booking_details', 'search_rooms', 'calculate_pricing', 'process_booking'];
                             const functionInterimMessages = {
-                                'check_availability': "Permíteme y consulto en nuestro sistema...",
-                                'search_rooms': "Buscando habitaciones disponibles...",
-                                'calculate_pricing': "Calculando precios y ofertas...",
-                                'process_booking': "Procesando tu reserva..."
+                                'check_availability': "Permítame y consulto en mi sistema",
+                                'check_booking_details': "Permítame y consulto en mi sistema",
+                                'search_rooms': "Permítame y consulto en mi sistema",
+                                'calculate_pricing': "Permítame y consulto en mi sistema",
+                                'process_booking': "Permítame y consulto en mi sistema"
                             };
                             
                             // Enviar mensaje interino para funciones lentas
