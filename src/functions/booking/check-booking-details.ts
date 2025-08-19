@@ -15,6 +15,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import type { FunctionDefinition } from '../types/function-types.js';
 
 // Logging simple para el sistema
 const logInfo = (category: string, message: string, data: any = {}, file: string = '') => 
@@ -24,18 +25,7 @@ const logError = (category: string, message: string, data: any = {}, file: strin
 const logSuccess = (category: string, message: string, data: any = {}, file: string = '') => 
   console.log(`[SUCCESS] ${category}: ${message}`, data);
 
-// Type definition para función
-type FunctionDefinition = {
-  name: string;
-  description: string;
-  category: string;
-  version: string;
-  enabled: boolean;
-  parameters: any;
-  handler: Function;
-  tags?: string[];
-  rateLimit?: { maxCalls: number; windowMs: number };
-};
+// Using imported FunctionDefinition from types/function-types.ts
 
 // Interface para datos de apartamento desde BD
 interface ApartmentDetails {
@@ -656,13 +646,7 @@ export const checkBookingDetailsFunction: FunctionDefinition = {
     required: ['firstName', 'lastName', 'checkInDate'],
     additionalProperties: false
   },
-  handler: checkBookingDetails,
-  tags: ['reserva', 'consulta', 'booking', 'beds24'],
-  rateLimit: { maxCalls: 10, windowMs: 60000 }
+  handler: checkBookingDetails
 };
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export { checkBookingDetails, checkBookingDetailsFunction };
+// Los exports ya están definidos arriba en las líneas 415 y 629
