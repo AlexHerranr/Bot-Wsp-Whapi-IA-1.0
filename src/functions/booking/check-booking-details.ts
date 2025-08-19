@@ -18,7 +18,63 @@ import { PrismaClient } from '@prisma/client';
 import type { FunctionDefinition } from '../types/function-types.js';
 import { logInfo, logError, logSuccess } from '../../utils/logging';
 
+// ============================================================================
+// PRISMA CONNECTION SINGLETON PARA MEJOR PERFORMANCE
+// ============================================================================
+const globalPrisma = new PrismaClient();
+
 // Using imported FunctionDefinition from types/function-types.ts
+
+// ============================================================================
+// INTERFACES TYPESCRIPT PARA TYPE SAFETY
+// ============================================================================
+
+// Interface para respuesta de API Beds24 /bookings
+interface Beds24BookingResponse {
+    data: Beds24Booking[];
+}
+
+// Interface para booking individual de Beds24
+interface Beds24Booking {
+    id: number;
+    firstName: string;
+    lastName: string;
+    arrival: string;
+    departure: string;
+    numAdult: number;
+    numChild: number;
+    status: string;
+    referer: string;
+    price: number;
+    roomId: number;
+    email?: string;
+    phone?: string;
+    comments?: string;
+    notes?: string;
+    apiMessage?: string;
+}
+
+// Interface para respuesta de API Beds24 /invoices
+interface InvoiceResponse {
+    data: Invoice[];
+}
+
+// Interface para invoice individual
+interface Invoice {
+    invoiceItems: InvoiceItem[];
+}
+
+// Interface para items de invoice
+interface InvoiceItem {
+    id: number;
+    type: 'charge' | 'payment';
+    description: string;
+    qty: number;
+    amount: number;
+    lineTotal: number;
+    vatRate: number;
+    status: string;
+}
 
 // Interface para datos de apartamento desde BD
 interface ApartmentDetails {
@@ -71,7 +127,7 @@ function calculateNights(checkIn: string, checkOut: string): number {
 }
 
 // Función para obtener invoice items detallados
-async function getInvoiceDetails(token: string, apiUrl: string, bookingId: number) {
+async function getInvoiceDetails(token: string, apiUrl: string, bookingId: number): Promise<{items: InvoiceItem[], total: number, raw: any}> {
     try {
         const searchParams = new URLSearchParams({ 'bookingId': bookingId.toString() });
         const invoiceUrl = `${apiUrl}/bookings/invoices?${searchParams.toString()}`;
@@ -89,8 +145,8 @@ async function getInvoiceDetails(token: string, apiUrl: string, bookingId: numbe
             return { items: [], total: 0, raw: null };
         }
 
-        const invoiceResponse = await response.json();
-        const invoices = (invoiceResponse as any).data || [];
+        const invoiceResponse = await response.json() as InvoiceResponse;
+        const invoices = invoiceResponse.data || [];
         
         if (!Array.isArray(invoices) || invoices.length === 0) {
             return { items: [], total: 0, raw: invoiceResponse };
@@ -142,16 +198,12 @@ function extractRoomType(apiMessage: string): string {
     return 'Habitación';
 }
 
-// Función para obtener detalles del apartamento desde BD
+// Función para obtener detalles del apartamento desde BD - OPTIMIZADO: Usando singleton
 async function getApartmentDetails(roomId: number): Promise<ApartmentDetails | null> {
-    let prisma: PrismaClient | null = null;
-    
     try {
-        prisma = new PrismaClient();
-        
         logInfo('APARTMENT_DATA', `Consultando apartamento roomId: ${roomId}`, { roomId }, 'check-booking-details.ts');
         
-        const apartment = await prisma.apartamentos.findUnique({
+        const apartment = await globalPrisma.apartamentos.findUnique({
             where: { roomId: roomId },
             select: { 
                 propertyId: true, 
@@ -180,21 +232,13 @@ async function getApartmentDetails(roomId: number): Promise<ApartmentDetails | n
             roomId 
         }, 'check-booking-details.ts');
         return null;
-    } finally {
-        if (prisma) {
-            try {
-                await prisma.$disconnect();
-            } catch (disconnectError) {
-                logError('APARTMENT_DATA', 'Error desconectando Prisma', {}, 'check-booking-details.ts');
-            }
-        }
     }
 }
 
 // Función para formatear respuesta según canal de reserva
 function formatBookingResponse(
-    booking: any,
-    invoiceDetails: any,
+    booking: Beds24Booking,
+    invoiceDetails: {items: InvoiceItem[], total: number, raw: any},
     apartmentDetails: ApartmentDetails | null
 ): string {
     const apartmentName = apartmentDetails?.roomName || extractRoomType(booking.apiMessage);
@@ -211,7 +255,7 @@ function formatBookingResponse(
 }
 
 // Formato completo para Booking.com y Direct
-function formatFullBookingDetails(booking: any, invoiceDetails: any, apartmentName: string): string {
+function formatFullBookingDetails(booking: Beds24Booking, invoiceDetails: {items: InvoiceItem[], total: number, raw: any}, apartmentName: string): string {
     const checkIn = formatDateDisplay(booking.arrival);
     const checkOut = formatDateDisplay(booking.departure);
     const nights = calculateNights(booking.arrival, booking.departure);
@@ -269,7 +313,7 @@ function formatFullBookingDetails(booking: any, invoiceDetails: any, apartmentNa
 }
 
 // Formato simple para OTAs (Airbnb, Expedia, etc.)
-function formatSimpleBookingDetails(booking: any, apartmentName: string): string {
+function formatSimpleBookingDetails(booking: Beds24Booking, apartmentName: string): string {
     const checkIn = formatDateDisplay(booking.arrival);
     const checkOut = formatDateDisplay(booking.departure);
     
@@ -321,8 +365,8 @@ function getStatusDisplay(status: string): string {
 
 // Función para filtrar datos según canal de reserva (CLAVE PARA OPENAI)
 function filterBookingDataByChannel(
-    booking: any,
-    invoiceDetails: any,
+    booking: Beds24Booking,
+    invoiceDetails: {items: InvoiceItem[], total: number, raw: any},
     apartmentDetails: ApartmentDetails | null,
     formattedMessage: string
 ): any {
@@ -433,16 +477,23 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
                 bookingIds: bookingsData.map(b => b.id) 
             }, 'check-booking-details.ts');
             
-            // Procesar todas las reservas encontradas
+            // Procesar todas las reservas encontradas - OPTIMIZADO: Llamadas paralelas
             const processedBookings = [];
             let combinedMessage = '';
             
+            // Paralelizar llamadas API/DB para mejor performance
+            const invoiceDetailsArray = await Promise.all(
+                bookingsData.map(booking => getInvoiceDetails(process.env.BEDS24_TOKEN!, process.env.BEDS24_API_URL!, booking.id))
+            );
+            const apartmentDetailsArray = await Promise.all(
+                bookingsData.map(booking => getApartmentDetails(booking.roomId))
+            );
+            
+            // Procesar resultados paralelizados
             for (let i = 0; i < bookingsData.length; i++) {
                 const booking = bookingsData[i];
-                
-                // Obtener datos adicionales para cada reserva
-                const invoiceDetails = await getInvoiceDetails(process.env.BEDS24_TOKEN!, process.env.BEDS24_API_URL!, booking.id);
-                const apartmentDetails = await getApartmentDetails(booking.roomId);
+                const invoiceDetails = invoiceDetailsArray[i];
+                const apartmentDetails = apartmentDetailsArray[i];
                 
                 // Formatear respuesta según canal
                 const formattedResponse = formatBookingResponse(
@@ -531,12 +582,12 @@ async function searchInBeds24(firstName: string, lastName: string, checkInDate: 
             return { found: false, data: null };
         }
 
-        const apiResponse = await response.json();
+        const apiResponse = await response.json() as Beds24BookingResponse;
         
         // 📋 AUDIT LOG: Raw API Response from Beds24 /bookings
         logInfo('BEDS24_BOOKINGS_RAW', JSON.stringify(apiResponse), {}, 'check-booking-details.ts');
         
-        const bookings = (apiResponse as any).data || [];
+        const bookings = apiResponse.data || [];
         const bookingsArray = Array.isArray(bookings) ? bookings : [];
 
         if (bookingsArray.length === 0) {

@@ -240,6 +240,17 @@ export class WebhookProcessor {
             return;
         }
 
+        // Early exit para mensajes from_me cuando están deshabilitados
+        const fromMe = message.from_me === true || message.fromMe === true;
+        const manualAgentEnabled = process.env.ENABLE_MANUAL_AGENT_MESSAGES === 'true';
+        if (fromMe && !manualAgentEnabled) {
+            logDebug('FROM_ME_EARLY_EXIT', 'Mensaje from_me ignorado por configuración', {
+                messageId: message.id || 'sin_id',
+                type: message.type
+            }, 'webhook-processor.ts');
+            return;
+        }
+
         // Para mensajes normales, userId es el remitente; para from_me usaremos chat_id
         let userId = message.from || message.contact_id || message.author || message.sender || '';
         const chatId = message.chat_id || message.from; // Fallback si no hay chat_id
@@ -392,7 +403,7 @@ export class WebhookProcessor {
         }
 
         // Si es un mensaje manual (from_me=true) del agente: enviar directo a OpenAI
-        const fromMe = message.from_me === true || message.fromMe === true;
+        // fromMe ya está declarado arriba (línea 244)
 
         // Nueva regla: Manejo de from_me no-text
         if (fromMe && message.type !== 'text') {

@@ -104,7 +104,7 @@ export class CoreBot {
         this.openaiService = new OpenAIService({
             apiKey: this.config.secrets.OPENAI_API_KEY,
             assistantId: process.env.ASSISTANT_ID || process.env.OPENAI_ASSISTANT_ID || 'asst_default'
-        }, this.terminalLog, undefined, this.functionRegistry, this.whatsappService, this.databaseService);
+        }, this.terminalLog, undefined, this.functionRegistry, this.whatsappService, this.databaseService, this.userManager);
 
         // Initialize Thread Persistence Service
         this.threadPersistence = new ThreadPersistenceService(this.databaseService);

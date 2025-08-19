@@ -40,7 +40,9 @@ export class OpenAIService implements IOpenAIService {
     private functionRegistry?: IFunctionRegistry;
     private whatsappService?: any; // Referencia opcional para mensajes interinos
     private currentChatId?: string; // Chat ID actual para mensajes interinos
+    private currentUserId?: string; // User ID actual para obtener estado de voz
     private databaseService?: DatabaseService; // Servicio de BD para resets de tokens
+    private userManager?: any; // UserManager para obtener estado de voz del usuario
     private static activeOpenAICalls: number = 0; // Contador global de llamadas concurrentes
     private perceptionService: PerceptionService; // Capa de percepción para imágenes
     private static readonly MAX_CONCURRENT_CALLS = 75; // Optimizado para 100 usuarios
@@ -51,7 +53,8 @@ export class OpenAIService implements IOpenAIService {
         cacheManager?: CacheManager,
         functionRegistry?: IFunctionRegistry,
         whatsappService?: any,
-        databaseService?: DatabaseService
+        databaseService?: DatabaseService,
+        userManager?: any
     ) {
         this.config = {
             apiKey: config.apiKey,
@@ -68,6 +71,7 @@ export class OpenAIService implements IOpenAIService {
         this.functionRegistry = functionRegistry;
         this.whatsappService = whatsappService;
         this.databaseService = databaseService;
+        this.userManager = userManager;
         this.perceptionService = new PerceptionService();
     }
 
@@ -75,8 +79,9 @@ export class OpenAIService implements IOpenAIService {
     async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string, existingTokenCount?: number, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<ProcessingResult> {
         const startTime = Date.now();
         
-        // Guardar chatId para posibles mensajes interinos
+        // Guardar chatId y userId para posibles mensajes interinos
         this.currentChatId = chatId;
+        this.currentUserId = userId;
 
         // Control de concurrencia para escalabilidad
         while (OpenAIService.activeOpenAICalls >= OpenAIService.MAX_CONCURRENT_CALLS) {
@@ -1056,15 +1061,18 @@ export class OpenAIService implements IOpenAIService {
                             
                             // Enviar mensaje interino para funciones lentas
                             const slowFunction = toolCalls.find(tc => slowFunctions.includes(tc.function.name));
-                            if (slowFunction && this.currentChatId) {
+                            if (slowFunction && this.currentChatId && this.currentUserId) {
                                 try {
                                     // Solo enviar si hay un WhatsappService disponible
-                                    if (this.whatsappService) {
+                                    if (this.whatsappService && this.userManager) {
+                                        // Obtener estado real del usuario para determinar modo de envío
+                                        const userState = this.userManager.getOrCreateState(this.currentUserId);
                                         const interimMessage = functionInterimMessages[slowFunction.function.name] || "Un momento por favor...";
+                                        
                                         await this.whatsappService.sendWhatsAppMessage(
                                             this.currentChatId, 
                                             interimMessage, 
-                                            { lastInputVoice: false }, 
+                                            { lastInputVoice: userState.lastInputVoice }, 
                                             false
                                         );
                                         
