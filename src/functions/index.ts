@@ -14,7 +14,7 @@ export * from './registry/function-registry.js';
 // export * from './escalation/escalate-to-human.js'; // Moved to hotel plugin
 // ELIMINADO: export * from './context/get-conversation-context.js'; - moved to external N8N flows
 
-// Funciones de booking (documentadas, pendientes de implementación)
-// export * from './booking/create-booking.js';
-// export * from './booking/get-booking-details.js';
-// export * from './booking/cancel-booking.js'; 
+// Funciones de booking
+export * from './booking/check-booking-details.js';
+// export * from './booking/create-booking.js';  // TODO: implementar
+// export * from './booking/cancel-booking.js';  // TODO: implementar 

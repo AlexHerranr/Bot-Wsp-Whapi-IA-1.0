@@ -10,6 +10,9 @@ import type { FunctionDefinition } from '../types/function-types.js';
 // import { escalateToHumanFunction } from '../escalation/escalate-to-human.js'; // Moved to hotel plugin
 // ELIMINADO: Context injection functionality moved to external N8N flows
 
+// Funciones de booking
+import { checkBookingDetailsFunction } from '../booking/check-booking-details.js';
+
 /**
  * Registro de todas las funciones disponibles
  */
@@ -24,10 +27,10 @@ export const FUNCTION_REGISTRY: Record<string, FunctionDefinition> = {
   // inject_history: ELIMINADO - movido a flujos externos N8N
   // get_conversation_context: ELIMINADO - movido a flujos externos N8N
   
-  // Funciones de booking (documentadas, pendientes de implementación)
-  // create_booking: createBookingFunction,
-  // get_booking_details: getBookingDetailsFunction,
-  // cancel_booking: cancelBookingFunction,
+  // Funciones de booking
+  check_booking_details: checkBookingDetailsFunction,
+  // create_booking: createBookingFunction,  // TODO: implementar
+  // cancel_booking: cancelBookingFunction,  // TODO: implementar
 };
 
 /**
