@@ -85,11 +85,18 @@ export class WhatsappService {
 
         const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && userState.lastInputVoice && !isQuoteOrPrice;
 
+        // DETECCIÓN DINÁMICA DE HUMAN TIMING
+        const operationsChatId = process.env.OPERATIONS_CHAT_ID;
+        const isOperations = (chatId === operationsChatId);
+        const enableHumanTiming = !isOperations; // Solo para Main, no para Operations
+
         // TIMING HUMANO: Log inicio
         logInfo('TIMING_HUMAN_START', 'Iniciando timing por chunks', { 
             chatId, 
             totalLength: message.length, 
             willUseVoice: shouldUseVoice,
+            isOperations,
+            enableHumanTiming,
             estimatedChunks: message.includes('\n\n') ? 'paragraphs' : 'normal'
         });
 
@@ -199,9 +206,10 @@ export class WhatsappService {
                     chunkLength: chunk.length
                 });
                 
-                // Delay = duración del audio (natural)
-                const maxDelayMs = 8000; // Cap máximo 8s por seguridad
-                const finalDelayMs = Math.min(audioDurationMs, maxDelayMs);
+                // Delay = duración del audio (natural) o instantáneo para Operations
+                const maxDelayMs = 8000; // Cap máximo 8s por seguridad  
+                const naturalDelayMs = Math.min(audioDurationMs, maxDelayMs);
+                const finalDelayMs = enableHumanTiming ? naturalDelayMs : 0;
                 
                 await Promise.race([
                     new Promise(resolve => setTimeout(resolve, finalDelayMs)),
@@ -383,8 +391,8 @@ export class WhatsappService {
                 hasQuoted: i === 0 && !!quotedMessageId
             }, 'whatsapp.service.ts');
             
-            // TIMING HUMANO: Calcular delay variable por chunk
-            const delay = this.calculateHumanDelayForChunk(chunk.length, 'text');
+            // TIMING HUMANO: Calcular delay variable por chunk (o instantáneo para Operations)
+            const delay = enableHumanTiming ? this.calculateHumanDelayForChunk(chunk.length, 'text') : 0;
             
             // Envía presencia inmediatamente antes del chunk
             await this.sendTypingIndicator(chatId);

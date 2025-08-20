@@ -166,9 +166,19 @@ export class BufferManager implements IBufferManager {
         const buffer = this.buffers.get(userId);
         if (!buffer) return;
 
-        // Ajustar delay según contexto: voice más rápido (3s), resto 5s
+        // TIMEOUTS DINÁMICOS POR PROCESSOR
+        const operationsChatId = process.env.OPERATIONS_CHAT_ID;
+        const isOperations = (userId === operationsChatId);
+        
+        // Detectar tipo de actividad y aplicar timeout específico
         const isVoiceContext = buffer.isVoice || reason === 'voice' || reason === 'activity';
-        const delay = isVoiceContext ? 3000 : BUFFER_DELAY_MS; // 3s para voz, 5s para texto
+        let delay: number;
+        
+        if (isVoiceContext) {
+            delay = isOperations ? 1000 : 3000;  // Operations: 1s, Main: 3s para voz
+        } else {
+            delay = isOperations ? 1000 : BUFFER_DELAY_MS;  // Operations: 1s, Main: 5s para texto
+        }
 
         // Cancelar timer anterior si existe (last event wins)
         if (buffer.timer) {
@@ -433,10 +443,29 @@ export class BufferManager implements IBufferManager {
 
     // Métodos legacy para compatibilidad
     public setIntelligentTimer(userId: string, triggerType: 'message' | 'voice' | 'typing' | 'recording'): void {
-        // Mapeo inteligente: 
-        // - typing/recording = activity (5s)
-        // - voice = activity (5s para esperar transcripción)
-        // - message = message (2s)
+        // SELECCIÓN DINÁMICA DE TIMEOUTS POR PROCESSOR
+        const operationsChatId = process.env.OPERATIONS_CHAT_ID;
+        const isOperations = (userId === operationsChatId);
+        
+        // Timeouts optimizados por processor
+        let timeoutMs: number;
+        if (triggerType === 'voice') {
+            timeoutMs = isOperations ? 1000 : 8000;  // Operations: 1s, Main: 8s
+        } else if (triggerType === 'typing' || triggerType === 'recording') {
+            timeoutMs = isOperations ? 1000 : 5000;  // Operations: 1s, Main: 5s  
+        } else { // message
+            timeoutMs = isOperations ? 1000 : 3000;  // Operations: 1s, Main: 3s
+        }
+        
+        logInfo('BUFFER_TIMEOUT_DYNAMIC', 'Timeout configurado por processor', {
+            userId,
+            triggerType,
+            isOperations,
+            timeoutMs,
+            processorType: isOperations ? 'OPERATIONS' : 'MAIN'
+        }, 'buffer-manager.ts');
+        
+        // Mapeo para compatibilidad con setOrExtendTimer
         const type = (triggerType === 'typing' || triggerType === 'recording' || triggerType === 'voice') ? 'activity' : 'message';
         
         // Para typing/recording, usar onTypingOrRecording que ahora maneja buffers vacíos correctamente

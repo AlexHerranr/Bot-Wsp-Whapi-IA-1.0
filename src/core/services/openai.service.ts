@@ -76,8 +76,33 @@ export class OpenAIService implements IOpenAIService {
     }
 
 
-    async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string, existingTokenCount?: number, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<ProcessingResult> {
+    async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string, existingTokenCount?: number, imageMessage?: { type: 'image', imageUrl: string, caption: string }, duringRunMsgId?: string, assistantId?: string): Promise<ProcessingResult> {
+        // SELECCIÓN DINÁMICA DE ASSISTANT
+        if (!assistantId) {
+            const operationsChatId = process.env.OPERATIONS_CHAT_ID;
+            assistantId = (chatId === operationsChatId) 
+                ? process.env.OPERATIONS_ASSISTANT_ID || process.env.OPENAI_ASSISTANT_ID
+                : process.env.OPENAI_ASSISTANT_ID;
+                
+            logInfo('ASSISTANT_SELECTION', 'Assistant seleccionado dinámicamente', {
+                chatId,
+                assistantId,
+                isOperations: chatId === operationsChatId,
+                operationsChatId
+            }, 'openai.service.ts');
+        }
         const startTime = Date.now();
+        
+        // 🎯 USAR ASSISTANT ID ESPECÍFICO O EL POR DEFECTO
+        const effectiveAssistantId = assistantId || this.config.assistantId;
+        
+        logInfo('ASSISTANT_EFFECTIVE', 'Assistant ID efectivo para procesamiento', {
+            userId,
+            providedAssistantId: assistantId,
+            defaultAssistantId: this.config.assistantId,
+            effectiveAssistantId,
+            source: assistantId ? 'parameter' : 'config'
+        }, 'openai.service.ts');
         
         // Guardar chatId y userId para posibles mensajes interinos
         this.currentChatId = chatId;
@@ -123,7 +148,7 @@ export class OpenAIService implements IOpenAIService {
                 messageLength: message.length,
                 hasImage: !!imageMessage,
                 imageCaption: imageMessage?.caption || '',
-                assistantId: this.config.assistantId,
+                assistantId: effectiveAssistantId,
                 existingThreadId: existingThreadId || 'none',
                 timestamp: new Date().toISOString(),
                 concurrencyUtilization: Math.round((OpenAIService.activeOpenAICalls / OpenAIService.MAX_CONCURRENT_CALLS) * 100)
@@ -236,7 +261,7 @@ export class OpenAIService implements IOpenAIService {
 
             // Step 3: Create run - NO verificar historial de imágenes 
             // La capa de percepción convierte imágenes a texto, siempre enviamos texto al thread
-            let runResult = await this.createAndMonitorRun(threadId, userName, false, false, false);
+            let runResult = await this.createAndMonitorRun(threadId, userName, effectiveAssistantId, false, false, false);
 
             // Retry simple en caso de fallo del run
             if (!runResult.success) {
@@ -249,7 +274,7 @@ export class OpenAIService implements IOpenAIService {
 
                 // Pequeño delay para evitar mismo estado inmediato
                 await this.sleep(500);
-                const retryResult = await this.createAndMonitorRun(threadId, userName, false, false, false);
+                const retryResult = await this.createAndMonitorRun(threadId, userName, effectiveAssistantId, false, false, false);
 
                 if (!retryResult.success) {
                     const fallbackText = 'Perdón, tuve un inconveniente técnico y no pude responder ahora. ¿Podrías repetir tu mensaje?';
@@ -347,7 +372,7 @@ export class OpenAIService implements IOpenAIService {
                         threadId,
                         runId: runResult.runId,
                         response: response.trim(),
-                        assistantId: this.config.assistantId,
+                        assistantId: effectiveAssistantId,
                         recommendation: 'Revisar instrucciones del asistente en OpenAI Dashboard'
                     });
                 }
@@ -422,7 +447,7 @@ export class OpenAIService implements IOpenAIService {
                 error: errorMessage,
                 stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
                 processingTime,
-                assistantId: this.config.assistantId
+                assistantId: effectiveAssistantId
             });
             
             return {
@@ -914,7 +939,7 @@ export class OpenAIService implements IOpenAIService {
     }
 
 
-    private async createAndMonitorRun(threadId: string, userName: string, hasImage: boolean = false, hasCurrentImage: boolean = false, hasImageHistory: boolean = false): Promise<{
+    private async createAndMonitorRun(threadId: string, userName: string, assistantId: string, hasImage: boolean = false, hasCurrentImage: boolean = false, hasImageHistory: boolean = false): Promise<{
         success: boolean;
         error?: string;
         runId?: string;
@@ -925,14 +950,15 @@ export class OpenAIService implements IOpenAIService {
         try {
             // Create run with model override for images
             const runParams: any = {
-                assistant_id: this.config.assistantId
+                assistant_id: assistantId
             };
             
             // NO override de modelo - usar Assistant tal como está configurado
             // Las imágenes ahora se procesan con capa de percepción antes de llegar aquí
             logInfo('MODEL_DEFAULT', 'Usando configuración por defecto del Assistant', {
                 threadId,
-                assistantId: this.config.assistantId
+                assistantId: assistantId,
+                assistantName: assistantId === process.env.OPERATIONS_ASSISTANT_ID ? 'OPERATIONS' : 'MAIN'
             }, 'openai.service.ts');
             
             const run = await openAIWithRetry(
@@ -1050,13 +1076,14 @@ export class OpenAIService implements IOpenAIService {
                             const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
                             
                             // Lista de funciones que requieren mensajes interinos
-                            const slowFunctions = ['check_availability', 'check_booking_details', 'search_rooms', 'calculate_pricing', 'process_booking'];
+                            const slowFunctions = ['check_availability', 'check_booking_details', 'search_rooms', 'calculate_pricing', 'process_booking', 'informar_movimiento_manana'];
                             const functionInterimMessages = {
                                 'check_availability': "Permítame y consulto en mi sistema",
                                 'check_booking_details': "Permítame y consulto en mi sistema",
                                 'search_rooms': "Permítame y consulto en mi sistema",
                                 'calculate_pricing': "Permítame y consulto en mi sistema",
-                                'process_booking': "Permítame y consulto en mi sistema"
+                                'process_booking': "Permíteme y consulto en mi sistema",
+                                'informar_movimiento_manana': "Voy a consultar el sistema"
                             };
                             
                             // Enviar mensaje interino para funciones lentas
