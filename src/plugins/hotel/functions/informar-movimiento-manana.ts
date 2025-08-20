@@ -357,13 +357,13 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         
         // Calcular total de personas (adultos + niños)
         const totalPersonas = (s.adults || 0) + (s.children || 0);
-        const personasTexto = totalPersonas > 0 ? `${totalPersonas} Pers.` : '';
+        const personasTexto = totalPersonas > 0 ? `${totalPersonas} P` : '';
         
         // Construir línea moviendo N/A al final
         let linea = `- ${s.roomInfo} - ${s.guestName}`;
         if (personasTexto) linea += ` - ${personasTexto}`;
         linea += ` - Tel: ${phone} - Hora: ${hora} - Canal: ${canal}`;
-        if (!personasTexto) linea += ` - N/A Pers.`;
+        if (!personasTexto) linea += ` - N/A P`;
         
         reporte += `${linea}\n`;
       });
@@ -388,13 +388,13 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         
         // Calcular total de personas (adultos + niños)
         const totalPersonas = (e.adults || 0) + (e.children || 0);
-        const personasTexto = totalPersonas > 0 ? `${totalPersonas} Pers.` : '';
+        const personasTexto = totalPersonas > 0 ? `${totalPersonas} P` : '';
         
         // Construir línea moviendo N/A al final
         let linea = `- ${e.roomInfo} - ${e.guestName}`;
         if (personasTexto) linea += ` - ${personasTexto}`;
         linea += ` - Tel: ${phone} - Hora: ${hora} - Saldo: ${saldo} - Canal: ${canal}`;
-        if (!personasTexto) linea += ` - N/A Pers.`;
+        if (!personasTexto) linea += ` - N/A P`;
         
         reporte += `${linea}\n`;
       });
