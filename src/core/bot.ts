@@ -17,7 +17,7 @@ import { DelayedActivityService } from './services/delayed-activity.service';
 import { FunctionRegistryService } from './services/function-registry.service';
 import { OpenAIService } from './services/openai.service';
 import { ThreadPersistenceService } from './services/thread-persistence.service';
-import { WebhookProcessor } from './api/webhook-processor';
+import { WebhookRouter } from './processors/WebhookRouter';
 import { TerminalLog } from './utils/terminal-log';
 // import { HotelPlugin } from '../plugins/hotel/hotel.plugin'; // Moved to main.ts
 import { IFunctionRegistry } from '../shared/interfaces';
@@ -55,7 +55,7 @@ export class CoreBot {
     private whatsappService: WhatsappService;
     private openaiService: OpenAIService;
     private threadPersistence: ThreadPersistenceService;
-    private webhookProcessor: WebhookProcessor;
+    private webhookRouter: WebhookRouter;
     // private hotelPlugin: HotelPlugin; // Moved to main.ts
     private functionRegistry: IFunctionRegistry;
     private cleanupIntervals: NodeJS.Timeout[] = [];
@@ -113,7 +113,7 @@ export class CoreBot {
             this.processBufferCallback.bind(this),
             (userId: string) => this.userManager.getState(userId)
         );
-        this.webhookProcessor = new WebhookProcessor(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.openaiService, this.terminalLog, this.clientDataCache);
+        this.webhookRouter = new WebhookRouter(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.openaiService, this.terminalLog, this.clientDataCache);
         this.hotelValidation = new HotelValidation();
 
         this.setupMiddleware();
@@ -147,8 +147,8 @@ export class CoreBot {
                     requestId: req.headers['x-request-id'] || 'unknown'
                 });
                 
-                // Process webhook asynchronously
-                await this.webhookProcessor.process(req.body);
+                // Process webhook asynchronously through router
+                await this.webhookRouter.route(req.body);
             } catch (error: any) {
                 console.error('Webhook processing error:', error.message);
                 // Don't fail the response since we already acknowledged
@@ -409,13 +409,19 @@ export class CoreBot {
                 labels
             );
             
-            const contextualMessage = this.buildContextualMessage(
-                userName,
-                clientData?.name || null,
-                labels,
-                combinedText,
-                needsClientContext  // Solo incluir cliente+tags si es necesario
-            );
+            // Detectar si es chat de operaciones para contexto simplificado
+            const opsChatId = process.env.OPERATIONS_CHAT_ID;
+            const isOpsChat = chatId === opsChatId;
+            
+            const contextualMessage = isOpsChat 
+                ? this.buildOperationsContextualMessage(combinedText)
+                : this.buildContextualMessage(
+                    userName,
+                    clientData?.name || null,
+                    labels,
+                    combinedText,
+                    needsClientContext  // Solo incluir cliente+tags si es necesario
+                );
 
             // Marcar contexto como enviado si se incluyó
             if (needsClientContext) {
@@ -564,6 +570,21 @@ export class CoreBot {
                 inputPreview: processedMessage.substring(0, 50)
             });
 
+            // 🎯 DETECTAR QUÉ ASSISTANT USAR SEGÚN EL CHAT
+            const operationsChatId = process.env.OPERATIONS_CHAT_ID || '120363419376827694@g.us';
+            const isOperationsChat = chatId === operationsChatId;
+            const targetAssistantId = isOperationsChat ? 
+                (process.env.OPERATIONS_ASSISTANT_ID || 'asst_5ojkMp15tPorXMaT4qnHiELG') : 
+                (process.env.OPENAI_ASSISTANT_ID || process.env.ASSISTANT_ID || 'asst_SRqZsLGTOwLCXxOADo7beQuM');
+
+            logInfo('ASSISTANT_SELECTION', 'Assistant seleccionado para procesamiento', {
+                userId,
+                chatId,
+                isOperationsChat,
+                selectedAssistant: isOperationsChat ? 'OPERATIONS' : 'MAIN',
+                assistantId: targetAssistantId
+            }, 'bot.ts');
+
             // Procesar con OpenAI Service usando thread existente si está disponible
             const processingResult = await this.openaiService.processMessage(
                 userId, 
@@ -572,7 +593,9 @@ export class CoreBot {
                 userName,
                 existingThreadId,
                 existingThread?.tokenCount, // Pasar tokens acumulados de BD/cache
-                imageMessage
+                imageMessage,
+                undefined, // duringRunMsgId
+                targetAssistantId // 🎯 PASAR EL ASSISTANT ID ESPECÍFICO
             );
 
             // Log técnico: fin de run OpenAI
@@ -1018,6 +1041,34 @@ Hora actual: ${colombianTime}
 ${alreadyQuoted ? message : `Mensaje del cliente:
 ${message}`}`;
 
+        return contextualMessage;
+    }
+
+    /**
+     * Construye un mensaje contextual simplificado para operaciones (solo fecha y hora)
+     */
+    private buildOperationsContextualMessage(
+        message: string, 
+        alreadyQuoted: boolean = false
+    ): string {
+        // Hora colombiana actual
+        const now = new Date();
+        const colombianTime = now.toLocaleString('es-CO', {
+            timeZone: 'America/Bogota',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        // Formato simplificado solo con fecha/hora
+        const contextualMessage = `Hora actual: ${colombianTime}
+
+${alreadyQuoted ? message : `Mensaje:
+${message}`}`;
+        
         return contextualMessage;
     }
 
