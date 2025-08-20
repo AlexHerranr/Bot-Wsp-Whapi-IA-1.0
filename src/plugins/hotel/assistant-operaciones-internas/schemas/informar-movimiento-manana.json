@@ -1,0 +1,22 @@
+{
+  "name": "informar_movimiento_manana",
+  "description": "Genera reporte diario de movimientos del hotel para cualquier fecha específica. IMPORTANTE: Solo ejecutar DESPUÉS de confirmar la fecha con el usuario. Incluye entradas, salidas, ocupados y desocupados con formato amigable.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "fecha": {
+        "type": "string",
+        "description": "Fecha del reporte en formato YYYY-MM-DD. Interpretar según contexto: 'mañana'=+1 día, 'pasado mañana'=+2 días, 'sábado'=próximo sábado, 'domingo'=próximo domingo. Ejemplo: '2025-08-23' para el sábado 23 de agosto",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "incluirSaldos": {
+        "type": "boolean",
+        "description": "Si incluir información de saldos pendientes en el reporte. Recomendado: true para reportes completos",
+        "default": true
+      }
+    },
+    "required": ["fecha", "incluirSaldos"],
+    "additionalProperties": false
+  }
+}
