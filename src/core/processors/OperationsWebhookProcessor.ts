@@ -7,16 +7,15 @@ import { logInfo, logSuccess, logError, logWarning, logDebug } from '../../utils
 export class OperationsWebhookProcessor extends BaseWebhookProcessor {
     
     canHandle(payload: any): boolean {
-        // Este processor maneja SOLO el grupo de operaciones
         const operationsChatId = process.env.OPERATIONS_CHAT_ID;
         
-        if (!operationsChatId) {
-            // Si no hay chat de operaciones configurado, no manejar nada
-            return false;
+        // Método 1: Es del grupo específico de operaciones
+        if (operationsChatId && this.isSpecificGroup(payload, operationsChatId)) {
+            return true;
         }
-
-        // Verificar si es del grupo de operaciones específico
-        return this.isSpecificGroup(payload, operationsChatId);
+        
+        // Método 2: El bot fue mencionado en cualquier grupo
+        return this.isBotMentioned(payload);
     }
 
     getProcessorName(): string {
@@ -337,5 +336,27 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
 
         // OPERACIONES: NO hacer enriquecimiento async para máxima eficiencia
         // Las operaciones no requieren datos enriquecidos complejos
+    }
+
+    /**
+     * Verifica si el bot fue mencionado en cualquier mensaje del payload
+     * Busca el número del bot en message.context.mentions[]
+     */
+    private isBotMentioned(payload: any): boolean {
+        const botNumber = process.env.BOT_PHONE_NUMBER; // ej: "573235906292"
+        
+        if (!botNumber || !payload.messages) {
+            return false;
+        }
+        
+        // Buscar mentions en todos los mensajes del payload
+        return payload.messages.some((message: any) => {
+            if (!message.context?.mentions || !Array.isArray(message.context.mentions)) {
+                return false;
+            }
+            
+            // Verificar si el número del bot está en las mentions
+            return message.context.mentions.includes(botNumber);
+        });
     }
 }
