@@ -13,9 +13,13 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
             return false;
         }
         
-        // SOLO responder si viene del grupo de operaciones
-        // (mentions y quotes solo importan si ya estamos en el grupo correcto)
-        return this.isSpecificGroup(payload, operationsChatId);
+        // Primero verificar que sea del grupo correcto
+        if (!this.isSpecificGroup(payload, operationsChatId)) {
+            return false;
+        }
+        
+        // Dentro del grupo correcto, SOLO responder si es mencionado o citado
+        return this.isBotMentioned(payload) || this.isBotQuoted(payload);
     }
 
     getProcessorName(): string {
@@ -338,4 +342,38 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
         // Las operaciones no requieren datos enriquecidos complejos
     }
 
+    /**
+     * Verifica si el bot fue mencionado en el payload
+     * Busca el número del bot en message.context.mentions[]
+     */
+    private isBotMentioned(payload: any): boolean {
+        const botNumber = process.env.OPERATIONS_BOT_PHONE_NUMBER; // ej: "573235906292"
+        
+        if (!botNumber || !payload.messages) {
+            return false;
+        }
+        
+        return payload.messages.some((message: any) => {
+            if (!message.context?.mentions || !Array.isArray(message.context.mentions)) {
+                return false;
+            }
+            return message.context.mentions.includes(botNumber);
+        });
+    }
+
+    /**
+     * Verifica si el bot fue citado en el payload
+     * Busca el número del bot en message.context.quoted_author
+     */
+    private isBotQuoted(payload: any): boolean {
+        const botNumber = process.env.OPERATIONS_BOT_PHONE_NUMBER; // ej: "573235906292"
+        
+        if (!botNumber || !payload.messages) {
+            return false;
+        }
+        
+        return payload.messages.some((message: any) => {
+            return message.context?.quoted_author === botNumber;
+        });
+    }
 }
