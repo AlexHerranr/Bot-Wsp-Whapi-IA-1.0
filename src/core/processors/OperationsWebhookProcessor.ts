@@ -143,17 +143,15 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
         // Para operaciones, mantener userId como chatId (no cambiar a phoneNumber)
         // userId = phoneNumber || userId; // ← REMOVIDO: No cambiar userId
         
-        // Para operaciones: nombre simplificado sin enriquecimiento complejo
-        let userName = 'Usuario';
+        // Para operaciones: SOLO usar nombre del grupo, ignorar contactos individuales
+        let userName = 'Operaciones';
         const webhookChatName = (message as any).chat_name;
-        const webhookFromName = (message as any).from_name;
         
-        // Usar el nombre más simple disponible
-        if (webhookChatName && webhookChatName !== phoneNumber) {
-            userName = webhookChatName;
-        } else if (webhookFromName && webhookFromName !== phoneNumber) {
-            userName = webhookFromName;
+        // SOLO usar chat_name del grupo, NUNCA from_name de contactos individuales
+        if (webhookChatName && chatId.includes('@g.us')) {
+            userName = webhookChatName; // Ejemplo: "Operaciones"
         }
+        // Para grupos: ignorar completamente from_name y from
 
         // Timestamp básico
         const webhookTimestamp = message.timestamp ? new Date(message.timestamp * 1000) : new Date();
