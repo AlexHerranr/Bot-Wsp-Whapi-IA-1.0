@@ -188,6 +188,7 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
     // 6. Procesar ENTRADAS
     const entradasProcesadas = [];
     let saldoPendienteTotal = 0;
+    const saldosDetalle = []; // Para mostrar suma detallada
 
     for (const booking of entradasData) {
       // Calcular saldo pendiente
@@ -221,6 +222,9 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         }
         
         saldoPendienteTotal += pendingBalance;
+        if (pendingBalance > 0) {
+          saldosDetalle.push(pendingBalance);
+        }
       }
       
       // Extraer horas y notas usando ambos campos
@@ -298,6 +302,9 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
             pendingBalance = totalCharges - totalPayments;
           }
           saldoPendienteTotal += pendingBalance;
+          if (pendingBalance > 0) {
+            saldosDetalle.push(pendingBalance);
+          }
         }
 
         ocupadosProcesados.push({
@@ -339,9 +346,15 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         
         // Calcular total de personas (adultos + niños)
         const totalPersonas = (s.adults || 0) + (s.children || 0);
-        const personasTexto = totalPersonas > 0 ? `${totalPersonas} Personas` : 'N/A Personas';
+        const personasTexto = totalPersonas > 0 ? `${totalPersonas} Pers.` : '';
         
-        reporte += `- ${s.roomInfo} - ${s.guestName} - ${personasTexto} - Tel: ${phone} - Hora: ${hora} - Canal: ${canal}\n`;
+        // Construir línea moviendo N/A al final
+        let linea = `- ${s.roomInfo} - ${s.guestName}`;
+        if (personasTexto) linea += ` - ${personasTexto}`;
+        linea += ` - Tel: ${phone} - Hora: ${hora} - Canal: ${canal}`;
+        if (!personasTexto) linea += ` - N/A Pers.`;
+        
+        reporte += `${linea}\n`;
       });
     } else {
       reporte += `- No hay salidas programadas\n`;
@@ -364,9 +377,15 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         
         // Calcular total de personas (adultos + niños)
         const totalPersonas = (e.adults || 0) + (e.children || 0);
-        const personasTexto = totalPersonas > 0 ? `${totalPersonas} Personas` : 'N/A Personas';
+        const personasTexto = totalPersonas > 0 ? `${totalPersonas} Pers.` : '';
         
-        reporte += `- ${e.roomInfo} - ${e.guestName} - ${personasTexto} - Tel: ${phone} - Hora: ${hora} - Saldo: ${saldo} - Canal: ${canal}\n`;
+        // Construir línea moviendo N/A al final
+        let linea = `- ${e.roomInfo} - ${e.guestName}`;
+        if (personasTexto) linea += ` - ${personasTexto}`;
+        linea += ` - Tel: ${phone} - Hora: ${hora} - Saldo: ${saldo} - Canal: ${canal}`;
+        if (!personasTexto) linea += ` - N/A Pers.`;
+        
+        reporte += `${linea}\n`;
       });
     } else {
       reporte += `- No hay entradas programadas\n`;
@@ -396,11 +415,25 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
       reporte += `- No hay apartamentos disponibles\n`;
     }
 
+    // Crear texto de suma detallada
+    let saldoTextoDetallado = '';
+    if (saldosDetalle.length > 0) {
+      const saldosFormateados = saldosDetalle.map(s => s.toLocaleString());
+      if (saldosDetalle.length === 1) {
+        saldoTextoDetallado = `$${saldosFormateados[0]}`;
+      } else {
+        saldoTextoDetallado = `${saldosFormateados.join(' + ')} = $${saldoPendienteTotal.toLocaleString()}`;
+      }
+    } else {
+      saldoTextoDetallado = '$0';
+    }
+
     const resumen = {
       totalSalidas: salidasProcesadas.length,
       totalEntradas: entradasProcesadas.length,
       totalOcupados: ocupadosProcesados.length,
-      saldoPendienteTotal: saldoPendienteTotal
+      saldoPendienteTotal: saldoPendienteTotal,
+      saldoTextoDetallado: saldoTextoDetallado
     };
 
     // 10. NOTA: No enviar directo a WhatsApp - el assistant maneja el envío
