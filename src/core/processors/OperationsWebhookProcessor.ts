@@ -15,7 +15,12 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
         }
         
         // Método 2: El bot fue mencionado en cualquier grupo
-        return this.isBotMentioned(payload);
+        if (this.isBotMentioned(payload)) {
+            return true;
+        }
+        
+        // Método 3: El bot fue citado en cualquier grupo
+        return this.isBotQuoted(payload);
     }
 
     getProcessorName(): string {
@@ -357,6 +362,24 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
             
             // Verificar si el número del bot está en las mentions
             return message.context.mentions.includes(botNumber);
+        });
+    }
+
+    /**
+     * Verifica si el bot fue citado en cualquier mensaje del payload
+     * Busca el número del bot en message.context.quoted_author
+     */
+    private isBotQuoted(payload: any): boolean {
+        const botNumber = process.env.OPERATIONS_BOT_PHONE_NUMBER; // ej: "573235906292"
+        
+        if (!botNumber || !payload.messages) {
+            return false;
+        }
+        
+        // Buscar quotes en todos los mensajes del payload
+        return payload.messages.some((message: any) => {
+            // Verificar si el quoted_author es el número del bot
+            return message.context?.quoted_author === botNumber;
         });
     }
 }
