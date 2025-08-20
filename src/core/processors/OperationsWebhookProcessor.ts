@@ -9,18 +9,13 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
     canHandle(payload: any): boolean {
         const operationsChatId = process.env.OPERATIONS_CHAT_ID;
         
-        // Método 1: Es del grupo específico de operaciones
-        if (operationsChatId && this.isSpecificGroup(payload, operationsChatId)) {
-            return true;
+        if (!operationsChatId) {
+            return false;
         }
         
-        // Método 2: El bot fue mencionado en cualquier grupo
-        if (this.isBotMentioned(payload)) {
-            return true;
-        }
-        
-        // Método 3: El bot fue citado en cualquier grupo
-        return this.isBotQuoted(payload);
+        // SOLO responder si viene del grupo de operaciones
+        // (mentions y quotes solo importan si ya estamos en el grupo correcto)
+        return this.isSpecificGroup(payload, operationsChatId);
     }
 
     getProcessorName(): string {
@@ -343,43 +338,4 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
         // Las operaciones no requieren datos enriquecidos complejos
     }
 
-    /**
-     * Verifica si el bot fue mencionado en cualquier mensaje del payload
-     * Busca el número del bot en message.context.mentions[]
-     */
-    private isBotMentioned(payload: any): boolean {
-        const botNumber = process.env.OPERATIONS_BOT_PHONE_NUMBER; // ej: "573235906292"
-        
-        if (!botNumber || !payload.messages) {
-            return false;
-        }
-        
-        // Buscar mentions en todos los mensajes del payload
-        return payload.messages.some((message: any) => {
-            if (!message.context?.mentions || !Array.isArray(message.context.mentions)) {
-                return false;
-            }
-            
-            // Verificar si el número del bot está en las mentions
-            return message.context.mentions.includes(botNumber);
-        });
-    }
-
-    /**
-     * Verifica si el bot fue citado en cualquier mensaje del payload
-     * Busca el número del bot en message.context.quoted_author
-     */
-    private isBotQuoted(payload: any): boolean {
-        const botNumber = process.env.OPERATIONS_BOT_PHONE_NUMBER; // ej: "573235906292"
-        
-        if (!botNumber || !payload.messages) {
-            return false;
-        }
-        
-        // Buscar quotes en todos los mensajes del payload
-        return payload.messages.some((message: any) => {
-            // Verificar si el quoted_author es el número del bot
-            return message.context?.quoted_author === botNumber;
-        });
-    }
 }
