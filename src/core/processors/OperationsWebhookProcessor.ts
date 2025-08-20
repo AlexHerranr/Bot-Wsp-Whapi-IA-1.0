@@ -343,7 +343,7 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
      * Busca el número del bot en message.context.mentions[]
      */
     private isBotMentioned(payload: any): boolean {
-        const botNumber = process.env.BOT_PHONE_NUMBER; // ej: "573235906292"
+        const botNumber = process.env.OPERATIONS_BOT_PHONE_NUMBER; // ej: "573235906292"
         
         if (!botNumber || !payload.messages) {
             return false;
