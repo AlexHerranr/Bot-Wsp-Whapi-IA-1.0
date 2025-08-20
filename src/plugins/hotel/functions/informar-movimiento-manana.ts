@@ -227,9 +227,14 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         }
       }
       
-      // Extraer horas y notas usando ambos campos
-      const allNotes = [booking.notes || '', booking.comments || ''].filter(Boolean).join(' | ');
-      const horaEntrada = extractTimeFromNotes(allNotes, 'entrada') || 'No reportada';
+      // Extraer horas: primero arrivalTime, luego notas
+      let horaEntrada = 'No reportada';
+      if (booking.arrivalTime) {
+        horaEntrada = booking.arrivalTime;
+      } else {
+        const allNotes = [booking.notes || '', booking.comments || ''].filter(Boolean).join(' | ');
+        horaEntrada = extractTimeFromNotes(allNotes, 'entrada') || 'No reportada';
+      }
 
       entradasProcesadas.push({
         guestName,
@@ -238,8 +243,8 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         horaEntrada,
         pendingBalance,
         channel,
-        adults: booking.adults || 0,
-        children: booking.children || 0
+        adults: booking.numAdult || booking.adults || 0,
+        children: booking.numChild || booking.children || 0
       });
     }
 
@@ -252,8 +257,14 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
       const roomInfo = getRoomName(booking.roomId) || `Room ID ${booking.roomId}`;
       const channel = booking.referer || 'Direct';
       
-      const allNotes = [booking.notes || '', booking.comments || ''].filter(Boolean).join(' | ');
-      const horaSalida = extractTimeFromNotes(allNotes, 'salida') || 'No reportada';
+      // Extraer horas: primero departureTime, luego notas
+      let horaSalida = 'No reportada';
+      if (booking.departureTime) {
+        horaSalida = booking.departureTime;
+      } else {
+        const allNotes = [booking.notes || '', booking.comments || ''].filter(Boolean).join(' | ');
+        horaSalida = extractTimeFromNotes(allNotes, 'salida') || 'No reportada';
+      }
 
       salidasProcesadas.push({
         guestName,
@@ -261,8 +272,8 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         roomInfo,
         horaSalida,
         channel,
-        adults: booking.adults || 0,
-        children: booking.children || 0
+        adults: booking.numAdult || booking.adults || 0,
+        children: booking.numChild || booking.children || 0
       });
     }
 
