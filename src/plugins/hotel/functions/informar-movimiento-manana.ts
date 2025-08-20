@@ -233,7 +233,9 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         roomInfo,
         horaEntrada,
         pendingBalance,
-        channel
+        channel,
+        adults: booking.adults || 0,
+        children: booking.children || 0
       });
     }
 
@@ -254,7 +256,9 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         phone,
         roomInfo,
         horaSalida,
-        channel
+        channel,
+        adults: booking.adults || 0,
+        children: booking.children || 0
       });
     }
 
@@ -304,68 +308,92 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
       }
     }
 
-    // 9. Generar reporte formato WhatsApp para equipo
-    const fechaDisplay = formatDateForTeam(fecha);
+    // 9. Generar reporte simplificado en texto plano para OpenAI
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    const fechaManana = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
-    let reporte = `Movimiento del día:
----
+    let diaTitulo;
+    if (fecha === fechaHoy) {
+        diaTitulo = "Hoy";
+    } else if (fecha === fechaManana) {
+        diaTitulo = "Mañana " + new Date(fecha).getDate();
+    } else {
+        const fechaObj = new Date(fecha);
+        diaTitulo = `El día ${fechaObj.getDate()}`;
+    }
+    
+    let reporte = `${diaTitulo} Sale y Entra:\n\n`;
 
-📅 *${fechaDisplay}*
-
-`;
-
-    // SALIDAS - Con emojis y formato limpio
-    reporte += `🚪 *SALE:*\n`;
+    // SALIDAS - Formato simplificado con total de personas
+    reporte += `SALE:\n`;
     if (salidasProcesadas.length > 0) {
       salidasProcesadas.forEach(s => {
         const phone = (s.phone && s.phone !== 'Sin teléfono') ? s.phone : 'N/A';
         const hora = (s.horaSalida && s.horaSalida !== 'No reportada') ? s.horaSalida : 'N/A';
-        const canal = s.channel || 'Direct';
-        let linea = `${s.roomInfo} - ${s.guestName} | Tel: ${phone} | Hora: ${hora} | Canal: ${canal}`;
-        reporte += `${linea}\n`;
+        
+        // Cambiar pacartagena2 a Directo
+        let canal = s.channel || 'Direct';
+        if (canal.toLowerCase().includes('pacartagena')) {
+            canal = 'Directo';
+        }
+        
+        // Calcular total de personas (adultos + niños)
+        const totalPersonas = (s.adults || 0) + (s.children || 0);
+        const personasTexto = totalPersonas > 0 ? `${totalPersonas} Personas` : 'N/A Personas';
+        
+        reporte += `- ${s.roomInfo} - ${s.guestName} - ${personasTexto} - Tel: ${phone} - Hora: ${hora} - Canal: ${canal}\n`;
       });
     } else {
-      reporte += `(No hay salidas programadas)\n`;
+      reporte += `- No hay salidas programadas\n`;
     }
     reporte += '\n';
 
-    // ENTRADAS - Con emojis y formato limpio
-    reporte += `🔑 *ENTRA:*\n`;
+    // ENTRADAS - Formato simplificado con total de personas
+    reporte += `ENTRA:\n`;
     if (entradasProcesadas.length > 0) {
       entradasProcesadas.forEach(e => {
         const phone = (e.phone && e.phone !== 'Sin teléfono') ? e.phone : 'N/A';
         const hora = (e.horaEntrada && e.horaEntrada !== 'No reportada') ? e.horaEntrada : 'N/A';
-        const saldo = e.pendingBalance > 0 ? `$${e.pendingBalance.toLocaleString()}` : 'N/A';
-        const canal = e.channel || 'Direct';
-        let linea = `${e.roomInfo} - ${e.guestName} | Tel: ${phone} | Hora: ${hora} | Saldo: ${saldo} | Canal: ${canal}`;
-        reporte += `${linea}\n`;
+        const saldo = e.pendingBalance > 0 ? `$${e.pendingBalance.toLocaleString()}` : '$0';
+        
+        // Cambiar pacartagena2 a Directo
+        let canal = e.channel || 'Direct';
+        if (canal.toLowerCase().includes('pacartagena')) {
+            canal = 'Directo';
+        }
+        
+        // Calcular total de personas (adultos + niños)
+        const totalPersonas = (e.adults || 0) + (e.children || 0);
+        const personasTexto = totalPersonas > 0 ? `${totalPersonas} Personas` : 'N/A Personas';
+        
+        reporte += `- ${e.roomInfo} - ${e.guestName} - ${personasTexto} - Tel: ${phone} - Hora: ${hora} - Saldo: ${saldo} - Canal: ${canal}\n`;
       });
     } else {
-      reporte += `(No hay entradas programadas)\n`;
+      reporte += `- No hay entradas programadas\n`;
     }
     reporte += '\n';
 
-    // OCUPADOS - Solo apartamento y fecha de salida
-    reporte += `🏠 *OCUPADOS:*\n`;
+    // OCUPADOS - Formato simplificado
+    reporte += `OCUPADOS:\n`;
     if (ocupadosProcesados.length > 0) {
       ocupadosProcesados.forEach(o => {
         const fechaSalida = formatDepartureDate(o.departureDate);
-        reporte += `${o.roomInfo} - ${o.guestName} | Sale: ${fechaSalida}\n`;
+        reporte += `- ${o.roomInfo} - ${o.guestName} - Sale: ${fechaSalida}\n`;
       });
     } else {
-      reporte += `(Todos los apartamentos disponibles)\n`;
+      reporte += `- Todos los apartamentos disponibles\n`;
     }
     reporte += '\n';
 
-    // DESOCUPADOS - Calcular apartamentos que quedan libres CON NOCHES
+    // DESOCUPADOS - Formato simplificado
     const apartamentosLibres = calcularDesocupados(salidasProcesadas, entradasProcesadas, ocupadosProcesados, proximasReservasData, fecha);
-    reporte += `🏡 *DESOCUPADOS:*\n`;
+    reporte += `DESOCUPADOS:\n`;
     if (apartamentosLibres.length > 0) {
       apartamentosLibres.forEach(libre => {
-        reporte += `${libre.roomInfo} - ${libre.disponibilidad}\n`;
+        reporte += `- ${libre.roomInfo} - ${libre.disponibilidad}\n`;
       });
     } else {
-      reporte += `(No hay apartamentos disponibles)\n`;
+      reporte += `- No hay apartamentos disponibles\n`;
     }
 
     const resumen = {
