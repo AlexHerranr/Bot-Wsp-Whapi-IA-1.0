@@ -227,13 +227,12 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         }
       }
       
-      // Extraer horas: primero arrivalTime, luego notas
+      // Extraer horas: primero arrivalTime, luego múltiples campos de comentarios
       let horaEntrada = 'No reportada';
       if (booking.arrivalTime) {
         horaEntrada = booking.arrivalTime;
       } else {
-        const allNotes = [booking.notes || '', booking.comments || ''].filter(Boolean).join(' | ');
-        horaEntrada = extractTimeFromNotes(allNotes, 'entrada') || 'No reportada';
+        horaEntrada = extractTimeFromMultipleFields(booking, 'entrada') || 'No reportada';
       }
 
       entradasProcesadas.push({
@@ -257,13 +256,12 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
       const roomInfo = getRoomName(booking.roomId) || `Room ID ${booking.roomId}`;
       const channel = booking.referer || 'Direct';
       
-      // Extraer horas: primero departureTime, luego notas
+      // Extraer horas: primero departureTime, luego múltiples campos de comentarios
       let horaSalida = 'No reportada';
       if (booking.departureTime) {
         horaSalida = booking.departureTime;
       } else {
-        const allNotes = [booking.notes || '', booking.comments || ''].filter(Boolean).join(' | ');
-        horaSalida = extractTimeFromNotes(allNotes, 'salida') || 'No reportada';
+        horaSalida = extractTimeFromMultipleFields(booking, 'salida') || 'No reportada';
       }
 
       salidasProcesadas.push({
@@ -545,21 +543,81 @@ function getRoomName(roomId: number): string | null {
 }
 
 // Helper para extraer horas de entrada/salida de notas
+// Nueva función mejorada para extraer horas de múltiples campos
+function extractTimeFromMultipleFields(booking: any, type: 'entrada' | 'salida'): string | null {
+  // DEBUG: Ver qué campos están disponibles (temporal)
+  if (process.env.DETAILED_FUNCTION_LOGS === 'true') {
+    const availableFields = Object.keys(booking);
+    console.log(`🔍 DEBUG ${type}: Campos disponibles en booking:`, availableFields);
+    
+    // Revisar campos que contienen texto
+    const textFields = availableFields.filter(key => 
+      typeof booking[key] === 'string' && booking[key].length > 0
+    );
+    console.log(`📝 DEBUG ${type}: Campos con texto:`, textFields.map(field => 
+      `${field}: "${booking[field].substring(0, 100)}"`
+    ));
+  }
+
+  // Campos donde buscar comentarios/notas (orden de prioridad)
+  const fieldsToSearch = [
+    booking.notes,
+    booking.comments, 
+    booking.guestComments,
+    booking.internalNotes,
+    booking.specialRequests,
+    booking.arrivalComments,
+    booking.departureComments,
+    booking.guestNotes,
+    booking.privateNotes
+  ].filter(Boolean); // Filtrar campos vacíos/null
+
+  // Buscar en cada campo
+  for (const field of fieldsToSearch) {
+    const timeFound = extractTimeFromNotes(field, type);
+    if (timeFound) {
+      if (process.env.DETAILED_FUNCTION_LOGS === 'true') {
+        console.log(`✅ DEBUG ${type}: Hora encontrada "${timeFound}" en campo:`, field);
+      }
+      return timeFound;
+    }
+  }
+
+  return null;
+}
+
 function extractTimeFromNotes(notes: string, type: 'entrada' | 'salida'): string | null {
   if (!notes) return null;
   
   const patterns = {
     entrada: [
-      /hora.*entrada:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      // Patrones específicos solicitados
+      /checkin:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /check\s*in:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /hora\s*entrada:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /hora\s*entra:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /entra:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      // Patrones adicionales útiles
       /llegada:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /check.*in:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /entrada:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i
+      /entrada:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /arrival:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      // Patrones con palabras clave en español
+      /llego:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /llegar:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i
     ],
     salida: [
-      /hora.*salida:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /check.*out:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      // Patrones específicos solicitados  
+      /checkout:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /check\s*out:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /hora\s*salida:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /hora\s*sale:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /sale:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      // Patrones adicionales útiles
       /salida:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /departure:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i
+      /departure:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /salgo:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /salir:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
+      /me\s*voy:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i
     ]
   };
 
