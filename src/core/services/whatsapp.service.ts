@@ -104,7 +104,7 @@ export class WhatsappService {
 
         if (shouldUseVoice) {
             try {
-                const voiceResult = await this.sendVoiceMessage(chatId, message, finalQuotedId);
+                const voiceResult = await this.sendVoiceMessage(chatId, message, finalQuotedId, enableHumanTiming);
                 if (voiceResult.success) {
                     result = { success: true, sentAsVoice: true, messageIds: voiceResult.messageIds };
                 } else {
@@ -117,7 +117,7 @@ export class WhatsappService {
             }
         } else {
             // Si llega aquí, se envía como texto (no resetea flag de voz)
-            const textResult = await this.sendTextMessage(chatId, message, isQuoteOrPrice, finalQuotedId);
+            const textResult = await this.sendTextMessage(chatId, message, isQuoteOrPrice, finalQuotedId, enableHumanTiming);
             result = { success: textResult.success, sentAsVoice: false, messageIds: textResult.messageIds };
         }
 
@@ -138,7 +138,7 @@ export class WhatsappService {
         return result;
     }
 
-    private async sendVoiceMessage(chatId: string, message: string, quotedMessageId?: string): Promise<{ success: boolean; messageIds: string[] }> {
+    private async sendVoiceMessage(chatId: string, message: string, quotedMessageId?: string, enableHumanTiming: boolean = true): Promise<{ success: boolean; messageIds: string[] }> {
         // CRÍTICO: Dedup simétrico - verificar si ya se envió como texto
         if (this.mediaManager.isBotSentContent(chatId, message)) {
             logInfo('DUPLICATE_PREVENTED', 'Voz skipped - ya enviado como texto', { chatId, messagePreview: message.substring(0, 100) });
@@ -341,7 +341,7 @@ export class WhatsappService {
         return { success: true, messageIds: collectedIds };
     }
 
-    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string): Promise<{ success: boolean; messageIds: string[] }> {
+    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string, enableHumanTiming: boolean = true): Promise<{ success: boolean; messageIds: string[] }> {
         // CRÍTICO: Verificar si ya se envió como voz para prevenir duplicados
         if (this.mediaManager.isBotSentContent(chatId, message)) {
             logInfo('DUPLICATE_PREVENTED', 'Texto skipped - ya enviado como voz', { 
