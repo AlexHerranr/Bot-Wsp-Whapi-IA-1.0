@@ -199,13 +199,21 @@ export class OperationsWebhookProcessor extends BaseWebhookProcessor {
         }
 
         // Actualizar estado del usuario de forma simplificada
-        this.userManager.updateState(userId, { 
-            userName, 
+        // IMPORTANTE: Para grupos, NO actualizar userName para evitar sobrescribir nombre del grupo
+        const updateData: any = {
             chatId: normalizedChatId,
             isTyping: false,    // Siempre false para operaciones
             isRecording: false, // Siempre false para operaciones
             lastActivity: webhookTimestamp.getTime()
-        });
+        };
+        
+        // Solo actualizar userName en el primer registro, luego mantener nombre del grupo
+        const existingState = this.userManager.getState(userId);
+        if (!existingState) {
+            updateData.userName = userName; // Solo la primera vez
+        }
+        
+        this.userManager.updateState(userId, updateData);
 
         try {
             switch (message.type) {
