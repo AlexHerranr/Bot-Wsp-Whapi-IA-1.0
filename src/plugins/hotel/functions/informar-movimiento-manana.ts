@@ -414,8 +414,31 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
     } else {
       reporte += `- No hay apartamentos disponibles\n`;
     }
+    reporte += '\n';
 
-    // Crear texto de suma detallada
+    // Calcular saldos SOLO de las entradas de ese día específico
+    const saldosEntradas = entradasProcesadas
+      .filter(e => e.pendingBalance > 0)
+      .map(e => e.pendingBalance);
+    
+    const totalSaldosEntradas = saldosEntradas.reduce((sum, saldo) => sum + saldo, 0);
+    
+    // Agregar resumen al final
+    reporte += `📊 Resumen:\n`;
+    reporte += `  - ${salidasProcesadas.length} salidas, ${entradasProcesadas.length} entradas, ${ocupadosProcesados.length} ocupados y ${apartamentosLibres.length} desocupado${apartamentosLibres.length !== 1 ? 's' : ''}.\n`;
+    
+    if (saldosEntradas.length > 0) {
+      if (saldosEntradas.length === 1) {
+        reporte += `  - Saldo total: $${saldosEntradas[0].toLocaleString()}\n`;
+      } else {
+        const saldosFormateados = saldosEntradas.map(s => s.toLocaleString()).join(' + ');
+        reporte += `  - Saldo total: ${saldosFormateados} = $${totalSaldosEntradas.toLocaleString()}\n`;
+      }
+    } else {
+      reporte += `  - Saldo total: $0\n`;
+    }
+
+    // Crear texto de suma detallada (para el resumen estructurado)
     let saldoTextoDetallado = '';
     if (saldosDetalle.length > 0) {
       const saldosFormateados = saldosDetalle.map(s => s.toLocaleString());
