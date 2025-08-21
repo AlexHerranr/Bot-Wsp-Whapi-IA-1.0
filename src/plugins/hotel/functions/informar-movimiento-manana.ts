@@ -546,17 +546,11 @@ function getRoomName(roomId: number): string | null {
 // Nueva función mejorada para extraer horas de múltiples campos
 function extractTimeFromMultipleFields(booking: any, type: 'entrada' | 'salida'): string | null {
 
-  // Campos donde buscar comentarios/notas (orden de prioridad)
+  // Campos prioritarios confirmados donde están los comentarios con horas
   const fieldsToSearch = [
-    booking.notes,
-    booking.comments, 
-    booking.guestComments,
-    booking.internalNotes,
-    booking.specialRequests,
-    booking.arrivalComments,
-    booking.departureComments,
-    booking.guestNotes,
-    booking.privateNotes
+    booking.arrivalTime,  // Campo oficial de hora de llegada
+    booking.comments,     // Comentarios del huésped 
+    booking.notes         // Notas internas
   ].filter(Boolean); // Filtrar campos vacíos/null
 
   // Buscar en cada campo
@@ -578,40 +572,40 @@ function extractTimeFromNotes(notes: string, type: 'entrada' | 'salida'): string
   
   const patterns = {
     entrada: [
-      // Patrones específicos solicitados
-      /checkin:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /check\s*in:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /hora\s*entrada:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /hora\s*entra:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /entra:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      // Patrones adicionales útiles
-      /llegada:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /entrada:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /arrival:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      // Patrones con palabras clave en español
-      /llego:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /llegar:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i
+      // Patrones específicos para CHECK IN - extraer solo la hora
+      /check\s*in:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      /checkin:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      /hora\s*entrada:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      /hora\s*llegada:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      /llegada:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      /arrival:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      // Patrones básicos de hora
+      /\b([0-9]{1,2}:[0-9]{2}\s*[ap]m)\b/i,
+      /\b([0-9]{1,2}\s*[ap]m)\b/i
     ],
     salida: [
-      // Patrones específicos solicitados  
-      /checkout:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /check\s*out:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /hora\s*salida:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /hora\s*sale:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /sale:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      // Patrones adicionales útiles
-      /salida:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /departure:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /salgo:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /salir:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i,
-      /me\s*voy:?\s*([0-9]{1,2}:[0-9]{2}(\s*[AP]M)?)/i
+      // Patrones específicos para CHECK OUT - extraer solo la hora
+      /check\s*out:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      /checkout:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      /hora\s*salida:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      /salida:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      /departure:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
+      // Patrones básicos de hora
+      /\b([0-9]{1,2}:[0-9]{2}\s*[ap]m)\b/i,
+      /\b([0-9]{1,2}\s*[ap]m)\b/i
     ]
   };
 
   for (const pattern of patterns[type]) {
     const match = notes.match(pattern);
     if (match) {
-      return match[1];
+      // Limpiar el resultado capturado
+      let result = match[1].trim();
+      
+      // Remover texto extra después de paréntesis
+      result = result.replace(/\s*\([^)]*\).*$/, '');
+      
+      return result;
     }
   }
 
