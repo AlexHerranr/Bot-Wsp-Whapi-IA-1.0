@@ -545,6 +545,7 @@ function getRoomName(roomId: number): string | null {
 // Helper para extraer horas de entrada/salida de notas
 // Nueva función mejorada para extraer horas de múltiples campos
 function extractTimeFromMultipleFields(booking: any, type: 'entrada' | 'salida'): string | null {
+
   // Campos donde buscar comentarios/notas (orden de prioridad)
   const fieldsToSearch = [
     booking.notes,
@@ -562,6 +563,9 @@ function extractTimeFromMultipleFields(booking: any, type: 'entrada' | 'salida')
   for (const field of fieldsToSearch) {
     const timeFound = extractTimeFromNotes(field, type);
     if (timeFound) {
+      if (process.env.DETAILED_FUNCTION_LOGS === 'true') {
+        console.log(`  ✅ Hora encontrada: "${timeFound}"`);
+      }
       return timeFound;
     }
   }
