@@ -198,7 +198,9 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
       // Calcular saldo pendiente usando price + invoice data cuando disponible
       
       // Extraer información operativa primero
-      const guestName = `${booking.firstName || ''} ${booking.lastName || ''}`.trim();
+      // Limitar a 2 palabras (nombre y apellido)
+      const fullName = `${booking.firstName || ''} ${booking.lastName || ''}`.trim();
+      const guestName = fullName.split(' ').slice(0, 2).join(' ');
       const phone = booking.phone || booking.mobile || 'Sin teléfono';
       const roomInfo = getRoomName(booking.roomId) || `Room ID ${booking.roomId}`;
       const channel = booking.referer || booking.channel || 'Direct';
@@ -251,7 +253,9 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
     const salidasProcesadas = [];
 
     for (const booking of salidasData) {
-      const guestName = `${booking.firstName || ''} ${booking.lastName || ''}`.trim();
+      // Limitar a 2 palabras (nombre y apellido)
+      const fullName = `${booking.firstName || ''} ${booking.lastName || ''}`.trim();
+      const guestName = fullName.split(' ').slice(0, 2).join(' ');
       const phone = booking.phone || booking.mobile || 'Sin teléfono';
       const roomInfo = getRoomName(booking.roomId) || `Room ID ${booking.roomId}`;
       const channel = booking.referer || 'Direct';
@@ -294,7 +298,9 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         let paidAmount = 0;
         let pendingBalance = 0;
         
-        const guestName = `${booking.firstName || ''} ${booking.lastName || ''}`.trim();
+        // Limitar a 2 palabras (nombre y apellido)
+      const fullName = `${booking.firstName || ''} ${booking.lastName || ''}`.trim();
+      const guestName = fullName.split(' ').slice(0, 2).join(' ');
         const channel = booking.referer || booking.channel || 'Direct';
 
         if (incluirSaldos) {
@@ -360,7 +366,7 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         // Construir línea moviendo N/A al final
         let linea = `- ${s.roomInfo} - ${s.guestName}`;
         if (personasTexto) linea += ` - ${personasTexto}`;
-        linea += ` - Tel: ${phone} - Hora: ${hora} - Canal: ${canal}`;
+        linea += ` - Tel: ${phone} - ${hora}`;
         if (!personasTexto) linea += ` - N/A P`;
         
         reporte += `${linea}\n`;
@@ -391,7 +397,7 @@ export async function informarMovimientoManana(params: MovimientoMananaParams): 
         // Construir línea moviendo N/A al final
         let linea = `- ${e.roomInfo} - ${e.guestName}`;
         if (personasTexto) linea += ` - ${personasTexto}`;
-        linea += ` - Tel: ${phone} - Hora: ${hora} - Saldo: ${saldo} - Canal: ${canal}`;
+        linea += ` - Tel: ${phone} - ${hora} - Saldo: ${saldo}`;
         if (!personasTexto) linea += ` - N/A P`;
         
         reporte += `${linea}\n`;
@@ -651,8 +657,14 @@ function extractTimeFromNotes(notes: string, type: 'entrada' | 'salida'): string
         if (type === 'salida' && !hasExitContext) continue;
       }
       
-      // Limpiar resultado
-      result = result.replace(/\s*\([^)]*\).*$/, '');
+      // Limpiar resultado - extraer solo la hora
+      result = result.trim();
+      // Si el resultado contiene texto extra, extraer solo la hora
+      const timeMatch = result.match(/([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m?)/i);
+      if (timeMatch) {
+        result = timeMatch[1];
+      }
+      result = result.trim();
       
       if (isValidTime(result)) {
         return result;
