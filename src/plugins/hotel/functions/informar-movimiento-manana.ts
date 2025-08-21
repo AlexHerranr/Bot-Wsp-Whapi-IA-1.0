@@ -542,70 +542,121 @@ function getRoomName(roomId: number): string | null {
   return roomNames[roomId] || null;
 }
 
-// Helper para extraer horas de entrada/salida de notas
-// Nueva función mejorada para extraer horas de múltiples campos
+// Campos prioritarios para búsqueda de horas (configurable)
+const PRIORITY_FIELDS = [
+  'arrivalTime',  // Campo oficial de hora de llegada
+  'comments',     // Comentarios del huésped 
+  'notes',        // Notas internas
+  'guestComments', // Comentarios adicionales
+  'specialRequests' // Solicitudes especiales
+] as const;
+
+// Horas por defecto del hotel
+const DEFAULT_TIMES = {
+  entrada: '14:00', // Check-in estándar
+  salida: '11:00'   // Check-out estándar
+} as const;
+
+// Helper para validar si una hora es válida
+function isValidTime(time: string): boolean {
+  return /^([01]?[0-9]|2[0-3]):?[0-5]?[0-9]?(\s*[ap]m)?$/i.test(time);
+}
+
+// Helper para normalizar formato de hora
+function normalizeTime(timeStr: string): string {
+  if (!timeStr) return '';
+  
+  // Limpiar espacios y convertir a minúsculas
+  let cleaned = timeStr.toLowerCase().trim();
+  
+  // Normalizar formato AM/PM
+  cleaned = cleaned.replace(/\s*([ap])\.?m?\.?\s*/i, '$1m');
+  
+  // Agregar :00 si solo tiene hora sin minutos (ej: "8pm" -> "8:00pm")
+  if (/^\d{1,2}[ap]m$/.test(cleaned)) {
+    cleaned = cleaned.replace(/(\d{1,2})([ap]m)/, '$1:00$2');
+  }
+  
+  return cleaned;
+}
+
+// Helper mejorado para extraer horas de múltiples campos
 function extractTimeFromMultipleFields(booking: any, type: 'entrada' | 'salida'): string | null {
-
-  // Campos prioritarios confirmados donde están los comentarios con horas
-  const fieldsToSearch = [
-    booking.arrivalTime,  // Campo oficial de hora de llegada
-    booking.comments,     // Comentarios del huésped 
-    booking.notes         // Notas internas
-  ].filter(Boolean); // Filtrar campos vacíos/null
-
-  // Buscar en cada campo
-  for (const field of fieldsToSearch) {
-    const timeFound = extractTimeFromNotes(field, type);
-    if (timeFound) {
-      if (process.env.DETAILED_FUNCTION_LOGS === 'true') {
-        console.log(`  ✅ Hora encontrada: "${timeFound}"`);
-      }
-      return timeFound;
+  const foundTimes = new Set<string>(); // Para evitar duplicados
+  
+  // Buscar en campos prioritarios
+  for (const fieldName of PRIORITY_FIELDS) {
+    const fieldValue = booking[fieldName];
+    if (!fieldValue || typeof fieldValue !== 'string') continue;
+    
+    const timeFound = extractTimeFromNotes(fieldValue, type);
+    if (timeFound && isValidTime(timeFound)) {
+      const normalized = normalizeTime(timeFound);
+      foundTimes.add(normalized);
+      
+      // Retornar el primer resultado válido (prioridad por orden)
+      return normalized;
     }
   }
-
+  
+  // Si no encuentra nada, retornar null (no hora por defecto en esta función)
   return null;
 }
 
+// Helper mejorado para extraer horas de notas con patrones robustos
 function extractTimeFromNotes(notes: string, type: 'entrada' | 'salida'): string | null {
-  if (!notes) return null;
+  if (!notes || typeof notes !== 'string') return null;
   
   const patterns = {
     entrada: [
-      // Patrones específicos para CHECK IN - extraer solo la hora
-      /check\s*in:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      /checkin:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      /hora\s*entrada:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      /hora\s*llegada:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      /llegada:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      /arrival:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      // Patrones básicos de hora
-      /\b([0-9]{1,2}:[0-9]{2}\s*[ap]m)\b/i,
-      /\b([0-9]{1,2}\s*[ap]m)\b/i
+      // Patrones específicos para CHECK IN (más robustos)
+      /check\s*in:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /checkin:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /hora\s*(?:de\s*)?entrada:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /hora\s*(?:de\s*)?llegada:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /llegada:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /arrival:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /llego:?\s*(?:a\s*las\s*)?([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      // Patrones genéricos de hora (solo si contiene palabras clave de entrada)
+      /\b([01]?[0-9]|2[0-3])(?::[0-5][0-9])?\s*(?:[ap]m)?\b/i
     ],
     salida: [
-      // Patrones específicos para CHECK OUT - extraer solo la hora
-      /check\s*out:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      /checkout:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      /hora\s*salida:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      /salida:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      /departure:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*[ap]m)\b/i,
-      // Patrones básicos de hora
-      /\b([0-9]{1,2}:[0-9]{2}\s*[ap]m)\b/i,
-      /\b([0-9]{1,2}\s*[ap]m)\b/i
+      // Patrones específicos para CHECK OUT (más robustos)
+      /check\s*out:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /checkout:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /late\s*check\s*out:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /hora\s*(?:de\s*)?salida:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /salida:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /departure:?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /salgo:?\s*(?:a\s*las\s*)?([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      /me\s*voy:?\s*(?:a\s*las\s*)?([0-9]{1,2}(?::[0-9]{2})?\s*(?:[ap]m)?)\b/i,
+      // Patrones genéricos de hora (solo si contiene palabras clave de salida)
+      /\b([01]?[0-9]|2[0-3])(?::[0-5][0-9])?\s*(?:[ap]m)?\b/i
     ]
   };
 
+  // Verificar contexto antes de aplicar patrones genéricos
+  const hasEntryContext = /\b(check.?in|entrada|llegada|arrival|llego)\b/i.test(notes);
+  const hasExitContext = /\b(check.?out|salida|departure|salgo|voy)\b/i.test(notes);
+  
   for (const pattern of patterns[type]) {
     const match = notes.match(pattern);
-    if (match) {
-      // Limpiar el resultado capturado
+    if (match && match[1]) {
       let result = match[1].trim();
       
-      // Remover texto extra después de paréntesis
+      // Validar contexto para patrones genéricos
+      const isGenericPattern = pattern.source.includes('[01]?[0-9]|2[0-3]');
+      if (isGenericPattern) {
+        if (type === 'entrada' && !hasEntryContext) continue;
+        if (type === 'salida' && !hasExitContext) continue;
+      }
+      
+      // Limpiar resultado
       result = result.replace(/\s*\([^)]*\).*$/, '');
       
-      return result;
+      if (isValidTime(result)) {
+        return result;
+      }
     }
   }
 
