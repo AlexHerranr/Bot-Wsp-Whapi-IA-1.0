@@ -55,14 +55,61 @@ interface Beds24ApiResponse {
     availability?: any[];
 }
 
+// Nuevas interfaces para métodos extendidos
+interface BookingSearchFilters {
+    arrival?: string;
+    departure?: string;
+    arrivalFrom?: string;
+    arrivalTo?: string;
+    departureFrom?: string;
+    departureTo?: string;
+    includeInvoiceItems?: boolean;
+    includeInfoItems?: boolean;
+    searchString?: string;
+    status?: string | string[];
+    bookingId?: string;
+    includeGuests?: boolean;
+    includeBookingGroup?: boolean;
+}
+
+interface CreateBookingData {
+    roomId: number;
+    arrival: string;
+    departure: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    numAdult: number;
+    numChild?: number;
+    status?: string;
+    referer?: string;
+    notes?: string;
+    invoiceItems?: any[];
+}
+
+interface UpdateBookingData {
+    id: number;
+    status?: string;
+    invoiceItems?: any[];
+    notes?: string;
+}
+
+interface AuthResponse {
+    token: string;
+    expiresIn?: number;
+}
+
 export class Beds24Client {
     private apiToken: string;
+    private writeToken: string;
     private baseUrl: string;
     private timeout: number;
     private apartmentDataService: ApartmentDataService;
 
     constructor(apiToken?: string) {
         this.apiToken = apiToken || process.env.BEDS24_TOKEN || '';
+        this.writeToken = process.env.BEDS24_WRITE_REFRESH_TOKEN || '';
         this.baseUrl = process.env.BEDS24_API_URL || 'https://api.beds24.com/v2';
         this.timeout = parseInt(process.env.BEDS24_TIMEOUT || '15000');
         this.apartmentDataService = new ApartmentDataService();
@@ -135,6 +182,9 @@ export class Beds24Client {
 
             const data: Beds24ApiResponse = await response.json() as Beds24ApiResponse;
             const duration = Date.now() - startTime;
+            
+            // 📋 AUDIT LOG: Raw API Response (compacto)
+            logInfo('BEDS24_RAW_RESPONSE', JSON.stringify(data), {}, 'beds24-client.ts');
 
             logBeds24ResponseDetail(`Response: ${response.status}`, {
                 status: response.status,
@@ -177,6 +227,9 @@ export class Beds24Client {
 
             // Formatear respuesta enriquecida para OpenAI
             const formattedResponse = this.formatEnrichedResponse(enrichedApartments, options);
+            
+            // 📋 AUDIT LOG: Data sent to OpenAI (compacto)
+            logInfo('TO_OPENAI_DATA', formattedResponse, {}, 'beds24-client.ts');
 
             logSuccess('BEDS24_CLIENT', 'Disponibilidad obtenida exitosamente', {
                 apartmentsFound: availableApartments.length,
@@ -356,8 +409,27 @@ export class Beds24Client {
         const endDate = this.formatDate(options.departure);
         const totalNights = this.calculateNights(options.arrival, options.departure);
         const numAdults = options.numAdults;
+        
+        // Obtener fecha de entrada y salida sin año para formato más limpio
+        const [yearStart, monthStart, dayStart] = options.arrival.split('-');
+        const [yearEnd, monthEnd, dayEnd] = options.departure.split('-');
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        
+        const entryMonth = monthNames[parseInt(monthStart) - 1];
+        const exitMonth = monthNames[parseInt(monthEnd) - 1];
+        
+        // Hora actual Colombia para validación
+        const colombiaTime = new Date().toLocaleString('es-CO', {
+            timeZone: 'America/Bogota',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
 
-        let response = `${apartments.length} Apartamentos Disponibles del ${startDate} al ${endDate} (${totalNights} ${totalNights === 1 ? 'noche' : 'noches'}) para ${numAdults} ${numAdults === 1 ? 'persona' : 'personas'}\n\n`;
+        let response = `Tenemos ${apartments.length} Apto${apartments.length === 1 ? '' : 's'} Disponible${apartments.length === 1 ? '' : 's'},\n`;
+        response += `entrando el ${dayStart} y saliendo ${dayEnd} de ${entryMonth} de ${yearStart},\n`;
+        response += `para (${totalNights} ${totalNights === 1 ? 'noche' : 'noches'}) para ${numAdults} ${numAdults === 1 ? 'persona' : 'personas'}.\n\n`;
         
         // Ordenar por precio total
         const sortedApartments = [...apartments]
@@ -367,23 +439,21 @@ export class Beds24Client {
             // Calcular total final con cargo extra
             const totalFinal = apt.totalPrice + apt.extraCharge.amount;
             
-            response += `${index + 1}. 🏠 ${apt.roomName}\n`;
-            response += `$${apt.pricePerNight.toLocaleString()}/noche × ${totalNights} noches = $${apt.totalPrice.toLocaleString()}\n`;
-            response += `${apt.extraCharge.description} $${apt.extraCharge.amount.toLocaleString()}\n`;
-            response += `Total: $${totalFinal.toLocaleString()}\n`;
+            response += `*${apt.roomName}*\n`;
+            response += `- $${apt.pricePerNight.toLocaleString()}/noche × ${totalNights} = $${apt.totalPrice.toLocaleString()}\n`;
+            response += `- ${apt.extraCharge.description} $${apt.extraCharge.amount.toLocaleString()}\n`;
+            response += `- Total: $${totalFinal.toLocaleString()}\n`;
             
-            // Mostrar disponibilidad si es relevante
-            if (apt.unitsAvailable && apt.unitsAvailable > 1) {
-                response += `Disponibilidad: ${apt.unitsAvailable} unidades\n`;
+            // Solo agregar línea en blanco si no es el último apartamento
+            if (index < sortedApartments.length - 1) {
+                response += `\n`;
             }
-            
-            response += `\n`;
         });
 
-        // Nota importante sobre validación de capacidad
-        response += `✓ Todos los apartamentos mostrados han sido validados para ${numAdults} ${numAdults === 1 ? 'persona' : 'personas'}`;
+        // Nota final con hora de validación
+        response += `\n\nDisponibilidad Validada a las ${colombiaTime}`;
 
-        return response.trim();
+        return response;
     }
 
     private formatDate(dateStr: string): string {
@@ -395,6 +465,640 @@ export class Beds24Client {
         const startDate = new Date(start);
         const endDate = new Date(end);
         return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+    }
+
+    // =========================================================================
+    // NUEVOS MÉTODOS EXTENDIDOS PARA MIGRACIÓN
+    // =========================================================================
+
+    /**
+     * Buscar reservas en Beds24 con filtros flexibles
+     */
+    public async searchBookings(filters: BookingSearchFilters): Promise<any> {
+        const startTime = Date.now();
+
+        try {
+            if (!this.apiToken) {
+                throw new Error('Token de Beds24 no configurado');
+            }
+
+            const params = new URLSearchParams();
+            
+            // Agregar filtros dinámicamente con manejo especial para arrays
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined) {
+                    if (key === 'status' && Array.isArray(value)) {
+                        // Para arrays de status, agregar cada valor por separado
+                        value.forEach((status: string) => {
+                            params.append('status', status);
+                        });
+                    } else {
+                        params.append(key, value.toString());
+                    }
+                }
+            });
+
+            const fullUrl = `${this.baseUrl}/bookings?${params.toString()}`;
+
+            logBeds24ApiCall(`GET ${fullUrl}`, {
+                method: 'GET',
+                filters,
+                timeout: this.timeout
+            });
+
+            const response = await fetchWithRetry(fullUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'token': this.apiToken
+                },
+                retryOptions: {
+                    maxRetries: 3,
+                    baseDelay: 1000,
+                    maxDelay: 5000,
+                    backoffFactor: 2
+                }
+            });
+
+            const data: any = await response.json();
+            const duration = Date.now() - startTime;
+
+            logBeds24ResponseDetail(`Search bookings response: ${response.status}`, {
+                status: response.status,
+                hasData: !!data.data,
+                bookingsCount: data.data?.length || 0,
+                duration: `${duration}ms`,
+                filters
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} - ${data.error || 'Unknown error'}`);
+            }
+
+            logSuccess('BEDS24_CLIENT', 'Búsqueda de reservas exitosa', {
+                bookingsFound: data.data?.length || 0,
+                duration: `${duration}ms`,
+                filters
+            }, 'beds24-client.ts');
+
+            return data; // Retorna respuesta raw para consistencia
+        } catch (error: any) {
+            const duration = Date.now() - startTime;
+            
+            logError('BEDS24_CLIENT', 'Error buscando reservas', {
+                error: error.message,
+                duration: `${duration}ms`,
+                filters
+            }, 'beds24-client.ts');
+
+            throw error;
+        }
+    }
+
+    /**
+     * Búsqueda optimizada de reservas con parámetros completos
+     * Incluye invoiceItems directamente para evitar segunda llamada API
+     */
+    public async searchBookingsOptimized(params: {
+        firstName: string;
+        lastName: string;
+        arrival: string;
+        status?: string[];
+    }): Promise<any> {
+        // SIN searchString - obtener todas las reservas para hacer validación estricta
+        const filters: BookingSearchFilters = {
+            arrival: params.arrival,
+            status: params.status || ['confirmed', 'new'], 
+            includeInvoiceItems: true,
+            includeInfoItems: true,
+            includeGuests: true,
+            includeBookingGroup: true
+        };
+
+        logInfo('BEDS24_SECURE_SEARCH', 'Búsqueda segura sin searchString', {
+            searchTerms: `${params.firstName} ${params.lastName}`,
+            arrival: params.arrival,
+            status: params.status || ['confirmed', 'new']
+        }, 'beds24-client.ts');
+
+        return await this.searchBookings(filters);
+    }
+
+    /**
+     * Crear múltiples reservas en Beds24 (batch operation)
+     */
+    public async createMultipleBookings(bookingDataArray: any[]): Promise<any> {
+        const startTime = Date.now();
+
+        try {
+            const accessToken = await this.getWriteToken();
+
+            logBeds24ApiCall(`POST ${this.baseUrl}/bookings (batch)`, {
+                method: 'POST',
+                bookingCount: bookingDataArray.length,
+                roomIds: bookingDataArray.map(b => b.roomId)
+            });
+
+            const response = await fetchWithRetry(`${this.baseUrl}/bookings`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'token': accessToken
+                },
+                body: JSON.stringify(bookingDataArray), // Array directo según documentación
+                retryOptions: {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 3000,
+                    backoffFactor: 2
+                }
+            });
+
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+
+            logBeds24ResponseDetail(`Create multiple bookings response: ${response.status}`, {
+                status: response.status,
+                bookingCount: Array.isArray(data) ? data.length : 0,
+                successCount: Array.isArray(data) ? data.filter((b: any) => b.new).length : 0,
+                duration: `${duration}ms`
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} - ${JSON.stringify(data)}`);
+            }
+
+            logSuccess('BEDS24_CLIENT', 'Múltiples reservas creadas exitosamente', {
+                bookingCount: Array.isArray(data) ? data.length : 0,
+                bookingIds: Array.isArray(data) ? data.map((b: any) => b.new?.id).filter(Boolean) : [],
+                duration: `${duration}ms`
+            }, 'beds24-client.ts');
+
+            return data;
+        } catch (error: any) {
+            const duration = Date.now() - startTime;
+            
+            logError('BEDS24_CLIENT', 'Error creando múltiples reservas', {
+                error: error.message,
+                duration: `${duration}ms`,
+                bookingCount: bookingDataArray.length
+            }, 'beds24-client.ts');
+
+            throw error;
+        }
+    }
+
+    /**
+     * Crear nueva reserva en Beds24 (single booking)
+     */
+    public async createBooking(bookingData: CreateBookingData): Promise<any> {
+        const startTime = Date.now();
+
+        try {
+            const accessToken = await this.getWriteToken();
+            
+            const bookingArray = [bookingData]; // Beds24 API espera array
+
+            logBeds24ApiCall(`POST ${this.baseUrl}/bookings`, {
+                method: 'POST',
+                roomId: bookingData.roomId,
+                arrival: bookingData.arrival,
+                departure: bookingData.departure
+            });
+
+            const response = await fetchWithRetry(`${this.baseUrl}/bookings`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'token': accessToken
+                },
+                body: JSON.stringify(bookingArray),
+                retryOptions: {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 3000,
+                    backoffFactor: 2
+                }
+            });
+
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+
+            logBeds24ResponseDetail(`Create booking response: ${response.status}`, {
+                status: response.status,
+                success: !!data[0]?.new,
+                bookingId: data[0]?.new?.id,
+                duration: `${duration}ms`
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} - ${JSON.stringify(data)}`);
+            }
+
+            logSuccess('BEDS24_CLIENT', 'Reserva creada exitosamente', {
+                bookingId: data[0]?.new?.id,
+                duration: `${duration}ms`
+            }, 'beds24-client.ts');
+
+            return data;
+        } catch (error: any) {
+            const duration = Date.now() - startTime;
+            
+            logError('BEDS24_CLIENT', 'Error creando reserva', {
+                error: error.message,
+                duration: `${duration}ms`,
+                bookingData: {
+                    roomId: bookingData.roomId,
+                    arrival: bookingData.arrival,
+                    departure: bookingData.departure
+                }
+            }, 'beds24-client.ts');
+
+            throw error;
+        }
+    }
+
+    /**
+     * Actualizar reserva existente en Beds24
+     */
+    public async performChannelAction(action: 'reportCancel' | 'reportNoShow', bookingId: number): Promise<any> {
+        const startTime = Date.now();
+
+        try {
+            const accessToken = await this.getWriteToken();
+
+            logBeds24ApiCall(`POST ${this.baseUrl}/channels/booking (${action})`, {
+                method: 'POST',
+                action: action,
+                bookingId: bookingId
+            });
+
+            const requestBody = [{
+                action: action,
+                bookingId: bookingId
+            }];
+
+            const response = await fetchWithRetry(`${this.baseUrl}/channels/booking`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'token': accessToken
+                },
+                body: JSON.stringify(requestBody),
+                retryOptions: {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 3000,
+                    backoffFactor: 2
+                }
+            });
+
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+
+            logBeds24ResponseDetail(`Channel action ${action} response: ${response.status}`, {
+                status: response.status,
+                success: response.ok,
+                bookingId: bookingId,
+                action: action,
+                duration: `${duration}ms`
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} - ${JSON.stringify(data)}`);
+            }
+
+            logSuccess('BEDS24_CLIENT', `Acción ${action} ejecutada exitosamente`, {
+                bookingId: bookingId,
+                action: action,
+                duration: `${duration}ms`
+            }, 'beds24-client.ts');
+
+            return data;
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            logError('BEDS24_CLIENT', `Error ejecutando ${action}: ${error.message}`, {
+                bookingId: bookingId,
+                action: action,
+                duration: `${duration}ms`,
+                error: error
+            }, 'beds24-client.ts');
+            throw error;
+        }
+    }
+
+    public async deleteBooking(bookingId: number): Promise<any> {
+        const startTime = Date.now();
+
+        try {
+            const accessToken = await this.getWriteToken();
+
+            logBeds24ApiCall(`DELETE ${this.baseUrl}/bookings?id=${bookingId}`, {
+                method: 'DELETE',
+                bookingId: bookingId
+            });
+
+            const response = await fetchWithRetry(`${this.baseUrl}/bookings?id=${bookingId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'token': accessToken
+                },
+                retryOptions: {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 3000,
+                    backoffFactor: 2
+                }
+            });
+
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+
+            logBeds24ResponseDetail(`Delete booking response: ${response.status}`, {
+                status: response.status,
+                success: response.ok,
+                bookingId: bookingId,
+                duration: `${duration}ms`
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} - ${JSON.stringify(data)}`);
+            }
+
+            logSuccess('BEDS24_CLIENT', 'Reserva eliminada exitosamente', {
+                bookingId: bookingId,
+                duration: `${duration}ms`
+            }, 'beds24-client.ts');
+
+            return data;
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            logError('BEDS24_CLIENT', `Error eliminando reserva: ${error.message}`, {
+                bookingId: bookingId,
+                duration: `${duration}ms`,
+                error: error
+            }, 'beds24-client.ts');
+            throw error;
+        }
+    }
+
+    public async updateBooking(updateData: UpdateBookingData): Promise<any> {
+        const startTime = Date.now();
+
+        try {
+            const accessToken = await this.getWriteToken();
+            
+            const updateArray = [updateData]; // Beds24 API espera array
+
+            logBeds24ApiCall(`POST ${this.baseUrl}/bookings (update)`, {
+                method: 'POST',
+                bookingId: updateData.id,
+                hasStatus: !!updateData.status,
+                hasInvoiceItems: !!updateData.invoiceItems
+            });
+
+            const response = await fetchWithRetry(`${this.baseUrl}/bookings`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'token': accessToken
+                },
+                body: JSON.stringify(updateArray),
+                retryOptions: {
+                    maxRetries: 2,
+                    baseDelay: 1000,
+                    maxDelay: 3000,
+                    backoffFactor: 2
+                }
+            });
+
+            const data = await response.json();
+            const duration = Date.now() - startTime;
+
+            logBeds24ResponseDetail(`Update booking response: ${response.status}`, {
+                status: response.status,
+                success: !!data[0]?.modified,
+                bookingId: updateData.id,
+                duration: `${duration}ms`
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} - ${JSON.stringify(data)}`);
+            }
+
+            logSuccess('BEDS24_CLIENT', 'Reserva actualizada exitosamente', {
+                bookingId: updateData.id,
+                duration: `${duration}ms`
+            }, 'beds24-client.ts');
+
+            return data;
+        } catch (error: any) {
+            const duration = Date.now() - startTime;
+            
+            logError('BEDS24_CLIENT', 'Error actualizando reserva', {
+                error: error.message,
+                duration: `${duration}ms`,
+                bookingId: updateData.id
+            }, 'beds24-client.ts');
+
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener movimientos del día específico (wrapper optimizado)
+     */
+    public async getTomorrowMovements(date: string): Promise<{
+        entradas: any,
+        salidas: any,
+        ocupados: any,
+        proximas: any
+    }> {
+        const startTime = Date.now();
+
+        try {
+            logInfo('BEDS24_CLIENT', `Consultando movimientos para fecha: ${date}`, { date }, 'beds24-client.ts');
+
+            // Calcular fecha límite (30 días después para próximas reservas)
+            const fechaLimite = new Date(date);
+            fechaLimite.setDate(fechaLimite.getDate() + 30);
+            const fechaLimiteStr = fechaLimite.toISOString().split('T')[0];
+
+            // Ejecutar todas las consultas en paralelo para mejor performance
+            const [entradas, salidas, ocupados, proximas] = await Promise.all([
+                // ENTRADAS del día
+                this.searchBookings({
+                    arrivalFrom: date,
+                    arrivalTo: date,
+                    includeInvoiceItems: true,
+                    includeInfoItems: true
+                }),
+                // SALIDAS del día
+                this.searchBookings({
+                    departureFrom: date,
+                    departureTo: date,
+                    includeInvoiceItems: true,
+                    includeInfoItems: true
+                }),
+                // OCUPADOS (llegaron antes, salen después)
+                this.searchBookings({
+                    arrivalTo: date,
+                    departureFrom: date,
+                    includeInvoiceItems: true,
+                    includeInfoItems: true
+                }),
+                // PRÓXIMAS RESERVAS (30 días)
+                this.searchBookings({
+                    arrivalFrom: date,
+                    arrivalTo: fechaLimiteStr,
+                    includeInvoiceItems: false,
+                    includeInfoItems: false
+                })
+            ]);
+
+            const duration = Date.now() - startTime;
+
+            logSuccess('BEDS24_CLIENT', 'Movimientos obtenidos exitosamente', {
+                entradas: entradas.data?.length || 0,
+                salidas: salidas.data?.length || 0,
+                ocupados: ocupados.data?.length || 0,
+                proximas: proximas.data?.length || 0,
+                duration: `${duration}ms`,
+                date
+            }, 'beds24-client.ts');
+
+            return { entradas, salidas, ocupados, proximas };
+        } catch (error: any) {
+            const duration = Date.now() - startTime;
+            
+            logError('BEDS24_CLIENT', 'Error obteniendo movimientos', {
+                error: error.message,
+                duration: `${duration}ms`,
+                date
+            }, 'beds24-client.ts');
+
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener detalles de invoice para una reserva
+     */
+    public async getInvoiceDetails(bookingId: number): Promise<any> {
+        const startTime = Date.now();
+
+        try {
+            if (!this.apiToken) {
+                throw new Error('Token de Beds24 no configurado');
+            }
+
+            const params = new URLSearchParams({ 'bookingId': bookingId.toString() });
+            const fullUrl = `${this.baseUrl}/bookings/invoices?${params.toString()}`;
+
+            logBeds24ApiCall(`GET ${fullUrl}`, {
+                method: 'GET',
+                bookingId,
+                timeout: this.timeout
+            });
+
+            const response = await fetchWithRetry(fullUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'token': this.apiToken
+                },
+                retryOptions: {
+                    maxRetries: 3,
+                    baseDelay: 1000,
+                    maxDelay: 5000,
+                    backoffFactor: 2
+                }
+            });
+
+            const data: any = await response.json();
+            const duration = Date.now() - startTime;
+
+            logBeds24ResponseDetail(`Get invoice response: ${response.status}`, {
+                status: response.status,
+                hasData: !!data.data,
+                invoicesCount: data.data?.length || 0,
+                duration: `${duration}ms`,
+                bookingId
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} - ${data.error || 'Unknown error'}`);
+            }
+
+            logSuccess('BEDS24_CLIENT', 'Invoice obtenido exitosamente', {
+                bookingId,
+                invoicesCount: data.data?.length || 0,
+                duration: `${duration}ms`
+            }, 'beds24-client.ts');
+
+            return data;
+        } catch (error: any) {
+            const duration = Date.now() - startTime;
+            
+            logError('BEDS24_CLIENT', 'Error obteniendo invoice', {
+                error: error.message,
+                duration: `${duration}ms`,
+                bookingId
+            }, 'beds24-client.ts');
+
+            return { data: [], error: error.message }; // Graceful fallback
+        }
+    }
+
+    /**
+     * Método privado para obtener token de escritura
+     */
+    private async getWriteToken(): Promise<string> {
+        try {
+            // Intentar refresh token flow primero
+            const authResponse = await fetchWithRetry(`${this.baseUrl}/authentication/token`, {
+                method: 'GET',
+                headers: {
+                    'refreshToken': this.writeToken
+                },
+                retryOptions: {
+                    maxRetries: 2,
+                    baseDelay: 500,
+                    maxDelay: 2000,
+                    backoffFactor: 2
+                }
+            });
+
+            const authData: any = await authResponse.json();
+
+            if (!authResponse.ok || !authData.token) {
+                throw new Error('Refresh token failed');
+            }
+
+            logInfo('BEDS24_CLIENT', 'Access token obtenido via refresh token', {
+                expiresIn: authData.expiresIn
+            }, 'beds24-client.ts');
+
+            return authData.token;
+        } catch (authError) {
+            // Fallback: usar token directo
+            logInfo('BEDS24_CLIENT', 'Refresh token falló, usando token directo', {
+                error: authError instanceof Error ? authError.message : 'Unknown error'
+            }, 'beds24-client.ts');
+
+            if (!this.writeToken) {
+                throw new Error('No se pudo obtener access token y no hay token directo disponible');
+            }
+
+            return this.writeToken;
+        }
     }
 
 }

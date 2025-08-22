@@ -40,10 +40,12 @@ export class OpenAIService implements IOpenAIService {
     private functionRegistry?: IFunctionRegistry;
     private whatsappService?: any; // Referencia opcional para mensajes interinos
     private currentChatId?: string; // Chat ID actual para mensajes interinos
+    private currentUserId?: string; // User ID actual para obtener estado de voz
     private databaseService?: DatabaseService; // Servicio de BD para resets de tokens
+    private userManager?: any; // UserManager para obtener estado de voz del usuario
     private static activeOpenAICalls: number = 0; // Contador global de llamadas concurrentes
     private perceptionService: PerceptionService; // Capa de percepción para imágenes
-    private static readonly MAX_CONCURRENT_CALLS = 50; // Límite para 100 usuarios
+    private static readonly MAX_CONCURRENT_CALLS = 75; // Optimizado para 100 usuarios
 
     constructor(
         config: OpenAIServiceConfig,
@@ -51,7 +53,8 @@ export class OpenAIService implements IOpenAIService {
         cacheManager?: CacheManager,
         functionRegistry?: IFunctionRegistry,
         whatsappService?: any,
-        databaseService?: DatabaseService
+        databaseService?: DatabaseService,
+        userManager?: any
     ) {
         this.config = {
             apiKey: config.apiKey,
@@ -68,15 +71,42 @@ export class OpenAIService implements IOpenAIService {
         this.functionRegistry = functionRegistry;
         this.whatsappService = whatsappService;
         this.databaseService = databaseService;
+        this.userManager = userManager;
         this.perceptionService = new PerceptionService();
     }
 
 
-    async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string, existingTokenCount?: number, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<ProcessingResult> {
+    async processMessage(userId: string, message: string, chatId: string, userName: string, existingThreadId?: string, existingTokenCount?: number, imageMessage?: { type: 'image', imageUrl: string, caption: string }, duringRunMsgId?: string, assistantId?: string): Promise<ProcessingResult> {
+        // SELECCIÓN DINÁMICA DE ASSISTANT
+        if (!assistantId) {
+            const operationsChatId = process.env.OPERATIONS_CHAT_ID;
+            assistantId = (chatId === operationsChatId) 
+                ? process.env.OPERATIONS_ASSISTANT_ID || process.env.OPENAI_ASSISTANT_ID
+                : process.env.OPENAI_ASSISTANT_ID;
+                
+            logInfo('ASSISTANT_SELECTION', 'Assistant seleccionado dinámicamente', {
+                chatId,
+                assistantId,
+                isOperations: chatId === operationsChatId,
+                operationsChatId
+            }, 'openai.service.ts');
+        }
         const startTime = Date.now();
         
-        // Guardar chatId para posibles mensajes interinos
+        // 🎯 USAR ASSISTANT ID ESPECÍFICO O EL POR DEFECTO
+        const effectiveAssistantId = assistantId || this.config.assistantId;
+        
+        logInfo('ASSISTANT_EFFECTIVE', 'Assistant ID efectivo para procesamiento', {
+            userId,
+            providedAssistantId: assistantId,
+            defaultAssistantId: this.config.assistantId,
+            effectiveAssistantId,
+            source: assistantId ? 'parameter' : 'config'
+        }, 'openai.service.ts');
+        
+        // Guardar chatId y userId para posibles mensajes interinos
         this.currentChatId = chatId;
+        this.currentUserId = userId;
 
         // Control de concurrencia para escalabilidad
         while (OpenAIService.activeOpenAICalls >= OpenAIService.MAX_CONCURRENT_CALLS) {
@@ -118,7 +148,7 @@ export class OpenAIService implements IOpenAIService {
                 messageLength: message.length,
                 hasImage: !!imageMessage,
                 imageCaption: imageMessage?.caption || '',
-                assistantId: this.config.assistantId,
+                assistantId: effectiveAssistantId,
                 existingThreadId: existingThreadId || 'none',
                 timestamp: new Date().toISOString(),
                 concurrencyUtilization: Math.round((OpenAIService.activeOpenAICalls / OpenAIService.MAX_CONCURRENT_CALLS) * 100)
@@ -228,6 +258,11 @@ export class OpenAIService implements IOpenAIService {
             const first15Words = flattenedMessage.split(' ').slice(0, 15).join(' ');
             console.info(`[OPENAI_RAW_CONTENT] ${userId}: "${first15Words}..." (${flattenedMessage.length}ch total)`);
             
+            // Log completo condicional para debugging
+            if (process.env.DEBUG_FULL_CONTENT === 'true') {
+                console.log(`[FULL_PROMPT] ${userId}:`, flattenedMessage);
+            }
+            
             // Mantener el log anterior para compatibilidad  
             logInfo('OPENAI_MESSAGE_SENT', 'Mensaje enviado al thread de OpenAI', {
                 userId,
@@ -241,7 +276,7 @@ export class OpenAIService implements IOpenAIService {
 
             // Step 3: Create run - NO verificar historial de imágenes 
             // La capa de percepción convierte imágenes a texto, siempre enviamos texto al thread
-            let runResult = await this.createAndMonitorRun(threadId, userName, false, false, false);
+            let runResult = await this.createAndMonitorRun(threadId, userName, effectiveAssistantId, false, false, false);
 
             // Retry simple en caso de fallo del run
             if (!runResult.success) {
@@ -254,7 +289,7 @@ export class OpenAIService implements IOpenAIService {
 
                 // Pequeño delay para evitar mismo estado inmediato
                 await this.sleep(500);
-                const retryResult = await this.createAndMonitorRun(threadId, userName, false, false, false);
+                const retryResult = await this.createAndMonitorRun(threadId, userName, effectiveAssistantId, false, false, false);
 
                 if (!retryResult.success) {
                     const fallbackText = 'Perdón, tuve un inconveniente técnico y no pude responder ahora. ¿Podrías repetir tu mensaje?';
@@ -339,6 +374,11 @@ export class OpenAIService implements IOpenAIService {
                     timestamp: new Date().toISOString()
                 });
                 
+                // Log completo condicional para debugging
+                if (process.env.DEBUG_FULL_CONTENT === 'true') {
+                    console.log(`[FULL_RESPONSE] ${userId}:`, response.trim());
+                }
+                
                 // Advertencia específica solo si realmente es un error de procesamiento de audio
                 if (containsAudioError) {
                     logWarning('OPENAI_AUDIO_PROCESSING_ERROR', 'OpenAI respondió que no puede procesar audio/transcripción', {
@@ -347,7 +387,7 @@ export class OpenAIService implements IOpenAIService {
                         threadId,
                         runId: runResult.runId,
                         response: response.trim(),
-                        assistantId: this.config.assistantId,
+                        assistantId: effectiveAssistantId,
                         recommendation: 'Revisar instrucciones del asistente en OpenAI Dashboard'
                     });
                 }
@@ -422,7 +462,7 @@ export class OpenAIService implements IOpenAIService {
                 error: errorMessage,
                 stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
                 processingTime,
-                assistantId: this.config.assistantId
+                assistantId: effectiveAssistantId
             });
             
             return {
@@ -914,7 +954,7 @@ export class OpenAIService implements IOpenAIService {
     }
 
 
-    private async createAndMonitorRun(threadId: string, userName: string, hasImage: boolean = false, hasCurrentImage: boolean = false, hasImageHistory: boolean = false): Promise<{
+    private async createAndMonitorRun(threadId: string, userName: string, assistantId: string, hasImage: boolean = false, hasCurrentImage: boolean = false, hasImageHistory: boolean = false): Promise<{
         success: boolean;
         error?: string;
         runId?: string;
@@ -925,14 +965,15 @@ export class OpenAIService implements IOpenAIService {
         try {
             // Create run with model override for images
             const runParams: any = {
-                assistant_id: this.config.assistantId
+                assistant_id: assistantId
             };
             
             // NO override de modelo - usar Assistant tal como está configurado
             // Las imágenes ahora se procesan con capa de percepción antes de llegar aquí
             logInfo('MODEL_DEFAULT', 'Usando configuración por defecto del Assistant', {
                 threadId,
-                assistantId: this.config.assistantId
+                assistantId: assistantId,
+                assistantName: assistantId === process.env.OPERATIONS_ASSISTANT_ID ? 'OPERATIONS' : 'MAIN'
             }, 'openai.service.ts');
             
             const run = await openAIWithRetry(
@@ -1056,25 +1097,30 @@ export class OpenAIService implements IOpenAIService {
                             const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
                             
                             // Lista de funciones que requieren mensajes interinos
-                            const slowFunctions = ['check_availability', 'search_rooms', 'calculate_pricing', 'process_booking'];
+                            const slowFunctions = ['check_availability', 'check_booking_details', 'search_rooms', 'calculate_pricing', 'process_booking', 'informar_movimiento_manana'];
                             const functionInterimMessages = {
-                                'check_availability': "Permíteme y consulto en nuestro sistema...",
-                                'search_rooms': "Buscando habitaciones disponibles...",
-                                'calculate_pricing': "Calculando precios y ofertas...",
-                                'process_booking': "Procesando tu reserva..."
+                                'check_availability': "Permítame y consulto en mi sistema",
+                                'check_booking_details': "Permítame y consulto en mi sistema",
+                                'search_rooms': "Permítame y consulto en mi sistema",
+                                'calculate_pricing': "Permítame y consulto en mi sistema",
+                                'process_booking': "Permíteme y consulto en mi sistema",
+                                'informar_movimiento_manana': "Voy a consultar el sistema"
                             };
                             
                             // Enviar mensaje interino para funciones lentas
                             const slowFunction = toolCalls.find(tc => slowFunctions.includes(tc.function.name));
-                            if (slowFunction && this.currentChatId) {
+                            if (slowFunction && this.currentChatId && this.currentUserId) {
                                 try {
                                     // Solo enviar si hay un WhatsappService disponible
-                                    if (this.whatsappService) {
+                                    if (this.whatsappService && this.userManager) {
+                                        // Obtener estado real del usuario para determinar modo de envío
+                                        const userState = this.userManager.getOrCreateState(this.currentUserId);
                                         const interimMessage = functionInterimMessages[slowFunction.function.name] || "Un momento por favor...";
+                                        
                                         await this.whatsappService.sendWhatsAppMessage(
                                             this.currentChatId, 
                                             interimMessage, 
-                                            { lastInputVoice: false }, 
+                                            { lastInputVoice: userState.lastInputVoice }, 
                                             false
                                         );
                                         

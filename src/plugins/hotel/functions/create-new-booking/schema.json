@@ -1,0 +1,132 @@
+{
+  "name": "create_new_booking",
+  "description": "Crear reserva(s) en hotel para una persona. Soporta MÚLTIPLES apartamentos con distribución automática de pagos. Usar SOLO cuando tengas TODOS los datos completos del huésped y confirmación de anticipo.",
+  "strict": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "roomIds": {
+        "type": "array",
+        "description": "Lista de apartamentos a reservar. Para UNO: [378110]. Para MÚLTIPLES: [378110, 378316, 378120]. Máximo 5 apartamentos para la misma persona y fechas.",
+        "items": {
+          "type": "integer",
+          "minimum": 100000,
+          "description": "ID de apartamento en Beds24 (378110=2005A, 378316=1820, etc.)"
+        },
+        "minItems": 1,
+        "maxItems": 5
+      },
+      "arrival": {
+        "type": "string",
+        "description": "Fecha de CHECK-IN en formato YYYY-MM-DD. Debe ser fecha futura, no pasada.",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "departure": {
+        "type": "string", 
+        "description": "Fecha de CHECK-OUT en formato YYYY-MM-DD. Debe ser posterior a arrival.",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "firstName": {
+        "type": "string",
+        "description": "Nombre del titular de la reserva (quien firma y es responsable)",
+        "minLength": 2,
+        "maxLength": 50
+      },
+      "lastName": {
+        "type": "string",
+        "description": "Apellido del titular de la reserva",
+        "minLength": 2,
+        "maxLength": 50
+      },
+      "email": {
+        "type": "string",
+        "description": "Email VÁLIDO del huésped para enviar confirmación de reserva",
+        "format": "email"
+      },
+      "phone": {
+        "type": "string",
+        "description": "Teléfono de contacto del huésped (incluir código país si es internacional)",
+        "minLength": 10,
+        "maxLength": 20
+      },
+      "numAdult": {
+        "type": "integer",
+        "description": "Número TOTAL de adultos para TODOS los apartamentos (no por apartamento)",
+        "minimum": 1,
+        "maximum": 20
+      },
+      "numChild": {
+        "type": "integer",
+        "description": "Número TOTAL de niños para TODOS los apartamentos (opcional)",
+        "minimum": 0,
+        "maximum": 10
+      },
+      "arrivalTime": {
+        "type": "string",
+        "description": "Hora aproximada de llegada (ej: '3:00 PM', '15:30', 'Tarde', 'After 6 PM')",
+        "maxLength": 50
+      },
+      "accommodationRate": {
+        "type": "integer",
+        "description": "Precio POR NOCHE POR APARTAMENTO en pesos colombianos. Si hay múltiples apartamentos, esta tarifa se aplica a CADA uno.",
+        "minimum": 50000,
+        "maximum": 2000000
+      },
+      "extraServices": {
+        "type": "array",
+        "description": "Lista de cargos adicionales (limpieza, parqueadero, servicios). Se distribuyen automáticamente entre apartamentos múltiples.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "Nombre del servicio (ej: 'Limpieza profunda', 'Parqueadero', 'Late checkout')",
+              "minLength": 3,
+              "maxLength": 100
+            },
+            "amount": {
+              "type": "integer", 
+              "description": "Valor TOTAL del servicio en pesos colombianos (se distribuye entre apartamentos si hay múltiples)",
+              "minimum": 1000,
+              "maximum": 500000
+            },
+            "qty": {
+              "type": "integer",
+              "description": "Cantidad del servicio (ej: 9 para parqueadero por 9 noches). Opcional, default 1.",
+              "minimum": 1,
+              "maximum": 30
+            }
+          },
+          "required": ["description", "amount"],
+          "additionalProperties": false
+        }
+      },
+      "advancePayment": {
+        "type": "integer",
+        "description": "Monto TOTAL del anticipo ya recibido en pesos colombianos. Se distribuye automáticamente entre apartamentos múltiples.",
+        "minimum": 50000,
+        "maximum": 50000000
+      },
+      "advanceDescription": {
+        "type": "string",
+        "description": "Descripción del método de pago del anticipo (ej: 'Transferencia Bancolombia', 'Pago Nequi', 'Efectivo recibido')",
+        "minLength": 5,
+        "maxLength": 200
+      }
+    },
+    "required": [
+      "roomIds",
+      "arrival", 
+      "departure",
+      "firstName",
+      "lastName", 
+      "email",
+      "phone",
+      "numAdult",
+      "accommodationRate",
+      "advancePayment",
+      "advanceDescription"
+    ],
+    "additionalProperties": false
+  }
+}

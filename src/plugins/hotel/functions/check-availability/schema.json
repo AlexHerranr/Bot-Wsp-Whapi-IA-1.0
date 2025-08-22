@@ -1,0 +1,32 @@
+{
+  "name": "check_availability",
+  "description": "Consulta disponibilidad y tarifas completas (incluye precios por noche, extras, totales). Usar SIEMPRE que tengas fechas específicas y número de personas confirmados por el cliente.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "startDate": {
+        "type": "string",
+        "description": "Fecha de entrada (check-in) en formato YYYY-MM-DD. IMPORTANTE: Validar que no sea fecha pasada",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "endDate": {
+        "type": "string", 
+        "description": "Fecha de salida (check-out) en formato YYYY-MM-DD. Debe ser posterior a startDate",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "numAdults": {
+        "type": "integer",
+        "description": "Número total de huéspedes adultos. NOTA: Niños mayores de 5 años cuentan como adultos para capacidad",
+        "minimum": 1,
+        "maximum": 50
+      }
+    },
+    "required": [
+      "startDate", 
+      "endDate",
+      "numAdults"
+    ],
+    "additionalProperties": false
+  }
+}

@@ -17,7 +17,7 @@ import { DelayedActivityService } from './services/delayed-activity.service';
 import { FunctionRegistryService } from './services/function-registry.service';
 import { OpenAIService } from './services/openai.service';
 import { ThreadPersistenceService } from './services/thread-persistence.service';
-import { WebhookProcessor } from './api/webhook-processor';
+import { WebhookRouter } from './processors/WebhookRouter';
 import { TerminalLog } from './utils/terminal-log';
 // import { HotelPlugin } from '../plugins/hotel/hotel.plugin'; // Moved to main.ts
 import { IFunctionRegistry } from '../shared/interfaces';
@@ -55,7 +55,7 @@ export class CoreBot {
     private whatsappService: WhatsappService;
     private openaiService: OpenAIService;
     private threadPersistence: ThreadPersistenceService;
-    private webhookProcessor: WebhookProcessor;
+    private webhookRouter: WebhookRouter;
     // private hotelPlugin: HotelPlugin; // Moved to main.ts
     private functionRegistry: IFunctionRegistry;
     private cleanupIntervals: NodeJS.Timeout[] = [];
@@ -104,7 +104,7 @@ export class CoreBot {
         this.openaiService = new OpenAIService({
             apiKey: this.config.secrets.OPENAI_API_KEY,
             assistantId: process.env.ASSISTANT_ID || process.env.OPENAI_ASSISTANT_ID || 'asst_default'
-        }, this.terminalLog, undefined, this.functionRegistry, undefined, this.databaseService);
+        }, this.terminalLog, undefined, this.functionRegistry, this.whatsappService, this.databaseService, this.userManager);
 
         // Initialize Thread Persistence Service
         this.threadPersistence = new ThreadPersistenceService(this.databaseService);
@@ -113,7 +113,7 @@ export class CoreBot {
             this.processBufferCallback.bind(this),
             (userId: string) => this.userManager.getState(userId)
         );
-        this.webhookProcessor = new WebhookProcessor(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.openaiService, this.terminalLog, this.clientDataCache);
+        this.webhookRouter = new WebhookRouter(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.openaiService, this.terminalLog, this.clientDataCache);
         this.hotelValidation = new HotelValidation();
 
         this.setupMiddleware();
@@ -147,8 +147,8 @@ export class CoreBot {
                     requestId: req.headers['x-request-id'] || 'unknown'
                 });
                 
-                // Process webhook asynchronously
-                await this.webhookProcessor.process(req.body);
+                // Process webhook asynchronously through router
+                await this.webhookRouter.route(req.body);
             } catch (error: any) {
                 console.error('Webhook processing error:', error.message);
                 // Don't fail the response since we already acknowledged
@@ -223,7 +223,7 @@ export class CoreBot {
 
     }
 
-    private async processBufferCallback(userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }): Promise<void> {
+    private async processBufferCallback(userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }, duringRunMsgId?: string): Promise<void> {
         // Check for recent errors to prevent secondary buffer processing during error recovery
         if (this.lastError[userId] && Date.now() - this.lastError[userId].time < 5000) {
             logWarning('BUFFER_SKIP_RECENT_ERROR', 'Saltando procesamiento de buffer secundario por error reciente', {
@@ -401,13 +401,54 @@ export class CoreBot {
                 }, 'bot.ts');
             }
             
-            // 3. Construir mensaje contextual con formato temporal
-            const contextualMessage = this.buildContextualMessage(
-                userName,
-                clientData?.name || null,
-                labels,
-                combinedText
+            // 3. CONTEXTUALIZACIÓN INTELIGENTE: Decidir si incluir contexto del cliente
+            const needsClientContext = this.clientDataCache.needsContextUpdate(
+                userId, 
+                clientData?.name || null,      // chat_name (nombre del contacto)
+                clientData?.userName || null,  // from_name (nombre del perfil)  
+                labels
             );
+            
+            // Detectar si es chat de operaciones para contexto simplificado
+            const opsChatId = process.env.OPERATIONS_CHAT_ID;
+            const isOpsChat = chatId === opsChatId;
+            
+            const contextualMessage = isOpsChat 
+                ? this.buildOperationsContextualMessage(combinedText)
+                : this.buildContextualMessage(
+                    userName,
+                    clientData?.name || null,
+                    labels,
+                    combinedText,
+                    needsClientContext  // Solo incluir cliente+tags si es necesario
+                );
+
+            // Marcar contexto como enviado si se incluyó
+            if (needsClientContext) {
+                this.clientDataCache.markContextSent(
+                    userId, 
+                    clientData?.name || null,      // chat_name (nombre del contacto)
+                    clientData?.userName || null,  // from_name (nombre del perfil)
+                    labels
+                );
+                logInfo('CONTEXT_SENT', 'Contexto completo enviado a OpenAI', {
+                    userId,
+                    userName,
+                    contactName: clientData?.name || null,     // chat_name (contacto guardado)
+                    profileName: clientData?.userName || null, // from_name (perfil WhatsApp)
+                    labelsCount: labels.length,
+                    labels: labels.slice(0, 3), // Primeros 3 labels para debug
+                    reason: !this.clientDataCache.has(userId) ? 'new_user' : 
+                            !this.clientDataCache.get(userId)?.contextSent ? 'first_message_post_restart' : 
+                            'context_changed'
+                });
+            } else {
+                logInfo('CONTEXT_SIMPLIFIED', 'Contexto simplificado enviado a OpenAI', {
+                    userId,
+                    userName,
+                    reason: 'context_already_sent'
+                });
+            }
             
             // Log detallado del mensaje que se enviará a OpenAI
             logInfo('OPENAI_MESSAGE_PREPARED', 'Mensaje preparado para OpenAI', {
@@ -475,7 +516,7 @@ export class CoreBot {
                     }, 'bot.ts');
                     // Reencolar el mensaje para procesarlo después y no perderlo
                     try {
-                        this.bufferManager.addMessage(userId, combinedText, chatId, userName);
+                        this.bufferManager.addMessage(userId, combinedText, chatId, userName, undefined, undefined);
                         this.bufferManager.setIntelligentTimer(userId, 'message');
                         logInfo('BUFFER_REQUEUED', 'Mensaje reencolado por run activo', {
                             userId,
@@ -529,6 +570,21 @@ export class CoreBot {
                 inputPreview: processedMessage.substring(0, 50)
             });
 
+            // 🎯 DETECTAR QUÉ ASSISTANT USAR SEGÚN EL CHAT
+            const operationsChatId = process.env.OPERATIONS_CHAT_ID || '120363419376827694@g.us';
+            const isOperationsChat = chatId === operationsChatId;
+            const targetAssistantId = isOperationsChat ? 
+                (process.env.OPERATIONS_ASSISTANT_ID || 'asst_5ojkMp15tPorXMaT4qnHiELG') : 
+                (process.env.OPENAI_ASSISTANT_ID || process.env.ASSISTANT_ID || 'asst_SRqZsLGTOwLCXxOADo7beQuM');
+
+            logInfo('ASSISTANT_SELECTION', 'Assistant seleccionado para procesamiento', {
+                userId,
+                chatId,
+                isOperationsChat,
+                selectedAssistant: isOperationsChat ? 'OPERATIONS' : 'MAIN',
+                assistantId: targetAssistantId
+            }, 'bot.ts');
+
             // Procesar con OpenAI Service usando thread existente si está disponible
             const processingResult = await this.openaiService.processMessage(
                 userId, 
@@ -537,7 +593,9 @@ export class CoreBot {
                 userName,
                 existingThreadId,
                 existingThread?.tokenCount, // Pasar tokens acumulados de BD/cache
-                imageMessage
+                imageMessage,
+                undefined, // duringRunMsgId
+                targetAssistantId // 🎯 PASAR EL ASSISTANT ID ESPECÍFICO
             );
 
             // Log técnico: fin de run OpenAI
@@ -733,27 +791,8 @@ export class CoreBot {
                     }, 'bot.ts');
                 }
 
-                // ✅ Decidir si citar usando heurística y respetar reply humano
-                const currentBuffer = this.bufferManager.getBuffer(userId);
-                const quotedFromUser = currentBuffer?.quotedMessageId;
-
-                // Detectar si el mensaje venía con contexto quoted (texto o voz) sin ancla al inicio
-                const hasQuotedContext = /cliente responde(?: con nota de voz)? a este mensaje:/i.test(combinedText);
-
-                // Normalizar texto removiendo encabezados de cita de texto o voz
-                const normalized = combinedText.replace(
-                    /Cliente responde (?:con nota de voz )?a este mensaje:.*?\n+(?:Mensaje del cliente|Transcripción de la nota de voz):\s*/is,
-                    ''
-                ).trim();
-
-                // Heurística solo para casos sin quotedId
-                const shouldQuote = this.shouldQuoteResponse(normalized, (pendingImages.length > 0) || hasQuotedContext);
-
-                // Refuerzo por deícticos en la respuesta de la IA
-                const aiRefersToIt = /\b(este|esta|ese|esa|eso|aquel)\b/i.test(finalResponse);
-
-                // Si el usuario respondió con "reply", citamos siempre
-                const quotedToSend = quotedFromUser || undefined;
+                // CITACIÓN SIMPLIFICADA: Solo durante run activo
+                const quotedToSend = undefined; // NUNCA citar por lógica heurística
                 
                 // ✅ Log específico de decisión de citado
                 logInfo('QUOTE_DECISION', 'Decisión de citado calculada', {
@@ -761,11 +800,10 @@ export class CoreBot {
                     userName,
                     willQuote: !!quotedToSend,
                     quotedId: quotedToSend || null,
-                    shouldQuote,
-                    aiRefersToIt,
                     hasImage: pendingImages.length > 0,
                     userTextLength: combinedText.length,
-                    aiResponsePreview: finalResponse.substring(0, 80)
+                    aiResponsePreview: finalResponse.substring(0, 80),
+                    citationMode: 'only_during_run'
                 });
 
                 // Liberar el gate de 'run activo' antes de enviar chunks de WhatsApp
@@ -776,19 +814,13 @@ export class CoreBot {
                     finalResponse,
                     userState,
                     isQuoteOrPrice,
-                    quotedToSend
+                    quotedToSend,
+                    duringRunMsgId  // CITACIÓN AUTO: Pasar ID para citación durante run
                 );
                 
                 if (messageResult.success) {
-                    // Limpiar quotedMessageId después de uso exitoso para evitar rebotes
-                    if (quotedToSend) {
-                        try {
-                            const buffer = this.bufferManager.getBuffer(userId);
-                            if (buffer) {
-                                buffer.quotedMessageId = undefined as any;
-                            }
-                        } catch {}
-                    }
+                    // ELIMINADO: Lógica de limpieza quotedMessageId innecesaria - solo citamos durante run activo
+                    // quotedToSend siempre es undefined ahora
                     
                     // Registrar IDs reales devueltos por WHAPI para evitar eco/loops
                     if (messageResult.messageIds && messageResult.messageIds.length > 0) {
@@ -937,23 +969,19 @@ export class CoreBot {
     }
 
     /**
-     * ✅ Heurística para decidir cuándo citar al responder
+     * ❌ DESHABILITADO: Heurística de citación removida - solo durante run activo
      */
-    private shouldQuoteResponse(userText: string, hasMedia: boolean): boolean {
-        if (!userText) return false;
-        
-        const trimmed = userText.trim();
-        const isShort = trimmed.length < 60;
-        const hasDeictics = /\b(este|esta|ese|esa|eso|aquel)\b/i.test(trimmed);
-        
-        return hasMedia || isShort || hasDeictics;
-    }
+    // private shouldQuoteResponse(userText: string, hasMedia: boolean): boolean {
+    //     // Función removida - solo citación durante run activo
+    //     return false;
+    // }
 
     private buildContextualMessage(
         userName: string, 
         displayName: string | null, 
         labels: string[], 
-        message: string
+        message: string,
+        includeClientContext: boolean = true // NUEVO: Flag para incluir contexto del cliente
     ): string {
         // Formato de fecha colombiana simplificado
         const now = new Date();
@@ -967,7 +995,19 @@ export class CoreBot {
             hour12: true
         }).format(now);
 
-        // Detectar si no hay registro en BD
+        // CONTEXTUALIZACIÓN INTELIGENTE: Solo incluir datos del cliente cuando sea necesario
+        const alreadyQuoted = /cliente responde a este mensaje/i.test(message);
+        
+        if (!includeClientContext) {
+            // FORMATO SIMPLIFICADO: Solo hora actual + mensaje
+            const contextualMessage = `Hora actual: ${colombianTime}
+
+${alreadyQuoted ? message : `Mensaje del cliente:
+${message}`}`;
+            return contextualMessage;
+        }
+
+        // FORMATO COMPLETO: Incluir contexto del cliente (primer mensaje o cambios)
         const hasDBRecord = displayName && displayName !== userName && displayName !== 'Usuario';
         const hasLabels = labels.length > 0;
         
@@ -977,7 +1017,7 @@ export class CoreBot {
 Tags: NOHAYREGISTRO
 Hora actual: ${colombianTime}
 
-${/cliente responde a este mensaje/i.test(message) ? message : `Mensaje del cliente:
+${alreadyQuoted ? message : `Mensaje del cliente:
 ${message}`}`;
             return contextualMessage;
         }
@@ -994,7 +1034,6 @@ ${message}`}`;
             : 'Sin tags';
 
         // Formatear el mensaje contextual (formato compacto)
-        const alreadyQuoted = /cliente responde a este mensaje/i.test(message);
         const contextualMessage = `Cliente: ${clientName}
 Tags: ${tagsText}
 Hora actual: ${colombianTime}
@@ -1005,9 +1044,44 @@ ${message}`}`;
         return contextualMessage;
     }
 
+    /**
+     * Construye un mensaje contextual simplificado para operaciones (solo fecha y hora)
+     */
+    private buildOperationsContextualMessage(
+        message: string, 
+        alreadyQuoted: boolean = false
+    ): string {
+        // Hora colombiana actual
+        const now = new Date();
+        const colombianTime = now.toLocaleString('es-CO', {
+            timeZone: 'America/Bogota',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        // Formato simplificado solo con fecha/hora
+        const contextualMessage = `Hora actual: ${colombianTime}
+
+${alreadyQuoted ? message : `Mensaje:
+${message}`}`;
+        
+        return contextualMessage;
+    }
+
     public async start() {
         try {
             await this.databaseService.connect();
+            
+            // CONTEXTUALIZACIÓN INTELIGENTE: Reset flags post-reinicio
+            this.clientDataCache.clear(); // Limpiar cache para forzar contexto completo
+            logInfo('CONTEXT_CACHE_RESET', 'Cache limpiado post-reinicio para contextualización fresca', {
+                reason: 'bot_restart_context_reset'
+            });
+            
             this.setupCleanupTasks();
             
             this.server.listen(this.config.port, this.config.host, () => {

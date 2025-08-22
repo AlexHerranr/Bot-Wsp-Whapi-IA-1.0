@@ -125,11 +125,13 @@
       "Bash(git config:*)",
       "Bash(git remote add:*)",
       "Bash(git remote set-url:*)",
+      "Bash(git ls-tree:*)",
+      "WebFetch(domain:wiki.beds24.com)",
+      "WebFetch(domain:beds24.com)",
       "Bash(git branch:*)",
       "Bash(git merge:*)"
     ],
     "deny": [],
-    "defaultMode": "acceptEdits",
     "additionalDirectories": [
       "C:\\Users\\alex-\\bot-data-service"
     ]

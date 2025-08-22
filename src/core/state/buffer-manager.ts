@@ -10,20 +10,20 @@ export class BufferManager implements IBufferManager {
     private activeRunTimestamps: Map<string, number> = new Map(); // Timestamps para timeout de seguridad
 
     constructor(
-        private processCallback: (userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }) => Promise<void>,
+        private processCallback: (userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }, duringRunMsgId?: string) => Promise<void>,
         private getUserState?: (userId: string) => { isTyping: boolean; isRecording: boolean; lastActivity?: number } | undefined
     ) {}
 
-    public addMessage(userId: string, messageText: string, chatId: string, userName: string, quotedMessageId?: string): void {
+    public addMessage(userId: string, messageText: string, chatId: string, userName: string, quotedMessageId?: string, currentMessageId?: string): void {
         let buffer = this.buffers.get(userId);
         if (!buffer) {
-            buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null, quotedMessageId } as any;
+            buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null } as any;
             this.buffers.set(userId, buffer);
             logInfo('BUFFER_CREATED', 'Buffer creado para mensaje', { userId, userName, reason: 'new_message' }, 'buffer-manager.ts');
         } else {
             if (userName && userName !== 'Usuario') buffer.userName = userName;
             if (chatId && !buffer.chatId) buffer.chatId = chatId;
-            if (quotedMessageId) buffer.quotedMessageId = quotedMessageId;
+            // SIMPLIFICADO: quotedMessageId eliminado - solo duringRunMsgId
         }
 
         if (buffer.messages.length >= MAX_BUFFER_MESSAGES) {
@@ -40,6 +40,19 @@ export class BufferManager implements IBufferManager {
         buffer.messages.push(messageText);
         buffer.lastActivity = Date.now();
         
+        // CITACIÓN AUTO: Marcar mensaje para citación si hay run activo
+        if (this.activeRuns.get(userId)) {
+            buffer.duringRunMsgId = currentMessageId || 'auto-during-run'; // Usa ID del mensaje actual para citación durante run
+            logInfo('CITACION_AUTO_MARK', 'Mensaje marcado para citación auto durante run', { 
+                userId, 
+                userName,
+                duringRunMsgId: buffer.duringRunMsgId,
+                messagePreview: messageText.substring(0, 80),
+                hasRealId: !!currentMessageId,
+                reason: 'active_run_detected'
+            });
+        }
+        
         // Marcar como voice si el mensaje contiene audio
         if (messageText.includes('(Nota de Voz Transcrita por Whisper)')) {
             buffer.isVoice = true;
@@ -48,7 +61,7 @@ export class BufferManager implements IBufferManager {
         // Analizar tipos de mensajes en el buffer
         const textCount = buffer.messages.filter(msg => !msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
         const voiceCount = buffer.messages.filter(msg => msg.includes('(Nota de Voz Transcrita por Whisper)')).length;
-        const currentCombined = this.smartCombineMessages(buffer.messages, buffer.quotedMessageId);
+        const currentCombined = this.smartCombineMessages(buffer.messages);
         
         // ✅ Log específico del estado del buffer
         if (buffer.messages.length > 0) {
@@ -56,11 +69,10 @@ export class BufferManager implements IBufferManager {
                 userId,
                 userName,
                 messageCount: buffer.messages.length,
-                hasQuotedId: !!buffer.quotedMessageId,
-                quotedId: buffer.quotedMessageId || null,
                 combinedPreview: currentCombined.substring(0, 80),
                 textCount,
-                voiceCount
+                voiceCount,
+                hasDuringRunFlag: !!buffer.duringRunMsgId
             });
         }
         const preview20Words = currentCombined.split(' ').slice(0, 20).join(' ') + (currentCombined.split(' ').length > 20 ? '...' : '');
@@ -154,9 +166,19 @@ export class BufferManager implements IBufferManager {
         const buffer = this.buffers.get(userId);
         if (!buffer) return;
 
-        // Ajustar delay según contexto: voice más rápido (3s), resto 5s
+        // TIMEOUTS DINÁMICOS POR PROCESSOR
+        const operationsChatId = process.env.OPERATIONS_CHAT_ID;
+        const isOperations = (userId === operationsChatId);
+        
+        // Detectar tipo de actividad y aplicar timeout específico
         const isVoiceContext = buffer.isVoice || reason === 'voice' || reason === 'activity';
-        const delay = isVoiceContext ? 3000 : BUFFER_DELAY_MS; // 3s para voz, 5s para texto
+        let delay: number;
+        
+        if (isVoiceContext) {
+            delay = isOperations ? 1000 : 3000;  // Operations: 1s, Main: 3s para voz
+        } else {
+            delay = isOperations ? 1000 : BUFFER_DELAY_MS;  // Operations: 1s, Main: 5s para texto
+        }
 
         // Cancelar timer anterior si existe (last event wins)
         if (buffer.timer) {
@@ -292,7 +314,19 @@ export class BufferManager implements IBufferManager {
 
         const messagesToProcess = [...buffer.messages];
         const { chatId, userName } = buffer;
+
+        // CITACIÓN AUTO: Detectar si hay mensaje marcado para citación durante run
+        const isDuringRunPending = !!buffer.duringRunMsgId;
+        if (isDuringRunPending) {
+            logInfo('BUFFER_PENDING_DURING_RUN', 'Procesando con citación auto', { 
+                userId, 
+                userName,
+                duringRunMsgId: buffer.duringRunMsgId,
+                messageCount: buffer.messages.length
+            });
+        }
         const pendingImage = buffer.pendingImage;
+        const duringRunMsgId = buffer.duringRunMsgId;
         
         buffer.messages = [];
         buffer.pendingImage = null;
@@ -302,7 +336,7 @@ export class BufferManager implements IBufferManager {
             buffer.timer = null;
         }
 
-        const combinedText = this.smartCombineMessages(messagesToProcess, buffer.quotedMessageId).trim();
+        const combinedText = this.smartCombineMessages(messagesToProcess).trim();
 
         logSuccess('BUFFER_GROUPED', 'Procesando idea completa agrupada', {
             userId,
@@ -320,7 +354,7 @@ export class BufferManager implements IBufferManager {
         });
 
         try {
-            await this.processCallback(userId, combinedText || '📷 Imagen recibida', chatId, userName, pendingImage || undefined);
+            await this.processCallback(userId, combinedText || '📷 Imagen recibida', chatId, userName, pendingImage || undefined, duringRunMsgId);
         } catch (error) {
             logWarning('BUFFER_PROCESS_ERROR', 'Error procesando buffer', {
                 userId,
@@ -331,8 +365,14 @@ export class BufferManager implements IBufferManager {
             this.activeRuns.delete(userId); // Liberar
             this.activeRunTimestamps.delete(userId); // Limpiar timestamp
             
-            // CRÍTICO: Verificar si llegaron mensajes nuevos mientras procesábamos
+            // LIMPIEZA: Reset flag duringRunMsgId para evitar carry-over
             const currentBuffer = this.buffers.get(userId);
+            if (currentBuffer) {
+                currentBuffer.duringRunMsgId = undefined;
+                logInfo('FLAG_RESET', 'duringRunMsgId reseteado post-procesamiento', { userId });
+            }
+            
+            // CRÍTICO: Verificar si llegaron mensajes nuevos mientras procesábamos
             if (currentBuffer && currentBuffer.messages.length > 0) {
                 // Hay mensajes pendientes que llegaron durante el procesamiento
                 logInfo('BUFFER_PENDING_AFTER_RUN', 'Mensajes pendientes detectados después del run', {
@@ -354,9 +394,9 @@ export class BufferManager implements IBufferManager {
         }
     }
 
-    private smartCombineMessages(messages: string[], quotedMessageId?: string): string {
-        // ✅ Buffer solo concatena mensajes, NO inyecta IDs internos ni frases de cita
-        // La frase "Cliente responde a este mensaje" ya viene formateada desde webhook-processor
+    private smartCombineMessages(messages: string[]): string {
+        // ✅ Buffer solo concatena mensajes - SIMPLIFICADO
+        // duringRunMsgId se maneja por separado para citación automática
         if (messages.length <= 1) {
             return messages[0] || '';
         }
@@ -403,10 +443,29 @@ export class BufferManager implements IBufferManager {
 
     // Métodos legacy para compatibilidad
     public setIntelligentTimer(userId: string, triggerType: 'message' | 'voice' | 'typing' | 'recording'): void {
-        // Mapeo inteligente: 
-        // - typing/recording = activity (5s)
-        // - voice = activity (5s para esperar transcripción)
-        // - message = message (2s)
+        // SELECCIÓN DINÁMICA DE TIMEOUTS POR PROCESSOR
+        const operationsChatId = process.env.OPERATIONS_CHAT_ID;
+        const isOperations = (userId === operationsChatId);
+        
+        // Timeouts optimizados por processor
+        let timeoutMs: number;
+        if (triggerType === 'voice') {
+            timeoutMs = isOperations ? 1000 : 8000;  // Operations: 1s, Main: 8s
+        } else if (triggerType === 'typing' || triggerType === 'recording') {
+            timeoutMs = isOperations ? 1000 : 5000;  // Operations: 1s, Main: 5s  
+        } else { // message
+            timeoutMs = isOperations ? 1000 : 3000;  // Operations: 1s, Main: 3s
+        }
+        
+        logInfo('BUFFER_TIMEOUT_DYNAMIC', 'Timeout configurado por processor', {
+            userId,
+            triggerType,
+            isOperations,
+            timeoutMs,
+            processorType: isOperations ? 'OPERATIONS' : 'MAIN'
+        }, 'buffer-manager.ts');
+        
+        // Mapeo para compatibilidad con setOrExtendTimer
         const type = (triggerType === 'typing' || triggerType === 'recording' || triggerType === 'voice') ? 'activity' : 'message';
         
         // Para typing/recording, usar onTypingOrRecording que ahora maneja buffers vacíos correctamente

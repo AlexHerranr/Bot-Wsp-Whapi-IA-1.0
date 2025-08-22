@@ -1,0 +1,26 @@
+{
+  "name": "cancel_booking",
+  "description": "Cancela una reserva cambiando su status a 'cancelled'. Usar cuando el cliente no toma la reserva por precio alto, cambio de planes, no responde seguimiento, o no le gustó el apartamento. NO funciona con Airbnb, Expedia, Hotels.com - requiere escalación.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "bookingId": {
+        "type": "number",
+        "description": "ID numérico de la reserva en Beds24 (obtenido de check_booking_details)"
+      },
+      "reason": {
+        "type": "string",
+        "description": "Motivo de cancelación (OBLIGATORIO - ej: 'precio muy alto', 'cambio de planes', 'no responde seguimiento', 'no le gustó apartamento')"
+      },
+      "notes": {
+        "type": "string",
+        "description": "Notas adicionales sobre la cancelación (opcional)"
+      }
+    },
+    "required": ["bookingId", "reason"]
+  },
+  "prerequisite": {
+    "function": "check_booking_details",
+    "description": "Debe ejecutarse primero para obtener el bookingId numérico"
+  }
+}

@@ -64,34 +64,81 @@ export class WhatsappService {
         message: string, 
         userState: UserState,
         isQuoteOrPrice: boolean, // Lógica de validación que vendrá del plugin
-        quotedMessageId?: string // ID del mensaje a citar/responder
+        quotedMessageId?: string, // ID del mensaje a citar/responder  
+        duringRunMsgId?: string // ID para citación auto durante run activo
     ): Promise<{ success: boolean; sentAsVoice: boolean; messageIds?: string[] }> {
         if (!message || message.trim() === '') {
             this.terminalLog.error(`Intento de enviar mensaje vacío a ${chatId}`);
             return { success: false, sentAsVoice: false }; // No se envió nada
         }
 
+        // CITACIÓN AUTO: Priorizar duringRunMsgId sobre quotedMessageId
+        let finalQuotedId = quotedMessageId; // User-quote primero
+        if (duringRunMsgId) { // Sobrescribe si duringRun
+            finalQuotedId = duringRunMsgId;
+            logInfo('QUOTE_AUTO_PRIORITY', 'Usando citación auto during run', { 
+                chatId, 
+                finalQuotedId,
+                originalQuotedId: quotedMessageId 
+            });
+        }
+
         const shouldUseVoice = process.env.ENABLE_VOICE_RESPONSES === 'true' && userState.lastInputVoice && !isQuoteOrPrice;
+
+        // DETECCIÓN DINÁMICA DE HUMAN TIMING
+        const operationsChatId = process.env.OPERATIONS_CHAT_ID;
+        const isOperations = (chatId === operationsChatId);
+        const enableHumanTiming = !isOperations; // Solo para Main, no para Operations
+
+        // TIMING HUMANO: Log inicio
+        logInfo('TIMING_HUMAN_START', 'Iniciando timing por chunks', { 
+            chatId, 
+            totalLength: message.length, 
+            willUseVoice: shouldUseVoice,
+            isOperations,
+            enableHumanTiming,
+            estimatedChunks: message.includes('\n\n') ? 'paragraphs' : 'normal'
+        });
+
+        let result: { success: boolean; sentAsVoice: boolean; messageIds?: string[] };
 
         if (shouldUseVoice) {
             try {
-                const voiceResult = await this.sendVoiceMessage(chatId, message, quotedMessageId);
+                const voiceResult = await this.sendVoiceMessage(chatId, message, finalQuotedId, enableHumanTiming);
                 if (voiceResult.success) {
-                    return { success: true, sentAsVoice: true, messageIds: voiceResult.messageIds };
+                    result = { success: true, sentAsVoice: true, messageIds: voiceResult.messageIds };
+                } else {
+                    result = { success: false, sentAsVoice: false };
                 }
             } catch (error) {
                 this.terminalLog.warning(`Fallo al enviar voz a ${getShortUserId(chatId)}, no se envía texto para evitar duplicado.`);
                 // NO hacer fallback automático - retornar fallo para que bot.ts maneje
-                return { success: false, sentAsVoice: false };
+                result = { success: false, sentAsVoice: false };
             }
+        } else {
+            // Si llega aquí, se envía como texto (no resetea flag de voz)
+            const textResult = await this.sendTextMessage(chatId, message, isQuoteOrPrice, finalQuotedId, enableHumanTiming);
+            result = { success: textResult.success, sentAsVoice: false, messageIds: textResult.messageIds };
         }
 
-        // Si llega aquí, se envía como texto (no resetea flag de voz)
-        const textResult = await this.sendTextMessage(chatId, message, isQuoteOrPrice, quotedMessageId);
-        return { success: textResult.success, sentAsVoice: false, messageIds: textResult.messageIds };
+        // TIMING HUMANO: Log final con delay total estimado (sin duplicar cálculos)
+        const estimatedChunks = Math.ceil(message.length / 50); // Estimación simple sin re-chunking
+        const estimatedTotalDelay = Math.ceil(message.length / 8) * 1000; // Total estimado
+        const cappedTotalDelay = Math.min(estimatedTotalDelay, estimatedChunks * 2000); // Con cap por chunk
+        
+        logInfo('TIMING_HUMAN_END', 'Timing humano completado', { 
+            chatId, 
+            estimatedTotalDelay: cappedTotalDelay,
+            estimatedChunks: estimatedChunks,
+            messageLength: message.length,
+            type: shouldUseVoice ? 'voice' : 'text',
+            success: result.success
+        });
+
+        return result;
     }
 
-    private async sendVoiceMessage(chatId: string, message: string, quotedMessageId?: string): Promise<{ success: boolean; messageIds: string[] }> {
+    private async sendVoiceMessage(chatId: string, message: string, quotedMessageId?: string, enableHumanTiming: boolean = true): Promise<{ success: boolean; messageIds: string[] }> {
         // CRÍTICO: Dedup simétrico - verificar si ya se envió como texto
         if (this.mediaManager.isBotSentContent(chatId, message)) {
             logInfo('DUPLICATE_PREVENTED', 'Voz skipped - ya enviado como texto', { chatId, messagePreview: message.substring(0, 100) });
@@ -113,8 +160,70 @@ export class WhatsappService {
                 .trim();
             const chunk = sanitizedChunk.slice(0, 8000); // límite seguro para TTS
 
-            // Presencia de grabando antes de cada nota
-            await this.sendRecordingIndicator(chatId);
+            const startTime = Date.now();
+            
+            // PASO 1: Generar TTS primero para conocer duración real
+            const ttsResponse = await this.openai.audio.speech.create({
+                model: 'gpt-4o-mini-tts',
+                voice: 'coral',
+                input: chunk,
+                response_format: 'opus', // ← Más liviano para WhatsApp
+                speed: 1.0,
+                instructions: "Habla normal y natural, como conversación en persona. Acento Cartagena Colombia neutro, nada exagerado. Incluye pausas naturales tipo 'em...', 'pues...', como hablan las personas reales. Nada expresivo."
+                
+                // BACKUP - Configuración anterior (revertir si hay problemas):
+                // model: 'tts-1-hd',
+                // response_format: 'mp3',
+                // (sin instructions parameter)
+            });
+
+            const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+            const base64Audio = audioBuffer.toString('base64');
+            const audioDataUrl = `data:audio/opus;base64,${base64Audio}`;
+
+            // PASO 2: TIMING HUMANO - Calcular duración real del audio generado
+            const estimatedWords = chunk.length / 5; // ~5 chars por palabra promedio español
+            const speechRateWordsPerSecond = 2.8; // ~168 WPM para voz coral natural
+            const audioDurationMs = Math.round((estimatedWords / speechRateWordsPerSecond) * 1000);
+            
+            logInfo('AUDIO_DURATION_CALCULATED', 'Duración de audio calculada', {
+                chunkLength: chunk.length,
+                estimatedWords: Math.round(estimatedWords),
+                audioDurationMs,
+                audioSizeBytes: audioBuffer.length
+            });
+
+            // PASO 3: TIMING HUMANO - Usar duración del audio como delay natural
+            if (i === 0 || voiceChunks.length > 1) {  // Presencia en primero y si >1 chunk (natural)
+                
+                // Enviar presencia "grabando..." por la duración del audio
+                await this.sendRecordingIndicator(chatId);
+                logInfo('PRESENCE_CHUNK_VOICE', `🎙️ch${i+1}/${voiceChunks.length}:${audioDurationMs}ms`, { 
+                    chatId, 
+                    chunkIndex: i + 1, 
+                    totalChunks: voiceChunks.length,
+                    audioDurationMs,
+                    chunkLength: chunk.length
+                });
+                
+                // Delay = duración del audio (natural) o instantáneo para Operations
+                const maxDelayMs = 8000; // Cap máximo 8s por seguridad  
+                const naturalDelayMs = Math.min(audioDurationMs, maxDelayMs);
+                const finalDelayMs = enableHumanTiming ? naturalDelayMs : 0;
+                
+                await Promise.race([
+                    new Promise(resolve => setTimeout(resolve, finalDelayMs)),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Voice chunk delay timeout')), maxDelayMs + 1000))
+                ]).catch(err => logInfo('VOICE_CHUNK_TIMEOUT', 'Timeout en delay voz chunk, continuando', { 
+                    chunkIndex: i + 1, 
+                    audioDurationMs: finalDelayMs, 
+                    error: err.message 
+                }));
+            } else {
+                // Para chunks secundarios sin delay extra, solo presencia original
+                await this.sendRecordingIndicator(chatId);
+            }
+            
             logInfo('INDICATOR_SENT', 'Indicador de grabación enviado exitosamente', {
                 userId: shortUserId,
                 chatId,
@@ -123,21 +232,14 @@ export class WhatsappService {
                 totalParts: voiceChunks.length
             }, 'whatsapp.service.ts');
 
-            const startTime = Date.now();
-            const ttsResponse = await this.openai.audio.speech.create({
-                model: 'tts-1',
-                voice: 'nova',
-                input: chunk,
-                response_format: 'mp3'
-            });
-
-            const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-            const base64Audio = audioBuffer.toString('base64');
-            const audioDataUrl = `data:audio/mp3;base64,${base64Audio}`;
-
             const payload: any = { to: chatId, media: audioDataUrl };
             if (i === 0 && quotedMessageId) {
                 payload.quoted = quotedMessageId;
+                logInfo('PAYLOAD_QUOTED_VOICE', 'Payload con quoted agregado para voz', { 
+                    chatId, 
+                    quotedId: quotedMessageId,
+                    part: i + 1 
+                });
             }
 
             const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/voice`, {
@@ -216,10 +318,30 @@ export class WhatsappService {
         // CRÍTICO: Marcar contenido como enviado para prevenir duplicados texto/voz
         this.mediaManager.addBotSentContent(chatId, message);
         
+        // CRÍTICO: Marcar IDs de mensajes como enviados por el bot (para detectar quotes)
+        collectedIds.forEach(id => {
+            this.mediaManager.addBotSentMessage(id);
+            logInfo('BOT_MESSAGE_ID_STORED', 'ID de mensaje del bot guardado', { 
+                chatId, 
+                messageId: id,
+                type: 'voice'
+            });
+        });
+        
+        // Log de confirmación de citación para voz
+        if (quotedMessageId) {
+            logInfo('QUOTE_ATTEMPT_VOICE', 'Citación enviada en nota de voz', { 
+                chatId, 
+                quotedId: quotedMessageId,
+                messagePreview: message.substring(0, 100),
+                totalParts: voiceChunks.length
+            });
+        }
+        
         return { success: true, messageIds: collectedIds };
     }
 
-    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string): Promise<{ success: boolean; messageIds: string[] }> {
+    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string, enableHumanTiming: boolean = true): Promise<{ success: boolean; messageIds: string[] }> {
         // CRÍTICO: Verificar si ya se envió como voz para prevenir duplicados
         if (this.mediaManager.isBotSentContent(chatId, message)) {
             logInfo('DUPLICATE_PREVENTED', 'Texto skipped - ya enviado como voz', { 
@@ -269,19 +391,32 @@ export class WhatsappService {
                 hasQuoted: i === 0 && !!quotedMessageId
             }, 'whatsapp.service.ts');
             
-            // Mostrar indicador de escritura antes de cada chunk (incluido el primero)
+            // TIMING HUMANO: Calcular delay variable por chunk (o instantáneo para Operations)
+            const delay = enableHumanTiming ? this.calculateHumanDelayForChunk(chunk.length, 'text') : 0;
+            
+            // Envía presencia inmediatamente antes del chunk
             await this.sendTypingIndicator(chatId);
-            logInfo('INDICATOR_SENT', 'Indicador de escritura enviado exitosamente', {
-                userId: getShortUserId(chatId),
-                chatId,
-                indicatorType: 'typing',
-                chunkNumber: i + 1,
-                totalChunks: chunks.length
+            logInfo('PRESENCE_CHUNK_TEXT', `✍️ch${i+1}/${chunks.length}:${delay}ms`, { 
+                chatId, 
+                chunkIndex: i + 1, 
+                totalChunks: chunks.length, 
+                chunkLength: chunk.length,
+                delay 
             });
             
-            // Delay humano simple antes de enviar el chunk
-            const humanDelay = this.calculateHumanTypingDelay(chunk.length);
-            await new Promise(resolve => setTimeout(resolve, humanDelay));
+            // NUEVO: Delay humano variable por chunk con timeout defensivo
+            await Promise.race([
+                new Promise(resolve => setTimeout(resolve, delay)),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Chunk delay timeout')), 3000))  // Max 3s
+            ]).catch(err => logInfo('CHUNK_TIMEOUT', 'Timeout en delay chunk, continuando', { 
+                chunkIndex: i + 1, 
+                delay, 
+                error: err.message 
+            }));
+            
+            // COMENTADO: Delay fijo anterior
+            // const humanDelay = this.calculateHumanTypingDelay(chunk.length);
+            // await new Promise(resolve => setTimeout(resolve, humanDelay));
 
             const typingTime = 0; // Evitar doble espera: ya simulamos typing con presencia + delay
 
@@ -300,6 +435,11 @@ export class WhatsappService {
             // Solo agregar quoted en el primer chunk si se proporciona
             if (i === 0 && quotedMessageId) {
                 messageBody.quoted = quotedMessageId;
+                logInfo('PAYLOAD_QUOTED_TEXT', 'Payload con quoted agregado para texto', { 
+                    chatId, 
+                    quotedId: quotedMessageId,
+                    chunkNumber: i + 1 
+                });
             }
 
             const attemptStart = Date.now();
@@ -332,22 +472,78 @@ export class WhatsappService {
             // Intentar capturar ID del mensaje enviado por WHAPI
             try {
                 const data: any = await response.clone().json();
+                
+                // DEBUG: Log completo de respuesta WHAPI para entender formato
+                logInfo('WHAPI_RESPONSE_DEBUG', 'Respuesta completa de WHAPI', {
+                    chatId,
+                    chunkIndex: i + 1,
+                    responseKeys: data ? Object.keys(data) : [],
+                    responseData: JSON.stringify(data).substring(0, 300),
+                    hasId: !!data?.id,
+                    hasMessages: !!data?.messages,
+                    messagesLength: Array.isArray(data?.messages) ? data.messages.length : 0
+                });
+                
                 if (data) {
                     if (Array.isArray(data.messages)) {
                         for (const m of data.messages) {
-                            if (m?.id) collectedIds.push(String(m.id));
+                            if (m?.id) {
+                                collectedIds.push(String(m.id));
+                                logInfo('WHAPI_ID_EXTRACTED', 'ID extraído de messages array', {
+                                    chatId,
+                                    extractedId: m.id,
+                                    chunkIndex: i + 1
+                                });
+                            }
                         }
                     } else if (data.id) {
                         collectedIds.push(String(data.id));
+                        logInfo('WHAPI_ID_EXTRACTED', 'ID extraído directamente', {
+                            chatId,
+                            extractedId: data.id,
+                            chunkIndex: i + 1
+                        });
                     }
+                    
+                    // Log final de IDs colectados
+                    logInfo('WHAPI_IDS_COLLECTED', 'IDs colectados para chunk', {
+                        chatId,
+                        chunkIndex: i + 1,
+                        collectedCount: collectedIds.length,
+                        ids: collectedIds
+                    });
                 }
-            } catch {
-                // Ignorar si no hay JSON o formato distinto
+            } catch (parseError) {
+                logInfo('WHAPI_JSON_PARSE_ERROR', 'Error parseando respuesta WHAPI', {
+                    chatId,
+                    chunkIndex: i + 1,
+                    error: parseError instanceof Error ? parseError.message : String(parseError)
+                });
             }
         }
 
         // CRÍTICO: Marcar contenido como enviado para prevenir duplicados
         this.mediaManager.addBotSentContent(chatId, message);
+        
+        // CRÍTICO: Marcar IDs de mensajes como enviados por el bot (para detectar quotes)
+        collectedIds.forEach(id => {
+            this.mediaManager.addBotSentMessage(id);
+            logInfo('BOT_MESSAGE_ID_STORED', 'ID de mensaje del bot guardado', { 
+                chatId, 
+                messageId: id,
+                type: 'text'
+            });
+        });
+        
+        // Log de confirmación de citación para texto
+        if (quotedMessageId) {
+            logInfo('QUOTE_ATTEMPT_TEXT', 'Citación enviada en mensaje de texto', { 
+                chatId, 
+                quotedId: quotedMessageId,
+                messagePreview: message.substring(0, 100),
+                totalChunks: chunks.length
+            });
+        }
         
         return { success: true, messageIds: collectedIds };
     }
@@ -499,6 +695,22 @@ export class WhatsappService {
             console.warn(`⚠️ Error obteniendo chat info para ${chatId}:`, error);
             return null;
         }
+    }
+
+    /**
+     * TIMING HUMANO: Calcula delay por chunk (1s cada 8 chars, cap 2000ms)
+     */
+    private calculateHumanDelayForChunk(chunkLength: number, mode: 'text' | 'voice'): number {
+        const delayPer8Chars = 1000;  // 1s por 8 chars, como pediste
+        let delay = Math.ceil(chunkLength / 8) * delayPer8Chars;
+        const maxDelayPerChunk = 2000;  // Cap 2s por chunk para evitar acumulaciones/cuelgues
+        delay = Math.min(delay, maxDelayPerChunk);
+        logInfo('HUMAN_DELAY_CHUNK', `${mode}:${chunkLength}ch=${delay}ms`, { 
+            mode, 
+            chunkLength, 
+            delay 
+        });
+        return delay;
     }
 }
 
