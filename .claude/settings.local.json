@@ -119,7 +119,11 @@
       "Bash(docker compose:*)",
       "Bash(robocopy:*)",
       "Bash(copy improve-leads-structure.ts beds24-sync-service\\scripts\\)",
-      "Bash(copy improve-leads-structure.ts beds24-sync-service\\migration-scripts\\)"
+      "Bash(copy improve-leads-structure.ts beds24-sync-service\\migration-scripts\\)",
+      "Bash(git ls-tree:*)",
+      "WebFetch(domain:wiki.beds24.com)",
+      "WebFetch(domain:beds24.com)",
+      "Bash(git branch:*)"
     ],
     "deny": [],
     "additionalDirectories": [

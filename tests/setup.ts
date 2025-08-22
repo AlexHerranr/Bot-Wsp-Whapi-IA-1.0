@@ -8,6 +8,9 @@ process.env.NODE_ENV = 'test';
 process.env.OPENAI_API_KEY = 'sk-test-key-for-testing-only';
 process.env.WHAPI_TOKEN = 'whapi-test-token-for-testing-only';
 process.env.ASSISTANT_ID = 'asst-test-id-for-testing-only';
+process.env.BEDS24_TOKEN = 'test-token-123';
+process.env.BEDS24_API_URL = 'https://api.beds24.com/v2';
+process.env.BEDS24_WRITE_REFRESH_TOKEN = 'test-refresh-token';
 
 // Configurar timeouts más largos para tests de integración
 jest.setTimeout(30000);

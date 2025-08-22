@@ -1,0 +1,25 @@
+{
+  "name": "check_booking_details",
+  "description": "Consulta detalles de una reserva existente. Requiere exactamente 2 nombres + fecha entrada. Busca palabras completas sin importar orden.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "firstName": {
+        "type": "string",
+        "description": "Primer nombre del huésped",
+        "minLength": 2
+      },
+      "lastName": {
+        "type": "string", 
+        "description": "Segundo nombre del huésped",
+        "minLength": 2
+      },
+      "checkInDate": {
+        "type": "string",
+        "description": "Fecha entrada YYYY-MM-DD",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      }
+    },
+    "required": ["firstName", "lastName", "checkInDate"]
+  }
+}

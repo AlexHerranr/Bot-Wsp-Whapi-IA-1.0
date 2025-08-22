@@ -1,0 +1,41 @@
+{
+  "name": "edit_booking",
+  "description": "Registra comprobantes de pago en reservas existentes. Solo añade pagos sin modificar el status. Funciona con reservas de Booking.com y Direct.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "bookingId": {
+        "type": "number",
+        "description": "ID numérico de la reserva en Beds24 (obtenido de check_booking_details)"
+      },
+      "paymentAmount": {
+        "type": "number",
+        "minimum": 1000,
+        "description": "Monto del comprobante de pago en COP (mínimo $1.000)"
+      },
+      "paymentDescription": {
+        "type": "string",
+        "description": "Descripción del comprobante de pago recibido (ej: 'Comprobante transferencia Bancolombia', 'Voucher Nequi recibido')"
+      },
+      "notes": {
+        "type": "string",
+        "description": "Notas adicionales opcionales sobre la modificación"
+      }
+    },
+    "required": ["bookingId", "paymentAmount", "paymentDescription"]
+  },
+  "restrictions": {
+    "channels": {
+      "allowed_for_payments": ["Booking.com", "Direct"],
+      "description": "Los pagos solo se pueden registrar para reservas de Booking.com y reservas directas"
+    },
+    "functionality": {
+      "payment_only": true,
+      "description": "Solo registra pagos, no modifica el status de la reserva"
+    }
+  },
+  "prerequisite": {
+    "function": "check_booking_details",
+    "description": "Debe ejecutarse primero para obtener el bookingId numérico"
+  }
+}
