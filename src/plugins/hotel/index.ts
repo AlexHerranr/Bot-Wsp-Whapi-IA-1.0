@@ -6,6 +6,7 @@ import { createNewBookingFunction } from './functions/create-new-booking/create-
 import { editBookingFunction } from './functions/edit-booking/edit-booking';
 import { cancelBooking } from './functions/cancel-booking/cancel-booking';
 import { informarMovimientoMananaFunction } from './functions/informar-movimiento-manana/informar-movimiento-manana';
+import { generateInvoicePDFFunction } from './functions/generate-invoice-pdf/generate-invoice-pdf';
 import { HotelContext } from './logic/context';
 import { HotelValidation } from './logic/validation';
 import { HotelLabels } from './logic/labels';
@@ -22,7 +23,7 @@ export class HotelPlugin {
     }
 
     public register(registry: IFunctionRegistry, source?: string): void {
-        console.log('🔌 hotel-plugin registering 6 functions...');
+        console.log('🔌 hotel-plugin registering 7 functions...');
         
         try {
             registry.register('check_availability', (args, context) => 
@@ -55,7 +56,12 @@ export class HotelPlugin {
                 source
             );
 
-            console.log('🔌 hotel-plugin ✓ 6 functions registered successfully');
+            registry.register('generate_invoice_pdf', async (args, context) => {
+                const result = await generateInvoicePDFFunction.handler(args as any);
+                return JSON.stringify(result);
+            }, source);
+
+            console.log('🔌 hotel-plugin ✓ 7 functions registered successfully');
         } catch (error) {
             console.error('❌ Error registering hotel-plugin functions:', error);
             console.log('🔌 hotel-plugin ✓ 2 functions (partial due to errors)');
@@ -63,9 +69,9 @@ export class HotelPlugin {
 
         // Log técnico consolidado
         const { logSuccess } = require('../../utils/logging');
-        logSuccess('PLUGIN_REGISTERED', 'hotel-plugin ✓ 6 functions', {
+        logSuccess('PLUGIN_REGISTERED', 'hotel-plugin ✓ 7 functions', {
             plugin: 'hotel-plugin',
-            functions: ['check_availability', 'check_booking_details', 'create_new_booking', 'edit_booking', 'cancel_booking', 'informar_movimiento_manana'],
+            functions: ['check_availability', 'check_booking_details', 'create_new_booking', 'edit_booking', 'cancel_booking', 'informar_movimiento_manana', 'generate_invoice_pdf'],
             source: source || 'hotel-plugin'
         }, 'index.ts');
     }
