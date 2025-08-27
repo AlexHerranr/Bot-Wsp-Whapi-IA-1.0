@@ -104,6 +104,24 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       };
     }
 
+    // OPTIMIZACIÓN: Validación de status temprana (evita transformación innecesaria)
+    const bookingStatus = targetBooking.status?.toLowerCase() || 'unknown';
+    if (bookingStatus !== 'confirmed') {
+      const duration = Date.now() - startTime;
+      logError('FETCH_BOOKING_BY_ID', `❌ Status de reserva inválido: ${bookingStatus}`, { 
+        ...context, 
+        currentStatus: targetBooking.status,
+        requiredStatus: 'confirmed',
+        duration: `${duration}ms`
+      });
+      await prisma.$disconnect();
+      return { 
+        success: false, 
+        error: `Status no confirmado: ${targetBooking.status}`,
+        message: `La reserva ${bookingId} tiene status "${targetBooking.status}" pero se requiere "confirmed"` 
+      };
+    }
+
     // Log del booking específico encontrado
     logInfo('FETCH_BOOKING_FOUND', `Booking específico encontrado: ${JSON.stringify({
       id: targetBooking.id,
@@ -112,7 +130,8 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       lastName: targetBooking.lastName,
       email: targetBooking.email || 'N/A',
       arrival: targetBooking.arrival,
-      departure: targetBooking.departure
+      departure: targetBooking.departure,
+      status: targetBooking.status
     })}`, context);
 
     // Procesar datos similar a check-booking-details
@@ -319,22 +338,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       };
     }
 
-    // 3. VALIDACIÓN DE STATUS - Solo reservas confirmadas pueden generar PDF
-    const bookingStatus = bookingDetails.booking.status?.toLowerCase() || 'unknown';
-    if (bookingStatus !== 'confirmed') {
-      logError('GENERATE_BOOKING_CONFIRMATION_PDF', `❌ Status de reserva inválido: ${bookingStatus}`, { 
-        ...context, 
-        currentStatus: bookingDetails.booking.status,
-        requiredStatus: 'confirmed'
-      });
-      return { 
-        success: false, 
-        error: `No se puede generar PDF ya que la reserva tiene status actual "${bookingDetails.booking.status}"`,
-        message: `Solo se pueden generar PDFs para reservas con status "confirmed". Status actual: "${bookingDetails.booking.status}"` 
-      };
-    }
-
-    // 4. VALIDACIÓN DE CANAL - Solo canales permitidos pueden generar PDF
+    // 3. VALIDACIÓN DE CANAL - Solo canales permitidos pueden generar PDF
     const rawChannel = bookingDetails.booking.referer || bookingDetails.booking.source || 'Unknown';
     const allowedChannels = ['booking.com', 'direct', 'pacartagena', 'booking', 'directo'];
     const blockedChannels = ['airbnb', 'expedia', 'hoteles.com', 'hotels.com', 'agoda'];
@@ -353,8 +357,8 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       });
       return { 
         success: false, 
-        error: `No se puede generar PDF para reservas del canal "${rawChannel}"`,
-        message: `Los PDFs solo se generan para reservas de Booking.com, Direct y PaCartagena. Canal actual: "${rawChannel}"` 
+        error: `No se puede generar pdf de confirmación, indícale al huésped que no es posible generar pdf de confirmación de ese canal de reserva, dile que consultarás con tu superior alguna solución`,
+        message: `Canal "${rawChannel}" no permitido para generación de PDF. Solo Booking.com, Direct y PaCartagena están habilitados.` 
       };
     }
 
@@ -369,14 +373,14 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       });
     }
 
-    // 5. TRANSFORMAR datos de API a formato PDF
+    // 4. TRANSFORMAR datos de API a formato PDF
     const pdfData = await transformBookingDetailsToPDFData(bookingDetails.booking, params.distribucion);
     pdfData.documentType = params.documentType || 'confirmation';
     
-    // 6. GENERAR PDF con datos 100% reales
+    // 5. GENERAR PDF con datos 100% reales
     const result = await generateInternalPDF(pdfData);
     
-    // 7. LOG de duración total para escalabilidad
+    // 6. LOG de duración total para escalabilidad
     const duration = Date.now() - startTime;
     logInfo('GENERATE_BOOKING_CONFIRMATION_PDF', `✅ PDF generado exitosamente`, {
       ...context,
