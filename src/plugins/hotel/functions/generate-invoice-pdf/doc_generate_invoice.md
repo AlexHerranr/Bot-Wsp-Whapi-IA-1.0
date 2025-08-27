@@ -7,15 +7,42 @@ Sistema empresarial de generación automática de PDFs profesionales con **Auto-
 
 ## 🔄 **FLUJO TÉCNICO EMPRESARIAL**
 
+### **🎯 FUNCIONES QUE ACTIVAN GENERACIÓN PDF:**
+
+**1. Función Principal OpenAI:**
+- `generate_invoice_pdf` - **Llamada directa desde OpenAI** ✅
+
+**2. Funciones de Negocio (context-aware):**
+- `create_new_booking` → **"CONFIRMACIÓN DE RESERVA"**
+- `add_payment_booking` → **"COMPROBANTE DE PAGO"**  
+- `confirm_booking` → **"RESERVA CONFIRMADA"**
+- `cancel_booking` → **"CANCELACIÓN DE RESERVA"** (pendiente implementar)
+- Por defecto → **"FACTURA"**
+
+### **📊 FLUJOS DISPONIBLES:**
+
+**Opción 1: Flujo Directo (ACTUAL)**
 ```
-OpenAI → PDFLifecycleService (Singleton) → Auto-Healing Browser → Config JSON → Template → PDF
+Cliente → OpenAI → generate_invoice_pdf() → PDF Service → Template Tailwind → PDF Final
 ```
+✅ **Ventajas:** Simple, directo, control total de OpenAI
+✅ **Estado:** Funcional y optimizado
+
+**Opción 2: Flujo Automático (FUTURO)**
+```
+Cliente → OpenAI → create_new_booking() → Auto-genera PDF
+                → add_payment_booking() → Auto-genera PDF
+                → confirm_booking() → Auto-genera PDF
+```
+✅ **Ventajas:** UX automática, menos pasos
+⚠️ **Estado:** Por implementar
 
 ### **🚀 Características Empresariales:**
 - **Singleton Pattern:** Una instancia navegador, múltiples solicitudes
 - **Auto-Recovery:** Navegador se autorrepara ante crashes de Chrome
 - **Graceful Shutdown:** Limpieza controlada para Docker/Kubernetes
 - **Configuration-Driven:** SVGs, políticas y diseño centralizados en JSON
+- **Context-Aware Documents:** Tipos de PDF según función origen
 
 ---
 
@@ -52,46 +79,62 @@ OpenAI → PDFLifecycleService (Singleton) → Auto-Healing Browser → Config J
   process.on('SIGTERM', () => handleShutdown());
   ```
 
-### **🗂️ `invoice-config.json`**
-- **Función:** Configuración centralizada empresarial
-- **Mejoras:** SVGs vectoriales centralizados para consistencia total
+### **🗂️ `invoice-config.json`** *(ARCHIVO ÚNICO DE PRODUCCIÓN)*
+- **Función:** Configuración completa centralizada (198 líneas)
+- **Estado:** Archivo único después de limpieza de duplicados
+- **Características Completas:**
+  - **🏢 Datos Empresa:** TE ALQUILAMOS S.A.S completos
+  - **🎨 Configuración Diseño:** Colores, fuentes, iconos SVG
+  - **📋 Políticas:** Check-in/out, cancelación, servicios
+  - **⚙️ Config PDF:** Formato Legal, márgenes, timeout, validaciones
+  - **🔍 Iconos SVG:** Vectoriales centralizados para consistencia
 - **Estructura:**
   ```json
   {
-    "company": {...}, // Datos fijos empresa
+    "company": {...}, // Datos fijos TE ALQUILAMOS S.A.S
+    "policies": {...}, // Políticas hotel completas
     "icons": {
       "sections": {
         "dates": "<svg>...</svg>", // SVGs centralizados
-        "guest": "<svg>...</svg>"
+        "guest": "<svg>...</svg>",
+        "payment": "<svg>...</svg>",
+        "policies": "<svg>...</svg>"
       }
     },
-    "variables_from_openai": {...} // Documentación de campos
+    "pdf": {
+      "format": "Legal",
+      "margins": {...},
+      "validation": {...}
+    },
+    "variables_from_openai": {...} // Documentación campos OpenAI
   }
   ```
 
 ### **🎨 `invoice-template.html`**
-- **Función:** Template de diseño premium con efectos de vanguardia
-- **Nuevas Características v8.0:**
-  - **🎯 Diseño Premium:** Border-radius sutil (8px), tipografía cohesiva Inter
-  - **📐 Maquetación Resiliente:** Unidades físicas (18.5cm) vs píxeles fijos
-  - **🎨 Efectos Visuales Avanzados:**
-    - Sombra interior en headers (`inset box-shadow`)
-    - Zebra striping en tablas para mejor legibilidad
-    - Efecto glow con gradientes radiales en fechas
-    - Sombras multicapa para profundidad realista
+- **Función:** Template Tailwind CSS con diseño profesional centrado
+- **Migración Completa:** De ~290 líneas CSS custom → Clases Tailwind utility-first
+- **Características Actuales:**
+  - **🎯 Diseño Centrado:** Responsive layout que se adapta al contenido
+  - **📐 Formato Optimizado:** A4 con márgenes precisos para impresión
+  - **🎨 Efectos Visuales Tailwind:**
+    - Gradientes: `bg-gradient-to-l from-blue-100 via-blue-50 to-white`
+    - Sombras elegantes: `shadow-xl`, `shadow-sm`
+    - Bordes sutiles: `border border-slate-200`
+    - Botones elegantes con gradientes multicapa
   - **⚡ Optimizaciones PDF:**
-    - `scale: 1.0` para máxima nitidez (sin pérdida de calidad)
-    - Eliminado `background-attachment: fixed` (problemático para PDF)
-    - Tabla financiera ultra-compacta (455KB vs 483KB)
-  - **🔤 Tipografía Refinada:**
-    - Font-smoothing antialiased para texto suave
-    - Letter-spacing optimizado para legibilidad
-    - Fuente monospace eliminada para consistencia
+    - Formato A4 estándar para compatibilidad
+    - Print styles optimizados con `@media print`
+    - Escala 0.85 para encaje perfecto en página
+    - Fuentes Inter con fallbacks seguros
+  - **🔤 Tipografía Profesional:**
+    - Font-family: 'Inter' con fallbacks del sistema
+    - Jerarquía visual clara con pesos de fuente apropiados
+    - Antialiasing para texto suave en PDF
   ```html
-  <!-- Diseño Premium Implementado -->
-  <div class="dates-container"> <!-- Efecto glow radial -->
-  <table class="payment-table"> <!-- Zebra striping + headers optimizados -->
-  <div class="section-header">   <!-- Sombra interior sutil -->
+  <!-- Template Tailwind Actualizado -->
+  <body class="bg-slate-50 text-slate-800 p-4 min-h-screen flex items-center justify-center">
+  <div class="document-wrapper max-w-xl bg-white rounded-lg shadow-xl">
+  <div class="bg-gradient-to-l from-blue-100 via-blue-50 to-white"> <!-- Header -->
   ```
 
 ---
@@ -164,16 +207,19 @@ const context = {
 return this.compiledTemplate(context);
 ```
 
-### **Output PDF Final v8.0:**
-- **Archivo:** `invoice-PA-2024-001-[timestamp].pdf`
-- **Tamaño:** ~455KB (premium con efectos visuales)
+### **Output PDF Final Actual:**
+- **Archivo:** `invoice-[bookingId]-[timestamp].pdf`
+- **Tamaño:** Optimizado con template Tailwind
 - **Calidad:** 
-  - ✨ **Máxima Nitidez:** Scale 1.0 + font-hinting + antialiasing
-  - 🎨 **Efectos Premium:** Sombras multicapa, glow radial, zebra striping
-  - 🔤 **Tipografía Elite:** Inter cohesivo con letter-spacing optimizado
-  - 📐 **Maquetación Profesional:** Unidades físicas resilientes
-  - 🔍 **Horas Destacadas:** Rojo nítido (#dc2626) para check-in/out
-- **Rendimiento:** 3-5s (optimización continua)
+  - ✨ **Diseño Profesional:** Template Tailwind CSS migrado completamente
+  - 🎨 **Efectos Elegantes:** Gradientes, sombras y bordes usando utilidades Tailwind
+  - 🔤 **Tipografía Profesional:** Inter con fallbacks del sistema
+  - 📐 **Layout Centrado:** Responsive y adaptable al contenido
+  - 🔍 **Campo Distribucion:** Visible y funcionando correctamente
+  - 📅 **Fechas Completas:** Formato con año incluido ("15 Sep 2024")
+  - 🏢 **Datos Empresa:** Desde invoice-config.json centralizado
+- **Formato:** A4 con escala 0.85 para encaje perfecto
+- **Rendimiento:** Optimizado con singleton pattern y auto-healing
 
 ---
 
@@ -205,22 +251,36 @@ class PDFLifecycleService {
 
 ```typescript
 interface GenerateInvoicePDFParams {
-  // CAMPOS OBLIGATORIOS
-  bookingId: string;
-  guestName: string; 
-  email: string;
-  checkInDate: string;        // YYYY-MM-DD
-  checkOutDate: string;       // YYYY-MM-DD
-  roomName: string;
-  distribucion?: string;      // Distribución de camas (ej: "2 camas dobles, 1 sofá cama")
+  // CAMPOS OBLIGATORIOS PARA OPENAI
+  bookingId: string;          // "PA-2024-001"
+  guestName: string;          // "Isabella Martínez Rodríguez"
+  email: string;              // "isabella@gmail.com"
+  checkInDate: string;        // "2024-09-28" (YYYY-MM-DD)
+  checkOutDate: string;       // "2024-10-03" (YYYY-MM-DD)
+  roomName: string;           // "Apartamento Premium Deluxe Vista Mar"
+  nights: number;             // 5
   totalCharges: string;       // "$875.000"
-  invoiceItems: InvoiceItem[];
+  invoiceItems: InvoiceItem[]; // Array con items de facturación
 
-  // CAMPOS OPCIONALES (auto-calculados/configurados)
-  nights?: number;            // Auto-calculado desde fechas
-  totalPaid?: string;
-  balance?: string;
-  triggerFunction?: string;   // Auto-determina tipo documento
+  // CAMPOS OPCIONALES AÑADIDOS
+  distribucion?: string;      // "Habitación Doble - 2 huéspedes" (NUEVO CAMPO)
+  guestCount?: string;        // "2 Adultos, 1 Niño"
+  phone?: string;             // "+57 315 789 4562"
+  totalPaid?: string;         // "$495.000" 
+  balance?: string;           // "$380.000"
+  bookingStatus?: string;     // "Confirmada"
+  
+  // CAMPOS PARA CONTROL DE TIPOS PDF
+  documentType?: string;      // Auto-detectado o manual
+  triggerFunction?: string;   // Define tipo documento:
+                             // • 'create_new_booking' → "CONFIRMACIÓN DE RESERVA"
+                             // • 'add_payment_booking' → "COMPROBANTE DE PAGO"
+                             // • 'confirm_booking' → "RESERVA CONFIRMADA"
+                             // • undefined → "FACTURA"
+  
+  // CAMPOS TÉCNICOS
+  saveToFile?: boolean;       // false por defecto
+  returnBuffer?: boolean;     // false por defecto
 }
 ```
 
@@ -228,19 +288,46 @@ interface GenerateInvoicePDFParams {
 
 ## ⚡ **TESTING Y DEPLOY**
 
-### **Prueba Local v8.0:**
+### **Prueba Local Actual:**
 ```bash
-# Test completo con diseño premium + auto-healing
+# Test completo con template Tailwind CSS
 npx tsx tests/test-pdf-generation.js
 
-# Resultado esperado v8.0:
-# ✅ PDF: 455KB, 3-5s, diseño de vanguardia
-# 💎 Nitidez máxima: scale 1.0 + font-hinting  
-# 🎨 Efectos premium: sombras + glow + zebra
-# 📐 Maquetación resiliente: 18.5cm físicos
-# 🔤 Tipografía elite: Inter + antialiasing
-# 🛡️ Auto-healing activado
-# 🔄 Graceful shutdown registrado
+# Resultado esperado:
+# ✅ PDF generado con template Tailwind migrado
+# 🎨 Diseño centrado y responsive
+# 📐 Formato A4 optimizado para impresión
+# 🔤 Tipografía Inter profesional
+# 💡 Campo 'distribucion' funcionando correctamente
+# 📅 Fechas con año completo (formato mejorado)
+# 🛡️ Auto-healing y lifecycle management activos
+# 📊 Configuración desde invoice-config.json único
+```
+
+### **Ejemplo de Llamada OpenAI:**
+```json
+{
+  "bookingId": "PA-2024-001",
+  "guestName": "Isabella Martínez Rodríguez",
+  "email": "isabella@gmail.com", 
+  "checkInDate": "2024-09-28",
+  "checkOutDate": "2024-10-03",
+  "roomName": "Apartamento Premium Deluxe Vista Mar",
+  "distribucion": "Habitación Doble - 2 huéspedes",
+  "nights": 5,
+  "totalCharges": "$875.000",
+  "totalPaid": "$495.000",
+  "balance": "$380.000",
+  "triggerFunction": "create_new_booking",
+  "invoiceItems": [
+    {
+      "description": "Estadía 5 noches",
+      "quantity": "5",
+      "unitPrice": "$165.000",
+      "totalAmount": "$825.000"
+    }
+  ]
+}
 ```
 
 ### **Deploy Empresarial:**
@@ -301,8 +388,16 @@ Sistema de **nivel de producción empresarial PREMIUM** que maneja:
 - 🔧 **Operabilidad Avanzada:** Logging, resource management, backups
 - 📊 **Eficiencia:** 455KB optimizado con máxima información
 
-### **🏅 Backups de Versiones:**
-- `invoice-template-v7-funcional.html` → Versión estable anterior
-- `invoice-template.html` → Versión premium actual v8.0
+### **🏅 Estado Actual del Sistema:**
+- `invoice-template.html` → **Template Tailwind CSS migrado y funcional**
+- `invoice-config.json` → **Configuración única de producción (duplicados eliminados)**
+- `template-config.json` → **ELIMINADO** (era versión simplificada duplicada)
+- **Backup disponible:** `templates/other-templates/invoice-template-plantilla-3.0.html`
 
-**¡Sistema de calidad PREMIUM listo para miles de PDFs diarios en producción!** 🚀✨
+### **✅ FLUJO RECOMENDADO ACTUAL:**
+1. **OpenAI** llama `generate_invoice_pdf` con parámetros completos
+2. **Sistema** usa `invoice-config.json` para configuración empresa
+3. **Template** Tailwind CSS genera PDF centrado y profesional  
+4. **Resultado** PDF con todos los campos incluyendo 'distribucion'
+
+**¡Sistema Tailwind CSS migrado y listo para producción!** 🚀✨

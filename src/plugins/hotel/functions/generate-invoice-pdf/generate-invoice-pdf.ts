@@ -7,8 +7,8 @@ import type { FunctionDefinition } from '../../../../functions/types/function-ty
 interface GenerateInvoicePDFParams {
   bookingId: string;
   guestName: string;
-  guestCount?: string;
-  phone?: string;
+  guestCount: string;
+  phone: string;
   email: string;
   checkInDate: string;
   checkOutDate: string;
@@ -16,7 +16,8 @@ interface GenerateInvoicePDFParams {
   distribucion?: string;
   nights: number;
   totalCharges: string;
-  totalPaid?: string;
+  totalPaid: string;              // AHORA OBLIGATORIO
+  paymentDescription: string;     // AHORA OBLIGATORIO
   balance?: string;
   bookingStatus?: string;
   invoiceItems: Array<{
@@ -41,6 +42,24 @@ export async function generateInvoicePDF(params: GenerateInvoicePDFParams) {
   logInfo('GENERATE_INVOICE_PDF', `🚀 Iniciando generación PDF para reserva: ${params.bookingId}`);
 
   try {
+    // 0. Verificar si ya existe un PDF reciente para evitar duplicados
+    const existingPDF = await checkExistingPDF(params.bookingId);
+    if (existingPDF.exists) {
+      logInfo('GENERATE_INVOICE_PDF', `📄 PDF existente encontrado para reserva: ${params.bookingId}`, context);
+      return {
+        success: true,
+        message: `✅ PDF existente disponible para reserva ${params.bookingId}`,
+        data: {
+          bookingId: params.bookingId,
+          documentType: 'EXISTENTE',
+          size: existingPDF.size,
+          generationTime: '0ms',
+          efficiency: '🚀 Instantáneo'
+        },
+        pdfPath: existingPDF.path
+      };
+    }
+
     // 1. Preparar datos para el servicio PDF
     const invoiceData: InvoiceData = transformParamsToInvoiceData(params);
     
@@ -109,13 +128,57 @@ export async function generateInvoicePDF(params: GenerateInvoicePDFParams) {
 }
 
 /**
+ * Verifica si ya existe un PDF reciente para la reserva
+ */
+async function checkExistingPDF(bookingId: string): Promise<{exists: boolean; path?: string; size?: string}> {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Buscar PDFs existentes en directorio temporal
+    const tempDir = path.join(process.cwd(), 'src', 'temp', 'pdfs');
+    if (!fs.existsSync(tempDir)) {
+      return { exists: false };
+    }
+    
+    const files = fs.readdirSync(tempDir);
+    const pdfPattern = new RegExp(`invoice-${bookingId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+\\.pdf$`);
+    
+    // Buscar PDF más reciente (último 30 minutos)
+    const now = Date.now();
+    const thirtyMinutesAgo = now - (30 * 60 * 1000);
+    
+    for (const file of files) {
+      if (pdfPattern.test(file)) {
+        const filePath = path.join(tempDir, file);
+        const stats = fs.statSync(filePath);
+        
+        if (stats.mtime.getTime() > thirtyMinutesAgo) {
+          const sizeKB = (stats.size / 1024).toFixed(1);
+          return { 
+            exists: true, 
+            path: filePath, 
+            size: `${sizeKB} KB`
+          };
+        }
+      }
+    }
+    
+    return { exists: false };
+  } catch (error) {
+    // Si hay error verificando, continuar con generación normal
+    return { exists: false };
+  }
+}
+
+/**
  * Transforma parámetros de entrada a datos de factura
  */
 function transformParamsToInvoiceData(params: GenerateInvoicePDFParams): InvoiceData {
   return {
     bookingId: params.bookingId,
     guestName: params.guestName,
-    guestCount: params.guestCount || '1 persona',
+    guestCount: params.guestCount,
     phone: params.phone,
     email: params.email,
     checkInDate: params.checkInDate,
@@ -127,6 +190,7 @@ function transformParamsToInvoiceData(params: GenerateInvoicePDFParams): Invoice
     statusClass: getStatusClass(params.bookingStatus),
     totalCharges: params.totalCharges,
     totalPaid: params.totalPaid,
+    paymentDescription: params.paymentDescription,
     balance: params.balance,
     invoiceItems: params.invoiceItems.map(item => ({
       description: item.description,
@@ -134,7 +198,7 @@ function transformParamsToInvoiceData(params: GenerateInvoicePDFParams): Invoice
       unitPrice: item.unitPrice || item.totalAmount,
       totalAmount: item.totalAmount
     })),
-    documentType: params.documentType || getDocumentType(params.triggerFunction),
+    documentType: params.documentType || getDocumentType(params.triggerFunction, params.totalPaid),
     triggerFunction: params.triggerFunction || 'generate_pdf'
   };
 }
@@ -217,16 +281,17 @@ function getStatusClass(status?: string): string {
 /**
  * Determina el tipo de documento según la función
  */
-function getDocumentType(triggerFunction?: string): string {
-  switch (triggerFunction) {
+function getDocumentType(triggerFunction?: string, totalPaid?: string): string {
+  // Lógica automática: si no hay triggerFunction, inferir del estado de pago
+  const actualTrigger = triggerFunction || (totalPaid ? 'confirm_booking' : 'create_new_booking');
+  
+  switch (actualTrigger) {
     case 'create_new_booking':
       return 'CONFIRMACIÓN DE RESERVA';
-    case 'add_payment_booking':
-      return 'COMPROBANTE DE PAGO';
     case 'confirm_booking':
       return 'RESERVA CONFIRMADA';
     default:
-      return 'FACTURA';
+      return 'CONFIRMACIÓN DE RESERVA';
   }
 }
 
@@ -255,12 +320,13 @@ export const generateInvoicePDFFunction: FunctionDefinition = {
       },
       guestCount: {
         type: 'string',
-        description: 'Número de huéspedes (ej: "2 personas")',
-        default: '1 persona'
+        description: 'Número de huéspedes (ej: "2 Adultos, 1 Niño")',
+        minLength: 1
       },
       phone: {
         type: 'string',
-        description: 'Teléfono del huésped (opcional)'
+        description: 'Teléfono del huésped',
+        minLength: 1
       },
       email: {
         type: 'string',
@@ -281,6 +347,10 @@ export const generateInvoicePDFFunction: FunctionDefinition = {
         type: 'string',
         description: 'Nombre del apartamento/habitación'
       },
+      distribucion: {
+        type: 'string',
+        description: 'Distribución de camas y espacios (ej: "2 camas dobles, 1 sofá cama")'
+      },
       nights: {
         type: 'number',
         description: 'Número de noches',
@@ -293,6 +363,10 @@ export const generateInvoicePDFFunction: FunctionDefinition = {
       totalPaid: {
         type: 'string',
         description: 'Total pagado (opcional, ej: "$100.000")'
+      },
+      paymentDescription: {
+        type: 'string',
+        description: 'Descripción del pago realizado (ej: "Anticipo del 60% vía transferencia bancaria")'
       },
       balance: {
         type: 'string',
@@ -337,7 +411,7 @@ export const generateInvoicePDFFunction: FunctionDefinition = {
       triggerFunction: {
         type: 'string',
         description: 'Función que origina el PDF (opcional)',
-        enum: ['create_new_booking', 'add_payment_booking', 'confirm_booking']
+        enum: ['create_new_booking', 'confirm_booking']
       },
       saveToFile: {
         type: 'boolean',
@@ -352,13 +426,17 @@ export const generateInvoicePDFFunction: FunctionDefinition = {
     },
     required: [
       'bookingId',
-      'guestName', 
+      'guestName',
+      'guestCount', 
+      'phone',
       'email',
       'checkInDate',
       'checkOutDate',
       'roomName',
       'nights',
       'totalCharges',
+      'totalPaid',
+      'paymentDescription',
       'invoiceItems'
     ],
     additionalProperties: false

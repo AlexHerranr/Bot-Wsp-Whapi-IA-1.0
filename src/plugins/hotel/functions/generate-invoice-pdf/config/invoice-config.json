@@ -73,10 +73,8 @@
     "status": "Confirmada",
     "documentTypes": {
       "create_new_booking": "CONFIRMACIÓN",
-      "add_payment_booking": "COMPROBANTE DE PAGO", 
       "confirm_booking": "RESERVA CONFIRMADA",
-      "cancel_booking": "CANCELACIÓN DE RESERVA",
-      "default": "FACTURA"
+      "default": "CONFIRMACIÓN"
     }
   },
 
@@ -125,7 +123,7 @@
       "left": "0.8cm"
     },
     "scale": 0.85,
-    "maxPages": 1,
+    "maxPages": 3,
     "timeout": 30000
   },
 

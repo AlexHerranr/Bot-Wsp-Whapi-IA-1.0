@@ -1,0 +1,120 @@
+{
+  "name": "generate_invoice_pdf",
+  "description": "Genera un PDF de factura/confirmación de reserva",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "bookingId": {
+        "type": "string",
+        "description": "[De booking details] ID único de la reserva"
+      },
+      "guestName": {
+        "type": "string", 
+        "description": "[De booking details] Nombre completo del huésped principal"
+      },
+      "guestCount": {
+        "type": "string",
+        "description": "[De booking details] Número real de huéspedes (ej: '2 Adultos, 1 Niño')"
+      },
+      "phone": {
+        "type": "string",
+        "description": "[De booking details] Teléfono real del huésped"
+      },
+      "email": {
+        "type": "string",
+        "description": "[De booking details] Email real del huésped",
+        "format": "email"
+      },
+      "checkInDate": {
+        "type": "string",
+        "description": "[De booking details] Fecha real de check-in (YYYY-MM-DD)",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "checkOutDate": {
+        "type": "string",
+        "description": "[De booking details] Fecha real de check-out (YYYY-MM-DD)",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "roomName": {
+        "type": "string",
+        "description": "[De booking details] Nombre real del apartamento/habitación reservada"
+      },
+      "distribucion": {
+        "type": "string",
+        "description": "[De booking details] Distribución real de camas y espacios"
+      },
+      "nights": {
+        "type": "number",
+        "description": "[Calculado] Número de noches entre fechas",
+        "minimum": 1
+      },
+      "totalCharges": {
+        "type": "string",
+        "description": "[De booking details] Total real de la reserva (ej: '$875.000')"
+      },
+      "totalPaid": {
+        "type": "string",
+        "description": "[De booking details] Monto real pagado"
+      },
+      "paymentDescription": {
+        "type": "string",
+        "description": "[Real] Descripción del pago/anticipo efectivamente realizado"
+      },
+      "balance": {
+        "type": "string", 
+        "description": "[Calculado] Saldo pendiente real (opcional)"
+      },
+      "bookingStatus": {
+        "type": "string",
+        "description": "[De booking details] Estado actual real de la reserva"
+      },
+      "invoiceItems": {
+        "type": "array",
+        "description": "[De booking details] Items reales exclusivos de la factura - NO inventar conceptos",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "[De booking details] Descripción exacta del concepto facturado"
+            },
+            "quantity": {
+              "type": "string",
+              "description": "[De booking details] Cantidad real del servicio"
+            },
+            "unitPrice": {
+              "type": "string",
+              "description": "[De booking details] Precio unitario real"
+            },
+            "totalAmount": {
+              "type": "string",
+              "description": "[De booking details] Total real del concepto"
+            }
+          },
+          "required": ["description", "totalAmount"]
+        }
+      },
+      "triggerFunction": {
+        "type": "string",
+        "description": "[Opcional] Función origen del PDF para determinar tipo",
+        "enum": ["create_new_booking", "confirm_booking"]
+      }
+    },
+    "required": [
+      "bookingId",
+      "guestName",
+      "guestCount",
+      "phone", 
+      "email",
+      "checkInDate",
+      "checkOutDate",
+      "roomName",
+      "nights",
+      "totalCharges",
+      "totalPaid",
+      "paymentDescription",
+      "invoiceItems"
+    ]
+  }
+}

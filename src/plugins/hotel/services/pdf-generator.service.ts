@@ -327,11 +327,8 @@ export class PDFGeneratorService {
         emailIcon: config.icons.contact.email,
         websiteIcon: config.icons.contact.website,
 
-        // FECHA ACTUAL
-        currentDate: new Intl.DateTimeFormat(config.location.currency.locale, {
-          timeZone: config.location.timezone,
-          ...config.location.dateFormat.long
-        }).format(new Date())
+        // FECHA ACTUAL - Removido porque no se usa en el template
+        // currentDate: new Intl.DateTimeFormat(...)
       };
 
       return this.compiledTemplate(context);
@@ -405,12 +402,13 @@ export class PDFGeneratorService {
         },
         preferCSSPageSize: true, // Usar configuración CSS @page
         scale: 1, // 🎯 Resolución nativa para máxima nitidez
-        displayHeaderFooter: false, // No mostrar headers/footers del browser
-        pageRanges: '1' // Solo primera página
+        // HABILITADO: Generar todas las páginas necesarias (sin limitación)
+        displayHeaderFooter: false // No mostrar headers/footers del browser
       });
 
-      // Validar que el PDF tiene solo una página
-      await this.validateSinglePage(pdfBuffer, bookingId);
+      // HABILITADO: Validación de múltiples páginas (máximo 3)
+      await this.validatePageCount(pdfBuffer, bookingId, 3);
+      logInfo('PDF_GENERATOR', `PDF generado con múltiples páginas permitidas (máximo 3)`, { bookingId });
 
       const result: PDFResult = {
         success: true,
@@ -505,18 +503,18 @@ export class PDFGeneratorService {
   }
 
   /**
-   * Valida que el PDF generado tiene solo una página
+   * Valida que el PDF generado no excede el límite de páginas
    */
-  private async validateSinglePage(pdfBuffer: Buffer, bookingId: string): Promise<void> {
+  private async validatePageCount(pdfBuffer: Buffer, bookingId: string, maxPages: number = 3): Promise<void> {
     try {
       const pdfDoc = await PDFDocument.load(pdfBuffer);
       const pageCount = pdfDoc.getPageCount();
       
-      if (pageCount > 1) {
-        logError('PDF_GENERATOR', `⚠️ PDF overflow detectado: ${pageCount} páginas para reserva ${bookingId}`);
-        // No fallar, solo alertar
+      if (pageCount > maxPages) {
+        logError('PDF_GENERATOR', `⚠️ PDF excede límite: ${pageCount} páginas (máximo: ${maxPages}) para reserva ${bookingId}`);
+        // No fallar, solo alertar - permitir múltiples páginas hasta el límite
       } else {
-        logSuccess('PDF_GENERATOR', `✅ PDF en una sola página para reserva ${bookingId}`);
+        logSuccess('PDF_GENERATOR', `✅ PDF generado con ${pageCount} página${pageCount > 1 ? 's' : ''} (límite: ${maxPages}) para reserva ${bookingId}`);
       }
     } catch (error) {
       logError('PDF_GENERATOR', `Error validando páginas PDF: ${error}`);
