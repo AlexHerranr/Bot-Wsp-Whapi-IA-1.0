@@ -197,30 +197,25 @@
             </section>
 
 
-            <!-- Sección de Políticas y Servicios -->
+            <!-- Sección de Políticas -->
             <section>
-                <div class="flex items-center gap-2 pb-1 mb-2 border-b border-slate-200">
-                    <div class="grid place-items-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-amber-200 text-amber-700">
+                <div class="flex items-center gap-3 pb-1 mb-2 border-b border-slate-200">
+                    <div class="grid place-items-center w-9 h-9 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-sm font-bold text-blue-900">Información Importante</h2>
+                </div>
+                <div class="flex items-start gap-3 p-3 bg-amber-50 border-l-4 border-amber-400 rounded-lg shadow-sm">
+                    <div class="flex-shrink-0 grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md mt-1">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <h2 class="text-sm font-bold text-amber-900">Políticas y Servicios</h2>
-                </div>
-                
-                <!-- Política de Cancelación -->
-                <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2">
-                    <div class="text-xs text-amber-900">
-                        <p><strong>Política de Cancelación:</strong></p>
-                        <p class="mt-1">{{cancellationPolicy}}</p>
-                    </div>
-                </div>
-
-                <!-- Servicios -->
-                <div class="bg-slate-50 border border-slate-200 rounded-lg p-2">
-                    <div class="text-xs text-slate-700">
-                        <p><strong>Servicios:</strong></p>
-                        <p class="mt-1">{{servicesNote}}</p>
+                    <div class="text-xs text-amber-900 space-y-1">
+                        <p><strong>Política de Cancelación:</strong> {{cancellationPolicy}}</p>
+                        <p><strong>Servicios:</strong> {{servicesNote}}</p>
                     </div>
                 </div>
             </section>
