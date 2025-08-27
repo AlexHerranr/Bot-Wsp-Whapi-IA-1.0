@@ -3,7 +3,8 @@ import { InvoiceData } from '../../services/pdf-generator.service';
 import { getPDFService } from '../../services/pdf-lifecycle.service';
 import { logInfo, logError, logSuccess } from '../../../../utils/logging';
 import type { FunctionDefinition } from '../../../../functions/types/function-types.js';
-import { checkBookingDetails } from '../check-booking-details/check-booking-details';
+import { Beds24Client } from '../../services/beds24-client';
+import { PrismaClient } from '@prisma/client';
 
 // Nueva interfaz simplificada para OpenAI
 interface GenerateBookingConfirmationPDFParams {
@@ -42,7 +43,168 @@ interface InternalPDFParams {
 }
 
 /**
- * Transforma datos de check-booking-details al formato requerido para PDF
+ * Buscar reserva por bookingId directamente en Beds24 API
+ * Función interna - no modifica check-booking-details
+ */
+async function fetchBookingByIdFromBeds24(bookingId: string) {
+  const startTime = Date.now();
+  const context = { bookingId, function: 'fetchBookingByIdFromBeds24' };
+  
+  try {
+    logInfo('FETCH_BOOKING_BY_ID', `🔍 Consultando reserva directamente: ${bookingId}`, context);
+    
+    const beds24Client = new Beds24Client();
+    const prisma = new PrismaClient();
+
+    // Buscar reserva por ID usando endpoint /bookings de Beds24
+    const apiResponse = await beds24Client.searchBookings({
+      bookingId: bookingId,
+      includeInvoiceItems: true,
+      includeInfoItems: true,
+      includeGuests: true,
+      includeBookingGroup: true
+    });
+
+    // Log response completo para debugging
+    logInfo('FETCH_BOOKING_RAW_RESPONSE', `API Response structure: ${JSON.stringify({
+      success: apiResponse.success,
+      type: apiResponse.type,
+      count: apiResponse.count,
+      dataLength: apiResponse.data?.length || 0,
+      firstBookingId: apiResponse.data?.[0]?.bookId || 'N/A'
+    })}`, context);
+
+    if (!apiResponse || !apiResponse.data || apiResponse.data.length === 0) {
+      const duration = Date.now() - startTime;
+      logError('FETCH_BOOKING_BY_ID', `❌ Reserva no encontrada: ${bookingId}`, { ...context, duration: `${duration}ms` });
+      return { 
+        success: false, 
+        error: 'Reserva no encontrada',
+        message: `No se encontró la reserva con ID ${bookingId} en Beds24`
+      };
+    }
+
+    // ARREGLO: Extraer booking específico por ID exacto (response puede tener múltiples bookings)
+    const targetBooking = apiResponse.data.find((b: any) => 
+      b.id == bookingId || b.bookId == bookingId || // Usar == para comparación flexible
+      b.id === parseInt(bookingId) || b.bookId === parseInt(bookingId)
+    ) || apiResponse.data[0]; // Fallback al primero si no encuentra exacto
+
+    if (!targetBooking || (!targetBooking.bookId && !targetBooking.id)) {
+      const duration = Date.now() - startTime;
+      logError('FETCH_BOOKING_BY_ID', `❌ Booking específico no encontrado en respuesta`, { 
+        ...context, 
+        duration: `${duration}ms`,
+        availableBookings: apiResponse.data.map((b: any) => b.bookId || b.id)
+      });
+      return { 
+        success: false, 
+        error: 'Booking específico no encontrado en respuesta de API',
+        message: `La reserva ${bookingId} no se encontró en la respuesta de Beds24`
+      };
+    }
+
+    // Log del booking específico encontrado
+    logInfo('FETCH_BOOKING_FOUND', `Booking específico encontrado: ${JSON.stringify({
+      id: targetBooking.id,
+      bookId: targetBooking.bookId,
+      firstName: targetBooking.firstName,
+      lastName: targetBooking.lastName,
+      email: targetBooking.email || 'N/A',
+      arrival: targetBooking.arrival,
+      departure: targetBooking.departure
+    })}`, context);
+
+    // Procesar datos similar a check-booking-details
+    const processedBooking = await processBookingData(targetBooking, prisma);
+    
+    const duration = Date.now() - startTime;
+    logInfo('FETCH_BOOKING_BY_ID', `✅ Reserva encontrada exitosamente`, { 
+      ...context, 
+      duration: `${duration}ms`,
+      guestName: `${processedBooking.firstName} ${processedBooking.lastName}`
+    });
+
+    await prisma.$disconnect();
+    
+    return { 
+      success: true, 
+      booking: processedBooking,
+      message: `Reserva ${bookingId} encontrada exitosamente`
+    };
+
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    logError('FETCH_BOOKING_BY_ID', `💥 Error consultando reserva: ${error}`, { 
+      ...context, 
+      duration: `${duration}ms`,
+      errorType: error instanceof Error ? error.constructor.name : 'UnknownError'
+    });
+    
+    return { 
+      success: false, 
+      error: `Error consultando reserva: ${error instanceof Error ? error.message : error}`,
+      message: 'Error interno al consultar la reserva en Beds24'
+    };
+  }
+}
+
+/**
+ * Función helper para procesar datos de reserva (reutilizada de check-booking-details)
+ */
+async function processBookingData(booking: any, prisma: PrismaClient) {
+  // Reutilizar lógica de procesamiento de check-booking-details
+  // Extraer room name real de base de datos
+  let realRoomName = booking.roomName || 'Apartamento';
+  
+  try {
+    const apartmentDetails = await prisma.apartamentos.findFirst({
+      where: {
+        propertyId: booking.propId,
+        roomId: booking.roomId
+      }
+    });
+    
+    if (apartmentDetails) {
+      realRoomName = apartmentDetails.roomName;
+    }
+  } catch (error) {
+    logError('PROCESS_BOOKING_DATA', `Error obteniendo nombre real del apartamento: ${error}`, { bookingId: booking.id || booking.bookId });
+  }
+
+  const processedData = {
+    id: booking.id || booking.bookId, // Priorizar booking.id sobre booking.bookId
+    firstName: booking.firstName || '',
+    lastName: booking.lastName || '', 
+    email: booking.email || '', // Opcional según tu instrucción
+    phone: booking.phone || '',
+    arrival: booking.arrival,
+    departure: booking.departure,
+    roomName: realRoomName,
+    numAdult: booking.numAdult || 1,
+    numChild: booking.numChild || 0,
+    totalCharges: booking.totalCharges || 0,
+    totalPaid: booking.totalPaid || 0,
+    balance: booking.balance || 0,
+    status: booking.status || 'confirmed',
+    invoiceItems: booking.invoiceItems || []
+  };
+
+  // Log processed data para debugging
+  logInfo('PROCESS_BOOKING_DATA', `Datos procesados: ${JSON.stringify({
+    id: processedData.id,
+    name: `${processedData.firstName} ${processedData.lastName}`,
+    email: processedData.email || 'N/A',
+    roomName: processedData.roomName,
+    totalCharges: processedData.totalCharges,
+    invoiceItemsCount: processedData.invoiceItems.length
+  })}`, { bookingId: booking.id || booking.bookId });
+
+  return processedData;
+}
+
+/**
+ * Transforma datos de API al formato requerido para PDF
  */
 async function transformBookingDetailsToPDFData(bookingData: any, distribucion?: string): Promise<InternalPDFParams> {
   // 1. CALCULAR nights
@@ -53,10 +215,10 @@ async function transformBookingDetailsToPDFData(bookingData: any, distribucion?:
   // 2. COMBINAR nombres
   const guestName = `${bookingData.firstName || ''} ${bookingData.lastName || ''}`.trim();
 
-  // 3. FORMATEAR montos (convertir números a strings formateados)
-  const totalCharges = `$${(bookingData.totalCharges || 0).toLocaleString('es-CO')}`;
-  const totalPaid = `$${(bookingData.totalPaid || 0).toLocaleString('es-CO')}`;
-  const balance = `$${(bookingData.balance || 0).toLocaleString('es-CO')}`;
+  // 3. FORMATEAR montos (convertir números a strings formateados - sin $ extra)
+  const totalCharges = `${(bookingData.totalCharges || 0).toLocaleString('es-CO')}`;
+  const totalPaid = `${(bookingData.totalPaid || 0).toLocaleString('es-CO')}`;
+  const balance = `${(bookingData.balance || 0).toLocaleString('es-CO')}`;
 
   // 4. PROCESAR invoiceItems (solo cargos, no pagos)
   const invoiceItems = (bookingData.invoiceItems || [])
@@ -64,8 +226,8 @@ async function transformBookingDetailsToPDFData(bookingData: any, distribucion?:
     .map((item: any) => ({
       description: item.description || 'Servicio de alojamiento',
       quantity: item.qty?.toString() || '1',
-      unitPrice: `$${(item.amount || 0).toLocaleString('es-CO')}`,
-      totalAmount: `$${(item.lineTotal || item.amount || 0).toLocaleString('es-CO')}`
+      unitPrice: `${(item.amount || 0).toLocaleString('es-CO')}`,
+      totalAmount: `${(item.lineTotal || item.amount || 0).toLocaleString('es-CO')}`
     }));
 
   // 5. DERIVAR guestCount
@@ -81,12 +243,17 @@ async function transformBookingDetailsToPDFData(bookingData: any, distribucion?:
     paymentDescription = `Pago registrado: ${latestPayment.description || 'Anticipo recibido'}`;
   }
 
-  return {
-    bookingId: bookingData.id,
+  // ARREGLO: Validación previa y fallbacks para campos requeridos
+  if (!bookingData.id) {
+    logError('TRANSFORM_PDF_DATA', 'bookingId faltante en bookingData', { bookingData });
+  }
+
+  const finalPdfData = {
+    bookingId: bookingData.id || 'UNKNOWN', // Fallback para evitar undefined
     guestName: guestName,
     guestCount: guestCount,
     phone: bookingData.phone || '',
-    email: bookingData.email || '',
+    email: bookingData.email || '', // Opcional como indicaste
     checkInDate: bookingData.arrival,
     checkOutDate: bookingData.departure,
     roomName: bookingData.roomName || 'Apartamento',
@@ -100,6 +267,18 @@ async function transformBookingDetailsToPDFData(bookingData: any, distribucion?:
     invoiceItems: invoiceItems,
     triggerFunction: 'auto_from_booking_details'
   };
+
+  // Log final transformation para debugging
+  logInfo('TRANSFORM_PDF_DATA', `PDF Data final: ${JSON.stringify({
+    bookingId: finalPdfData.bookingId,
+    guestName: finalPdfData.guestName,
+    email: finalPdfData.email || 'OPCIONAL',
+    nights: finalPdfData.nights,
+    invoiceItemsCount: finalPdfData.invoiceItems.length,
+    totalCharges: finalPdfData.totalCharges
+  })}`, { originalBookingId: bookingData.id });
+
+  return finalPdfData;
 }
 
 /**
@@ -112,29 +291,74 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
   logInfo('GENERATE_BOOKING_CONFIRMATION_PDF', `🚀 Iniciando generación PDF para reserva: ${params.bookingId}`);
 
   try {
-    // 1. CONSULTAR DATOS REALES desde check-booking-details
+    // 1. CONSULTAR DATOS REALES directamente desde Beds24 API
     logInfo('GENERATE_BOOKING_CONFIRMATION_PDF', `🔍 Consultando datos reales de la reserva: ${params.bookingId}`, context);
     
-    const bookingDetails = await checkBookingDetails({ bookingId: params.bookingId });
+    const bookingDetails = await fetchBookingByIdFromBeds24(params.bookingId);
     
     if (!bookingDetails.success || !bookingDetails.booking) {
       logError('GENERATE_BOOKING_CONFIRMATION_PDF', `❌ No se pudo obtener datos de la reserva: ${params.bookingId}`, context);
       return { 
         success: false, 
-        error: 'Reserva no encontrada o no se pudo acceder a los datos',
-        message: `No se pudieron obtener los detalles de la reserva ${params.bookingId}` 
+        error: bookingDetails.error || 'Reserva no encontrada o no se pudo acceder a los datos',
+        message: bookingDetails.message || `No se pudieron obtener los detalles de la reserva ${params.bookingId}` 
       };
     }
 
-    // 2. TRANSFORMAR datos de API a formato PDF
+    // 2. VALIDACIÓN adicional antes de transformar
+    if (!bookingDetails.booking || !bookingDetails.booking.id) {
+      logError('GENERATE_BOOKING_CONFIRMATION_PDF', `❌ Datos de reserva inválidos`, { 
+        ...context, 
+        hasBooking: !!bookingDetails.booking,
+        bookingId: bookingDetails.booking?.id || 'N/A'
+      });
+      return { 
+        success: false, 
+        error: 'Datos API inválidos: falta ID de reserva',
+        message: `Los datos obtenidos de la API están incompletos para la reserva ${params.bookingId}` 
+      };
+    }
+
+    // 3. VALIDACIÓN DE STATUS - Solo reservas confirmadas pueden generar PDF
+    const bookingStatus = bookingDetails.booking.status?.toLowerCase() || 'unknown';
+    if (bookingStatus !== 'confirmed') {
+      logError('GENERATE_BOOKING_CONFIRMATION_PDF', `❌ Status de reserva inválido: ${bookingStatus}`, { 
+        ...context, 
+        currentStatus: bookingDetails.booking.status,
+        requiredStatus: 'confirmed'
+      });
+      return { 
+        success: false, 
+        error: `No se puede generar PDF ya que la reserva tiene status actual "${bookingDetails.booking.status}"`,
+        message: `Solo se pueden generar PDFs para reservas con status "confirmed". Status actual: "${bookingDetails.booking.status}"` 
+      };
+    }
+
+    // 4. TRANSFORMAR datos de API a formato PDF
     const pdfData = await transformBookingDetailsToPDFData(bookingDetails.booking, params.distribucion);
     pdfData.documentType = params.documentType || 'confirmation';
     
-    // 3. GENERAR PDF con datos 100% reales
-    return await generateInternalPDF(pdfData);
+    // 5. GENERAR PDF con datos 100% reales
+    const result = await generateInternalPDF(pdfData);
+    
+    // 6. LOG de duración total para escalabilidad
+    const duration = Date.now() - startTime;
+    logInfo('GENERATE_BOOKING_CONFIRMATION_PDF', `✅ PDF generado exitosamente`, {
+      ...context,
+      duration: `${duration}ms`,
+      dataSource: 'check-booking-details',
+      transformedFields: Object.keys(pdfData).length
+    });
+    
+    return result;
 
   } catch (error) {
-    logError('GENERATE_BOOKING_CONFIRMATION_PDF', `💥 Error generando PDF: ${error}`, context);
+    const duration = Date.now() - startTime;
+    logError('GENERATE_BOOKING_CONFIRMATION_PDF', `💥 Error generando PDF: ${error}`, {
+      ...context,
+      duration: `${duration}ms`,
+      errorType: error instanceof Error ? error.constructor.name : 'UnknownError'
+    });
     return {
       success: false,
       error: `Error generando PDF: ${error instanceof Error ? error.message : error}`,

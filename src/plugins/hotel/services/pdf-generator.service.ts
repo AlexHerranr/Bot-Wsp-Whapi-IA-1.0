@@ -529,7 +529,8 @@ export class PDFGeneratorService {
 
     if (!data.bookingId) errors.push('bookingId es requerido');
     if (!data.guestName) errors.push('guestName es requerido');
-    if (!data.email) errors.push('email es requerido');
+    // Email es opcional - puede estar vacío en algunas reservas
+    // if (!data.email) errors.push('email es requerido');
     if (!data.checkInDate) errors.push('checkInDate es requerido');
     if (!data.checkOutDate) errors.push('checkOutDate es requerido');
     if (!data.roomName) errors.push('roomName es requerido');
