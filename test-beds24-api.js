@@ -45,7 +45,10 @@ async function testBeds24API() {
           lastName: found.lastName,
           email: found.email,
           arrival: found.arrival,
-          departure: found.departure
+          departure: found.departure,
+          status: found.status,
+          referer: found.referer,
+          source: found.source
         }, null, 2));
       } else {
         console.log('❌ NO ENCONTRADO en los', response.data.length, 'resultados');

@@ -1,6 +1,6 @@
 {
   "name": "generate_booking_confirmation_pdf",
-  "description": "Genera PDF de confirmación de reserva consultando datos reales de Beds24",
+  "description": "Genera PDF de confirmación de reserva consultando datos reales de Beds24. Solo para reservas confirmadas de canales permitidos (Booking.com, Direct, PaCartagena).",
   "parameters": {
     "type": "object",
     "properties": {
