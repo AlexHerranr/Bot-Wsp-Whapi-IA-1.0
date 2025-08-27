@@ -570,7 +570,6 @@ function transformParamsToInvoiceData(params: InternalPDFParams): InvoiceData {
     statusClass: getStatusClass(params.bookingStatus),
     totalCharges: params.totalCharges,
     totalPaid: params.totalPaid,
-    paymentDescription: params.paymentDescription,
     balance: params.balance,
     invoiceItems: params.invoiceItems.map(item => ({
       description: item.description,

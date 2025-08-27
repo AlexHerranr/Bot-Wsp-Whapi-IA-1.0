@@ -38,31 +38,21 @@
             .document-wrapper {
                 box-shadow: none !important;
                 border: 1px solid #e2e8f0 !important;
-                /* Permitir división entre páginas - máximo 3 páginas */
+                /* MANTENER: División automática para contenido extenso */
                 break-inside: auto;
                 max-height: none !important;
             }
             
-            /* Permitir división de contenido entre páginas */
-            .no-page-break {
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }
-            
-            /* La tabla puede dividirse entre páginas */
+            /* MANTENER: La tabla puede dividirse entre páginas si es necesario */
             table {
                 break-inside: auto;
+                page-break-inside: auto;
             }
             
-            /* Evitar división en medio de una fila */
+            /* MANTENER: Las filas individuales no se rompen */
             tr {
                 break-inside: avoid;
                 page-break-inside: avoid;
-            }
-            
-            /* Forzar nueva página si es necesario */
-            .page-break {
-                page-break-before: always;
             }
 
             .no-print {
