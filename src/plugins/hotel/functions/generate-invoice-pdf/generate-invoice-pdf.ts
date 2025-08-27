@@ -3,8 +3,17 @@ import { InvoiceData } from '../../services/pdf-generator.service';
 import { getPDFService } from '../../services/pdf-lifecycle.service';
 import { logInfo, logError, logSuccess } from '../../../../utils/logging';
 import type { FunctionDefinition } from '../../../../functions/types/function-types.js';
+import { checkBookingDetails } from '../check-booking-details/check-booking-details';
 
-interface GenerateInvoicePDFParams {
+// Nueva interfaz simplificada para OpenAI
+interface GenerateBookingConfirmationPDFParams {
+  bookingId: string;
+  distribucion?: string;
+  documentType?: string;
+}
+
+// Interfaz interna completa para datos transformados
+interface InternalPDFParams {
   bookingId: string;
   guestName: string;
   guestCount: string;
@@ -16,8 +25,8 @@ interface GenerateInvoicePDFParams {
   distribucion?: string;
   nights: number;
   totalCharges: string;
-  totalPaid: string;              // AHORA OBLIGATORIO
-  paymentDescription: string;     // AHORA OBLIGATORIO
+  totalPaid: string;
+  paymentDescription: string;
   balance?: string;
   bookingStatus?: string;
   invoiceItems: Array<{
@@ -33,9 +42,111 @@ interface GenerateInvoicePDFParams {
 }
 
 /**
- * Genera PDF de factura usando template interno
+ * Transforma datos de check-booking-details al formato requerido para PDF
  */
-export async function generateInvoicePDF(params: GenerateInvoicePDFParams) {
+async function transformBookingDetailsToPDFData(bookingData: any, distribucion?: string): Promise<InternalPDFParams> {
+  // 1. CALCULAR nights
+  const checkInDate = new Date(bookingData.arrival);
+  const checkOutDate = new Date(bookingData.departure);
+  const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  // 2. COMBINAR nombres
+  const guestName = `${bookingData.firstName || ''} ${bookingData.lastName || ''}`.trim();
+
+  // 3. FORMATEAR montos (convertir números a strings formateados)
+  const totalCharges = `$${(bookingData.totalCharges || 0).toLocaleString('es-CO')}`;
+  const totalPaid = `$${(bookingData.totalPaid || 0).toLocaleString('es-CO')}`;
+  const balance = `$${(bookingData.balance || 0).toLocaleString('es-CO')}`;
+
+  // 4. PROCESAR invoiceItems (solo cargos, no pagos)
+  const invoiceItems = (bookingData.invoiceItems || [])
+    .filter((item: any) => item.type === 'charge')
+    .map((item: any) => ({
+      description: item.description || 'Servicio de alojamiento',
+      quantity: item.qty?.toString() || '1',
+      unitPrice: `$${(item.amount || 0).toLocaleString('es-CO')}`,
+      totalAmount: `$${(item.lineTotal || item.amount || 0).toLocaleString('es-CO')}`
+    }));
+
+  // 5. DERIVAR guestCount
+  const adults = bookingData.numAdult || bookingData.adults || 1;
+  const children = bookingData.numChild || bookingData.children || 0;
+  const guestCount = children > 0 ? `${adults} Adultos, ${children} Niños` : `${adults} Adultos`;
+
+  // 6. DERIVAR paymentDescription
+  const payments = (bookingData.invoiceItems || []).filter((item: any) => item.type === 'payment');
+  let paymentDescription = 'Pago pendiente de registro';
+  if (payments.length > 0) {
+    const latestPayment = payments[payments.length - 1];
+    paymentDescription = `Pago registrado: ${latestPayment.description || 'Anticipo recibido'}`;
+  }
+
+  return {
+    bookingId: bookingData.id,
+    guestName: guestName,
+    guestCount: guestCount,
+    phone: bookingData.phone || '',
+    email: bookingData.email || '',
+    checkInDate: bookingData.arrival,
+    checkOutDate: bookingData.departure,
+    roomName: bookingData.roomName || 'Apartamento',
+    distribucion: distribucion || 'Información disponible al check-in',
+    nights: nights,
+    totalCharges: totalCharges,
+    totalPaid: totalPaid,
+    paymentDescription: paymentDescription,
+    balance: balance,
+    bookingStatus: bookingData.status || 'confirmed',
+    invoiceItems: invoiceItems,
+    triggerFunction: 'auto_from_booking_details'
+  };
+}
+
+/**
+ * Nueva función principal simplificada - Solo requiere bookingId
+ */
+export async function generateBookingConfirmationPDF(params: GenerateBookingConfirmationPDFParams) {
+  const startTime = Date.now();
+  const context = { bookingId: params.bookingId, function: 'generateBookingConfirmationPDF' };
+  
+  logInfo('GENERATE_BOOKING_CONFIRMATION_PDF', `🚀 Iniciando generación PDF para reserva: ${params.bookingId}`);
+
+  try {
+    // 1. CONSULTAR DATOS REALES desde check-booking-details
+    logInfo('GENERATE_BOOKING_CONFIRMATION_PDF', `🔍 Consultando datos reales de la reserva: ${params.bookingId}`, context);
+    
+    const bookingDetails = await checkBookingDetails({ bookingId: params.bookingId });
+    
+    if (!bookingDetails.success || !bookingDetails.booking) {
+      logError('GENERATE_BOOKING_CONFIRMATION_PDF', `❌ No se pudo obtener datos de la reserva: ${params.bookingId}`, context);
+      return { 
+        success: false, 
+        error: 'Reserva no encontrada o no se pudo acceder a los datos',
+        message: `No se pudieron obtener los detalles de la reserva ${params.bookingId}` 
+      };
+    }
+
+    // 2. TRANSFORMAR datos de API a formato PDF
+    const pdfData = await transformBookingDetailsToPDFData(bookingDetails.booking, params.distribucion);
+    pdfData.documentType = params.documentType || 'confirmation';
+    
+    // 3. GENERAR PDF con datos 100% reales
+    return await generateInternalPDF(pdfData);
+
+  } catch (error) {
+    logError('GENERATE_BOOKING_CONFIRMATION_PDF', `💥 Error generando PDF: ${error}`, context);
+    return {
+      success: false,
+      error: `Error generando PDF: ${error instanceof Error ? error.message : error}`,
+      message: 'Error interno al generar el PDF de confirmación'
+    };
+  }
+}
+
+/**
+ * Función interna para generar PDF con datos completos
+ */
+export async function generateInternalPDF(params: InternalPDFParams) {
   const startTime = Date.now();
   const context = { bookingId: params.bookingId, function: 'generateInvoicePDF' };
   
@@ -144,16 +255,16 @@ async function checkExistingPDF(bookingId: string): Promise<{exists: boolean; pa
     const files = fs.readdirSync(tempDir);
     const pdfPattern = new RegExp(`invoice-${bookingId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+\\.pdf$`);
     
-    // Buscar PDF más reciente (último 30 minutos)
+    // Buscar PDF más reciente (último 60 minutos para mayor flexibilidad)
     const now = Date.now();
-    const thirtyMinutesAgo = now - (30 * 60 * 1000);
+    const sixtyMinutesAgo = now - (60 * 60 * 1000);
     
     for (const file of files) {
       if (pdfPattern.test(file)) {
         const filePath = path.join(tempDir, file);
         const stats = fs.statSync(filePath);
         
-        if (stats.mtime.getTime() > thirtyMinutesAgo) {
+        if (stats.mtime.getTime() > sixtyMinutesAgo) {
           const sizeKB = (stats.size / 1024).toFixed(1);
           return { 
             exists: true, 
@@ -174,7 +285,7 @@ async function checkExistingPDF(bookingId: string): Promise<{exists: boolean; pa
 /**
  * Transforma parámetros de entrada a datos de factura
  */
-function transformParamsToInvoiceData(params: GenerateInvoicePDFParams): InvoiceData {
+function transformParamsToInvoiceData(params: InternalPDFParams): InvoiceData {
   return {
     bookingId: params.bookingId,
     guestName: params.guestName,
@@ -299,147 +410,33 @@ function getDocumentType(triggerFunction?: string, totalPaid?: string): string {
 // SCHEMA EXPORT PARA OPENAI
 // ============================================================================
 
-export const generateInvoicePDFFunction: FunctionDefinition = {
-  name: 'generate_invoice_pdf',
-  description: 'Genera un PDF de factura/confirmación de reserva usando template interno con datos de la reserva',
+export const generateBookingConfirmationPDFFunction: FunctionDefinition = {
+  name: 'generate_booking_confirmation_pdf',
+  description: 'Genera PDF de confirmación de reserva consultando datos reales de Beds24 - Solo requiere bookingId',
   category: 'invoice',
-  version: '1.0.0',
+  version: '2.0.0',
   enabled: true,
   parameters: {
     type: 'object',
     properties: {
       bookingId: {
         type: 'string',
-        description: 'ID único de la reserva',
+        description: 'ID único de la reserva en Beds24',
         minLength: 1
-      },
-      guestName: {
-        type: 'string',
-        description: 'Nombre completo del huésped principal',
-        minLength: 1
-      },
-      guestCount: {
-        type: 'string',
-        description: 'Número de huéspedes (ej: "2 Adultos, 1 Niño")',
-        minLength: 1
-      },
-      phone: {
-        type: 'string',
-        description: 'Teléfono del huésped',
-        minLength: 1
-      },
-      email: {
-        type: 'string',
-        description: 'Email del huésped',
-        format: 'email'
-      },
-      checkInDate: {
-        type: 'string',
-        description: 'Fecha de check-in (YYYY-MM-DD)',
-        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
-      },
-      checkOutDate: {
-        type: 'string',
-        description: 'Fecha de check-out (YYYY-MM-DD)',
-        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
-      },
-      roomName: {
-        type: 'string',
-        description: 'Nombre del apartamento/habitación'
       },
       distribucion: {
         type: 'string',
-        description: 'Distribución de camas y espacios (ej: "2 camas dobles, 1 sofá cama")'
-      },
-      nights: {
-        type: 'number',
-        description: 'Número de noches',
-        minimum: 1
-      },
-      totalCharges: {
-        type: 'string',
-        description: 'Total de la reserva (ej: "$300.000")'
-      },
-      totalPaid: {
-        type: 'string',
-        description: 'Total pagado (opcional, ej: "$100.000")'
-      },
-      paymentDescription: {
-        type: 'string',
-        description: 'Descripción del pago realizado (ej: "Anticipo del 60% vía transferencia bancaria")'
-      },
-      balance: {
-        type: 'string',
-        description: 'Saldo pendiente (opcional, ej: "$200.000")'
-      },
-      bookingStatus: {
-        type: 'string',
-        description: 'Estado de la reserva (ej: "Confirmada", "Pendiente")'
-      },
-      invoiceItems: {
-        type: 'array',
-        description: 'Items de la factura',
-        minItems: 1,
-        items: {
-          type: 'object',
-          properties: {
-            description: {
-              type: 'string',
-              description: 'Descripción del item'
-            },
-            quantity: {
-              type: 'string',
-              description: 'Cantidad'
-            },
-            unitPrice: {
-              type: 'string',
-              description: 'Precio unitario'
-            },
-            totalAmount: {
-              type: 'string',
-              description: 'Total del item'
-            }
-          },
-          required: ['description', 'totalAmount'],
-          additionalProperties: false
-        }
+        description: 'Distribución específica de camas y espacios si difiere de la estándar'
       },
       documentType: {
         type: 'string',
-        description: 'Tipo de documento (opcional, se auto-detecta)'
-      },
-      triggerFunction: {
-        type: 'string',
-        description: 'Función que origina el PDF (opcional)',
-        enum: ['create_new_booking', 'confirm_booking']
-      },
-      saveToFile: {
-        type: 'boolean',
-        description: 'Si guardar PDF como archivo',
-        default: false
-      },
-      returnBuffer: {
-        type: 'boolean',
-        description: 'Si retornar el buffer del PDF',
-        default: false
+        description: 'Tipo de documento PDF a generar',
+        enum: ['confirmation', 'updated_confirmation'],
+        default: 'confirmation'
       }
     },
-    required: [
-      'bookingId',
-      'guestName',
-      'guestCount', 
-      'phone',
-      'email',
-      'checkInDate',
-      'checkOutDate',
-      'roomName',
-      'nights',
-      'totalCharges',
-      'totalPaid',
-      'paymentDescription',
-      'invoiceItems'
-    ],
+    required: ['bookingId'],
     additionalProperties: false
   },
-  handler: generateInvoicePDF
+  handler: generateBookingConfirmationPDF
 };

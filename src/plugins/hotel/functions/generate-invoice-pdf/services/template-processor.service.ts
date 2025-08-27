@@ -1,20 +1,29 @@
 import fs from 'fs';
 import path from 'path';
 
-// Interfaz para datos que vienen de OpenAI
+// Interfaz para datos que vienen de OpenAI - ACTUALIZADA para match con generate-invoice-pdf.ts
 interface OpenAIInvoiceData {
   bookingId: string;
   guestName: string;
-  guestCount?: string;
-  phone?: string;
+  guestCount: string;  // Ahora obligatorio
+  phone: string;       // Ahora obligatorio
   email: string;
   checkInDate: string; // YYYY-MM-DD
   checkOutDate: string; // YYYY-MM-DD
   roomName: string;
-  aptDescription?: string;
-  basePrice: number; // Precio por noche
-  totalPaid?: number; // Anticipo pagado
-  paymentNote?: string;
+  distribucion?: string; // Campo agregado
+  nights: number;
+  totalCharges: string;  // Reemplaza basePrice
+  totalPaid: string;     // Ahora obligatorio
+  paymentDescription: string; // Reemplaza paymentNote y ahora obligatorio
+  balance?: string;
+  bookingStatus?: string;
+  invoiceItems: Array<{  // Campo agregado - obligatorio
+    description: string;
+    quantity?: string;
+    unitPrice?: string;
+    totalAmount: string;
+  }>;
 }
 
 // Interfaz para la configuración completa

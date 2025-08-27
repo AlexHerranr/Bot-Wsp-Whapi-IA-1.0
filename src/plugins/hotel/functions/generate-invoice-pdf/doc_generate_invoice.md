@@ -14,7 +14,6 @@ Sistema empresarial de generación automática de PDFs profesionales con **Auto-
 
 **2. Funciones de Negocio (context-aware):**
 - `create_new_booking` → **"CONFIRMACIÓN DE RESERVA"**
-- `add_payment_booking` → **"COMPROBANTE DE PAGO"**  
 - `confirm_booking` → **"RESERVA CONFIRMADA"**
 - `cancel_booking` → **"CANCELACIÓN DE RESERVA"** (pendiente implementar)
 - Por defecto → **"FACTURA"**
@@ -31,7 +30,6 @@ Cliente → OpenAI → generate_invoice_pdf() → PDF Service → Template Tailw
 **Opción 2: Flujo Automático (FUTURO)**
 ```
 Cliente → OpenAI → create_new_booking() → Auto-genera PDF
-                → add_payment_booking() → Auto-genera PDF
                 → confirm_booking() → Auto-genera PDF
 ```
 ✅ **Ventajas:** UX automática, menos pasos
@@ -274,7 +272,7 @@ interface GenerateInvoicePDFParams {
   documentType?: string;      // Auto-detectado o manual
   triggerFunction?: string;   // Define tipo documento:
                              // • 'create_new_booking' → "CONFIRMACIÓN DE RESERVA"
-                             // • 'add_payment_booking' → "COMPROBANTE DE PAGO"
+                             // Removido: 'add_payment_booking' (ya no se usa)
                              // • 'confirm_booking' → "RESERVA CONFIRMADA"
                              // • undefined → "FACTURA"
   

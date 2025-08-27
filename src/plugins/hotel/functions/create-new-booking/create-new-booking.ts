@@ -263,7 +263,9 @@ ${params.extraServices?.map(extra => `• **${extra.description}:** $${(extra.am
 ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleString()} COP por apartamento` : ''}
 • **SALDO PENDIENTE:** $${pendingBalance.toLocaleString()} COP
 
-📧 Se enviará confirmación detallada por email a ${email}`;
+📧 Se enviará confirmación detallada por email a ${email}
+
+🔔 **Sugerencia para OpenAI:** Procede a llamar a la función \`generate_invoice_pdf\` con los datos de esta reserva para generar y enviar el documento PDF de confirmación al huésped.`;
 
     return {
       success: true,
