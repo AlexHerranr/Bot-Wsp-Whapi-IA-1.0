@@ -59,6 +59,16 @@ export class PDFGeneratorService {
   }
 
   /**
+   * Limpia cache para forzar recarga (útil durante desarrollo)
+   */
+  public clearCache(): void {
+    this.templateCache = null;
+    this.compiledTemplate = null;
+    this.configCache = null;
+    logInfo('PDF_GENERATOR', '🧹 Cache limpiado - se recargarán template y configuración');
+  }
+
+  /**
    * Inicializa helpers de Handlebars
    */
   private initializeHandlebars() {
@@ -308,6 +318,7 @@ export class PDFGeneratorService {
 
         // TEMPLATE CONFIG
         templateTitle,
+        documentType: templateTitle,  // AGREGAR: Para que coincida con {{documentType}} en template
 
         // POLÍTICAS (desde JSON)
         checkInTime: config.policies.checkIn.time,

@@ -70,11 +70,11 @@
 
   "template": {
     "title": "Confirmación",
-    "status": "Confirmada",
+    "status": "Confirmada", 
     "documentTypes": {
-      "create_new_booking": "CONFIRMACIÓN",
-      "confirm_booking": "RESERVA CONFIRMADA",
-      "default": "CONFIRMACIÓN"
+      "create_new_booking": "CONFIRMACIÓN DE RESERVA",
+      "confirm_booking": "CONFIRMACIÓN DE RESERVA",
+      "default": "CONFIRMACIÓN DE RESERVA"
     }
   },
 
