@@ -239,8 +239,8 @@ async function transformBookingDetailsToPDFData(bookingData: any, distribucion?:
   const totalPaid = `${(bookingData.totalPaid || 0).toLocaleString('es-CO')}`;
   const balance = `${(bookingData.balance || 0).toLocaleString('es-CO')}`;
 
-  // 4. PROCESAR invoiceItems (solo cargos, no pagos)
-  const invoiceItems = (bookingData.invoiceItems || [])
+  // 4. PROCESAR invoiceItems (cargos Y pagos como filas en la tabla)
+  const chargeItems = (bookingData.invoiceItems || [])
     .filter((item: any) => item.type === 'charge')
     .map((item: any) => ({
       description: item.description || 'Servicio de alojamiento',
@@ -249,18 +249,25 @@ async function transformBookingDetailsToPDFData(bookingData: any, distribucion?:
       totalAmount: `${(item.lineTotal || item.amount || 0).toLocaleString('es-CO')}`
     }));
 
+  // Agregar pagos como filas negativas (descuentos/abonos)
+  const paymentItems = (bookingData.invoiceItems || [])
+    .filter((item: any) => item.type === 'payment')
+    .map((item: any) => ({
+      description: `💳 ${item.description || 'Pago recibido'}`,
+      quantity: '1',
+      unitPrice: `-${Math.abs(item.amount || 0).toLocaleString('es-CO')}`,
+      totalAmount: `-${Math.abs(item.lineTotal || item.amount || 0).toLocaleString('es-CO')}`
+    }));
+
+  // Combinar cargos y pagos en una sola tabla
+  const invoiceItems = [...chargeItems, ...paymentItems];
+
   // 5. DERIVAR guestCount
   const adults = bookingData.numAdult || bookingData.adults || 1;
   const children = bookingData.numChild || bookingData.children || 0;
   const guestCount = children > 0 ? `${adults} Adultos, ${children} Niños` : `${adults} Adultos`;
 
-  // 6. DERIVAR paymentDescription
-  const payments = (bookingData.invoiceItems || []).filter((item: any) => item.type === 'payment');
-  let paymentDescription = 'Pago pendiente de registro';
-  if (payments.length > 0) {
-    const latestPayment = payments[payments.length - 1];
-    paymentDescription = `Pago registrado: ${latestPayment.description || 'Anticipo recibido'}`;
-  }
+  // 6. DERIVAR guestCount (simplificado, paymentDescription eliminado)
 
   // ARREGLO: Validación previa y fallbacks para campos requeridos
   if (!bookingData.id) {
@@ -280,7 +287,6 @@ async function transformBookingDetailsToPDFData(bookingData: any, distribucion?:
     nights: nights,
     totalCharges: totalCharges,
     totalPaid: totalPaid,
-    paymentDescription: paymentDescription,
     balance: balance,
     bookingStatus: bookingData.status || 'confirmed',
     invoiceItems: invoiceItems,
