@@ -448,8 +448,8 @@ export async function generateInternalPDF(params: InternalPDFParams) {
     // 2. Generar PDF con validación centralizada y gestión de ciclo de vida
     const pdfService = getPDFService(); // Singleton con Auto-Healing y Graceful Shutdown
     const result = await pdfService.generateInvoicePDF(invoiceData, {
-      saveToFile: params.saveToFile || false,
-      outputDir: undefined
+      saveToFile: params.saveToFile || true,  // CAMBIO: Por defecto guardar archivo
+      outputDir: params.outputDir || './src/temp/pdfs'  // CAMBIO: Directorio por defecto
     });
 
     // 4. Validar resultado

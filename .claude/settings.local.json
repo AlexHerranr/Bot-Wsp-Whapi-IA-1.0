@@ -145,7 +145,8 @@
       "Bash(start \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\temp\\pdfs\\invoice-TEST-10-ITEMS-001-1756246891346.pdf\")",
       "Bash(start \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\temp\\pdfs\\invoice-COMPACT-TEST-001-1756247070169.pdf\")",
       "Bash(start \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\temp\\pdfs\\invoice-MULTIPAGE-TEST-001-1756247255802.pdf\")",
-      "Bash(start \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\temp\\pdfs\\invoice-72554184-1756317992095.pdf\")"
+      "Bash(start \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\temp\\pdfs\\invoice-72554184-1756317992095.pdf\")",
+      "Bash(start \"src\\temp\\pdfs\\invoice-74793397-1756319506318.pdf\")"
     ],
     "deny": [],
     "additionalDirectories": [
