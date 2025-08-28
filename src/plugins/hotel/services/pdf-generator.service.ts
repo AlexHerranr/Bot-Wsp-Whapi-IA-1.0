@@ -1,5 +1,6 @@
 // src/plugins/hotel/services/pdf-generator.service.ts
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
 import QRCode from 'qrcode';
@@ -184,26 +185,31 @@ export class PDFGeneratorService {
         logInfo('PDF_GENERATOR', '🚀 Railway detectado - usando Puppeteer bundled Chromium (versión matching)');
       }
       
-      // PUPPETEER v24 FIX: Forzar download de bundled Chromium si no existe
-      let executablePath: string | undefined = undefined;
+      // SPARTICUZ CHROMIUM FIX: Usar Chromium serverless optimizado para Railway
+      let executablePath: string;
+      let chromiumArgs: string[] = [];
       
       if (isRailway) {
-        // En Railway, forzar uso del bundled Chromium descargado
-        const puppeteerModule = await import('puppeteer');
+        // En Railway, usar @sparticuz/chromium optimizado para contenedores
         try {
-          executablePath = puppeteerModule.executablePath();
-          logInfo('PDF_GENERATOR', `🎯 DEBUGGING: Bundled Chromium path: ${executablePath}`);
+          executablePath = await chromium.executablePath();
+          chromiumArgs = chromium.args;
+          logInfo('PDF_GENERATOR', `🎯 SPARTICUZ: Chromium path: ${executablePath}`);
+          logInfo('PDF_GENERATOR', `🎯 SPARTICUZ: Extra args: ${chromiumArgs.length} args`);
         } catch (pathError) {
-          logError('PDF_GENERATOR', `⚠️ No se pudo obtener bundled path: ${pathError.message}`);
+          logError('PDF_GENERATOR', `⚠️ Error obteniendo Sparticuz Chromium: ${pathError.message}`);
+          throw new Error(`Sparticuz Chromium failed: ${pathError.message}`);
         }
+      } else {
+        // En local, usar Puppeteer normal
+        executablePath = puppeteer.executablePath();
       }
 
       const launchOptions = {
-        headless: true,
-        args: browserArgs,
-        // PUPPETEER v24 FIX: Especificar bundled path explícitamente
-        ...(isRailway && executablePath && {
-          executablePath: executablePath,
+        headless: 'shell' as const, // Optimizado para serverless
+        args: [...browserArgs, ...chromiumArgs], // Combinar args propios + sparticuz
+        executablePath: executablePath,
+        ...(isRailway && {
           timeout: 60000,
           handleSIGINT: false,
           handleSIGTERM: false,
@@ -242,7 +248,8 @@ export class PDFGeneratorService {
           logInfo('PDF_GENERATOR', '🔄 DEBUGGING: Iniciando retry con opciones ultra-básicas...');
           
           const retryOptions = {
-            headless: true,
+            headless: 'shell' as const,
+            executablePath: executablePath, // Usar mismo path de sparticuz
             args: [
               '--no-sandbox',
               '--disable-setuid-sandbox', 
