@@ -41,6 +41,12 @@ COPY scripts/ ./scripts/
 RUN npx prisma generate
 RUN npm run build
 
+# ✅ VERIFICAR CHROMIUM INSTALACIÓN EN BUILD
+RUN echo "🔍 VERIFICANDO INSTALACIÓN DE CHROMIUM..." && \
+    /usr/bin/chromium --version && \
+    echo "✅ Chromium instalado correctamente" || \
+    echo "❌ ERROR: Chromium no encontrado"
+
 # Stage de producción - imagen mínima con Chrome
 FROM node:18-bullseye-slim AS runner
 WORKDIR /app
@@ -62,6 +68,12 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
+
+# ✅ VERIFICAR CHROMIUM EN STAGE RUNNER
+RUN echo "🔍 VERIFICANDO CHROMIUM EN RUNNER..." && \
+    /usr/bin/chromium --version && \
+    echo "✅ Chromium runner OK" || \
+    echo "❌ ERROR: Chromium no funcional en runner"
 
 # Crear usuario no-root (sintaxis Debian)
 RUN groupadd -g 1001 nodejs && \
