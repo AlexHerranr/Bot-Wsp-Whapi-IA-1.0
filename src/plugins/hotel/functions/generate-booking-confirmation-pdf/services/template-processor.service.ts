@@ -87,6 +87,7 @@ interface TemplateContext {
   // Apartamento
   roomName: string;
   aptDescription?: string;
+  distribucion?: string;
   
   // Financiero
   totalCharges: string;
@@ -142,14 +143,12 @@ export class TemplateProcessor {
     const checkInISO = this.formatDateForISO(checkIn);
     const checkOutISO = this.formatDateForISO(checkOut);
     
-    // Calcular totales
-    const stayTotal = openAIData.basePrice * nights;
-    const cleaningTotal = this.config.fixedItems.cleaning.unitPrice;
-    const insuranceTotal = this.config.fixedItems.insurance.unitPrice;
-    const totalCharges = stayTotal + cleaningTotal + insuranceTotal;
+    // Parsear totales desde strings
+    const totalChargesAmount = parseInt(openAIData.totalCharges.replace(/[^\d]/g, '')) || 0;
+    const totalPaidAmount = parseInt(openAIData.totalPaid.replace(/[^\d]/g, '')) || 0;
     
-    // Calcular balance si hay pago
-    const balance = openAIData.totalPaid ? totalCharges - openAIData.totalPaid : undefined;
+    // Calcular balance
+    const balance = totalChargesAmount - totalPaidAmount;
     
     // Generar URL de calendario
     const calendarUrl = this.generateCalendarUrl(openAIData, checkInISO, checkOutISO);
@@ -181,13 +180,14 @@ export class TemplateProcessor {
       
       // Apartamento
       roomName: openAIData.roomName,
-      aptDescription: openAIData.aptDescription,
+      aptDescription: openAIData.roomName, // Usar roomName como fallback
+      distribucion: openAIData.distribucion,
       
       // Financiero
-      totalCharges: this.formatCurrency(totalCharges),
-      totalPaid: openAIData.totalPaid ? this.formatCurrency(openAIData.totalPaid) : undefined,
-      balance: balance ? this.formatCurrency(balance) : undefined,
-      paymentNote: openAIData.paymentNote,
+      totalCharges: openAIData.totalCharges,
+      totalPaid: openAIData.totalPaid,
+      balance: balance > 0 ? this.formatCurrency(balance) : undefined,
+      paymentNote: openAIData.paymentDescription,
       
       // Enlaces
       googleMapsUrl: this.config.location.googleMapsUrl,

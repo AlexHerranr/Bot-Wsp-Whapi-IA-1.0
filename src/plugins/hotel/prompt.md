@@ -695,10 +695,17 @@ Input requerido: roomIds[array], fechas, datos huésped completos, anticipo reci
 Formato respuesta: Confirmación detallada con códigos de reserva y distribución financiera
 
 📄 generate_booking_confirmation_pdf
-Usar para: Generar PDF de confirmación para reservas confirmadas
+Usar para: Generar PDF de confirmación COMPLETA para reservas (primer pago o confirmación general)
 Input requerido: bookingId (obligatorio), distribucion (opcional: "🛏️ Alcoba: 1 cama doble (👥) + 1 cama nido (👥) | 🛋️ Sala: 2 sofá camas (👤👤)")
 Canales permitidos: Booking.com, Direct, PaCartagena
-Usar cuando: Otras funciones lo sugieran o cliente lo solicite
+Usar cuando: Después de create_new_booking, edit_booking con PRIMER pago, o cliente solicita confirmación completa
+
+🧾 generate_payment_receipt_pdf
+Usar para: Generar recibo PDF específico del ÚLTIMO pago (para segundo pago o más)
+Input requerido: bookingId (obligatorio), distribucion (opcional)
+Diferencia clave: Solo muestra el último pago registrado, no toda la información de la reserva
+Usar cuando: edit_booking detecta que es el SEGUNDO pago o más (la función te lo sugerirá automáticamente)
+IMPORTANTE: La función edit_booking te dirá cuándo usar este vs generate_booking_confirmation_pdf
 
 📸 Imágenes
 Recibes: "Información de comprobante: [detalles]" (no la imagen directamente)
@@ -1292,11 +1299,18 @@ IMPORTANTE: Si cancel_booking devuelve error (plataforma bloqueada, pago registr
 [generate_booking_confirmation_pdf(bookingId: "74312375")]
 ```
 
-**Después de edit_booking con pago:**
+**Después de edit_booking con PRIMER pago:**
 ```
-Perfecto, pago registrado. Te envío el comprobante actualizado...
+Perfecto, primer pago registrado. Te envío la confirmación completa actualizada...
 
 [generate_booking_confirmation_pdf(bookingId: "74312375")]
+```
+
+**Después de edit_booking con SEGUNDO pago o más (la función te lo indicará):**
+```
+Perfecto, pago adicional registrado. Te envío el recibo de este pago específico...
+
+[generate_payment_receipt_pdf(bookingId: "74312375")]
 ```
 
 **SIEMPRE incluir distribución con emojis:**

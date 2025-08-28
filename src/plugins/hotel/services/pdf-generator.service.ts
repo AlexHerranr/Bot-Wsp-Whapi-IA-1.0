@@ -57,7 +57,7 @@ export class PDFGeneratorService {
   private templateCache: string | null = null;
   private compiledTemplate: HandlebarsTemplateDelegate | null = null;
   private configCache: any | null = null;
-  private browser: puppeteer.Browser | null = null;
+  private browser: any | null = null;
 
   constructor() {
     // Template path se establecerá dinámicamente según el tipo de documento
@@ -66,15 +66,7 @@ export class PDFGeneratorService {
     this.initializeHandlebars();
   }
 
-  /**
-   * Limpia cache para forzar recarga (útil durante desarrollo)
-   */
-  public clearCache(): void {
-    this.templateCache = null;
-    this.compiledTemplate = null;
-    this.configCache = null;
-    logInfo('PDF_GENERATOR', '🧹 Cache limpiado - se recargarán template y configuración');
-  }
+
 
   /**
    * Inicializa helpers de Handlebars
