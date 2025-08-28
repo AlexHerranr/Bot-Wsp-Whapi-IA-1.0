@@ -168,10 +168,15 @@ export class PDFGeneratorService {
           '--ignore-ssl-errors',
           '--ignore-certificate-errors-spki-list',
           '--disable-crash-reporter', // Deshabilita crashpad_handler
-          '--disable-breakpad', // Deshabilita crash reporting
+          '--disable-breakpad', // Deshabilita crash reporting  
           '--crash-dumps-dir=/tmp', // Directorio temporal para evitar error database
           '--enable-logging=stderr', // Redirige logs a stderr
           '--disable-logging-redirect',
+          // FLAGS ESPECÍFICOS ANTI-CRASHPAD - SOLUCIÓN DEFINITIVA
+          '--disable-crashpad', // Deshabilita sistema crashpad completamente
+          '--no-crash-upload', // No subir crash reports
+          '--disable-crash-uploads', // Bloquea uploads de crashes
+          '--disable-ipc-flooding-protection', // Evita issues IPC relacionados con crashpad
           '--disable-client-side-phishing-detection',
           '--disable-component-update',
           '--disable-domain-reliability'
