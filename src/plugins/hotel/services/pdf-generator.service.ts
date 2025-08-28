@@ -60,9 +60,9 @@ export class PDFGeneratorService {
   private browser: any | null = null;
 
   constructor() {
-    // Template path se establecerá dinámicamente según el tipo de documento
-    this.templatePath = path.join(__dirname, '../functions/generate-booking-confirmation-pdf/templates/invoice-template.html');
-    this.configPath = path.join(__dirname, '../functions/generate-booking-confirmation-pdf/config/invoice-config.json');
+    // RAILWAY FIX: Usar rutas absolutas desde process.cwd() para evitar ENOENT
+    this.templatePath = path.join(process.cwd(), 'src/plugins/hotel/functions/generate-booking-confirmation-pdf/templates/invoice-template.html');
+    this.configPath = path.join(process.cwd(), 'src/plugins/hotel/functions/generate-booking-confirmation-pdf/config/invoice-config.json');
     this.initializeHandlebars();
   }
 
@@ -272,21 +272,45 @@ export class PDFGeneratorService {
    */
   public async loadTemplate(documentType?: string): Promise<string> {
     try {
-      // Determinar el path del template según el tipo de documento
+      // RAILWAY FIX: Determinar el path del template con rutas absolutas
       let templatePath = this.templatePath;
       
       if (documentType === 'RECIBO DE PAGO') {
-        templatePath = path.join(__dirname, '../functions/generate-payment-receipt-pdf/templates/receipt-template.html');
-        logInfo('PDF_GENERATOR', `Usando template de recibo: ${templatePath}`);
+        templatePath = path.join(process.cwd(), 'src/plugins/hotel/functions/generate-payment-receipt-pdf/templates/receipt-template.html');
+        logInfo('PDF_GENERATOR', `📄 Usando template de recibo: ${templatePath}`);
+      }
+      
+      // RAILWAY DEBUG: Log path absoluto para debugging
+      const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
+      if (isRailway) {
+        logInfo('TEMPLATE_PATH_RAILWAY', 'Verificando template path en Railway', {
+          templatePath,
+          documentType,
+          processDir: process.cwd(),
+          exists: fs.existsSync(templatePath)
+        });
       }
       
       // No usar cache para recibos, ya que son diferentes templates
       if (documentType === 'RECIBO DE PAGO' || !this.templateCache) {
         if (!fs.existsSync(templatePath)) {
-          throw new Error(`Template no encontrado: ${templatePath}`);
+          const error = `Template no encontrado: ${templatePath}`;
+          logError('TEMPLATE_NOT_FOUND', error, {
+            templatePath,
+            documentType,
+            processDir: process.cwd(),
+            dirExists: fs.existsSync(path.dirname(templatePath)),
+            isRailway
+          });
+          throw new Error(error);
         }
         
         const template = fs.readFileSync(templatePath, 'utf-8');
+        logInfo('TEMPLATE_LOADED', `Template cargado exitosamente (${template.length} chars)`, {
+          templatePath,
+          documentType,
+          isRailway
+        });
         
         // Solo cachear el template de confirmación
         if (documentType !== 'RECIBO DE PAGO') {
@@ -298,7 +322,13 @@ export class PDFGeneratorService {
       
       return this.templateCache;
     } catch (error) {
-      throw new Error(`Error cargando template: ${error instanceof Error ? error.message : 'Unknown'}`);
+      const errorMsg = `Error cargando template: ${error instanceof Error ? error.message : 'Unknown'}`;
+      logError('TEMPLATE_LOAD_ERROR', errorMsg, {
+        documentType,
+        error: error instanceof Error ? error.stack : error,
+        isRailway: !!(process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME)
+      });
+      throw new Error(errorMsg);
     }
   }
 
