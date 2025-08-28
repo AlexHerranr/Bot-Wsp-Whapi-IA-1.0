@@ -582,6 +582,17 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     };
     
     // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico
+    // DEBUG: Log completo del result object
+    logInfo('RESULT_DEBUG', 'Result object completo del PDF service', {
+      success: result.success,
+      hasBuffer: !!(result as any).pdfBuffer,
+      bufferLength: (result as any).pdfBuffer?.length || 0,
+      hasPdfPath: !!(result as any).pdfPath,
+      hasFilePath: !!(result as any).filePath,
+      resultKeys: Object.keys(result as any),
+      isRailway: !!(process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME)
+    });
+    
     if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer)) {
       const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
       
