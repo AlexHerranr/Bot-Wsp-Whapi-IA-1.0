@@ -1,5 +1,5 @@
 // src/plugins/hotel/services/pdf-generator.service.ts
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import fs from 'fs';
 import path from 'path';
 import QRCode from 'qrcode';
@@ -156,6 +156,8 @@ export class PDFGeneratorService {
       this.browser = await puppeteer.launch({
         headless: true,
         args: browserArgs,
+        // RAILWAY FIX: Usar Chrome instalado manualmente
+        executablePath: isRailway ? '/usr/bin/google-chrome-stable' : undefined,
         // Configuraciones adicionales para Railway
         ...(isRailway && {
           timeout: 60000,
