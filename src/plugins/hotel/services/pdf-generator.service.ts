@@ -184,12 +184,26 @@ export class PDFGeneratorService {
         logInfo('PDF_GENERATOR', '🚀 Railway detectado - usando Puppeteer bundled Chromium (versión matching)');
       }
       
+      // PUPPETEER v24 FIX: Forzar download de bundled Chromium si no existe
+      let executablePath: string | undefined = undefined;
+      
+      if (isRailway) {
+        // En Railway, forzar uso del bundled Chromium descargado
+        const puppeteerModule = await import('puppeteer');
+        try {
+          executablePath = puppeteerModule.executablePath();
+          logInfo('PDF_GENERATOR', `🎯 DEBUGGING: Bundled Chromium path: ${executablePath}`);
+        } catch (pathError) {
+          logError('PDF_GENERATOR', `⚠️ No se pudo obtener bundled path: ${pathError.message}`);
+        }
+      }
+
       const launchOptions = {
         headless: true,
         args: browserArgs,
-        // PUPPETEER v24 FIX: NO especificar executablePath para usar bundled automático
-        ...(isRailway && {
-          // Sin executablePath = usa bundled Chromium automáticamente
+        // PUPPETEER v24 FIX: Especificar bundled path explícitamente
+        ...(isRailway && executablePath && {
+          executablePath: executablePath,
           timeout: 60000,
           handleSIGINT: false,
           handleSIGTERM: false,
