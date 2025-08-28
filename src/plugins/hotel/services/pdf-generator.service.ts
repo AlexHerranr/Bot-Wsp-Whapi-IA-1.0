@@ -203,26 +203,45 @@ export class PDFGeneratorService {
       }
 
       try {
+        logInfo('PDF_GENERATOR', '🔍 DEBUGGING: Iniciando puppeteer.launch() con options:', launchOptions);
         this.browser = await puppeteer.launch(launchOptions);
         logSuccess('PDF_GENERATOR', '✅ Puppeteer bundled browser launched successfully');
       } catch (launchError) {
-        // Log específico pero continuar si es un warning menor
-        logError('PDF_GENERATOR', `⚠️ Launch warning: ${launchError.message}`, {
+        // Log específico con stack trace completo para debugging
+        logError('PDF_GENERATOR', `⚠️ Launch FAILED - ERROR COMPLETO:`, {
           isRailway,
-          errorType: launchError.constructor.name
+          errorMessage: launchError.message,
+          errorType: launchError.constructor.name,
+          errorStack: launchError.stack,
+          launchOptionsUsed: JSON.stringify(launchOptions)
         });
+        
         // Re-try más simple sin opciones extra si es Railway
         if (isRailway) {
-          logInfo('PDF_GENERATOR', '🔄 Retry with bundled Chromium only...');
-          // RETRY ULTRA-SIMPLE: Solo bundled Chromium sin executablePath
-          this.browser = await puppeteer.launch({
+          logInfo('PDF_GENERATOR', '🔄 DEBUGGING: Iniciando retry con opciones ultra-básicas...');
+          
+          const retryOptions = {
             headless: true,
             args: [
               '--no-sandbox',
               '--disable-setuid-sandbox', 
               '--disable-dev-shm-usage'
             ]
-          });
+          };
+          
+          logInfo('PDF_GENERATOR', '🔍 RETRY OPTIONS:', retryOptions);
+          
+          try {
+            this.browser = await puppeteer.launch(retryOptions);
+            logSuccess('PDF_GENERATOR', '✅ RETRY EXITOSO - Browser lanzado con opciones básicas');
+          } catch (retryError) {
+            logError('PDF_GENERATOR', `❌ RETRY TAMBIÉN FALLÓ:`, {
+              retryErrorMessage: retryError.message,
+              retryErrorStack: retryError.stack,
+              retryOptionsUsed: JSON.stringify(retryOptions)
+            });
+            throw retryError; // Re-throw el error del retry
+          }
         } else {
           throw launchError; // Re-throw en local
         }
