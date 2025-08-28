@@ -213,10 +213,11 @@ export class PDFGeneratorService {
         });
         // Re-try más simple sin opciones extra si es Railway
         if (isRailway) {
-          logInfo('PDF_GENERATOR', '🔄 Retry with ultra-minimal options...');
-          // RETRY ULTRA-SIMPLE: Solo args esenciales
+          logInfo('PDF_GENERATOR', '🔄 Retry with system Chromium...');
+          // RETRY ULTRA-SIMPLE: Forzar uso de Chromium del sistema
           this.browser = await puppeteer.launch({
             headless: true,
+            executablePath: '/usr/bin/chromium-browser', // Path típico en Railway
             args: [
               '--no-sandbox',
               '--disable-setuid-sandbox', 
