@@ -538,7 +538,12 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     pdfData.documentType = 'CONFIRMACIÓN DE RESERVA'; // Valor fijo desde config
     
     // 5. GENERAR PDF con datos 100% reales
-    const result = await generateInternalPDF(pdfData);
+    const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
+    const pdfParams = { 
+      ...pdfData, 
+      returnBuffer: isRailway ? true : false  // Fuerza buffer en Railway para attachment
+    };
+    const result = await generateInternalPDF(pdfParams);
     
     // 6. PREPARAR PDF PARA ENVÍO AUTOMÁTICO VIA SISTEMA EXISTENTE
     if (result.success && (result as any).pdfPath) {
@@ -591,6 +596,14 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       hasFilePath: !!(result as any).filePath,
       resultKeys: Object.keys(result as any),
       isRailway: !!(process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME)
+    });
+    
+    // Log preparación de attachment
+    logInfo('ATTACHMENT_PREP', 'Preparando attachment para response', { 
+      isRailway: !!(process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME),
+      hasBuffer: !!(result as any).pdfBuffer, 
+      hasPath: !!(result as any).pdfPath,
+      bufferSize: (result as any).pdfBuffer?.length || 0
     });
     
     if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer)) {

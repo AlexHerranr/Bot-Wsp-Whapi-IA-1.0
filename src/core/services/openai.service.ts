@@ -1419,29 +1419,50 @@ export class OpenAIService implements IOpenAIService {
             
             // Si hay attachment (PDF) y tenemos WhatsApp service, enviar directamente
             if (result?.attachment && this.whatsappService && this.currentChatId) {
-                if (result.attachment.pdfBuffer) {
-                    await this.whatsappService.sendDocumentFromBuffer(
-                        this.currentChatId,
-                        result.attachment.pdfBuffer,
-                        result.attachment.fileName
-                    );
-                } else if (result.attachment.pdfPath || result.attachment.filePath) {
-                    // Usar filePath (commit original) o pdfPath como fallback
-                    const pdfPath = result.attachment.filePath || result.attachment.pdfPath;
-                    await this.whatsappService.sendDocument(
-                        this.currentChatId,
-                        pdfPath,
-                        result.attachment.fileName
-                    );
-                }
-                logInfo('PDF_SENT_DIRECT', 'PDF enviado directamente post-function', {
-                    functionName,
-                    chatId: this.currentChatId,
-                    fileName: result.attachment.fileName,
+                logInfo('ATTACHMENT_DETECTED', 'Attachment encontrado en result', {
                     hasBuffer: !!result.attachment.pdfBuffer,
                     hasFilePath: !!result.attachment.filePath,
-                    hasPdfPath: !!result.attachment.pdfPath
+                    hasPdfPath: !!result.attachment.pdfPath,
+                    fileName: result.attachment.fileName,
+                    bufferSize: result.attachment.pdfBuffer?.length || 0,
+                    functionName
                 });
+                
+                try {
+                    if (result.attachment.pdfBuffer) {
+                        const whapiRes = await this.whatsappService.sendDocumentFromBuffer(
+                            this.currentChatId,
+                            result.attachment.pdfBuffer,
+                            result.attachment.fileName
+                        );
+                        logSuccess('PDF_SENT_WHAPI', 'PDF enviado via Whapi (buffer)', { 
+                            success: whapiRes.success, 
+                            messageId: whapiRes.messageId,
+                            bufferSize: result.attachment.pdfBuffer.length 
+                        });
+                    } else if (result.attachment.pdfPath || result.attachment.filePath) {
+                        // Usar filePath (commit original) o pdfPath como fallback
+                        const pdfPath = result.attachment.filePath || result.attachment.pdfPath;
+                        const whapiRes = await this.whatsappService.sendDocument(
+                            this.currentChatId,
+                            pdfPath,
+                            result.attachment.fileName
+                        );
+                        logSuccess('PDF_SENT_WHAPI', 'PDF enviado via Whapi (path)', { 
+                            success: whapiRes.success, 
+                            messageId: whapiRes.messageId,
+                            filePath: pdfPath 
+                        });
+                    }
+                } catch (error) {
+                    logError('PDF_SEND_ERROR', 'Fallo envío Whapi', { 
+                        error: error instanceof Error ? error.message : 'Unknown',
+                        functionName,
+                        hasBuffer: !!result.attachment.pdfBuffer,
+                        hasPath: !!(result.attachment.pdfPath || result.attachment.filePath)
+                    });
+                }
+                
                 // Eliminar attachment del result para que OpenAI solo vea datos textuales
                 delete result.attachment;
             }
