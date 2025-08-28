@@ -187,9 +187,9 @@ export class PDFGeneratorService {
       const launchOptions = {
         headless: true,
         args: browserArgs,
-        // PUPPETEER v24 FIX: Sin executablePath para usar bundled
-        // Configuraciones adicionales para Railway
+        // PUPPETEER v24 FIX: Forzar bundled Chromium path en Railway
         ...(isRailway && {
+          executablePath: require('puppeteer').executablePath(), // Path del bundled Chromium
           timeout: 60000,
           handleSIGINT: false,
           handleSIGTERM: false,
