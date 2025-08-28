@@ -180,7 +180,10 @@ export class PDFGeneratorService {
           '--disable-ipc-flooding-protection', // Evita issues IPC relacionados con crashpad
           '--disable-client-side-phishing-detection',
           '--disable-component-update',
-          '--disable-domain-reliability'
+          '--disable-domain-reliability',
+          // FLAGS ANTI-FONTCONFIG - Eliminar warnings en Railway
+          '--font-render-hinting=none',
+          '--disable-font-subpixel-positioning'
         );
         logInfo('PDF_GENERATOR', '🚀 Railway detectado - usando Puppeteer bundled Chromium (versión matching)');
       }
@@ -630,23 +633,9 @@ export class PDFGeneratorService {
       });
 
       if (isRailway) {
-        // Esperar extra en Railway para asegurar que todo esté cargado
-        try {
-          logInfo('PDF_GENERATOR', '⏰ Railway: Iniciando wait timeout de 2000ms...');
-          await page.waitForTimeout(2000);
-          logInfo('PDF_GENERATOR', '⏰ Railway: Tiempo extra de espera aplicado exitosamente');
-        } catch (waitError) {
-          logError('PDF_GENERATOR', '❌ Railway: Error en waitForTimeout:', {
-            errorMessage: waitError.message,
-            errorStack: waitError.stack,
-            pageStatus: 'unknown'
-          });
-          
-          // FALLBACK: usar setTimeout si waitForTimeout falla
-          logInfo('PDF_GENERATOR', '🔄 Railway: Usando fallback setTimeout...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          logInfo('PDF_GENERATOR', '✅ Railway: Fallback setTimeout completado');
-        }
+        // Esperar extra en Railway - usar setTimeout (waitForTimeout removido en Puppeteer v22+)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        logInfo('PDF_GENERATOR', '⏰ Railway: Tiempo extra de espera aplicado');
       }
 
       // Generar PDF con configuración optimizada para una página oficio
