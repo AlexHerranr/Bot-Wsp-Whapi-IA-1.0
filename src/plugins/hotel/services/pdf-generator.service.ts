@@ -216,6 +216,13 @@ export class PDFGeneratorService {
           launchOptionsUsed: JSON.stringify(launchOptions)
         });
         
+        // DEBUGGING: Log directo a console para evitar truncado
+        console.error('🔴 PUPPETEER ERROR COMPLETO:');
+        console.error('Message:', launchError.message);
+        console.error('Stack:', launchError.stack);
+        console.error('Type:', launchError.constructor.name);
+        console.error('Options used:', JSON.stringify(launchOptions, null, 2));
+        
         // Re-try más simple sin opciones extra si es Railway
         if (isRailway) {
           logInfo('PDF_GENERATOR', '🔄 DEBUGGING: Iniciando retry con opciones ultra-básicas...');
@@ -240,6 +247,13 @@ export class PDFGeneratorService {
               retryErrorStack: retryError.stack,
               retryOptionsUsed: JSON.stringify(retryOptions)
             });
+            
+            // DEBUGGING: Log directo del retry error
+            console.error('🔴 RETRY ERROR COMPLETO:');
+            console.error('Retry Message:', retryError.message);
+            console.error('Retry Stack:', retryError.stack);
+            console.error('Retry Options:', JSON.stringify(retryOptions, null, 2));
+            
             throw retryError; // Re-throw el error del retry
           }
         } else {
