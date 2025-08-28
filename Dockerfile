@@ -48,7 +48,10 @@ WORKDIR /app
 # Variables de entorno para producción (Railway setea PORT dinámicamente)
 ENV NODE_ENV=production \
     NODE_OPTIONS="--max-old-space-size=768" \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    CHROME_DISABLE_CRASH_REPORTER=1 \
+    CHROME_NO_SANDBOX=1 \
+    PUPPETEER_DISABLE_DEV_SHM_USAGE=true
 
 # Instalar Chromium en producción (slim version)
 RUN apt-get update && apt-get install -y \

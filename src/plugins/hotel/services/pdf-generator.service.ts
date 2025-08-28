@@ -169,6 +169,9 @@ export class PDFGeneratorService {
           '--ignore-certificate-errors-spki-list',
           '--disable-crash-reporter', // Deshabilita crashpad_handler
           '--disable-breakpad', // Deshabilita crash reporting
+          '--crash-dumps-dir=/tmp', // Directorio temporal para evitar error database
+          '--enable-logging=stderr', // Redirige logs a stderr
+          '--disable-logging-redirect',
           '--disable-client-side-phishing-detection',
           '--disable-component-update',
           '--disable-domain-reliability'
