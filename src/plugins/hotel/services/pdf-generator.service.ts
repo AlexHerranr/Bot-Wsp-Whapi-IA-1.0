@@ -120,16 +120,44 @@ export class PDFGeneratorService {
     if (!this.browser) {
       logInfo('PDF_GENERATOR', 'Inicializando navegador Puppeteer...');
       
+      // Detectar si estamos en Railway y agregar configuraciones específicas
+      const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
+      
+      const browserArgs = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--font-render-hinting=medium'
+      ];
+
+      // Configuraciones adicionales para Railway
+      if (isRailway) {
+        browserArgs.push(
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--disable-web-security',
+          '--no-first-run',
+          '--no-default-browser-check',
+          '--single-process', // Crucial para Railway - evita problemas de memoria compartida
+          '--disable-extensions'
+        );
+        logInfo('PDF_GENERATOR', '🚀 Railway detectado - aplicando configuraciones específicas');
+      }
+      
       this.browser = await puppeteer.launch({
         headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          // 🎯 Mejorar nitidez de fuentes para PDF de alta calidad
-          '--font-render-hinting=medium'
-        ]
+        args: browserArgs,
+        // Configuraciones adicionales para Railway
+        ...(isRailway && {
+          timeout: 60000,
+          handleSIGINT: false,
+          handleSIGTERM: false,
+          handleSIGHUP: false
+        })
       });
       
       logSuccess('PDF_GENERATOR', '🚀 Navegador Puppeteer inicializado y reutilizable');
@@ -213,8 +241,16 @@ export class PDFGeneratorService {
       // 2. Procesar datos y reemplazar placeholders
       const processedHtml = await this.processTemplate(htmlTemplate, data);
       
-      // 3. Generar PDF con Puppeteer
-      const pdfResult = await this.generatePDFFromHTML(processedHtml, data.bookingId, options);
+      // 3. Generar PDF con Puppeteer - RAILWAY OPTIMIZADO
+      const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
+      
+      // En Railway, evitar guardar archivo por defecto (FS efímero)
+      const railwayOptions = isRailway ? {
+        ...options,
+        saveToFile: process.env.SAVE_PDFS !== 'false' ? options.saveToFile : false // Opcional en Railway
+      } : options;
+      
+      const pdfResult = await this.generatePDFFromHTML(processedHtml, data.bookingId, railwayOptions);
       
       logSuccess('PDF_GENERATOR', `PDF generado exitosamente: ${pdfResult.size} bytes`);
       
@@ -405,10 +441,24 @@ export class PDFGeneratorService {
   }): Promise<PDFResult> {
     
     try {
+      // Detectar Railway una sola vez
+      const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
+      
       // 🔍 AUTO-HEALING: Verificar salud del navegador
       await this.ensureBrowserHealth();
       
       const page = await this.browser!.newPage();
+      
+      // MONITOREO: Páginas activas para concurrencia (Railway debugging)
+      if (isRailway) {
+        const pages = await this.browser!.pages();
+        logInfo('PDF_CONCURRENCY', 'Estado del navegador singleton', {
+          bookingId,
+          activePagesCount: pages.length,
+          browserConnected: this.browser!.isConnected(),
+          memoryUsage: process.memoryUsage().heapUsed / 1024 / 1024 + 'MB'
+        });
+      }
       
       // Configurar viewport optimizado para PDF compacto
       await page.setViewport({
@@ -420,11 +470,20 @@ export class PDFGeneratorService {
       // Activar modo print para mejores estilos CSS @media print
       await page.emulateMediaType('print');
 
+      // Ajustar timeouts según entorno
+      const timeout = isRailway ? 60000 : 30000; // Más tiempo en Railway
+
       // Cargar HTML
       await page.setContent(html, {
         waitUntil: 'networkidle0',
-        timeout: 30000
+        timeout: timeout
       });
+
+      if (isRailway) {
+        // Esperar extra en Railway para asegurar que todo esté cargado
+        await page.waitForTimeout(2000);
+        logInfo('PDF_GENERATOR', '⏰ Railway: Tiempo extra de espera aplicado');
+      }
 
       // Generar PDF con configuración optimizada para una página oficio
       const pdfBuffer = await page.pdf({
@@ -454,25 +513,76 @@ export class PDFGeneratorService {
 
       // Guardar archivo si se solicita
       if (options.saveToFile) {
+        const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
         const outputDir = options.outputDir || path.join(__dirname, '../../../temp/pdfs');
         
-        // Crear directorio si no existe
+        // Crear directorio si no existe - con verificación especial para Railway
         if (!fs.existsSync(outputDir)) {
-          fs.mkdirSync(outputDir, { recursive: true });
+          try {
+            fs.mkdirSync(outputDir, { recursive: true });
+            if (isRailway) {
+              logInfo('PDF_GENERATOR', '📁 Railway: Directorio PDF creado exitosamente', { outputDir });
+            }
+          } catch (dirError) {
+            logError('PDF_GENERATOR', `❌ Error creando directorio PDF: ${dirError}`, { 
+              outputDir, 
+              isRailway,
+              error: dirError instanceof Error ? dirError.message : 'Unknown'
+            });
+            throw new Error(`No se pudo crear directorio PDF: ${dirError}`);
+          }
         }
 
         const filename = `invoice-${bookingId}-${Date.now()}.pdf`;
         const filepath = path.join(outputDir, filename);
         
-        fs.writeFileSync(filepath, pdfBuffer);
-        result.pdfPath = filepath;
-        
-        logInfo('PDF_GENERATOR', `PDF guardado en: ${filepath}`);
+        try {
+          fs.writeFileSync(filepath, pdfBuffer);
+          result.pdfPath = filepath;
+          
+          if (isRailway) {
+            logInfo('PDF_GENERATOR', `📄 Railway: PDF guardado exitosamente`, {
+              filepath,
+              size: `${(pdfBuffer.length / 1024).toFixed(1)}KB`,
+              bookingId
+            });
+          } else {
+            logInfo('PDF_GENERATOR', `PDF guardado en: ${filepath}`);
+          }
+          
+        } catch (writeError) {
+          logError('PDF_GENERATOR', `❌ Error escribiendo archivo PDF: ${writeError}`, {
+            filepath,
+            isRailway,
+            bufferSize: pdfBuffer.length,
+            error: writeError instanceof Error ? writeError.message : 'Unknown'
+          });
+          throw new Error(`No se pudo escribir archivo PDF: ${writeError}`);
+        }
       }
 
       return result;
 
     } catch (error) {
+      // Mejor logging de errores específicos para Railway
+      const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      
+      if (isRailway) {
+        logError('PDF_GENERATOR_RAILWAY', `❌ Error específico en Railway generando PDF: ${errorMessage}`, {
+          bookingId,
+          isRailway: true,
+          errorType: error instanceof Error ? error.constructor.name : 'UnknownError',
+          railwayEnv: process.env.RAILWAY_ENVIRONMENT_NAME
+        });
+      } else {
+        logError('PDF_GENERATOR_LOCAL', `❌ Error en entorno local generando PDF: ${errorMessage}`, {
+          bookingId,
+          isRailway: false,
+          errorType: error instanceof Error ? error.constructor.name : 'UnknownError'
+        });
+      }
+      
       throw error;
     } finally {
       // 🚀 SOLO cerrar página, mantener navegador vivo para próximas solicitudes

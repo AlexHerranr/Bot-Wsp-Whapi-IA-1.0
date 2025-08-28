@@ -148,7 +148,8 @@
       "Bash(start \"C:\\Users\\alex-\\Bot-Wsp-Whapi-IA\\src\\temp\\pdfs\\invoice-72554184-1756317992095.pdf\")",
       "Bash(start \"src\\temp\\pdfs\\invoice-74793397-1756319506318.pdf\")",
       "Bash(git pull:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(ping:*)"
     ],
     "deny": [],
     "additionalDirectories": [

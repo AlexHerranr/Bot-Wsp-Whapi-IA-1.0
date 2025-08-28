@@ -399,20 +399,39 @@ export async function generatePaymentReceiptPDF(params: GeneratePaymentReceiptPD
 El recibo PDF ha sido generado y está listo para enviar al huésped.`
     };
     
-    // Añadir attachment para envío automático
-    if (result.success && (result as any).pdfPath) {
-      const pdfPath = (result as any).pdfPath;
-      response.attachment = {
-        type: 'pdf',
-        filePath: pdfPath,
-        fileName: `recibo-pago-${params.bookingId}-${Date.now()}.pdf`
-      };
+    // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico
+    if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer)) {
+      const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
       
-      logInfo('PDF_RECEIPT_ATTACHMENT_ADDED', 'Recibo PDF attachment añadido a respuesta', {
-        bookingId: params.bookingId,
-        filePath: pdfPath,
-        fileName: response.attachment.fileName
-      });
+      // Priorizar pdfBuffer para Railway (in-memory), pdfPath para local
+      if ((result as any).pdfBuffer && (result as any).pdfBuffer.length > 0) {
+        response.attachment = {
+          type: 'pdf',
+          pdfBuffer: (result as any).pdfBuffer, // Buffer directo
+          fileName: `recibo-pago-${params.bookingId}-${Date.now()}.pdf`
+        };
+        
+        logInfo('PDF_RECEIPT_ATTACHMENT_ADDED_BUFFER', 'Recibo PDF attachment añadido (buffer in-memory)', {
+          bookingId: params.bookingId,
+          bufferSize: (result as any).pdfBuffer?.length,
+          fileName: response.attachment.fileName,
+          isRailway
+        });
+      } else if ((result as any).pdfPath) {
+        // Fallback local con archivo
+        response.attachment = {
+          type: 'pdf',
+          filePath: (result as any).pdfPath,
+          fileName: `recibo-pago-${params.bookingId}-${Date.now()}.pdf`
+        };
+        
+        logInfo('PDF_RECEIPT_ATTACHMENT_ADDED_FILE', 'Recibo PDF attachment añadido (archivo local)', {
+          bookingId: params.bookingId,
+          filePath: (result as any).pdfPath,
+          fileName: response.attachment.fileName,
+          isRailway: false
+        });
+      }
     }
     
     return response;
@@ -465,10 +484,11 @@ export async function generateInternalReceiptPDF(params: InternalReceiptPDFParam
     
     logInfo('GENERATE_RECEIPT_PDF_INTERNAL', `📋 Datos recibo procesados - Tipo: ${invoiceData.documentType}, Pagos: ${invoiceData.paymentItems?.length || 0}`, context);
 
-    // 3. Generar PDF con servicio centralizado
+    // 3. Generar PDF con servicio centralizado - RAILWAY OPTIMIZADO  
+    const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
     const pdfService = getPDFService();
     const result = await pdfService.generateInvoicePDF(invoiceData, {
-      saveToFile: true,
+      saveToFile: !isRailway, // Solo guardar archivo en local, no en Railway (FS efímero)
       outputDir: './src/temp/pdfs'
     });
 

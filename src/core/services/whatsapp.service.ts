@@ -84,15 +84,36 @@ export class WhatsappService {
                 chatId,
                 attachmentType: attachment.type,
                 fileName: attachment.fileName,
-                hasMessage: !!actualMessage
+                hasMessage: !!actualMessage,
+                hasBuffer: !!(attachment as any).pdfBuffer,
+                hasFilePath: !!attachment.filePath
             });
             
-            const documentResult = await this.sendDocument(
-                chatId, 
-                attachment.filePath, 
-                attachment.fileName,
-                quotedMessageId || duringRunMsgId
-            );
+            // SOLUCIÓN RAILWAY: Priorizar buffer over filePath
+            let documentResult;
+            if ((attachment as any).pdfBuffer) {
+                // Usar buffer directo (Railway compatible)
+                documentResult = await this.sendDocumentFromBuffer(
+                    chatId,
+                    (attachment as any).pdfBuffer,
+                    attachment.fileName,
+                    quotedMessageId || duringRunMsgId
+                );
+            } else if (attachment.filePath) {
+                // Fallback a archivo físico (local)
+                documentResult = await this.sendDocument(
+                    chatId, 
+                    attachment.filePath, 
+                    attachment.fileName,
+                    quotedMessageId || duringRunMsgId
+                );
+            } else {
+                logInfo('ATTACHMENT_NO_SOURCE', 'Attachment PDF sin buffer ni filePath', {
+                    chatId,
+                    attachment
+                });
+                documentResult = { success: false };
+            }
             
             if (!documentResult.success) {
                 logInfo('ATTACHMENT_SEND_ERROR', 'Error enviando attachment', {
@@ -824,6 +845,70 @@ export class WhatsappService {
                 chatId,
                 error: error.message,
                 filePath
+            });
+            return { success: false };
+        }
+    }
+
+    /**
+     * NUEVO: Envía documento PDF desde buffer in-memory (Railway compatible)
+     */
+    public async sendDocumentFromBuffer(
+        chatId: string, 
+        pdfBuffer: Buffer, 
+        fileName?: string,
+        quotedMessageId?: string
+    ): Promise<{ success: boolean; messageId?: string }> {
+        try {
+            // VALIDACIÓN: Buffer no vacío antes de conversión
+            if (!pdfBuffer || pdfBuffer.length === 0) {
+                throw new Error('PDF buffer vacío o nulo');
+            }
+
+            // Convertir buffer directamente a base64 (sin FS)
+            const base64Data = pdfBuffer.toString('base64');
+            const mimeType = 'application/pdf';
+            const dataUrl = `data:${mimeType};base64,${base64Data}`;
+            
+            const payload: any = {
+                to: chatId,
+                media: dataUrl,
+                mime_type: 'application/pdf',
+                filename: fileName || 'documento.pdf'
+            };
+            
+            if (quotedMessageId) {
+                payload.quoted = quotedMessageId;
+            }
+            
+            const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/document`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.config.secrets.WHAPI_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            const responseData = await response.json() as any;
+            const messageId = responseData?.message_id;
+            
+            logInfo('DOCUMENT_BUFFER_SENT', 'Documento enviado desde buffer in-memory', {
+                chatId,
+                fileName: payload.filename,
+                fileSize: Math.round(pdfBuffer.length / 1024) + 'KB',
+                messageId,
+                bufferLength: pdfBuffer.length
+            });
+            
+            return { success: true, messageId };
+            
+        } catch (error: any) {
+            logInfo('DOCUMENT_BUFFER_ERROR', 'Error enviando documento desde buffer', {
+                chatId,
+                error: error.message,
+                fileName,
+                bufferLength: pdfBuffer?.length
             });
             return { success: false };
         }

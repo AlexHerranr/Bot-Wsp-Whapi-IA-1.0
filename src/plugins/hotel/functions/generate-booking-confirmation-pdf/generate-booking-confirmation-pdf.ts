@@ -581,20 +581,39 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       message: `Envío de PDF de confirmación de reserva ${params.bookingId} exitoso. Indícale al huésped que verifique si todo está en orden con la información de su reserva.`
     };
     
-    // CLAVE: Añadir attachment para que el sistema existente lo envíe automáticamente
-    if (result.success && (result as any).pdfPath) {
-      const pdfPath = (result as any).pdfPath;
-      response.attachment = {
-        type: 'pdf',
-        filePath: pdfPath,
-        fileName: `confirmacion-reserva-${params.bookingId}.pdf`
-      };
+    // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico
+    if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer)) {
+      const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
       
-      logInfo('PDF_ATTACHMENT_ADDED', 'PDF attachment añadido a respuesta para envío automático', {
-        bookingId: params.bookingId,
-        filePath: pdfPath,
-        fileName: `confirmacion-reserva-${params.bookingId}.pdf`
-      });
+      // Priorizar pdfBuffer para Railway (in-memory), pdfPath para local
+      if ((result as any).pdfBuffer && (result as any).pdfBuffer.length > 0) {
+        response.attachment = {
+          type: 'pdf',
+          pdfBuffer: (result as any).pdfBuffer, // Buffer directo
+          fileName: `confirmacion-reserva-${params.bookingId}.pdf`
+        };
+        
+        logInfo('PDF_ATTACHMENT_ADDED_BUFFER', 'PDF attachment añadido (buffer in-memory)', {
+          bookingId: params.bookingId,
+          bufferSize: (result as any).pdfBuffer?.length,
+          fileName: response.attachment.fileName,
+          isRailway
+        });
+      } else if ((result as any).pdfPath) {
+        // Fallback local con archivo
+        response.attachment = {
+          type: 'pdf',
+          filePath: (result as any).pdfPath,
+          fileName: `confirmacion-reserva-${params.bookingId}.pdf`
+        };
+        
+        logInfo('PDF_ATTACHMENT_ADDED_FILE', 'PDF attachment añadido (archivo local)', {
+          bookingId: params.bookingId,
+          filePath: (result as any).pdfPath,
+          fileName: response.attachment.fileName,
+          isRailway: false
+        });
+      }
       
       // DEBUG: Verificar que attachment se devuelve correctamente a OpenAI
       logInfo('ATTACHMENT_RETURNED', 'Attachment devuelto a OpenAI', {
@@ -655,11 +674,12 @@ export async function generateInternalPDF(params: InternalPDFParams) {
     
     logInfo('GENERATE_INVOICE_PDF', `📋 Datos procesados - Tipo: ${invoiceData.documentType}, Items: ${invoiceData.invoiceItems.length}`, context);
 
-    // 2. Generar PDF con validación centralizada y gestión de ciclo de vida
+    // 2. Generar PDF con validación centralizada y gestión de ciclo de vida - RAILWAY OPTIMIZADO
+    const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
     const pdfService = getPDFService(); // Singleton con Auto-Healing y Graceful Shutdown
     const result = await pdfService.generateInvoicePDF(invoiceData, {
-      saveToFile: (params as any).saveToFile || true,  // CAMBIO: Por defecto guardar archivo
-      outputDir: (params as any).outputDir || './src/temp/pdfs'  // CAMBIO: Directorio por defecto
+      saveToFile: (params as any).saveToFile || !isRailway,  // Solo guardar archivo en local, no en Railway
+      outputDir: (params as any).outputDir || './src/temp/pdfs'
     });
 
     // 4. Validar resultado
