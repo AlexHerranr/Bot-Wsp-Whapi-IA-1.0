@@ -146,7 +146,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       return { 
         success: false, 
         error: 'Reserva no encontrada',
-        message: `No se encontró la reserva con ID ${bookingId} en Beds24`
+        message: `❌ Hubo un problema técnico consultando la reserva ${bookingId}. Dile al cliente que vas a consultar con tu superior para verificar el ID de reserva.`
       };
     }
 
@@ -184,7 +184,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       return { 
         success: false, 
         error: `Status no confirmado: ${targetBooking.status}`,
-        message: `La reserva ${bookingId} tiene status "${targetBooking.status}" pero se requiere "confirmed"` 
+        message: `❌ Hubo un problema técnico con el estado de la reserva ${bookingId}. Dile al cliente que vas a consultar con tu superior para revisar el status de su reserva.` 
       };
     }
 
@@ -229,7 +229,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
     return { 
       success: false, 
       error: `Error consultando reserva: ${error instanceof Error ? error.message : error}`,
-      message: 'Error interno al consultar la reserva en Beds24'
+      message: '❌ Hubo un problema técnico accediendo a los datos de la reserva. Dile al cliente que vas a consultar con tu superior para resolver este inconveniente.'
     };
   }
 }
@@ -452,7 +452,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       return { 
         success: false, 
         error: bookingDetails.error || 'Reserva no encontrada o no se pudo acceder a los datos',
-        message: bookingDetails.message || `No se pudieron obtener los detalles de la reserva ${params.bookingId}` 
+        message: `❌ Hubo un problema técnico obteniendo los detalles de la reserva ${params.bookingId}. Dile al cliente que vas a consultar con tu superior para resolver este inconveniente.` 
       };
     }
 
@@ -803,8 +803,8 @@ function createErrorResponse(errorCode: string, message: string, context: any = 
         ...context
       }
     },
-    // Mantener compatibilidad con código existente
-    message,
+    // MENSAJE ESTÁNDAR para OpenAI Assistant
+    message: `❌ Hubo un problema técnico generando el PDF de confirmación. Dile al cliente que vas a consultar con tu superior para resolver este inconveniente.`,
     bookingId: context.bookingId
   };
 }
