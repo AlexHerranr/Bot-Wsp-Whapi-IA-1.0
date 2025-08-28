@@ -12,14 +12,9 @@ RUN npm ci --only=production --ignore-scripts
 FROM node:18-bullseye AS builder
 WORKDIR /app
 
-# Instalar dependencias de sistema y Chrome para Puppeteer
+# Instalar dependencias de sistema y Chromium para Puppeteer
 RUN apt-get update && apt-get install -y \
-    ca-certificates curl gnupg \
-    && mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg \
-    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
+    ca-certificates curl gnupg chromium \
     fontconfig fonts-freefont-ttf libfontconfig libfreetype6 libjpeg62-turbo libpng16-16 libx11-6 libxcb1 libxext6 libxrender1 xfonts-75dpi xfonts-base \
     libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 libcups2 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libxrandr2 libxss1 libxtst6 \
     libasound2 libexpat1 libfontconfig1 libpangocairo-1.0-0 libx11-xcb1 lsb-release wget xdg-utils \

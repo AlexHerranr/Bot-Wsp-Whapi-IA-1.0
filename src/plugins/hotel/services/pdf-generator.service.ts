@@ -152,18 +152,19 @@ export class PDFGeneratorService {
           '--no-default-browser-check',
           '--single-process', // Crucial para Railway - evita problemas de memoria compartida
           '--disable-extensions',
-          '--no-sandbox', // CRÍTICO para contenedores - Chrome requiere este flag
-          '--disable-setuid-sandbox' // Complementario para seguridad en contenedores
+          '--no-sandbox', // CRÍTICO para contenedores - Chrome/Chromium requiere este flag
+          '--disable-setuid-sandbox', // Complementario para seguridad en contenedores
+          '--disable-dev-shm-usage' // Evita issues de memoria compartida en Docker
         );
         logInfo('PDF_GENERATOR', '🚀 Railway detectado - aplicando configuraciones específicas');
         
-        // DEBUG: Verificar paths de Chrome disponibles en Railway
+        // DEBUG: Verificar paths de Chromium disponibles en Railway
         const chromePaths = [
+          '/usr/bin/chromium',
+          '/usr/bin/chromium-browser',
           '/usr/bin/google-chrome',
           '/usr/bin/google-chrome-stable', 
-          '/opt/google/chrome/google-chrome',
-          '/usr/bin/chromium',
-          '/usr/bin/chromium-browser'
+          '/opt/google/chrome/google-chrome'
         ];
         
         logInfo('PDF_GENERATOR', '🔍 RAILWAY DEBUG - Verificando paths de Chrome disponibles:');
@@ -196,7 +197,7 @@ export class PDFGeneratorService {
         headless: true,
         args: browserArgs,
         // RAILWAY FIX: Usar Chrome instalado manualmente
-        executablePath: isRailway ? (foundChromePath || '/opt/google/chrome/google-chrome') : undefined,
+        executablePath: isRailway ? (foundChromePath || '/usr/bin/chromium') : undefined,
         // Configuraciones adicionales para Railway
         ...(isRailway && {
           timeout: 60000,
