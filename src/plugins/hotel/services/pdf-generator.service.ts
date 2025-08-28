@@ -154,7 +154,19 @@ export class PDFGeneratorService {
           '--disable-extensions',
           '--no-sandbox', // CRÍTICO para contenedores - Chrome/Chromium requiere este flag
           '--disable-setuid-sandbox', // Complementario para seguridad en contenedores
-          '--disable-dev-shm-usage' // Evita issues de memoria compartida en Docker
+          '--disable-dev-shm-usage', // Evita issues de memoria compartida en Docker
+          '--disable-background-networking',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--disable-translate',
+          '--hide-scrollbars',
+          '--metrics-recording-only',
+          '--mute-audio',
+          '--no-first-run',
+          '--safebrowsing-disable-auto-update',
+          '--ignore-certificate-errors',
+          '--ignore-ssl-errors',
+          '--ignore-certificate-errors-spki-list'
         );
         logInfo('PDF_GENERATOR', '🚀 Railway detectado - aplicando configuraciones específicas');
         
@@ -193,19 +205,26 @@ export class PDFGeneratorService {
         }
       }
       
-      this.browser = await puppeteer.launch({
+      const launchOptions = {
         headless: true,
         args: browserArgs,
-        // RAILWAY FIX: Usar Chrome instalado manualmente
+        // RAILWAY FIX: Usar Chromium instalado
         executablePath: isRailway ? (foundChromePath || '/usr/bin/chromium') : undefined,
         // Configuraciones adicionales para Railway
         ...(isRailway && {
           timeout: 60000,
           handleSIGINT: false,
           handleSIGTERM: false,
-          handleSIGHUP: false
+          handleSIGHUP: false,
+          dumpio: true // Debug output para Railway
         })
-      });
+      };
+
+      if (isRailway) {
+        logInfo('PDF_GENERATOR', `🚀 Lanzando Chromium con opciones: ${JSON.stringify(launchOptions)}`);
+      }
+
+      this.browser = await puppeteer.launch(launchOptions);
       
       logSuccess('PDF_GENERATOR', '🚀 Navegador Puppeteer inicializado y reutilizable');
     }
