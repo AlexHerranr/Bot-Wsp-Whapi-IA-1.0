@@ -7,6 +7,11 @@
 | 1 | `check_booking_details` | ✅ Operativa | Consultar reservas existentes | ✅ Probada |
 | 2 | `create_new_booking` | ✅ Operativa | Crear reservas completas | ✅ Probada |
 | 3 | `edit_booking` | ✅ Operativa | Confirmar/cancelar reservas | ✅ Probada |
+| 4 | `cancel_booking` | ✅ Operativa | Cancelar reserva existente | ✅ Probada |
+| 5 | `check_availability` | ✅ Operativa | Verificar disponibilidad | ✅ Probada |
+| 6 | `informar_movimiento_manana` | ✅ Operativa | Informar check-ins/outs del día siguiente | ✅ Probada |
+| 7 | `generate_booking_confirmation_pdf` | ✅ Operativa | Generar PDF de confirmación completa | ✅ Probada |
+| 8 | `generate_payment_receipt_pdf` | ✅ Operativa | Generar recibo PDF de pago específico | ✅ Probada |
 
 ---
 
@@ -17,7 +22,7 @@
 - Selecciona tu Assistant: Pa'Cartagena Bot
 - Ve a **Functions** → **Add Function**
 
-### Paso 2: Añadir las 3 Funciones
+### Paso 2: Añadir las 8 Funciones
 
 #### FUNCIÓN 1: check_booking_details
 ```json
@@ -237,6 +242,123 @@
 }
 ```
 
+#### FUNCIÓN 4: cancel_booking
+```json
+{
+  "name": "cancel_booking",
+  "description": "Cancela una reserva existente en el sistema Beds24",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "bookingId": {
+        "type": "string",
+        "description": "ID único de la reserva a cancelar"
+      },
+      "cancellationReason": {
+        "type": "string",
+        "description": "Motivo de la cancelación"
+      }
+    },
+    "required": ["bookingId"],
+    "additionalProperties": false
+  }
+}
+```
+
+#### FUNCIÓN 5: check_availability
+```json
+{
+  "name": "check_availability",
+  "description": "Verifica disponibilidad de apartamentos para fechas específicas",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "startDate": {
+        "type": "string",
+        "description": "Fecha de inicio en formato YYYY-MM-DD"
+      },
+      "endDate": {
+        "type": "string",
+        "description": "Fecha de fin en formato YYYY-MM-DD"
+      },
+      "numAdults": {
+        "type": "integer",
+        "description": "Número de adultos",
+        "minimum": 1
+      }
+    },
+    "required": ["startDate", "endDate"],
+    "additionalProperties": false
+  }
+}
+```
+
+#### FUNCIÓN 6: informar_movimiento_manana
+```json
+{
+  "name": "informar_movimiento_manana",
+  "description": "Informa los check-ins y check-outs programados para mañana",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  }
+}
+```
+
+#### FUNCIÓN 7: generate_booking_confirmation_pdf
+```json
+{
+  "name": "generate_booking_confirmation_pdf",
+  "description": "Genera un PDF de confirmación completa de reserva con todos los detalles y pagos. Úsalo después de crear o actualizar una reserva.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "bookingId": {
+        "type": "string",
+        "description": "ID único de la reserva en Beds24",
+        "pattern": "^[0-9]+$"
+      },
+      "distribucion": {
+        "type": "string",
+        "description": "Descripción opcional de la distribución de camas"
+      }
+    },
+    "required": ["bookingId"],
+    "additionalProperties": false
+  }
+}
+```
+
+#### FUNCIÓN 8: generate_payment_receipt_pdf
+```json
+{
+  "name": "generate_payment_receipt_pdf",
+  "description": "Genera un recibo PDF específico para el último pago registrado. Úsalo cuando se registra un segundo pago o más en una reserva existente.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "bookingId": {
+        "type": "string",
+        "description": "ID único de la reserva en Beds24",
+        "pattern": "^[0-9]+$"
+      },
+      "distribucion": {
+        "type": "string",
+        "description": "Descripción opcional de la distribución de camas"
+      }
+    },
+    "required": ["bookingId"],
+    "additionalProperties": false
+  }
+}
+```
+
 ### Paso 3: Save All Functions
 
 ---
@@ -283,13 +405,18 @@ BEDS24_WRITE_REFRESH_TOKEN=tu_token_de_escritura
 
 ### Archivos Implementados:
 ```
-src/functions/booking/
-├── check-booking-details.ts     ✅ Existente
-├── create-new-booking.ts        ✅ Implementado 
-└── edit-booking.ts              ✅ Implementado
+src/plugins/hotel/functions/
+├── check-booking-details/       ✅ Existente
+├── create-new-booking/          ✅ Implementado 
+├── edit-booking/                ✅ Implementado
+├── cancel-booking/              ✅ Implementado
+├── check-availability/          ✅ Implementado
+├── informar-movimiento-manana/  ✅ Implementado
+├── generate-booking-confirmation-pdf/ ✅ Implementado
+└── generate-payment-receipt-pdf/      ✅ Implementado
 
-src/functions/registry/
-└── function-registry.ts         ✅ Actualizado con 3 funciones
+src/plugins/hotel/
+└── index.ts                     ✅ Actualizado con 8 funciones
 ```
 
 ---
@@ -353,15 +480,28 @@ src/functions/registry/
 ### Consultar Reserva:
 "Consultar reserva Wildary Diaz 28 agosto 2025"
 
+### Generar PDF de Confirmación:
+"Generar PDF de confirmación para la reserva 74486663"
+
+### Generar Recibo de Pago (2do pago o más):
+"Generar recibo del último pago para la reserva 74486663"
+
 ---
 
 ## ⚡ CONFIGURACIÓN FINAL
 
 **TODO LISTO PARA USAR EN TU BOT:**
 
-1. ✅ **Copy/paste** los 3 JSON en OpenAI Assistant
+1. ✅ **Copy/paste** los 8 JSON en OpenAI Assistant
 2. ✅ **Save** las funciones
 3. ✅ **Test** con prompts proporcionados
 4. ✅ **¡A PRODUCCIÓN!** 🚀
+
+### 🆕 Funciones Adicionales Implementadas:
+- **generate_payment_receipt_pdf**: Genera recibos específicos para pagos adicionales
+- **generate_booking_confirmation_pdf**: PDFs de confirmación completa con todos los detalles
+- **check_availability**: Verificación de disponibilidad en tiempo real
+- **cancel_booking**: Cancelación directa de reservas
+- **informar_movimiento_manana**: Reporte diario de check-ins/outs
 
 **🎉 ¡Bot Pa'Cartagena con sistema completo de reservas directas!**
