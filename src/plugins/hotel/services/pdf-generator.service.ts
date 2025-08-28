@@ -151,7 +151,9 @@ export class PDFGeneratorService {
           '--no-first-run',
           '--no-default-browser-check',
           '--single-process', // Crucial para Railway - evita problemas de memoria compartida
-          '--disable-extensions'
+          '--disable-extensions',
+          '--no-sandbox', // CRÍTICO para contenedores - Chrome requiere este flag
+          '--disable-setuid-sandbox' // Complementario para seguridad en contenedores
         );
         logInfo('PDF_GENERATOR', '🚀 Railway detectado - aplicando configuraciones específicas');
         
