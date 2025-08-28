@@ -242,3 +242,15 @@ WEBHOOK_CACHE_SYNC: Updated clientCache for 573003913251, preserving threadId: t
 2025-08-28T17:31:41Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:188ch funcs:0 errs:0
 2025-08-28T17:31:41Z [LATENCY_METRIC:system] null: openai:44906ms beds24:0ms whapi:0ms db:0ms total:44906ms
 2025-08-28T17:31:42Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-28T17:32:41Z [SYS_METRIC:system] sys: mem:31/512MB cpu:0% conn:0 uptime:0h12m activeUsers:1
+2025-08-28T17:32:41Z [CACHE_METRIC:cache] sys: hits:100% misses:0% size:0MB users:1 evicts:0
+2025-08-28T17:32:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-28T17:32:41Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:188ch funcs:0 errs:0
+2025-08-28T17:32:41Z [LATENCY_METRIC:system] null: openai:44906ms beds24:0ms whapi:0ms db:0ms total:44906ms
+2025-08-28T17:32:42Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-28T17:33:41Z [SYS_METRIC:system] sys: mem:31/512MB cpu:0% conn:0 uptime:0h13m activeUsers:1
+2025-08-28T17:33:41Z [CACHE_METRIC:cache] sys: hits:100% misses:0% size:0MB users:1 evicts:0
+2025-08-28T17:33:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-28T17:33:41Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:188ch funcs:0 errs:0
+2025-08-28T17:33:41Z [LATENCY_METRIC:system] null: openai:44906ms beds24:0ms whapi:0ms db:0ms total:44906ms
+2025-08-28T17:33:42Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0

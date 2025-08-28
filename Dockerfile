@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile optimizado para Railway/Cloud Run
-FROM node:18-alpine AS deps
+FROM node:18-bullseye AS deps
 WORKDIR /app
 
 # Copiar solo archivos de dependencias primero
