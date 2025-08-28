@@ -255,6 +255,7 @@ async function processBookingData(booking: any, prisma: PrismaClient) {
     }
   } catch (error) {
     logError('PROCESS_BOOKING_DATA', `Error obteniendo nombre real del apartamento: ${error}`, { bookingId: booking.id || booking.bookId });
+    realRoomName = 'Apartamento'; // Fallback consistente en caso de error DB
   }
 
   const processedData = {
@@ -296,7 +297,10 @@ async function transformBookingDetailsToPDFData(bookingData: any, distribucion?:
   // 1. CALCULAR nights
   const checkInDate = new Date(bookingData.arrival);
   const checkOutDate = new Date(bookingData.departure);
-  const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+  let nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  // Prevenir nights=0 para evitar problemas downstream
+  if (nights < 1) nights = 1;
 
   // 2. COMBINAR nombres
   const guestName = `${bookingData.firstName || ''} ${bookingData.lastName || ''}`.trim();
@@ -389,32 +393,34 @@ async function transformBookingDetailsToPDFData(bookingData: any, distribucion?:
     triggerFunction: 'auto_from_booking_details'
   };
 
-  // Log final transformation para debugging
-  logInfo('TRANSFORM_PDF_DATA', `📊 DATOS DE LA API: price=${bookingData.price}, invoiceItems=${(bookingData.invoiceItems || []).length}`, { 
-    originalBookingId: bookingData.id,
-    apiPrice: bookingData.price,
-    calculatedTotal: totalChargesAmount,
-    calculatedPaid: totalPaidAmount,
-    calculatedBalance: balanceAmount
-  });
-  
-  logInfo('TRANSFORM_PDF_DATA', `PDF Data final: ${JSON.stringify({
-    bookingId: finalPdfData.bookingId,
-    guestName: finalPdfData.guestName,
-    email: finalPdfData.email || 'OPCIONAL',
-    nights: finalPdfData.nights,
-    invoiceItemsCount: finalPdfData.invoiceItems.length,
-    paymentItemsCount: finalPdfData.paymentItems.length,
-    totalCharges: finalPdfData.totalCharges,
-    totalPaid: finalPdfData.totalPaid,
-    balance: finalPdfData.balance
-  })}`, { originalBookingId: bookingData.id });
-  
-  // DEBUG: Log de paymentItems específico para plantilla
-  if (finalPdfData.paymentItems.length > 0) {
-    logInfo('TRAN', `🎯 PAYMENTITEMS ENVIADOS A TEMPLATE:`, finalPdfData.paymentItems);
-  } else {
-    logInfo('TRAN', `⚠️ NO hay paymentItems para enviar a template`);
+  // Log final transformation para debugging (solo en desarrollo)
+  if (process.env.NODE_ENV !== 'production') {
+    logInfo('TRANSFORM_PDF_DATA', `📊 DATOS DE LA API: price=${bookingData.price}, invoiceItems=${(bookingData.invoiceItems || []).length}`, { 
+      originalBookingId: bookingData.id,
+      apiPrice: bookingData.price,
+      calculatedTotal: totalChargesAmount,
+      calculatedPaid: totalPaidAmount,
+      calculatedBalance: balanceAmount
+    });
+    
+    logInfo('TRANSFORM_PDF_DATA', `PDF Data final: ${JSON.stringify({
+      bookingId: finalPdfData.bookingId,
+      guestName: finalPdfData.guestName,
+      email: finalPdfData.email || 'OPCIONAL',
+      nights: finalPdfData.nights,
+      invoiceItemsCount: finalPdfData.invoiceItems.length,
+      paymentItemsCount: finalPdfData.paymentItems.length,
+      totalCharges: finalPdfData.totalCharges,
+      totalPaid: finalPdfData.totalPaid,
+      balance: finalPdfData.balance
+    })}`, { originalBookingId: bookingData.id });
+    
+    // DEBUG: Log de paymentItems específico para plantilla
+    if (finalPdfData.paymentItems.length > 0) {
+      logInfo('TRAN', `🎯 PAYMENTITEMS ENVIADOS A TEMPLATE:`, finalPdfData.paymentItems);
+    } else {
+      logInfo('TRAN', `⚠️ NO hay paymentItems para enviar a template`);
+    }
   }
 
   return finalPdfData;
@@ -493,7 +499,12 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     const blockedChannels = ['airbnb', 'expedia', 'hoteles.com', 'hotels.com', 'agoda'];
     
     // Normalizar canal para comparación
-    const normalizedChannel = rawChannel.toLowerCase();
+    let normalizedChannel = rawChannel.toLowerCase();
+    
+    // Mapear variaciones comunes para evitar falsos negativos
+    if (normalizedChannel.includes('booking')) normalizedChannel = 'booking.com';
+    if (normalizedChannel.includes('directo') || normalizedChannel.includes('direct')) normalizedChannel = 'direct';
+    if (normalizedChannel.includes('pacartagena') || normalizedChannel.includes('pa cartagena')) normalizedChannel = 'pacartagena';
     
     // Verificar si es un canal bloqueado
     const isBlocked = blockedChannels.some(blocked => normalizedChannel.includes(blocked));

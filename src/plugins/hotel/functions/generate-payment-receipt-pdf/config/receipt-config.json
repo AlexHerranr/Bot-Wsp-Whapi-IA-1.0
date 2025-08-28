@@ -1,0 +1,1 @@
+{"documentType": "RECIBO DE PAGO", "version": "1.0.0", "template": {"file": "receipt-template.html", "engine": "handlebars"}, "pdf": {"format": "A4", "margin": {"top": "20mm", "right": "15mm", "bottom": "20mm", "left": "15mm"}}, "output": {"directory": "./src/temp/pdfs", "filename": "receipt-{{bookingId}}-{{timestamp}}.pdf"}}

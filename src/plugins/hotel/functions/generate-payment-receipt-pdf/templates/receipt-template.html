@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Recibo de Pago - {{bookingId}}</title>
+    <style>
+        /* TODO: Implementar estilos para recibo de pago */
+        /* Basado en el template de confirmación pero simplificado */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .receipt-header {
+            text-align: center;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .document-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        
+        /* TODO: Añadir más estilos específicos para recibo */
+    </style>
+</head>
+<body>
+    <div class="receipt-header">
+        <div class="document-title">RECIBO DE PAGO</div>
+        <div>Reserva: {{bookingId}}</div>
+    </div>
+    
+    <!-- TODO: Implementar contenido completo del recibo -->
+    <div class="payment-details">
+        <h3>Detalles del Pago</h3>
+        <!-- Información del pago específico -->
+    </div>
+    
+    <div class="booking-summary">
+        <h3>Resumen de Reserva</h3>
+        <!-- Datos básicos de la reserva -->
+    </div>
+</body>
+</html>
