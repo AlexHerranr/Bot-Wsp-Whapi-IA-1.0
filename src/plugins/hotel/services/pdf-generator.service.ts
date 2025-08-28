@@ -218,11 +218,25 @@ export class PDFGeneratorService {
         }
       }
       
+      // SOLUCIÓN DEFINITIVA CRASHPAD - Variables de entorno
+      if (isRailway) {
+        process.env.CHROME_CRASHPAD_PIPE_NAME = '';  // Deshabilita crashpad_handler completamente
+        process.env.BREAKPAD_DUMP_LOCATION = '';     // Deshabilita breakpad
+        process.env.CHROME_LOG_FILE = '/dev/null';   // Redirige logs a null
+      }
+
       const launchOptions = {
         headless: true,
         args: browserArgs,
         // RAILWAY FIX: Usar Chromium instalado
         executablePath: isRailway ? (foundChromePath || '/usr/bin/chromium') : undefined,
+        // Variables de entorno específicas
+        env: isRailway ? {
+          ...process.env,
+          CHROME_CRASHPAD_PIPE_NAME: '',
+          BREAKPAD_DUMP_LOCATION: '',
+          CHROME_LOG_FILE: '/dev/null'
+        } : undefined,
         // Configuraciones adicionales para Railway
         ...(isRailway && {
           timeout: 60000,
