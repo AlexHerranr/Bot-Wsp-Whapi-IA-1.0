@@ -213,10 +213,15 @@ export class PDFGeneratorService {
         });
         // Re-try más simple sin opciones extra si es Railway
         if (isRailway) {
-          logInfo('PDF_GENERATOR', '🔄 Retry with minimal options...');
+          logInfo('PDF_GENERATOR', '🔄 Retry with ultra-minimal options...');
+          // RETRY ULTRA-SIMPLE: Solo args esenciales
           this.browser = await puppeteer.launch({
             headless: true,
-            args: browserArgs
+            args: [
+              '--no-sandbox',
+              '--disable-setuid-sandbox', 
+              '--disable-dev-shm-usage'
+            ]
           });
         } else {
           throw launchError; // Re-throw en local
