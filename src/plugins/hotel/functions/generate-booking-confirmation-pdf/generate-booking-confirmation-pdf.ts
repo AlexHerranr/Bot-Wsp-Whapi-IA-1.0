@@ -441,6 +441,23 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
   
   logInfo('GENERATE_BOOKING_CONFIRMATION_PDF', `🚀 Iniciando generación PDF para reserva: ${params.bookingId}`);
 
+  // ENVIAR MENSAJE INMEDIATO AL USUARIO durante el run activo
+  if (userContext?.chatId) {
+    try {
+      await sendInterimMessage(
+        userContext.chatId, 
+        "📄 Voy a proceder a generar el documento de confirmación actualizado de tu reserva...",
+        userContext.userId
+      );
+    } catch (error) {
+      // Si falla el mensaje interino, continuar con la generación PDF
+      logInfo('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje durante run, continuando', {
+        bookingId: params.bookingId,
+        error: error instanceof Error ? error.message : error
+      });
+    }
+  }
+
   try {
     // 1. CONSULTAR DATOS REALES directamente desde Beds24 API
     logInfo('GENERATE_BOOKING_CONFIRMATION_PDF', `🔍 Consultando datos reales de la reserva: ${params.bookingId}`, context);
@@ -825,6 +842,53 @@ function extractErrorInfo(error: unknown): { message: string; type: string; stac
     message: String(error),
     type: 'UnknownError'
   };
+}
+
+/**
+ * Envía mensaje inmediato durante el run activo
+ */
+async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
+  try {
+    const WHAPI_API_URL = process.env.WHAPI_API_URL;
+    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
+    
+    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
+      throw new Error('WHAPI_API_URL o WHAPI_TOKEN no están configurados');
+    }
+
+    const payload = {
+      to: chatId,
+      body: message
+    };
+
+    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHAPI_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    logInfo('INTERIM_MESSAGE_SENT', 'Mensaje durante run enviado exitosamente', {
+      chatId,
+      userId,
+      messagePreview: message.substring(0, 50)
+    });
+
+  } catch (error) {
+    logError('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje durante run', {
+      chatId,
+      userId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    throw error;
+  }
 }
 
 /**
