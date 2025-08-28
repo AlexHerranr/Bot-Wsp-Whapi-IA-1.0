@@ -136,6 +136,9 @@ export class PDFGeneratorService {
         '--font-render-hinting=medium'
       ];
 
+      // Variable para path de Chrome en Railway
+      let foundChromePath = null;
+      
       // Configuraciones adicionales para Railway
       if (isRailway) {
         browserArgs.push(
@@ -151,13 +154,47 @@ export class PDFGeneratorService {
           '--disable-extensions'
         );
         logInfo('PDF_GENERATOR', '🚀 Railway detectado - aplicando configuraciones específicas');
+        
+        // DEBUG: Verificar paths de Chrome disponibles en Railway
+        const chromePaths = [
+          '/usr/bin/google-chrome',
+          '/usr/bin/google-chrome-stable', 
+          '/opt/google/chrome/google-chrome',
+          '/usr/bin/chromium',
+          '/usr/bin/chromium-browser'
+        ];
+        
+        logInfo('PDF_GENERATOR', '🔍 RAILWAY DEBUG - Verificando paths de Chrome disponibles:');
+        
+        for (const path of chromePaths) {
+          try {
+            const fs = require('fs');
+            if (fs.existsSync(path)) {
+              const stats = fs.statSync(path);
+              logInfo('PDF_GENERATOR', `✅ ENCONTRADO: ${path} (${stats.isFile() ? 'file' : 'other'}, ${stats.mode & parseInt('111', 8) ? 'executable' : 'no-exec'})`);
+              if (!foundChromePath && stats.isFile() && (stats.mode & parseInt('111', 8))) {
+                foundChromePath = path;
+                logInfo('PDF_GENERATOR', `🎯 SELECCIONADO: ${path} como ejecutable principal`);
+              }
+            } else {
+              logInfo('PDF_GENERATOR', `❌ NO EXISTE: ${path}`);
+            }
+          } catch (error) {
+            logInfo('PDF_GENERATOR', `⚠️ ERROR verificando ${path}: ${error.message}`);
+          }
+        }
+        
+        if (!foundChromePath) {
+          logError('PDF_GENERATOR', '🚨 CRÍTICO: No se encontró ningún ejecutable de Chrome válido en Railway');
+          logInfo('PDF_GENERATOR', '📋 Paths verificados: ' + chromePaths.join(', '));
+        }
       }
       
       this.browser = await puppeteer.launch({
         headless: true,
         args: browserArgs,
         // RAILWAY FIX: Usar Chrome instalado manualmente
-        executablePath: isRailway ? '/usr/bin/google-chrome' : undefined,
+        executablePath: isRailway ? (foundChromePath || '/opt/google/chrome/google-chrome') : undefined,
         // Configuraciones adicionales para Railway
         ...(isRailway && {
           timeout: 60000,
