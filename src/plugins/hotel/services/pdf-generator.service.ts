@@ -60,6 +60,7 @@ export class PDFGeneratorService {
   private browser: puppeteer.Browser | null = null;
 
   constructor() {
+    // Template path se establecerá dinámicamente según el tipo de documento
     this.templatePath = path.join(__dirname, '../functions/generate-booking-confirmation-pdf/templates/invoice-template.html');
     this.configPath = path.join(__dirname, '../functions/generate-booking-confirmation-pdf/config/invoice-config.json');
     this.initializeHandlebars();
@@ -214,8 +215,8 @@ export class PDFGeneratorService {
         };
       }
 
-      // 2. Cargar template HTML
-      const htmlTemplate = await this.loadTemplate();
+      // 2. Cargar template HTML según el tipo de documento
+      const htmlTemplate = await this.loadTemplate(data.documentType);
       
       // 2. Procesar datos y reemplazar placeholders
       const processedHtml = await this.processTemplate(htmlTemplate, data);
@@ -241,19 +242,32 @@ export class PDFGeneratorService {
   /**
    * Carga el template HTML desde archivo (con cache)
    */
-  public async loadTemplate(): Promise<string> {
+  public async loadTemplate(documentType?: string): Promise<string> {
     try {
-      // Usar cache si está disponible
-      if (this.templateCache) {
-        return this.templateCache;
+      // Determinar el path del template según el tipo de documento
+      let templatePath = this.templatePath;
+      
+      if (documentType === 'RECIBO DE PAGO') {
+        templatePath = path.join(__dirname, '../functions/generate-payment-receipt-pdf/templates/receipt-template.html');
+        logInfo('PDF_GENERATOR', `Usando template de recibo: ${templatePath}`);
       }
-
-      if (!fs.existsSync(this.templatePath)) {
-        throw new Error(`Template no encontrado: ${this.templatePath}`);
+      
+      // No usar cache para recibos, ya que son diferentes templates
+      if (documentType === 'RECIBO DE PAGO' || !this.templateCache) {
+        if (!fs.existsSync(templatePath)) {
+          throw new Error(`Template no encontrado: ${templatePath}`);
+        }
+        
+        const template = fs.readFileSync(templatePath, 'utf-8');
+        
+        // Solo cachear el template de confirmación
+        if (documentType !== 'RECIBO DE PAGO') {
+          this.templateCache = template;
+        }
+        
+        return template;
       }
-
-      // Cargar y cachear template
-      this.templateCache = fs.readFileSync(this.templatePath, 'utf-8');
+      
       return this.templateCache;
     } catch (error) {
       throw new Error(`Error cargando template: ${error instanceof Error ? error.message : 'Unknown'}`);
@@ -313,6 +327,11 @@ export class PDFGeneratorService {
         checkOutDateFormatted: this.formatDateShort(data.checkOutDate),
         multipleNights: calculatedNights > 1,
         paymentNote: this.getPaymentNote(data, config),
+        currentDate: new Date().toLocaleDateString('es-CO', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
 
         // DATOS DE EMPRESA (desde JSON)
         companyName: config.company.name,

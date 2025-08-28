@@ -145,6 +145,19 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
       paymentDescription: params.paymentDescription
     }, 'edit-booking.ts');
 
+    // 4.5 DETECTAR PAGOS EXISTENTES para sugerencia condicional
+    const existingPayments = (existingBooking.invoiceItems || [])
+      .filter((item: any) => item.type === 'payment')
+      .length;
+    const isSecondPaymentOrMore = existingPayments >= 1; // Ya hay 1+ pagos, el nuevo será el 2do+
+    
+    logInfo('PAYMENT_DETECTION', 'Analizando pagos existentes para sugerencia', {
+      bookingId,
+      existingPayments,
+      isSecondPaymentOrMore,
+      newPaymentAmount: params.paymentAmount
+    }, 'edit-booking.ts');
+
     // 5. Actualizar reserva usando Beds24Client
     const responseData = await beds24Client.updateBooking(bookingUpdateData);
 
@@ -169,7 +182,11 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
       status: modifiedBooking.status
     }, 'edit-booking.ts');
 
-    // 7. Formatear respuesta
+    // 7. Formatear respuesta con sugerencia condicional
+    const suggestion = isSecondPaymentOrMore 
+      ? '🔔 **Sugerencia para OpenAI:** Se ha registrado un pago adicional (pago #' + (existingPayments + 1) + '). Procede a llamar a la función `generate_payment_receipt_pdf` para generar y enviar el recibo de pago específico al huésped.'
+      : '🔔 **Sugerencia para OpenAI:** Se ha registrado el primer pago de la reserva. Procede a llamar a la función `generate_booking_confirmation_pdf` para generar y enviar el documento PDF de confirmación actualizada al huésped.';
+    
     const formattedMessage = `✅ **PAGO REGISTRADO EXITOSAMENTE**
 
 📋 **DETALLES DEL PAGO:**
@@ -178,12 +195,13 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
 • **Pago registrado:** $${params.paymentAmount?.toLocaleString()} COP
 • **Comprobante:** ${params.paymentDescription}
 • **Fecha registro:** ${new Date().toLocaleDateString('es-CO')}
+• **Número de pago:** #${existingPayments + 1}
 
 💰 ¡Pago registrado en el sistema!
 
-📧 Se enviará confirmación actualizada por email
+📧 Se enviará documento actualizado por email
 
-🔔 **Sugerencia para OpenAI:** Se ha agregado el pago y actualizado el status de la reserva. Procede a llamar a la función \`generate_booking_confirmation_pdf\` para generar y enviar el documento PDF de confirmación actualizada al huésped.`;
+${suggestion}`;
 
     return {
       success: true,

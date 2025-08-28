@@ -33,8 +33,8 @@ interface InternalReceiptPDFParams {
   bookingStatus?: string;
   invoiceItems: Array<{
     description: string;
-    quantity?: string;
-    unitPrice?: string;
+    quantity: string;
+    unitPrice: string;
     totalAmount: string;
   }>;
   documentType?: string;
@@ -46,6 +46,23 @@ interface InternalReceiptPDFParams {
     amount: number;
     formattedAmount: string;
   }>;
+}
+
+/**
+ * Función helper para enviar mensaje durante el run
+ */
+async function sendInterimMessage(chatId: string, message: string, userId: string) {
+  try {
+    const response = await fetchWithRetry(`${process.env.WEBHOOK_URL}/send-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId, message, userId })
+    });
+    return response;
+  } catch (error) {
+    logError('SEND_INTERIM_MESSAGE', `Error enviando mensaje: ${error}`);
+    throw error;
+  }
 }
 
 /**
@@ -74,6 +91,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
     if (!apiResponse || !apiResponse.data || apiResponse.data.length === 0) {
       const duration = Date.now() - startTime;
       logError('FETCH_BOOKING_BY_ID_RECEIPT', `❌ Reserva no encontrada: ${bookingId}`, { ...context, duration: `${duration}ms` });
+      await prisma.$disconnect();
       return { 
         success: false, 
         error: 'Reserva no encontrada',
@@ -94,6 +112,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
         duration: `${duration}ms`,
         availableBookings: apiResponse.data.map((b: any) => b.bookId || b.id)
       });
+      await prisma.$disconnect();
       return { 
         success: false, 
         error: 'Booking específico no encontrado en respuesta de API',
@@ -101,9 +120,9 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       };
     }
 
-    // Validación de status temprana
-    const bookingStatus = targetBooking.status?.toLowerCase() || 'unknown';
-    if (bookingStatus !== 'confirmed') {
+    // Validar status para recibos (solo confirmadas)
+    const bookingStatus = targetBooking.status;
+    if (bookingStatus !== 'confirmed' && bookingStatus !== '1' && bookingStatus !== 1) {
       const duration = Date.now() - startTime;
       logError('FETCH_BOOKING_BY_ID_RECEIPT', `❌ Status de reserva inválido: ${bookingStatus}`, { 
         ...context, 
@@ -199,9 +218,9 @@ async function processBookingData(booking: any, prisma: PrismaClient) {
 }
 
 /**
- * Transforma datos de API al formato requerido para recibo de pago
+ * Transforma datos de API al formato requerido para PDF de recibo
  */
-async function transformBookingDetailsToReceiptData(bookingData: any, distribucion?: string): Promise<InternalReceiptPDFParams> {
+async function transformBookingDetailsToReceiptPDFData(bookingData: any, distribucion?: string): Promise<InternalReceiptPDFParams> {
   // 1. CALCULAR nights
   const checkInDate = new Date(bookingData.arrival);
   const checkOutDate = new Date(bookingData.departure);
@@ -226,7 +245,6 @@ async function transformBookingDetailsToReceiptData(bookingData: any, distribuci
     .filter((item: any) => item.type === 'payment')
     .reduce((sum: number, item: any) => sum + Math.abs(item.amount || 0), 0);
   
-  // Calcular saldo pendiente
   const balanceAmount = totalChargesAmount - totalPaidAmount;
   
   // Formatear montos
@@ -234,46 +252,39 @@ async function transformBookingDetailsToReceiptData(bookingData: any, distribuci
   const totalPaid = `${totalPaidAmount.toLocaleString('es-CO')}`;
   const balance = `${balanceAmount.toLocaleString('es-CO')}`;
 
-  // 4. PROCESAR SOLO el último pago (diferencia clave con confirmación completa)
-  const allPayments = (bookingData.invoiceItems || [])
-    .filter((item: any) => item.type === 'payment')
-    .map((item: any) => ({
-      description: item.description || 'Pago recibido',
-      amount: Math.abs(item.amount || 0),
-      formattedAmount: `${Math.abs(item.amount || 0).toLocaleString('es-CO')}`
-    }));
-
-  // Solo último pago para el recibo
-  const paymentItems = allPayments.slice(-1);
-
-  // Log para verificar
-  logInfo('TRANSFORM_RECEIPT_DATA', `💰 PAYMENT RECIBO: ${paymentItems.length} pago (último)`, { 
-    totalPayments: allPayments.length,
-    lastPayment: paymentItems[0] 
-  });
-
-  // 5. PROCESAR cargos básicos (reutilizar lógica)
+  // 4. PROCESAR SOLO los cargos básicos
   const invoiceItems = (bookingData.invoiceItems || [])
     .filter((item: any) => item.type === 'charge')
-    .map((item: any) => {
-      let itemDescription = item.description || 'Servicio de alojamiento';
-      if (itemDescription.match(/\[ROOMNAME\d*\]\s*\[FIRSTNIGHT\]\s*-\s*\[LEAVINGDAY\]/)) {
-        itemDescription = 'Alojamiento';
-      }
-      return {
-        description: itemDescription,
-        quantity: item.qty?.toString() || '1',
-        unitPrice: `${(item.amount || 0).toLocaleString('es-CO')}`,
-        totalAmount: `${(item.lineTotal || item.amount || 0).toLocaleString('es-CO')}`
-      };
-    });
+    .slice(0, 1) // Solo el primer cargo para el recibo
+    .map((item: any) => ({
+      description: 'Servicio de alojamiento',
+      quantity: nights.toString(),
+      unitPrice: `${(item.amount || 0).toLocaleString('es-CO')}`,
+      totalAmount: `${totalChargesAmount.toLocaleString('es-CO')}`
+    }));
+
+  // 5. OBTENER SOLO EL ÚLTIMO PAGO para el recibo
+  const allPayments = (bookingData.invoiceItems || [])
+    .filter((item: any) => item.type === 'payment');
+  
+  const lastPayment = allPayments[allPayments.length - 1];
+  const paymentItems = lastPayment ? [{
+    description: lastPayment.description || 'Pago recibido',
+    amount: Math.abs(lastPayment.amount || 0),
+    formattedAmount: `${Math.abs(lastPayment.amount || 0).toLocaleString('es-CO')}`
+  }] : [];
+
+  logInfo('RECEIPT_PAYMENT', `💰 ÚLTIMO PAGO PARA RECIBO: ${paymentItems.length > 0 ? paymentItems[0].formattedAmount : 'Sin pagos'}`, { 
+    totalPayments: allPayments.length,
+    lastPaymentAmount: paymentItems[0]?.amount 
+  });
 
   // 6. DERIVAR guestCount
   const adults = bookingData.numAdult || bookingData.adults || 1;
   const children = bookingData.numChild || bookingData.children || 0;
   const guestCount = children > 0 ? `${adults} Adultos, ${children} Niños` : `${adults} Adultos`;
 
-  const finalReceiptData = {
+  const finalPdfData = {
     bookingId: bookingData.id || 'UNKNOWN',
     guestName: guestName,
     guestCount: guestCount,
@@ -282,20 +293,20 @@ async function transformBookingDetailsToReceiptData(bookingData: any, distribuci
     checkInDate: bookingData.arrival,
     checkOutDate: bookingData.departure,
     roomName: bookingData.roomName || 'Apartamento',
-    distribucion: distribucion || 'Información disponible al check-in',
+    distribucion: distribucion || '',
     nights: nights,
     totalCharges: totalCharges,
     totalPaid: totalPaid,
-    paymentDescription: paymentItems[0]?.description || 'Pago recibido',
+    paymentDescription: paymentItems[0]?.description || '',
     balance: balance,
     bookingStatus: bookingData.status || 'confirmed',
     invoiceItems: invoiceItems,
-    paymentItems: paymentItems, // Solo último pago
-    triggerFunction: 'auto_from_receipt',
-    documentType: 'RECIBO DE PAGO' // Diferencia clave
+    paymentItems: paymentItems,
+    documentType: 'RECIBO DE PAGO',
+    triggerFunction: 'generate_payment_receipt_pdf'
   };
 
-  return finalReceiptData;
+  return finalPdfData;
 }
 
 /**
@@ -343,20 +354,16 @@ export async function generatePaymentReceiptPDF(params: GeneratePaymentReceiptPD
       .filter((item: any) => item.type === 'payment');
     
     if (allPayments.length < 2) {
-      logError('GENERATE_PAYMENT_RECEIPT_PDF', `❌ Insuficientes pagos para recibo: ${allPayments.length}`, { 
+      logInfo('GENERATE_PAYMENT_RECEIPT_PDF', `⚠️ Solo ${allPayments.length} pago(s), sugiriendo confirmación completa`, { 
         ...context, 
-        paymentsFound: allPayments.length,
-        requiredPayments: 2
+        paymentsFound: allPayments.length
       });
-      return { 
-        success: false, 
-        error: `Solo ${allPayments.length} pago(s) registrado(s), se requieren al menos 2 para generar recibo`,
-        message: `No se puede generar recibo de pago ya que solo hay ${allPayments.length} pago registrado. Los recibos específicos requieren múltiples pagos. Usa generate_booking_confirmation_pdf para confirmaciones completas.` 
-      };
+      // No fallar, solo informar
+      logInfo('PAYMENT_RECEIPT_FALLBACK', 'Generando recibo aunque solo hay 1 pago', context);
     }
 
     // 3. TRANSFORMAR datos de API a formato recibo
-    const receiptData = await transformBookingDetailsToReceiptData(bookingDetails.booking, params.distribucion);
+    const receiptData = await transformBookingDetailsToReceiptPDFData(bookingDetails.booking, params.distribucion);
     
     // 4. GENERAR PDF con datos específicos del recibo
     const result = await generateInternalReceiptPDF(receiptData);
@@ -382,7 +389,14 @@ export async function generatePaymentReceiptPDF(params: GeneratePaymentReceiptPD
     // 7. RETORNAR RESPUESTA CON ATTACHMENT
     const response: any = {
       success: true,
-      message: `Envío de recibo de pago para reserva ${params.bookingId} exitoso. Indícale al huésped que verifique el pago registrado en el documento.`
+      message: `✅ Recibo de pago generado exitosamente para la reserva ${params.bookingId}. 
+
+📄 **Documento:** Recibo de Pago
+💰 **Último pago registrado:** ${receiptData.paymentItems[0]?.formattedAmount || 'N/A'} COP
+📊 **Total pagado:** ${receiptData.totalPaid} COP
+💳 **Saldo pendiente:** ${receiptData.balance} COP
+
+El recibo PDF ha sido generado y está listo para enviar al huésped.`
     };
     
     // Añadir attachment para envío automático
@@ -391,13 +405,13 @@ export async function generatePaymentReceiptPDF(params: GeneratePaymentReceiptPD
       response.attachment = {
         type: 'pdf',
         filePath: pdfPath,
-        fileName: `recibo-pago-${params.bookingId}.pdf`
+        fileName: `recibo-pago-${params.bookingId}-${Date.now()}.pdf`
       };
       
       logInfo('PDF_RECEIPT_ATTACHMENT_ADDED', 'Recibo PDF attachment añadido a respuesta', {
         bookingId: params.bookingId,
         filePath: pdfPath,
-        fileName: `recibo-pago-${params.bookingId}.pdf`
+        fileName: response.attachment.fileName
       });
     }
     
@@ -441,7 +455,8 @@ export async function generateInternalReceiptPDF(params: InternalReceiptPDFParam
           generationTime: '0ms',
           efficiency: '🚀 Instantáneo'
         },
-        pdfPath: existingPDF.path
+        pdfPath: existingPDF.path,
+        size: existingPDF.size
       };
     }
 
@@ -493,7 +508,8 @@ export async function generateInternalReceiptPDF(params: InternalReceiptPDFParam
         generationTime: metrics.duration,
         efficiency: metrics.efficiency
       },
-      pdfPath: result.pdfPath
+      pdfPath: result.pdfPath,
+      size: result.size
     };
 
   } catch (error) {
@@ -528,16 +544,16 @@ async function checkExistingReceiptPDF(bookingId: string): Promise<{exists: bool
     const files = fs.readdirSync(tempDir);
     const pdfPattern = new RegExp(`receipt-${bookingId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+\\.pdf$`);
     
-    // Buscar recibo más reciente (último 60 minutos)
+    // Buscar recibo más reciente (último 5 minutos para evitar duplicados)
     const now = Date.now();
-    const sixtyMinutesAgo = now - (60 * 60 * 1000);
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
     
     for (const file of files) {
       if (pdfPattern.test(file)) {
         const filePath = path.join(tempDir, file);
         const stats = fs.statSync(filePath);
         
-        if (stats.mtime.getTime() > sixtyMinutesAgo) {
+        if (stats.mtime.getTime() > fiveMinutesAgo) {
           const sizeKB = (stats.size / 1024).toFixed(1);
           return { 
             exists: true, 
@@ -567,90 +583,38 @@ function transformReceiptParamsToInvoiceData(params: InternalReceiptPDFParams): 
     checkInDate: params.checkInDate,
     checkOutDate: params.checkOutDate,
     roomName: params.roomName,
+    aptDescription: params.roomName,
     distribucion: params.distribucion,
     nights: params.nights,
-    bookingStatus: params.bookingStatus,
-    statusClass: 'confirmed', // Recibos siempre de reservas confirmadas
     totalCharges: params.totalCharges,
     totalPaid: params.totalPaid,
     balance: params.balance,
-    invoiceItems: params.invoiceItems.map(item => ({
-      description: item.description,
-      quantity: item.quantity || '1',
-      unitPrice: item.unitPrice || item.totalAmount,
-      totalAmount: item.totalAmount
-    })),
-    paymentItems: params.paymentItems, // Solo último pago
+    invoiceItems: params.invoiceItems,
+    paymentItems: params.paymentItems,
     documentType: params.documentType || 'RECIBO DE PAGO',
     triggerFunction: params.triggerFunction || 'generate_payment_receipt_pdf'
   };
 }
 
 /**
- * Envía mensaje inmediato durante el run activo
+ * Definición de la función para el sistema de plugins
  */
-async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
-  try {
-    const WHAPI_API_URL = process.env.WHAPI_API_URL;
-    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
-    
-    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
-      throw new Error('WHAPI_API_URL o WHAPI_TOKEN no están configurados');
-    }
-
-    const payload = {
-      to: chatId,
-      body: message
-    };
-
-    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${WHAPI_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error ${response.status}: ${errorText}`);
-    }
-
-    logInfo('INTERIM_MESSAGE_SENT_RECEIPT', 'Mensaje durante run enviado exitosamente', {
-      chatId,
-      userId,
-      messagePreview: message.substring(0, 50)
-    });
-
-  } catch (error) {
-    logError('INTERIM_MESSAGE_ERROR_RECEIPT', 'Error enviando mensaje durante run', {
-      chatId,
-      userId,
-      error: error instanceof Error ? error.message : String(error)
-    });
-    throw error;
-  }
-}
-
-// Definición para OpenAI Assistant
 export const generatePaymentReceiptPDFFunction: FunctionDefinition = {
   name: 'generate_payment_receipt_pdf',
-  description: 'Genera recibo específico de pago individual para reserva existente. Solo para reservas con múltiples pagos (2+). Muestra únicamente el último pago registrado.',
-  category: 'invoice',
-  version: '1.0.0',
+  description: 'Genera un recibo PDF específico para el último pago registrado en una reserva. Úsalo cuando se registra un segundo pago o más.',
   enabled: true,
+  category: 'hotel',
+  version: '1.0.0',
   parameters: {
     type: 'object',
     properties: {
       bookingId: {
         type: 'string',
-        description: 'ID único de la reserva en Beds24',
-        minLength: 1
+        description: 'El ID de la reserva en Beds24'
       },
       distribucion: {
         type: 'string',
-        description: 'Distribución detallada de camas y sofá camas. Solo especificar si difiere de la configuración estándar.'
+        description: 'Descripción opcional de la distribución de camas'
       }
     },
     required: ['bookingId'],

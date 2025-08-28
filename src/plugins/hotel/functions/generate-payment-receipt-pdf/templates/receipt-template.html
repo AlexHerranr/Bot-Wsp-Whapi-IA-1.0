@@ -1,50 +1,422 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Recibo de Pago - {{bookingId}}</title>
-    <style>
-        /* TODO: Implementar estilos para recibo de pago */
-        /* Basado en el template de confirmación pero simplificado */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        
-        .receipt-header {
-            text-align: center;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .document-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 10px;
-        }
-        
-        /* TODO: Añadir más estilos específicos para recibo */
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recibo de Pago - {{bookingId}}</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: white;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    /* Header con gradiente */
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 10px 10px 0 0;
+      text-align: center;
+      margin-bottom: 0;
+    }
+    
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+    
+    .receipt-number {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-top: 5px;
+    }
+    
+    .company-info {
+      background: #f8f9fa;
+      padding: 20px;
+      border-left: 4px solid #667eea;
+      margin-bottom: 25px;
+    }
+    
+    .company-info h2 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+    
+    .company-details {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      font-size: 14px;
+    }
+    
+    .company-details span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Información de la reserva */
+    .booking-info {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    
+    .booking-info h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 16px;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      font-size: 14px;
+    }
+    
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .info-label {
+      font-weight: 600;
+      color: #666;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    
+    .info-value {
+      color: #333;
+      font-size: 14px;
+    }
+    
+    /* Caja destacada para el pago */
+    .payment-highlight {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      padding: 25px;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    
+    .payment-highlight h2 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 22px;
+    }
+    
+    .payment-amount {
+      font-size: 36px;
+      color: #764ba2;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .payment-description {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    
+    .payment-date {
+      font-size: 14px;
+      color: #888;
+    }
+    
+    /* Resumen financiero */
+    .financial-summary {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    
+    .financial-summary h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+    
+    .summary-table {
+      width: 100%;
+      font-size: 14px;
+    }
+    
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .summary-row:last-child {
+      border-bottom: none;
+      font-weight: bold;
+      font-size: 16px;
+      color: #667eea;
+      padding-top: 12px;
+    }
+    
+    .summary-label {
+      color: #666;
+    }
+    
+    .summary-value {
+      color: #333;
+      font-weight: 600;
+    }
+    
+    /* Tabla de servicios */
+    .services-section {
+      margin-bottom: 25px;
+    }
+    
+    .services-section h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 16px;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+    
+    .services-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    
+    .services-table th {
+      background: #f8f9fa;
+      color: #666;
+      padding: 10px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .services-table td {
+      padding: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .services-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    /* Footer */
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #e0e0e0;
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+    }
+    
+    .footer-note {
+      background: #fff9e6;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+    
+    .contact-info {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #666;
+    }
+    
+    /* Estilos para impresión */
+    @media print {
+      body {
+        padding: 0;
+        max-width: 100%;
+      }
+      
+      .header {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+      
+      .payment-highlight {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+      
+      .footer {
+        page-break-inside: avoid;
+      }
+    }
+    
+    /* Iconos SVG inline */
+    .icon {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  </style>
 </head>
 <body>
-    <div class="receipt-header">
-        <div class="document-title">RECIBO DE PAGO</div>
-        <div>Reserva: {{bookingId}}</div>
+  <!-- Header -->
+  <div class="header">
+    <h1>RECIBO DE PAGO</h1>
+    <div class="receipt-number">No. {{bookingId}}-{{triggerFunction}}</div>
+    <div class="receipt-number">Fecha de emisión: {{currentDate}}</div>
+  </div>
+  
+  <!-- Información de la empresa -->
+  <div class="company-info">
+    <h2>{{companyName}}</h2>
+    <div class="company-details">
+      <span>NIT: {{companyNit}}</span>
+      <span>{{companyAddress}}</span>
+      <span>Tel: {{companyPhone}}</span>
+      <span>Email: {{companyEmail}}</span>
     </div>
-    
-    <!-- TODO: Implementar contenido completo del recibo -->
-    <div class="payment-details">
-        <h3>Detalles del Pago</h3>
-        <!-- Información del pago específico -->
+  </div>
+  
+  <!-- Información de la reserva -->
+  <div class="booking-info">
+    <h3>INFORMACIÓN DE LA RESERVA</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">Código de Reserva</span>
+        <span class="info-value">{{bookingId}}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Huésped</span>
+        <span class="info-value">{{guestName}}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Check-in</span>
+        <span class="info-value">{{checkInDateFormatted}}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Check-out</span>
+        <span class="info-value">{{checkOutDateFormatted}}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Apartamento</span>
+        <span class="info-value">{{roomName}}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Noches</span>
+        <span class="info-value">{{nights}} {{#if multipleNights}}noches{{else}}noche{{/if}}</span>
+      </div>
     </div>
-    
-    <div class="booking-summary">
-        <h3>Resumen de Reserva</h3>
-        <!-- Datos básicos de la reserva -->
+  </div>
+  
+  <!-- Pago destacado -->
+  <div class="payment-highlight">
+    <h2>PAGO REGISTRADO</h2>
+    {{#if paymentItems}}
+      {{#each paymentItems}}
+        <div class="payment-amount">${{this.formattedAmount}} COP</div>
+        <div class="payment-description">{{this.description}}</div>
+      {{/each}}
+    {{else}}
+      <div class="payment-amount">$0 COP</div>
+      <div class="payment-description">Sin pagos registrados</div>
+    {{/if}}
+    <div class="payment-date">Procesado el {{currentDate}}</div>
+  </div>
+  
+  <!-- Resumen financiero -->
+  <div class="financial-summary">
+    <h3>RESUMEN FINANCIERO</h3>
+    <div class="summary-table">
+      <div class="summary-row">
+        <span class="summary-label">Total de la reserva:</span>
+        <span class="summary-value">${{totalCharges}} COP</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Total pagado hasta la fecha:</span>
+        <span class="summary-value">${{totalPaid}} COP</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Saldo pendiente:</span>
+        <span class="summary-value">${{balance}} COP</span>
+      </div>
     </div>
+  </div>
+  
+  <!-- Detalle de servicios -->
+  <div class="services-section">
+    <h3>DETALLE DE SERVICIOS</h3>
+    <table class="services-table">
+      <thead>
+        <tr>
+          <th>Descripción</th>
+          <th>Cantidad</th>
+          <th>Precio Unit.</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each invoiceItems}}
+        <tr>
+          <td>{{this.description}}</td>
+          <td>{{this.quantity}}</td>
+          <td>${{this.unitPrice}} COP</td>
+          <td>${{this.totalAmount}} COP</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- Nota importante -->
+  <div class="footer-note">
+    <strong>Nota importante:</strong> Este recibo corresponde únicamente al pago registrado en la fecha indicada. 
+    Para ver el estado completo de su reserva, solicite una confirmación actualizada.
+  </div>
+  
+  <!-- Footer -->
+  <div class="footer">
+    <div class="contact-info">
+      <span class="contact-item">
+        <span class="icon">📞</span> {{companyPhone}}
+      </span>
+      <span class="contact-item">
+        <span class="icon">✉️</span> {{companyEmail}}
+      </span>
+      <span class="contact-item">
+        <span class="icon">🌐</span> {{companyWebsite}}
+      </span>
+    </div>
+    <p style="margin-top: 15px;">Gracias por su confianza en {{companyName}}</p>
+  </div>
 </body>
 </html>

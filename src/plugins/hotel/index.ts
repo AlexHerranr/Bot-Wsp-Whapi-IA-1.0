@@ -7,6 +7,7 @@ import { editBookingFunction } from './functions/edit-booking/edit-booking';
 import { cancelBooking } from './functions/cancel-booking/cancel-booking';
 import { informarMovimientoMananaFunction } from './functions/informar-movimiento-manana/informar-movimiento-manana';
 import { generateBookingConfirmationPDFFunction } from './functions/generate-booking-confirmation-pdf/generate-booking-confirmation-pdf';
+import { generatePaymentReceiptPDFFunction } from './functions/generate-payment-receipt-pdf/generate-payment-receipt-pdf';
 import { HotelContext } from './logic/context';
 import { HotelValidation } from './logic/validation';
 import { HotelLabels } from './logic/labels';
@@ -23,7 +24,7 @@ export class HotelPlugin {
     }
 
     public register(registry: IFunctionRegistry, source?: string): void {
-        console.log('🔌 hotel-plugin registering 7 functions...');
+        console.log('🔌 hotel-plugin registering 8 functions...');
         
         try {
             registry.register('check_availability', (args, context) => 
@@ -57,11 +58,16 @@ export class HotelPlugin {
             );
 
             registry.register('generate_booking_confirmation_pdf', async (args, context) => {
-                const result = await generateBookingConfirmationPDFFunction.handler(args as any, context);
+                const result = await generateBookingConfirmationPDFFunction.handler(args as any);
                 return JSON.stringify(result);
             }, source);
 
-            console.log('🔌 hotel-plugin ✓ 7 functions registered successfully');
+            registry.register('generate_payment_receipt_pdf', async (args, context) => {
+                const result = await generatePaymentReceiptPDFFunction.handler(args as any);
+                return JSON.stringify(result);
+            }, source);
+
+            console.log('🔌 hotel-plugin ✓ 8 functions registered successfully');
         } catch (error) {
             console.error('❌ Error registering hotel-plugin functions:', error);
             console.log('🔌 hotel-plugin ✓ 2 functions (partial due to errors)');
@@ -69,9 +75,9 @@ export class HotelPlugin {
 
         // Log técnico consolidado
         const { logSuccess } = require('../../utils/logging');
-        logSuccess('PLUGIN_REGISTERED', 'hotel-plugin ✓ 7 functions', {
+        logSuccess('PLUGIN_REGISTERED', 'hotel-plugin ✓ 8 functions', {
             plugin: 'hotel-plugin',
-            functions: ['check_availability', 'check_booking_details', 'create_new_booking', 'edit_booking', 'cancel_booking', 'informar_movimiento_manana', 'generate_booking_confirmation_pdf'],
+            functions: ['check_availability', 'check_booking_details', 'create_new_booking', 'edit_booking', 'cancel_booking', 'informar_movimiento_manana', 'generate_booking_confirmation_pdf', 'generate_payment_receipt_pdf'],
             source: source || 'hotel-plugin'
         }, 'index.ts');
     }
