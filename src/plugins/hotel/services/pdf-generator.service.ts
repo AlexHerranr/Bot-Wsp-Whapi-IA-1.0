@@ -60,9 +60,14 @@ export class PDFGeneratorService {
   private browser: any | null = null;
 
   constructor() {
-    // RAILWAY FIX: Usar rutas absolutas desde process.cwd() para evitar ENOENT
-    this.templatePath = path.join(process.cwd(), 'src/plugins/hotel/functions/generate-booking-confirmation-pdf/templates/invoice-template.html');
-    this.configPath = path.join(process.cwd(), 'src/plugins/hotel/functions/generate-booking-confirmation-pdf/config/invoice-config.json');
+    // SMART PATH: Detectar si estamos en build (dist/) o desarrollo (src/)
+    const isBuilt = fs.existsSync(path.join(process.cwd(), 'dist'));
+    const baseDir = isBuilt ? 'dist' : 'src';
+    
+    this.templatePath = path.join(process.cwd(), `${baseDir}/plugins/hotel/functions/generate-booking-confirmation-pdf/templates/invoice-template.html`);
+    this.configPath = path.join(process.cwd(), `${baseDir}/plugins/hotel/functions/generate-booking-confirmation-pdf/config/invoice-config.json`);
+    
+    logInfo('PDF_GENERATOR', `📁 Base directory: ${baseDir}/ (built: ${isBuilt})`);
     this.initializeHandlebars();
   }
 
@@ -276,8 +281,10 @@ export class PDFGeneratorService {
       let templatePath = this.templatePath;
       
       if (documentType === 'RECIBO DE PAGO') {
-        templatePath = path.join(process.cwd(), 'src/plugins/hotel/functions/generate-payment-receipt-pdf/templates/receipt-template.html');
-        logInfo('PDF_GENERATOR', `📄 Usando template de recibo: ${templatePath}`);
+        const isBuilt = fs.existsSync(path.join(process.cwd(), 'dist'));
+        const baseDir = isBuilt ? 'dist' : 'src';
+        templatePath = path.join(process.cwd(), `${baseDir}/plugins/hotel/functions/generate-payment-receipt-pdf/templates/receipt-template.html`);
+        logInfo('PDF_GENERATOR', `📄 Usando template de recibo: ${templatePath} (baseDir: ${baseDir})`);
       }
       
       // RAILWAY DEBUG: Log path absoluto para debugging
