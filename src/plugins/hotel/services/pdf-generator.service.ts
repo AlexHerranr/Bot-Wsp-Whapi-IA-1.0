@@ -238,26 +238,22 @@ export class PDFGeneratorService {
     }
 
     try {
-      // Verificar si el navegador sigue conectado
-      if (!this.browser.isConnected()) {
-        logInfo('PDF_GENERATOR', '⚠️ Navegador desconectado, reiniciando...');
-        await this.browser.close();
-        this.browser = null;
-        await this.initializeBrowser();
-        logSuccess('PDF_GENERATOR', '🔄 Navegador reiniciado exitosamente');
-      }
+      // SOLUCIÓN DEFINITIVA: No usar isConnected() que puede causar connect()
+      // Test directo con pages() - si falla, el browser está roto
+      const pages = await this.browser.pages();
+      logInfo('PDF_GENERATOR', `✅ Browser healthy - ${pages.length} pages activas`);
     } catch (error) {
-      logError('PDF_GENERATOR', `⚠️ Error verificando navegador, reiniciando: ${error}`);
+      // Si pages() falla, el browser está roto - relanzar con launch()
+      logInfo('PDF_GENERATOR', `⚠️ Browser no healthy - relanzando: ${error.message}`);
       try {
-        if (this.browser) {
-          await this.browser.close();
-        }
+        if (this.browser) await this.browser.close().catch(() => {});
       } catch (closeError) {
-        logError('PDF_GENERATOR', `Error cerrando navegador dañado: ${closeError}`);
+        logError('PDF_GENERATOR', `Error cerrando browser: ${closeError.message}`);
       }
+      
       this.browser = null;
-      await this.initializeBrowser();
-      logSuccess('PDF_GENERATOR', '🔄 Navegador recuperado exitosamente');
+      await this.initializeBrowser();  // Relanza con launch, NUNCA connect
+      logSuccess('PDF_GENERATOR', '🔄 Browser relanzado exitosamente');
     }
   }
 
@@ -550,7 +546,7 @@ export class PDFGeneratorService {
         logInfo('PDF_CONCURRENCY', 'Estado del navegador singleton', {
           bookingId,
           activePagesCount: pages.length,
-          browserConnected: this.browser!.isConnected(),
+          browserHealthy: 'checked via pages()',
           memoryUsage: process.memoryUsage().heapUsed / 1024 / 1024 + 'MB'
         });
       }
