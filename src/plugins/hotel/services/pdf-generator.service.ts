@@ -166,7 +166,12 @@ export class PDFGeneratorService {
           '--safebrowsing-disable-auto-update',
           '--ignore-certificate-errors',
           '--ignore-ssl-errors',
-          '--ignore-certificate-errors-spki-list'
+          '--ignore-certificate-errors-spki-list',
+          '--disable-crash-reporter', // Deshabilita crashpad_handler
+          '--disable-breakpad', // Deshabilita crash reporting
+          '--disable-client-side-phishing-detection',
+          '--disable-component-update',
+          '--disable-domain-reliability'
         );
         logInfo('PDF_GENERATOR', '🚀 Railway detectado - aplicando configuraciones específicas');
         
