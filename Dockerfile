@@ -12,10 +12,9 @@ RUN npm ci --only=production --ignore-scripts
 FROM node:18-bullseye AS builder
 WORKDIR /app
 
-# Instalar dependencias de sistema y Chromium para Puppeteer
+# Instalar dependencias de sistema para Puppeteer bundled Chromium
 RUN apt-get update && apt-get install -y \
     ca-certificates curl gnupg \
-    && apt-get install -y chromium chromium-driver \
     fontconfig fonts-freefont-ttf libfontconfig libfreetype6 libjpeg62-turbo libpng16-16 libx11-6 libxcb1 libxext6 libxrender1 xfonts-75dpi xfonts-base \
     libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 libcups2 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libxrandr2 libxss1 libxtst6 \
     libasound2 libexpat1 libfontconfig1 libpangocairo-1.0-0 libx11-xcb1 lsb-release wget xdg-utils \
@@ -41,11 +40,11 @@ COPY scripts/ ./scripts/
 RUN npx prisma generate
 RUN npm run build
 
-# ✅ VERIFICAR CHROMIUM INSTALACIÓN EN BUILD
-RUN echo "🔍 VERIFICANDO INSTALACIÓN DE CHROMIUM..." && \
-    /usr/bin/chromium --version && \
-    echo "✅ Chromium instalado correctamente" || \
-    echo "❌ ERROR: Chromium no encontrado"
+# ✅ VERIFICAR PUPPETEER BUNDLED CHROMIUM
+RUN echo "🔍 VERIFICANDO PUPPETEER BUNDLED CHROMIUM..." && \
+    find /app/node_modules/puppeteer -name "chrome*" -type f -executable 2>/dev/null | head -1 && \
+    echo "✅ Puppeteer bundled Chromium encontrado" || \
+    echo "❌ ERROR: Puppeteer bundled Chromium no encontrado"
 
 # Stage de producción - imagen mínima con Chrome
 FROM node:18-bullseye-slim AS runner
@@ -59,21 +58,15 @@ ENV NODE_ENV=production \
     CHROME_NO_SANDBOX=1 \
     PUPPETEER_DISABLE_DEV_SHM_USAGE=true
 
-# Instalar Chromium en producción (slim version)
+# Instalar solo libs necesarias para Puppeteer bundled Chromium
 RUN apt-get update && apt-get install -y \
-    ca-certificates curl gnupg chromium chromium-driver \
+    ca-certificates curl gnupg \
     fontconfig fonts-freefont-ttf libfontconfig libfreetype6 libjpeg62-turbo libpng16-16 libx11-6 libxcb1 libxext6 libxrender1 \
     libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 libcups2 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libxrandr2 libxss1 libxtst6 \
     libasound2 libexpat1 libfontconfig1 libpangocairo-1.0-0 libx11-xcb1 lsb-release wget xdg-utils \
     fonts-liberation fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
-
-# ✅ VERIFICAR CHROMIUM EN STAGE RUNNER
-RUN echo "🔍 VERIFICANDO CHROMIUM EN RUNNER..." && \
-    /usr/bin/chromium --version && \
-    echo "✅ Chromium runner OK" || \
-    echo "❌ ERROR: Chromium no funcional en runner"
 
 # Crear usuario no-root (sintaxis Debian)
 RUN groupadd -g 1001 nodejs && \

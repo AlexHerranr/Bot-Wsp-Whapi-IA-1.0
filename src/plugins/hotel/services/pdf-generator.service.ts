@@ -181,62 +181,14 @@ export class PDFGeneratorService {
           '--disable-component-update',
           '--disable-domain-reliability'
         );
-        logInfo('PDF_GENERATOR', '🚀 Railway detectado - aplicando configuraciones específicas');
-        
-        // DEBUG: Verificar paths de Chromium disponibles en Railway
-        const chromePaths = [
-          '/usr/bin/chromium',
-          '/usr/bin/chromium-browser',
-          '/usr/bin/google-chrome',
-          '/usr/bin/google-chrome-stable', 
-          '/opt/google/chrome/google-chrome'
-        ];
-        
-        logInfo('PDF_GENERATOR', '🔍 RAILWAY DEBUG - Verificando paths de Chrome disponibles:');
-        
-        for (const path of chromePaths) {
-          try {
-            const fs = require('fs');
-            if (fs.existsSync(path)) {
-              const stats = fs.statSync(path);
-              logInfo('PDF_GENERATOR', `✅ ENCONTRADO: ${path} (${stats.isFile() ? 'file' : 'other'}, ${stats.mode & parseInt('111', 8) ? 'executable' : 'no-exec'})`);
-              if (!foundChromePath && stats.isFile() && (stats.mode & parseInt('111', 8))) {
-                foundChromePath = path;
-                logInfo('PDF_GENERATOR', `🎯 SELECCIONADO: ${path} como ejecutable principal`);
-              }
-            } else {
-              logInfo('PDF_GENERATOR', `❌ NO EXISTE: ${path}`);
-            }
-          } catch (error) {
-            logInfo('PDF_GENERATOR', `⚠️ ERROR verificando ${path}: ${error.message}`);
-          }
-        }
-        
-        if (!foundChromePath) {
-          logError('PDF_GENERATOR', '🚨 CRÍTICO: No se encontró ningún ejecutable de Chrome válido en Railway');
-          logInfo('PDF_GENERATOR', '📋 Paths verificados: ' + chromePaths.join(', '));
-        }
+        logInfo('PDF_GENERATOR', '🚀 Railway detectado - usando Puppeteer bundled Chromium (versión matching)');
       }
       
-      // SOLUCIÓN DEFINITIVA CRASHPAD - Variables de entorno
-      if (isRailway) {
-        process.env.CHROME_CRASHPAD_PIPE_NAME = '';  // Deshabilita crashpad_handler completamente
-        process.env.BREAKPAD_DUMP_LOCATION = '';     // Deshabilita breakpad
-        process.env.CHROME_LOG_FILE = '/dev/null';   // Redirige logs a null
-      }
-
       const launchOptions = {
         headless: true,
         args: browserArgs,
-        // RAILWAY FIX: Usar Chromium instalado
-        executablePath: isRailway ? (foundChromePath || '/usr/bin/chromium') : undefined,
-        // Variables de entorno específicas
-        env: isRailway ? {
-          ...process.env,
-          CHROME_CRASHPAD_PIPE_NAME: '',
-          BREAKPAD_DUMP_LOCATION: '',
-          CHROME_LOG_FILE: '/dev/null'
-        } : undefined,
+        // SOLUCIÓN DEFINITIVA: Usar Puppeteer bundled Chromium (versión matching)
+        // NO executablePath - deja que Puppeteer use su bundled Chromium ~127
         // Configuraciones adicionales para Railway
         ...(isRailway && {
           timeout: 60000,
