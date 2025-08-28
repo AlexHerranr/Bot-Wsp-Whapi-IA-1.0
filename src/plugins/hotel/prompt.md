@@ -18,6 +18,7 @@ Para dar respuestas precisas y útiles en cada interacción
 - [ ] Nueva consulta de disponibilidad → usar check_availability
 - [ ] Consulta de reserva existente → usar check_booking_details
 - [ ] Cliente quiere cancelar reserva → usar cancel_booking
+- [ ] Cliente solicita comprobante/confirmación → usar generate_booking_confirmation_pdf
 - [ ] Seguimiento de conversación existente  
 - [ ] Cliente con reserva confirmada
 - [ ] Pregunta sobre servicios específicos
@@ -693,6 +694,12 @@ Soporta: UNO o MÚLTIPLES apartamentos para la misma persona con distribución a
 Input requerido: roomIds[array], fechas, datos huésped completos, anticipo recibido
 Formato respuesta: Confirmación detallada con códigos de reserva y distribución financiera
 
+📄 generate_booking_confirmation_pdf
+Usar para: Generar PDF de confirmación para reservas confirmadas
+Input requerido: bookingId (obligatorio), distribucion (opcional: "🛏️ Alcoba: 1 cama doble (👥) + 1 cama nido (👥) | 🛋️ Sala: 2 sofá camas (👤👤)")
+Canales permitidos: Booking.com, Direct, PaCartagena
+Usar cuando: Otras funciones lo sugieran o cliente lo solicite
+
 📸 Imágenes
 Recibes: "Información de comprobante: [detalles]" (no la imagen directamente)
 Acepta: Solo comprobantes de pago y documentos de reservas
@@ -1268,6 +1275,34 @@ Permíteme liberar este apartamento y buscar otras opciones que se ajusten mejor
 IMPORTANTE: Si cancel_booking devuelve error (plataforma bloqueada, pago registrado, o API error), seguir las instrucciones específicas que devuelve la función para escalar al superior.
 
 [Después de recibir success=true de la API, el bot responderá automáticamente con la promoción para nueva cotización y preguntará si quiere apartamentos con características diferentes]
+
+---
+
+## 📄 GENERACIÓN DE PDF DE CONFIRMACIÓN
+
+**Usar generate_booking_confirmation_pdf cuando:**
+- Cliente solicita documento de confirmación  
+- create_new_booking o edit_booking retornan exitosamente con nota de llamar a generate_booking_confirmation_pdf
+- Solo canales: Booking.com, Direct, PaCartagena
+
+**Después de crear reserva exitosamente:**
+```
+¡Listo! Tu reserva ya está registrada en nuestro sistema, ahora procederé a enviarte un comprobante, un momento por favor...
+
+[generate_booking_confirmation_pdf(bookingId: "74312375")]
+```
+
+**Después de edit_booking con pago:**
+```
+Perfecto, pago registrado. Te envío el comprobante actualizado...
+
+[generate_booking_confirmation_pdf(bookingId: "74312375")]
+```
+
+**SIEMPRE incluir distribución con emojis:**
+```
+[generate_booking_confirmation_pdf(bookingId: "74312375", distribucion: "🛏️ Alcoba: 1 cama doble (👥) + 1 cama nido (👥) | 🛋️ Sala: 2 sofá camas (👤👤)")]
+```
 
 ---
 

@@ -6,7 +6,7 @@ import { createNewBookingFunction } from './functions/create-new-booking/create-
 import { editBookingFunction } from './functions/edit-booking/edit-booking';
 import { cancelBooking } from './functions/cancel-booking/cancel-booking';
 import { informarMovimientoMananaFunction } from './functions/informar-movimiento-manana/informar-movimiento-manana';
-import { generateInvoicePDFFunction } from './functions/generate-invoice-pdf/generate-invoice-pdf';
+import { generateBookingConfirmationPDFFunction } from './functions/generate-booking-confirmation-pdf/generate-booking-confirmation-pdf';
 import { HotelContext } from './logic/context';
 import { HotelValidation } from './logic/validation';
 import { HotelLabels } from './logic/labels';
@@ -56,8 +56,8 @@ export class HotelPlugin {
                 source
             );
 
-            registry.register('generate_invoice_pdf', async (args, context) => {
-                const result = await generateInvoicePDFFunction.handler(args as any);
+            registry.register('generate_booking_confirmation_pdf', async (args, context) => {
+                const result = await generateBookingConfirmationPDFFunction.handler(args as any, context);
                 return JSON.stringify(result);
             }, source);
 
@@ -71,7 +71,7 @@ export class HotelPlugin {
         const { logSuccess } = require('../../utils/logging');
         logSuccess('PLUGIN_REGISTERED', 'hotel-plugin ✓ 7 functions', {
             plugin: 'hotel-plugin',
-            functions: ['check_availability', 'check_booking_details', 'create_new_booking', 'edit_booking', 'cancel_booking', 'informar_movimiento_manana', 'generate_invoice_pdf'],
+            functions: ['check_availability', 'check_booking_details', 'create_new_booking', 'edit_booking', 'cancel_booking', 'informar_movimiento_manana', 'generate_booking_confirmation_pdf'],
             source: source || 'hotel-plugin'
         }, 'index.ts');
     }

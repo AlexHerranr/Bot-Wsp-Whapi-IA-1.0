@@ -81,6 +81,7 @@ export interface FunctionCall {
         name: string;
         arguments: string;
     };
+    result?: any; // Para manejar resultados de funciones con attachments
 }
 
 // Tipos para Media Processing

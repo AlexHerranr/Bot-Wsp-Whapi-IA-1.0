@@ -183,7 +183,7 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
 
 📧 Se enviará confirmación actualizada por email
 
-🔔 **Sugerencia para OpenAI:** Se ha agregado el pago y actualizado el status de la reserva. Procede a llamar a la función \`generate_invoice_pdf\` para generar y enviar el documento PDF de confirmación actualizada al huésped.`;
+🔔 **Sugerencia para OpenAI:** Se ha agregado el pago y actualizado el status de la reserva. Procede a llamar a la función \`generate_booking_confirmation_pdf\` para generar y enviar el documento PDF de confirmación actualizada al huésped.`;
 
     return {
       success: true,

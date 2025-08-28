@@ -265,7 +265,7 @@ ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleStrin
 
 📧 Se enviará confirmación detallada por email a ${email}
 
-🔔 **Sugerencia para OpenAI:** Procede a llamar a la función \`generate_invoice_pdf\` con los datos de esta reserva para generar y enviar el documento PDF de confirmación al huésped.`;
+🔔 **Sugerencia para OpenAI:** Procede a llamar a la función \`generate_booking_confirmation_pdf\` con los datos de esta reserva para generar y enviar el documento PDF de confirmación al huésped.`;
 
     return {
       success: true,

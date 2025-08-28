@@ -25,6 +25,7 @@ export interface InvoiceData {
   totalPaid?: string;
   balance?: string;
   invoiceItems: InvoiceItem[];
+  paymentItems?: PaymentItem[];  // AÑADIDO: Soporte para items de pago separados
   documentType: string; // Ya no se usa, mantenido por compatibilidad
   triggerFunction: string;
 }
@@ -34,6 +35,12 @@ export interface InvoiceItem {
   quantity: string;
   unitPrice: string;
   totalAmount: string;
+}
+
+export interface PaymentItem {
+  description: string;
+  amount: number;
+  formattedAmount: string;
 }
 
 export interface PDFResult {
@@ -53,8 +60,8 @@ export class PDFGeneratorService {
   private browser: puppeteer.Browser | null = null;
 
   constructor() {
-    this.templatePath = path.join(__dirname, '../functions/generate-invoice-pdf/templates/invoice-template.html');
-    this.configPath = path.join(__dirname, '../functions/generate-invoice-pdf/config/invoice-config.json');
+    this.templatePath = path.join(__dirname, '../functions/generate-booking-confirmation-pdf/templates/invoice-template.html');
+    this.configPath = path.join(__dirname, '../functions/generate-booking-confirmation-pdf/config/invoice-config.json');
     this.initializeHandlebars();
   }
 
@@ -341,6 +348,13 @@ export class PDFGeneratorService {
         // FECHA ACTUAL - Removido porque no se usa en el template
         // currentDate: new Intl.DateTimeFormat(...)
       };
+
+      // DEBUG: Log de paymentItems en contexto del template
+      if (context.paymentItems && context.paymentItems.length > 0) {
+        logInfo('PDF_', `🔍 CONTEXT PAYMENTITEMS: ${context.paymentItems.length} items`, { paymentItems: context.paymentItems });
+      } else {
+        logInfo('PDF_', `⚠️ CONTEXT SIN PAYMENTITEMS o vacío`, { hasPaymentItems: !!context.paymentItems, length: context.paymentItems?.length });
+      }
 
       return this.compiledTemplate(context);
     } catch (error) {
