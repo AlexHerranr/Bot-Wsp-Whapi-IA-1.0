@@ -157,7 +157,7 @@ export class PDFGeneratorService {
         headless: true,
         args: browserArgs,
         // RAILWAY FIX: Usar Chrome instalado manualmente
-        executablePath: isRailway ? '/usr/bin/google-chrome-stable' : undefined,
+        executablePath: isRailway ? '/usr/bin/google-chrome' : undefined,
         // Configuraciones adicionales para Railway
         ...(isRailway && {
           timeout: 60000,
