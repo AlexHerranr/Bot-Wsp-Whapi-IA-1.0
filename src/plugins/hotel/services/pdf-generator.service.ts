@@ -187,8 +187,7 @@ export class PDFGeneratorService {
       const launchOptions = {
         headless: true,
         args: browserArgs,
-        // SOLUCIÓN DEFINITIVA: Usar Puppeteer bundled Chromium (versión matching)
-        // NO executablePath - deja que Puppeteer use su bundled Chromium ~127
+        // PUPPETEER v24 FIX: Sin executablePath para usar bundled
         // Configuraciones adicionales para Railway
         ...(isRailway && {
           timeout: 60000,
@@ -203,7 +202,26 @@ export class PDFGeneratorService {
         logInfo('PDF_GENERATOR', `🚀 Lanzando Chromium con opciones: ${JSON.stringify(launchOptions)}`);
       }
 
-      this.browser = await puppeteer.launch(launchOptions);
+      try {
+        this.browser = await puppeteer.launch(launchOptions);
+        logSuccess('PDF_GENERATOR', '✅ Puppeteer bundled browser launched successfully');
+      } catch (launchError) {
+        // Log específico pero continuar si es un warning menor
+        logError('PDF_GENERATOR', `⚠️ Launch warning: ${launchError.message}`, {
+          isRailway,
+          errorType: launchError.constructor.name
+        });
+        // Re-try más simple sin opciones extra si es Railway
+        if (isRailway) {
+          logInfo('PDF_GENERATOR', '🔄 Retry with minimal options...');
+          this.browser = await puppeteer.launch({
+            headless: true,
+            args: browserArgs
+          });
+        } else {
+          throw launchError; // Re-throw en local
+        }
+      }
       
       logSuccess('PDF_GENERATOR', '🚀 Navegador Puppeteer inicializado y reutilizable');
     }
