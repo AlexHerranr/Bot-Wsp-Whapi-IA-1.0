@@ -63,9 +63,9 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Crear usuario no-root
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+# Crear usuario no-root (sintaxis Debian)
+RUN groupadd -g 1001 nodejs && \
+    useradd -r -u 1001 -g nodejs nodejs
 
 # Copiar solo lo necesario
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
