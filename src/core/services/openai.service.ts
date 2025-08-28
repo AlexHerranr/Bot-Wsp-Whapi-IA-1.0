@@ -41,6 +41,7 @@ export class OpenAIService implements IOpenAIService {
     private whatsappService?: any; // Referencia opcional para mensajes interinos
     private currentChatId?: string; // Chat ID actual para mensajes interinos
     private currentUserId?: string; // User ID actual para obtener estado de voz
+    private currentThreadId?: string; // Thread ID actual para contexto
     private databaseService?: DatabaseService; // Servicio de BD para resets de tokens
     private userManager?: any; // UserManager para obtener estado de voz del usuario
     private static activeOpenAICalls: number = 0; // Contador global de llamadas concurrentes
@@ -215,6 +216,9 @@ export class OpenAIService implements IOpenAIService {
                 threadTokenCount = 0; // Reset completo
                 isNewThread = true;
             }
+            
+            // Guardar threadId actual para contexto de funciones
+            this.currentThreadId = threadId;
 
             // Step 2: Verificar y cancelar runs activos antes de agregar mensaje
             const runs = await this.openai.beta.threads.runs.list(threadId, { limit: 1 });
@@ -445,7 +449,8 @@ export class OpenAIService implements IOpenAIService {
                 tokensUsed: runResult.tokensUsed,
                 threadId,
                 runId: runResult.runId,
-                threadTokenCount: threadTokenCount // Incluir el token count del thread
+                threadTokenCount: threadTokenCount, // Incluir el token count del thread
+                functionCalls: runResult.functionCalls // NUEVO: Incluir function calls para detectar attachments
             };
 
         } catch (error) {
@@ -1255,6 +1260,9 @@ export class OpenAIService implements IOpenAIService {
                     // Execute function using the real registry
                     const result = await this.executeFunctionCall(functionCall);
                     
+                    // NUEVO: Guardar resultado en functionCall para bot.ts
+                    (functionCall as any).result = result;
+                    
                     // Formatear respuesta para envío a OpenAI
                     const formattedForOpenAI = JSON.stringify(result);
                     
@@ -1389,8 +1397,25 @@ export class OpenAIService implements IOpenAIService {
             // Parse arguments
             const args = JSON.parse(functionCall.function.arguments);
             
-            // Execute function using the real registry
-            const result = await this.functionRegistry.execute(functionName, args);
+            // Construir contexto del usuario actual
+            const userContext = {
+                chatId: this.currentChatId,
+                userId: this.currentUserId,
+                threadId: this.currentThreadId
+            };
+            
+            // DEBUG: Log del contexto que se está pasando
+            logInfo('FUNCTION_CONTEXT_DEBUG', 'Contexto pasado a función', {
+                functionName,
+                hasContext: !!userContext,
+                chatId: userContext.chatId,
+                userId: userContext.userId,
+                threadId: userContext.threadId,
+                contextKeys: Object.keys(userContext)
+            });
+            
+            // Execute function using the real registry con contexto
+            const result = await this.functionRegistry.execute(functionName, args, userContext);
             
             // Return the result directly for OpenAI to see the actual data
             return result;

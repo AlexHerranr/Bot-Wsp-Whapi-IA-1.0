@@ -623,6 +623,102 @@ export class CoreBot {
             }
 
             let response = processingResult.response || '';
+            let attachment = null;
+            
+            // DEBUG: Log para verificar structure de processingResult
+            logInfo('DEBUG_FUNCTION_CALLS', `FunctionCalls: ${!!processingResult.functionCalls}`, {
+                userId,
+                hasFunctionCalls: !!processingResult.functionCalls,
+                functionCallsLength: processingResult.functionCalls?.length || 0
+            }, 'bot.ts');
+            
+            if (processingResult.functionCalls && processingResult.functionCalls.length > 0) {
+                logInfo('DEBUG_FUNCTION_DETAILS', 'Detalles de functionCalls', {
+                    userId,
+                    functionCall0: {
+                        hasFunction: !!processingResult.functionCalls[0].function,
+                        functionName: processingResult.functionCalls[0].function?.name || 'NO_NAME',
+                        hasResult: !!processingResult.functionCalls[0].result,
+                        resultType: typeof processingResult.functionCalls[0].result,
+                        resultKeys: processingResult.functionCalls[0].result ? Object.keys(processingResult.functionCalls[0].result) : []
+                    }
+                }, 'bot.ts');
+            }
+            
+            // NUEVO: Verificar si hay attachment info en processingResult
+            if (processingResult.functionCalls) {
+                logInfo('ATTACHMENT_SEARCH_START', 'Buscando attachments en functionCalls', {
+                    userId,
+                    userName,
+                    functionCallsLength: processingResult.functionCalls.length,
+                    firstFunctionName: processingResult.functionCalls[0]?.function?.name || 'NO_FUNCTION'
+                }, 'bot.ts');
+                
+                for (const funcCall of processingResult.functionCalls) {
+                    logInfo('ATTACHMENT_FUNCALL_DEBUG', 'Analizando funcCall individual', {
+                        userId,
+                        userName,
+                        functionName: funcCall.function?.name || 'NO_NAME',
+                        hasResult: !!(funcCall as any).result,
+                        resultType: typeof (funcCall as any).result,
+                        resultKeys: (funcCall as any).result ? Object.keys((funcCall as any).result) : []
+                    }, 'bot.ts');
+                    
+                    // LOG DETALLADO PARA DEBUG DE ESTRUCTURA
+                    if ((funcCall as any).result) {
+                        logInfo('FUNCTION_RESULT_STRUCTURE_DETAILED', 'Estructura completa del resultado', {
+                            userId,
+                            functionName: funcCall.function?.name || 'NO_NAME',
+                            resultType: typeof (funcCall as any).result,
+                            isObject: typeof (funcCall as any).result === 'object',
+                            resultKeys: (funcCall as any).result && typeof (funcCall as any).result === 'object' ? Object.keys((funcCall as any).result) : [],
+                            hasAttachmentKey: !!((funcCall as any).result?.attachment),
+                            resultJson: typeof (funcCall as any).result === 'string' ? (funcCall as any).result.substring(0, 500) : JSON.stringify((funcCall as any).result).substring(0, 500)
+                        }, 'bot.ts');
+                    }
+                    
+                    // MEJORADO: Manejar tanto objetos como strings JSON
+                    let parsedResult = (funcCall as any).result;
+                    if (typeof parsedResult === 'string') {
+                        try {
+                            parsedResult = JSON.parse(parsedResult);
+                        } catch (parseError) {
+                            logInfo('RESULT_PARSE_ERROR', 'No se pudo parsear resultado como JSON', {
+                                userId,
+                                functionName: funcCall.function?.name || 'NO_NAME',
+                                resultLength: parsedResult.length,
+                                resultPreview: parsedResult.substring(0, 100)
+                            }, 'bot.ts');
+                            parsedResult = (funcCall as any).result; // Mantener original
+                        }
+                    }
+                    
+                    if (parsedResult && typeof parsedResult === 'object' && parsedResult.attachment) {
+                        attachment = parsedResult.attachment;
+                        logInfo('ATTACHMENT_DETECTED_IN_FUNCTION', 'Attachment detectado desde función', {
+                            userId,
+                            userName,
+                            chatId,
+                            attachmentType: attachment.type,
+                            fileName: attachment.fileName,
+                            functionName: funcCall.function?.name || 'unknown'
+                        }, 'bot.ts');
+                        
+                        // VALIDACIÓN ESPECÍFICA PARA PDFs
+                        if (attachment?.type === 'pdf') {
+                            logInfo('PDF_ATTACHMENT_DETECTED_IN_BOT', 'PDF attachment detectado para envío', {
+                                userId,
+                                userName,
+                                filePath: attachment.filePath,
+                                fileName: attachment.fileName,
+                                functionName: funcCall.function?.name || 'unknown'
+                            }, 'bot.ts');
+                        }
+                        
+                        break; // Solo tomar el primer attachment
+                    }
+                }
+            }
             
             // Verificar si la respuesta es vacía - retornar vacío para evitar fallback automático
             if (!response || response.trim() === '') {
@@ -809,9 +905,29 @@ export class CoreBot {
                 // Liberar el gate de 'run activo' antes de enviar chunks de WhatsApp
                 this.bufferManager.releaseRun(userId);
                 
+                // NUEVO: Preparar mensaje con attachment si existe
+                const messageToSend = attachment ? {
+                    message: finalResponse,
+                    attachment: attachment
+                } : finalResponse;
+                
+                // LOG FINAL: Confirmar que attachment se pasa al servicio de WhatsApp
+                if (attachment) {
+                    logInfo('ATTACHMENT_FINAL_SEND', 'Enviando mensaje con attachment a WhatsApp', {
+                        userId,
+                        userName,
+                        chatId,
+                        hasAttachment: !!attachment,
+                        attachmentType: attachment?.type,
+                        filePath: attachment?.filePath,
+                        fileName: attachment?.fileName,
+                        messageType: typeof messageToSend
+                    }, 'bot.ts');
+                }
+                
                 const messageResult = await this.whatsappService.sendWhatsAppMessage(
                     chatId,
-                    finalResponse,
+                    messageToSend,
                     userState,
                     isQuoteOrPrice,
                     quotedToSend,
@@ -819,8 +935,16 @@ export class CoreBot {
                 );
                 
                 if (messageResult.success) {
-                    // ELIMINADO: Lógica de limpieza quotedMessageId innecesaria - solo citamos durante run activo
-                    // quotedToSend siempre es undefined ahora
+                    // Log de éxito del envío (para debugging)
+                    if (attachment && attachment.type === 'pdf') {
+                        logInfo('PDF_SENT_SUCCESS', 'PDF enviado exitosamente por WhatsApp', {
+                            userId,
+                            userName,
+                            chatId,
+                            fileName: attachment.fileName,
+                            bookingId: attachment.description || 'unknown'
+                        }, 'bot.ts');
+                    }
                     
                     // Registrar IDs reales devueltos por WHAPI para evitar eco/loops
                     if (messageResult.messageIds && messageResult.messageIds.length > 0) {
@@ -852,7 +976,39 @@ export class CoreBot {
                     
                     // Si el mensaje se envió exitosamente pero no como voz (texto normal)
                     this.terminalLog.response(userName, finalResponse, processingResult.processingTime);
-                } else if (userState.lastInputVoice) {
+                } else {
+                    // NUEVO: Manejar fallo en envío de mensaje/attachment
+                    if (attachment && attachment.type === 'pdf') {
+                        // PDF falló al enviarse
+                        const errorMessage = `❌ Hubo un problema técnico generando el PDF de confirmación. Por favor consulte con su superior para resolver este inconveniente.`;
+                        
+                        logError('PDF_SEND_FAILED', 'Fallo enviando PDF al cliente', {
+                            userId,
+                            userName,
+                            chatId,
+                            fileName: attachment.fileName,
+                            bookingId: attachment.description || 'unknown',
+                            reason: 'whatsapp_send_failed'
+                        }, 'bot.ts');
+                        
+                        // Enviar mensaje de error como texto simple sin attachment
+                        const errorResult = await this.whatsappService.sendWhatsAppMessage(
+                            chatId,
+                            errorMessage,
+                            userState,
+                            false, // no es quote/price
+                            undefined, // sin quoted
+                            undefined  // sin duringRun
+                        );
+                        
+                        if (errorResult.success) {
+                            this.terminalLog.response(userName, errorMessage, processingResult.processingTime);
+                        }
+                        return;
+                    }
+                } 
+                
+                if (!messageResult.success && userState.lastInputVoice) {
                     // Si falló el envío de voz (messageResult.success = false), no enviar nada
                     logWarning('VOICE_SEND_FAILED', 'Envío de voz falló, no se envía texto para evitar duplicado', {
                         userId,

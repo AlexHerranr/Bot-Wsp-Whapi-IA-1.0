@@ -1,0 +1,18 @@
+{
+  "name": "generate_booking_confirmation_pdf",
+  "description": "Genera PDF elegante de confirmación de reserva con diseño optimizado. Consulta datos reales de Beds24 API y base de datos Railway. Solo para reservas confirmadas de canales permitidos (Booking.com, Direct, PaCartagena).",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "bookingId": {
+        "type": "string",
+        "description": "ID único de la reserva en Beds24"
+      },
+      "distribucion": {
+        "type": "string",
+        "description": "[Opcional] Distribución detallada de camas y sofá camas. Ejemplo: 'Sala: dos sofá camas, Alcoba: 1 cama doble + 1 cama nido'. Solo especificar si difiere de la configuración estándar del apartamento."
+      }
+    },
+    "required": ["bookingId"]
+  }
+}

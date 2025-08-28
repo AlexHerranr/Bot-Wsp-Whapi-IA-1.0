@@ -61,15 +61,72 @@ export class WhatsappService {
 
     public async sendWhatsAppMessage(
         chatId: string, 
-        message: string, 
+        message: string | { message?: string; attachment?: any }, // Soporte para attachments
         userState: UserState,
         isQuoteOrPrice: boolean, // Lógica de validación que vendrá del plugin
         quotedMessageId?: string, // ID del mensaje a citar/responder  
         duringRunMsgId?: string // ID para citación auto durante run activo
     ): Promise<{ success: boolean; sentAsVoice: boolean; messageIds?: string[] }> {
-        if (!message || message.trim() === '') {
+        // Parsear mensaje y attachment si es objeto
+        let actualMessage: string;
+        let attachment: any = null;
+        
+        if (typeof message === 'object' && message !== null) {
+            actualMessage = message.message || '';
+            attachment = message.attachment;
+        } else {
+            actualMessage = (message as string) || '';
+        }
+        
+        // Si hay attachment normal, enviarlo primero
+        if (attachment && attachment.type === 'pdf') {
+            logInfo('ATTACHMENT_DETECTED', 'Enviando attachment PDF', {
+                chatId,
+                attachmentType: attachment.type,
+                fileName: attachment.fileName,
+                hasMessage: !!actualMessage
+            });
+            
+            const documentResult = await this.sendDocument(
+                chatId, 
+                attachment.filePath, 
+                attachment.fileName,
+                quotedMessageId || duringRunMsgId
+            );
+            
+            if (!documentResult.success) {
+                logInfo('ATTACHMENT_SEND_ERROR', 'Error enviando attachment', {
+                    chatId,
+                    attachmentType: attachment.type,
+                    fileName: attachment.fileName
+                });
+                return { success: false, sentAsVoice: false };
+            }
+            
+            // Si solo hay attachment sin mensaje, retornar éxito
+            if (!actualMessage || actualMessage.trim() === '') {
+                logInfo('ATTACHMENT_ONLY_SENT', 'Solo attachment enviado exitosamente', {
+                    chatId,
+                    attachmentType: attachment.type,
+                    fileName: attachment.fileName,
+                    messageId: documentResult.messageId
+                });
+                return { 
+                    success: true, 
+                    sentAsVoice: false, 
+                    messageIds: documentResult.messageId ? [documentResult.messageId] : [] 
+                };
+            }
+            
+            // Si hay mensaje adicional, enviarlo después del attachment
+            // Resetear quotedMessageId para evitar doble citación
+            quotedMessageId = undefined;
+            duringRunMsgId = undefined;
+        }
+        
+        if (!actualMessage || actualMessage.trim() === '') {
             this.terminalLog.error(`Intento de enviar mensaje vacío a ${chatId}`);
-            return { success: false, sentAsVoice: false }; // No se envió nada
+            return { success: false, sentAsVoice: false };
         }
 
         // CITACIÓN AUTO: Priorizar duringRunMsgId sobre quotedMessageId
@@ -91,20 +148,21 @@ export class WhatsappService {
         const enableHumanTiming = !isOperations; // Solo para Main, no para Operations
 
         // TIMING HUMANO: Log inicio
+        const messageText = typeof message === 'string' ? message : (message as any).message || '';
         logInfo('TIMING_HUMAN_START', 'Iniciando timing por chunks', { 
             chatId, 
-            totalLength: message.length, 
+            totalLength: messageText.length, 
             willUseVoice: shouldUseVoice,
             isOperations,
             enableHumanTiming,
-            estimatedChunks: message.includes('\n\n') ? 'paragraphs' : 'normal'
+            estimatedChunks: messageText.includes('\n\n') ? 'paragraphs' : 'normal'
         });
 
         let result: { success: boolean; sentAsVoice: boolean; messageIds?: string[] };
 
         if (shouldUseVoice) {
             try {
-                const voiceResult = await this.sendVoiceMessage(chatId, message, finalQuotedId, enableHumanTiming);
+                const voiceResult = await this.sendVoiceMessage(chatId, actualMessage, finalQuotedId, enableHumanTiming);
                 if (voiceResult.success) {
                     result = { success: true, sentAsVoice: true, messageIds: voiceResult.messageIds };
                 } else {
@@ -117,20 +175,20 @@ export class WhatsappService {
             }
         } else {
             // Si llega aquí, se envía como texto (no resetea flag de voz)
-            const textResult = await this.sendTextMessage(chatId, message, isQuoteOrPrice, finalQuotedId, enableHumanTiming);
+            const textResult = await this.sendTextMessage(chatId, actualMessage, isQuoteOrPrice, finalQuotedId, enableHumanTiming);
             result = { success: textResult.success, sentAsVoice: false, messageIds: textResult.messageIds };
         }
 
         // TIMING HUMANO: Log final con delay total estimado (sin duplicar cálculos)
-        const estimatedChunks = Math.ceil(message.length / 50); // Estimación simple sin re-chunking
-        const estimatedTotalDelay = Math.ceil(message.length / 8) * 1000; // Total estimado
+        const estimatedChunks = Math.ceil(actualMessage.length / 50); // Estimación simple sin re-chunking
+        const estimatedTotalDelay = Math.ceil(actualMessage.length / 8) * 1000; // Total estimado
         const cappedTotalDelay = Math.min(estimatedTotalDelay, estimatedChunks * 2000); // Con cap por chunk
         
         logInfo('TIMING_HUMAN_END', 'Timing humano completado', { 
             chatId, 
             estimatedTotalDelay: cappedTotalDelay,
             estimatedChunks: estimatedChunks,
-            messageLength: message.length,
+            messageLength: actualMessage.length,
             type: shouldUseVoice ? 'voice' : 'text',
             success: result.success
         });
@@ -697,6 +755,80 @@ export class WhatsappService {
         }
     }
 
+    public async sendDocument(
+        chatId: string, 
+        filePath: string, 
+        fileName?: string,
+        quotedMessageId?: string
+    ): Promise<{ success: boolean; messageId?: string }> {
+        try {
+            const fs = await import('fs').then(m => m.promises);
+            
+            // Leer archivo y convertir a base64
+            const fileBuffer = await fs.readFile(filePath);
+            const base64Data = fileBuffer.toString('base64');
+            const mimeType = 'application/pdf';
+            const dataUrl = `data:${mimeType};base64,${base64Data}`;
+            
+            const payload: any = {
+                to: chatId,
+                media: dataUrl,
+                mime_type: 'application/pdf',
+                filename: fileName || 'documento.pdf'
+            };
+            
+            if (quotedMessageId) {
+                payload.quoted = quotedMessageId;
+            }
+            
+            const response = await fetchWithRetry(`${this.config.secrets.WHAPI_API_URL}/messages/document`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.config.secrets.WHAPI_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                logInfo('DOCUMENT_SEND_ERROR', 'Error enviando documento', {
+                    chatId,
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorText: errorText.substring(0, 200)
+                });
+                return { success: false };
+            }
+            
+            // Extraer ID del mensaje
+            let messageId: string | undefined;
+            try {
+                const data: any = await response.json();
+                messageId = data.id || data.messages?.[0]?.id;
+            } catch {
+                // Ignorar si no es JSON
+            }
+            
+            logInfo('DOCUMENT_SENT', 'Documento enviado exitosamente', {
+                chatId,
+                fileName: payload.filename,
+                fileSize: Math.round(fileBuffer.length / 1024) + 'KB',
+                messageId
+            });
+            
+            return { success: true, messageId };
+            
+        } catch (error: any) {
+            logInfo('DOCUMENT_SEND_ERROR', 'Error enviando documento', {
+                chatId,
+                error: error.message,
+                filePath
+            });
+            return { success: false };
+        }
+    }
+
     /**
      * TIMING HUMANO: Calcula delay por chunk (1s cada 8 chars, cap 2000ms)
      */
@@ -708,7 +840,7 @@ export class WhatsappService {
         logInfo('HUMAN_DELAY_CHUNK', `${mode}:${chunkLength}ch=${delay}ms`, { 
             mode, 
             chunkLength, 
-            delay 
+delay 
         });
         return delay;
     }
