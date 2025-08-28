@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y google-chrome-stable \
     fontconfig fonts-freefont-ttf libfontconfig libfreetype6 libjpeg62-turbo libpng16-16 libx11-6 libxcb1 libxext6 libxrender1 xfonts-75dpi xfonts-base \
     libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 libcups2 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libxrandr2 libxss1 libxtst6 \
+    libasound2 libexpat1 libfontconfig1 libpangocairo-1.0-0 libx11-xcb1 lsb-release wget xdg-utils \
+    fonts-liberation fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst \
     python3 make g++ \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
