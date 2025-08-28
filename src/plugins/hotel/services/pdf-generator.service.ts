@@ -134,7 +134,9 @@ export class PDFGeneratorService {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--font-render-hinting=medium'
+        '--font-render-hinting=medium',
+        '--disable-font-subpixel-positioning',
+        '--font-render-hinting=none'
       ];
 
       // Variable para path de Chrome en Railway
