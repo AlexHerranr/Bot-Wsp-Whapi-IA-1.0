@@ -631,8 +631,22 @@ export class PDFGeneratorService {
 
       if (isRailway) {
         // Esperar extra en Railway para asegurar que todo esté cargado
-        await page.waitForTimeout(2000);
-        logInfo('PDF_GENERATOR', '⏰ Railway: Tiempo extra de espera aplicado');
+        try {
+          logInfo('PDF_GENERATOR', '⏰ Railway: Iniciando wait timeout de 2000ms...');
+          await page.waitForTimeout(2000);
+          logInfo('PDF_GENERATOR', '⏰ Railway: Tiempo extra de espera aplicado exitosamente');
+        } catch (waitError) {
+          logError('PDF_GENERATOR', '❌ Railway: Error en waitForTimeout:', {
+            errorMessage: waitError.message,
+            errorStack: waitError.stack,
+            pageStatus: 'unknown'
+          });
+          
+          // FALLBACK: usar setTimeout si waitForTimeout falla
+          logInfo('PDF_GENERATOR', '🔄 Railway: Usando fallback setTimeout...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          logInfo('PDF_GENERATOR', '✅ Railway: Fallback setTimeout completado');
+        }
       }
 
       // Generar PDF con configuración optimizada para una página oficio
