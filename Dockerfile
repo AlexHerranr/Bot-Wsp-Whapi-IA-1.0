@@ -48,16 +48,15 @@ WORKDIR /app
 # Variables de entorno para producción (Railway setea PORT dinámicamente)
 ENV NODE_ENV=production \
     NODE_OPTIONS="--max-old-space-size=768" \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Instalar Chrome en producción (slim version)
+# Instalar Chromium en producción (slim version)
 RUN apt-get update && apt-get install -y \
-    ca-certificates curl gnupg \
-    && mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg \
-    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
+    ca-certificates curl gnupg chromium chromium-driver \
+    fontconfig fonts-freefont-ttf libfontconfig libfreetype6 libjpeg62-turbo libpng16-16 libx11-6 libxcb1 libxext6 libxrender1 \
+    libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 libcups2 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libxrandr2 libxss1 libxtst6 \
+    libasound2 libexpat1 libfontconfig1 libpangocairo-1.0-0 libx11-xcb1 lsb-release wget xdg-utils \
+    fonts-liberation fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
