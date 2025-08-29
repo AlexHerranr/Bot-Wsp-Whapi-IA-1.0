@@ -237,12 +237,10 @@ export class PDFGeneratorService {
             );
             logInfo('PDF_GENERATOR', '✅ Font cargado exitosamente');
             
-            // Step 2: FUERZA DESCARGA EXTERNA PARA EVITAR ENOENT
-            // Usa release compatible con Puppeteer 24.17.1 (Chromium 139)
-            const chromiumPackUrl = 'https://github.com/Sparticuz/chromium/releases/download/v138.0.0/chromium-v138.0.0-pack.tar';
-            
-            logInfo('PDF_GENERATOR', `📦 Descargando Chromium desde: ${chromiumPackUrl}`);
-            executablePath = await chromium.executablePath(chromiumPackUrl);
+            // Step 2: Obtener executable path de Sparticuz
+            // No necesita URL externa, el paquete maneja la descarga automáticamente
+            logInfo('PDF_GENERATOR', '📦 Obteniendo Chromium path de @sparticuz/chromium');
+            executablePath = await chromium.executablePath();
             chromiumArgs = chromium.args;
             
             logInfo('PDF_GENERATOR', `🎯 RAILWAY: Chromium path descargado: ${executablePath}`);
@@ -322,17 +320,18 @@ export class PDFGeneratorService {
         logInfo('PDF_GENERATOR', `🔄 FALLBACK: Usando Puppeteer bundled - ${executablePath}`);
       }
 
+      // Configuración optimizada según documentación oficial de @sparticuz/chromium
       const launchOptions: any = {
-        headless: 'shell' as const, // Requerido para sparticuz moderno
-        executablePath,
-        args: [
+        args: isRailway && chromiumArgs.length > 0 ? chromiumArgs : [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--single-process',
-          '--disable-gpu',
-          ...chromiumArgs
+          '--disable-gpu'
         ],
+        defaultViewport: null,
+        executablePath,
+        headless: 'shell' as const,
         timeout: 60000,
         handleSIGINT: false,
         handleSIGTERM: false,
