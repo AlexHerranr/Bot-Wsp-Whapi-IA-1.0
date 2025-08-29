@@ -584,10 +584,53 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
                 }
             }
             
+            // Agregar nota interna contextual para el asistente
+            let assistantNote = '';
+            
+            // Analizar el contexto de la(s) reserva(s)
+            for (const booking of processedBookings) {
+                const channel = (booking.channel || '').toLowerCase();
+                const hasPendingBalance = booking.balancePending > 0;
+                const hasPayments = booking.totalPaid > 0;
+                
+                // Determinar si es OTA que no requiere pagos directos
+                const isOTAWithoutDirectPayment = 
+                    channel.includes('airbnb') || 
+                    channel.includes('expedia') || 
+                    channel.includes('hotels.com') ||
+                    channel.includes('hoteles.com');
+                
+                if (isOTAWithoutDirectPayment) {
+                    assistantNote = '\n\n📌 NOTA INTERNA: Esta reserva proviene de ' + booking.channel + 
+                        ', por lo que el pago se gestiona directamente a través de esa plataforma. ' +
+                        'No hay saldo pendiente con el hotel. Enfócate en confirmar los detalles de la estadía ' +
+                        'y coordinar la logística de llegada.';
+                } else if (channel.includes('booking.com') || channel.includes('direct')) {
+                    if (!hasPayments && hasPendingBalance) {
+                        assistantNote = '\n\n📌 NOTA INTERNA: Reserva confirmada pero SIN PAGOS registrados. ' +
+                            'Según las políticas del hotel, se requiere un anticipo del 50% para garantizar la reserva al 100%. ' +
+                            'Sugiere amablemente el pago del anticipo y ofrece los métodos de pago disponibles.';
+                    } else if (hasPayments && hasPendingBalance) {
+                        assistantNote = '\n\n📌 NOTA INTERNA: Reserva con anticipo parcial recibido. ' +
+                            'Hay un saldo pendiente de $' + formatCurrencyClean(booking.balancePending) + 
+                            '. Puedes mencionar esto si es relevante, pero enfócate en resolver cualquier duda del huésped.';
+                    } else if (hasPayments && !hasPendingBalance) {
+                        assistantNote = '\n\n📌 NOTA INTERNA: Reserva completamente pagada. ' +
+                            'Enfócate en confirmar detalles y coordinar la llegada del huésped.';
+                    }
+                }
+            }
+            
+            // Si no se agregó nota específica, agregar una genérica
+            if (!assistantNote) {
+                assistantNote = '\n\n📌 NOTA INTERNA: Consulta exitosa. Responde las dudas del huésped ' +
+                    'sobre su reserva según las políticas del hotel y coordina los detalles necesarios.';
+            }
+            
             // 📋 AUDIT LOG: Final response sent to OpenAI
             const finalResponse: BookingResult = {
                 success: true,
-                message: combinedMessage,
+                message: combinedMessage + assistantNote,
                 booking: processedBookings.length === 1 ? processedBookings[0] : processedBookings,
                 source: 'beds24'
             };
