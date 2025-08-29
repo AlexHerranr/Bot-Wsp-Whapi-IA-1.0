@@ -975,11 +975,12 @@ export class OpenAIService implements IOpenAIService {
         tokensUsed?: number;
         modelUsed?: string;
     }> {
+        // Create run params fuera del try para que esté disponible en el catch
+        const runParams: any = {
+            assistant_id: assistantId
+        };
+        
         try {
-            // Create run with model override for images
-            const runParams: any = {
-                assistant_id: assistantId
-            };
             
             // NO override de modelo - usar Assistant tal como está configurado
             // Las imágenes ahora se procesan con capa de percepción antes de llegar aquí
@@ -1012,7 +1013,106 @@ export class OpenAIService implements IOpenAIService {
                 modelUsed: result.modelUsed || 'unknown'
             };
 
-        } catch (error) {
+        } catch (error: any) {
+            // Manejo especial para run activo
+            if (error?.status === 400 && error?.message?.includes('already has an active run')) {
+                logWarning('ACTIVE_RUN_EXISTS', 'Thread ya tiene un run activo, esperando para reintentar', {
+                    threadId,
+                    error: error.message
+                }, 'openai.service.ts');
+                
+                // Extraer el runId activo del mensaje de error si es posible
+                const activeRunMatch = error.message.match(/run (run_[\w]+)/);
+                const activeRunId = activeRunMatch ? activeRunMatch[1] : null;
+                
+                if (activeRunId) {
+                    // Intentar esperar a que termine el run activo
+                    try {
+                        logInfo('WAITING_FOR_RUN', `Esperando que termine run activo: ${activeRunId}`, {
+                            threadId,
+                            activeRunId
+                        }, 'openai.service.ts');
+                        
+                        // Esperar hasta 10 segundos para que termine el run activo
+                        let attempts = 0;
+                        const maxAttempts = 10;
+                        
+                        while (attempts < maxAttempts) {
+                            await this.sleep(1000);
+                            
+                            try {
+                                const activeRun = await this.openai.beta.threads.runs.retrieve(threadId, activeRunId);
+                                
+                                if (['completed', 'failed', 'cancelled', 'expired'].includes(activeRun.status)) {
+                                    logInfo('ACTIVE_RUN_FINISHED', `Run activo terminó con status: ${activeRun.status}`, {
+                                        threadId,
+                                        activeRunId,
+                                        status: activeRun.status
+                                    }, 'openai.service.ts');
+                                    
+                                    // Intentar crear nuevo run
+                                    const newRun = await openAIWithRetry(
+                                        () => this.openai.beta.threads.runs.create(threadId, runParams),
+                                        {
+                                            maxRetries: 2,
+                                            baseDelay: 500,
+                                            maxDelay: 2000
+                                        }
+                                    );
+                                    
+                                    const result = await this.pollRunStatus(threadId, newRun.id, userName);
+                                    
+                                    return {
+                                        success: result.success,
+                                        error: result.error,
+                                        runId: newRun.id,
+                                        functionCalls: result.functionCalls,
+                                        tokensUsed: result.tokensUsed,
+                                        modelUsed: result.modelUsed || 'unknown'
+                                    };
+                                }
+                                
+                                // Si el run sigue activo, cancelarlo después de 5 intentos
+                                if (attempts >= 5 && activeRun.status === 'in_progress') {
+                                    logWarning('CANCELLING_STUCK_RUN', 'Cancelando run atascado', {
+                                        threadId,
+                                        activeRunId,
+                                        attempts
+                                    }, 'openai.service.ts');
+                                    
+                                    try {
+                                        await this.openai.beta.threads.runs.cancel(threadId, activeRunId);
+                                        await this.sleep(1000); // Esperar un poco después de cancelar
+                                    } catch (cancelError) {
+                                        logError('CANCEL_RUN_ERROR', 'Error al cancelar run', {
+                                            error: cancelError
+                                        }, 'openai.service.ts');
+                                    }
+                                }
+                                
+                            } catch (retrieveError) {
+                                logError('RETRIEVE_RUN_ERROR', 'Error al obtener estado del run activo', {
+                                    error: retrieveError
+                                }, 'openai.service.ts');
+                            }
+                            
+                            attempts++;
+                        }
+                    } catch (waitError) {
+                        logError('WAIT_RUN_ERROR', 'Error esperando run activo', {
+                            error: waitError
+                        }, 'openai.service.ts');
+                    }
+                }
+                
+                // Si llegamos aquí, no pudimos resolver el run activo
+                return {
+                    success: false,
+                    error: 'No se pudo procesar el mensaje porque hay una operación en curso. Por favor intenta de nuevo en unos segundos.'
+                };
+            }
+            
+            // Otros errores
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to create run'
@@ -1593,6 +1693,45 @@ export class OpenAIService implements IOpenAIService {
 
     private sleep(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    /**
+     * Limpia runs huérfanos o atascados de un thread
+     */
+    private async cleanupStuckRuns(threadId: string): Promise<void> {
+        try {
+            const runs = await this.openai.beta.threads.runs.list(threadId, { limit: 10 });
+            
+            for (const run of runs.data) {
+                // Si el run está en progreso o en cola por más de 2 minutos, cancelarlo
+                if (['in_progress', 'queued', 'requires_action'].includes(run.status)) {
+                    const runAge = Date.now() - run.created_at * 1000;
+                    
+                    if (runAge > 120000) { // 2 minutos
+                        logWarning('CLEANUP_OLD_RUN', `Cancelando run antiguo: ${run.id}`, {
+                            threadId,
+                            runId: run.id,
+                            status: run.status,
+                            ageMs: runAge
+                        }, 'openai.service.ts');
+                        
+                        try {
+                            await this.openai.beta.threads.runs.cancel(threadId, run.id);
+                        } catch (cancelError) {
+                            logError('CLEANUP_CANCEL_ERROR', 'Error cancelando run antiguo', {
+                                runId: run.id,
+                                error: cancelError
+                            }, 'openai.service.ts');
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            logError('CLEANUP_ERROR', 'Error limpiando runs', {
+                threadId,
+                error
+            }, 'openai.service.ts');
+        }
     }
 
     // Utility methods
