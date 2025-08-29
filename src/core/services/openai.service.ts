@@ -105,9 +105,17 @@ export class OpenAIService implements IOpenAIService {
             source: assistantId ? 'parameter' : 'config'
         }, 'openai.service.ts');
         
-        // Guardar chatId y userId para posibles mensajes interinos
+        // Guardar chatId y userId para posibles mensajes interinos y funciones
         this.currentChatId = chatId;
         this.currentUserId = userId;
+        
+        // DEBUG: Verificar que se establecieron correctamente
+        logInfo('CONTEXT_SET', 'Contexto establecido para OpenAI', {
+            chatId: this.currentChatId,
+            userId: this.currentUserId,
+            chatIdProvided: chatId,
+            userIdProvided: userId
+        });
 
         // Control de concurrencia para escalabilidad
         while (OpenAIService.activeOpenAICalls >= OpenAIService.MAX_CONCURRENT_CALLS) {
