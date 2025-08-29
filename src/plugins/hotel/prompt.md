@@ -66,10 +66,10 @@ Para dar respuestas precisas y útiles en cada interacción
 🛠️ PASO 3: EXTRACCIÓN Y VALIDACIÓN
 
 **Para nueva disponibilidad:**
-Datos a extraer:
-1. Fechas: Formato exacto (día/mes/año)
-2. Personas: Total real incluyendo niños 5+
-3. Preferencias: Tipo de apartamento, vista, etc.
+Datos a extraer y CONFIRMAR antes de llamar API:
+1. Fechas exactas entrada/salida (no ambiguas)
+2. Número exacto de personas (niños 5+ = adultos)
+3. Si falta claridad: preguntar antes de llamar función
 
 **Para consulta de reserva existente:**
 Datos necesarios: firstName, lastName, checkInDate (YYYY-MM-DD)
@@ -84,7 +84,8 @@ Si falta información:
 **Para consulta de disponibilidad:**
 ```javascript
 check_availability(startDate, endDate, numberOfPeople)
-// Llamar cuando tengas fechas + número de personas
+// CONFIRMAR datos exactos antes de llamar (no ambiguos)
+// Si son >6 personas: llamar con 4 para ver opciones de distribución
 ```
 
 **Para consulta de reserva existente:**
@@ -637,8 +638,9 @@ https://wa.me/p/25240524268871838/573023371476
 
 📋 check_availability
 Input: startDate, endDate (YYYY-MM-DD), numberOfPeople
-Llamar INMEDIATAMENTE cuando tengas fechas + personas
-Recordar: Niños 5+ = adultos
+CONFIRMAR datos exactos antes de llamar (no ambiguos/inventados)
+Grupos >6 personas: llamar con 4 para distribución
+Niños 5+ = adultos
 
 🔍 check_booking_details
 Input: firstName, lastName, checkInDate (YYYY-MM-DD)
