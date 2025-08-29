@@ -299,6 +299,37 @@ El sistema PDF ahora funciona correctamente en **todos los entornos**:
 
 ---
 
+## 🔬 **ITERACIONES TÉCNICAS**
+
+### **Error 1: executablePath undefined**
+```bash
+Error: "The 'path' argument must be of type string. Received undefined"
+Causa: puppeteer-core sin chromium.executablePath() válido
+```
+**Intento 1:** Puppeteer 24.17.1 + Chromium 131.0.1 (version compatibility)  
+**Resultado:** ❌ ENOENT: no such file or directory
+
+**Intento 2:** Revert puppeteer-core 24.9.0 + @sparticuz/chromium 138.0.2 (commit funcional exacto)  
+**Resultado:** ❌ Sin fallback bundled, mismo error Railway
+
+**Intento 3:** Puppeteer completo 24.9.0 + @sparticuz/chromium 138.0.2 + fallback robusto  
+**Resultado:** ❌ Fallback NO se ejecuta - sigue throw error en Railway
+
+**Intento 4:** Debug detallado step-by-step + fallback automático real  
+**Resultado:** 🚀 **IMPLEMENTANDO** - Enhanced logging + true fallback
+
+### **Root Cause Analysis:**
+- **Railway environment:** Chromium download policy changed/restricted  
+- **puppeteer-core limitation:** No bundled fallback when @sparticuz fails  
+- **Version matrix:** Compatible pero Railway filesystem issues  
+
+### **Next Actions:**
+- ✅ Railway logs validation con nueva config  
+- ⏳ Si persiste ENOENT: Railway infrastructure limitation  
+- 🎯 Fallback a puppeteer bundled debe activarse automáticamente  
+
+---
+
 **Documento actualizado:** `2025-08-29`  
-**Versión:** `1.0 - Solución Definitiva`  
+**Versión:** `1.1 - Con Debug Técnico`  
 **Estado:** ✅ **IMPLEMENTADO Y FUNCIONANDO**

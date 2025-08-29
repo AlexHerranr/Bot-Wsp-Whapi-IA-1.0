@@ -1,5 +1,5 @@
 // src/plugins/hotel/services/pdf-generator.service.ts
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer';
 import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
@@ -137,9 +137,8 @@ export class PDFGeneratorService {
     if (!this.browser) {
       logInfo('PDF_GENERATOR', 'Inicializando navegador Puppeteer...');
       
-      // DETECCIÓN CORRECTA: Solo usar sparticuz en Railway REAL
-      const isRealRailway = !!(process.env.RAILWAY_PROJECT_ID && process.env.RAILWAY_PROJECT_ID !== 'local-dev');
-      const isRailway = isRealRailway;
+      // DETECCIÓN SIMPLE: Railway environment
+      const isRailway = !!process.env.RAILWAY_PROJECT_ID;
       
       const browserArgs = [
         '--no-sandbox',
@@ -207,33 +206,54 @@ export class PDFGeneratorService {
       let chromiumArgs: string[] = [];
       
       if (isRailway) {
-        // EN RAILWAY REAL: usar @sparticuz/chromium obligatorio
+        // RAILWAY: Intentar @sparticuz/chromium con fallback a bundled
         try {
-          logInfo('PDF_GENERATOR', '🎯 RAILWAY REAL detectado - inicializando Sparticuz Chromium');
+          logInfo('PDF_GENERATOR', '🎯 RAILWAY detectado - intentando Sparticuz Chromium');
           
-          // CRITICAL: Cargar fonts antes del executablePath  
+          // Step 1: Font loading
           await chromium.font(
             'https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2'
           );
-          logInfo('PDF_GENERATOR', '✅ Font cargado exitosamente');
+          logInfo('PDF_GENERATOR', '✅ Font loaded successfully');
           
+          // Step 2: Get executable path
           executablePath = await chromium.executablePath();
           chromiumArgs = chromium.args;
           
-          logInfo('PDF_GENERATOR', `🎯 RAILWAY: Chromium path: ${executablePath}`);
-          logInfo('PDF_GENERATOR', `🎯 RAILWAY: Args count: ${chromiumArgs.length}`);
+          logInfo('PDF_GENERATOR', `🎯 SPARTICUZ: Path: ${executablePath}`);
+          logInfo('PDF_GENERATOR', `🎯 SPARTICUZ: Args: ${chromiumArgs.length} total`);
           
-          // VALIDACIÓN CRÍTICA del path
-          if (!executablePath || executablePath === '/usr/bin/chromium') {
-            throw new Error('Sparticuz executablePath inválido: ' + executablePath);
+          // Step 3: Validate path
+          if (!executablePath || executablePath === '/usr/bin/chromium' || executablePath.includes('undefined')) {
+            throw new Error(`Invalid Sparticuz path: "${executablePath}"`);
           }
           
-        } catch (pathError) {
-          logError('PDF_GENERATOR', `❌ SPARTICUZ COMPLETAMENTE FALLIDO: ${pathError.message}`);
-          logError('PDF_GENERATOR', `❌ Stack: ${pathError.stack}`);
+          logSuccess('PDF_GENERATOR', '✅ Sparticuz Chromium configured successfully');
           
-          // EN RAILWAY: Si sparticuz falla, es error crítico
-          throw new Error(`Railway PDF requires Sparticuz Chromium: ${pathError.message}`);
+        } catch (sparticuzError) {
+          logError('PDF_GENERATOR', `❌ SPARTICUZ FAILED: ${sparticuzError.message}`);
+          logError('PDF_GENERATOR', `❌ SPARTICUZ STACK: ${sparticuzError.stack}`);
+          
+          // CRITICAL FALLBACK: Use puppeteer bundled
+          logInfo('PDF_GENERATOR', '🔄 ACTIVATING FALLBACK: Puppeteer bundled');
+          
+          try {
+            executablePath = puppeteer.executablePath();
+            chromiumArgs = [];
+            
+            logInfo('PDF_GENERATOR', `🔄 FALLBACK PATH: ${executablePath}`);
+            logInfo('PDF_GENERATOR', `🔄 FALLBACK ARGS: ${chromiumArgs.length} total`);
+            
+            if (!executablePath) {
+              throw new Error('Puppeteer bundled path también undefined');
+            }
+            
+            logSuccess('PDF_GENERATOR', '✅ FALLBACK Puppeteer bundled configured');
+            
+          } catch (fallbackError) {
+            logError('PDF_GENERATOR', `❌ FALLBACK ALSO FAILED: ${fallbackError.message}`);
+            throw new Error(`Both Sparticuz and Puppeteer bundled failed: ${fallbackError.message}`);
+          }
         }
       } else {
         // LOCAL: usar Puppeteer bundled normal
