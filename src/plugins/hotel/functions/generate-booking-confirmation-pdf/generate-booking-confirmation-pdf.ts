@@ -623,15 +623,17 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     });
     
     // DEBUG: Verificar condiciones para envío directo  
-    logInfo('DIRECT_SEND_CONDITIONS', 'Verificando condiciones para envío directo', {
+    console.log('🔍 DIRECT_SEND_DEBUG:', JSON.stringify({
       resultSuccess: result.success,
-      hasPdfPath: !!(result as any).pdfPath,
+      hasPdfPath: !!(result as any).pdfPath, 
       hasPdfBuffer: !!(result as any).pdfBuffer,
+      bufferLength: (result as any).pdfBuffer?.length,
       hasUserContext: !!userContext,
+      userContextKeys: userContext ? Object.keys(userContext) : null,
       hasChatId: !!userContext?.chatId,
       chatId: userContext?.chatId,
       bookingId: params.bookingId
-    });
+    }, null, 2));
 
     // ENVÍO DIRECTO DE PDF - Evitar attachment en response para prevenir OpenAI string limit
     if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer) && userContext?.chatId) {
@@ -692,14 +694,23 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       });
     } else {
       // Log cuando NO se ejecuta envío directo
-      logInfo('DIRECT_SEND_SKIPPED', 'Envío directo NO ejecutado - condiciones no cumplidas', {
+      console.log('❌ DIRECT_SEND_FAILED - Condiciones NO cumplidas:', JSON.stringify({
         resultSuccess: result.success,
         hasPdfPath: !!(result as any).pdfPath,
         hasPdfBuffer: !!(result as any).pdfBuffer,
+        bufferLength: (result as any).pdfBuffer?.length,
         hasUserContext: !!userContext,
+        userContextKeys: userContext ? Object.keys(userContext) : null,
         hasChatId: !!userContext?.chatId,
-        bookingId: params.bookingId
-      });
+        chatId: userContext?.chatId,
+        bookingId: params.bookingId,
+        conditionCheck: {
+          success: result.success,
+          hasPdf: !!((result as any).pdfPath || (result as any).pdfBuffer),
+          hasChatId: !!userContext?.chatId,
+          fullCondition: result.success && ((result as any).pdfPath || (result as any).pdfBuffer) && userContext?.chatId
+        }
+      }, null, 2));
     }
     
     return response;
