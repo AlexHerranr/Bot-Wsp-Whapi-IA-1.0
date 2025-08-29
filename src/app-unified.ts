@@ -252,6 +252,9 @@ const botSentMessages = new Set<string>();
 // NUEVO: Map global para estados de usuario (funcionalidades media)
 const globalUserStates = new Map<string, UserState>();
 
+// Map temporal para attachments de funciones
+const globalAttachments = new Map<string, any>();
+
 // 🔧 ELIMINADOS: Caches duplicados migrados a historyInjection.ts
 // Los caches historyCache y contextInjectionCache ahora están centralizados
 // en el módulo historyInjection.ts para evitar duplicación y optimizar memoria
@@ -1557,7 +1560,19 @@ function setupWebhooks() {
             // Todo mensaje relevante va directo a OpenAI
             try {
                 const response = await processWithOpenAI(combinedText, userId, chatId, userName);
-                await sendWhatsAppMessage(chatId, response);
+                
+                // Verificar si la respuesta incluye attachments
+                if (typeof response === 'object' && response.attachment) {
+                    // Enviar el mensaje de texto primero
+                    if (response.message) {
+                        await sendWhatsAppMessage(chatId, response.message);
+                    }
+                    // Luego enviar el attachment
+                    await sendWhatsAppAttachment(chatId, response.attachment);
+                } else {
+                    // Respuesta normal de texto
+                    await sendWhatsAppMessage(chatId, response);
+                }
             } catch (error) {
                 // 🔧 NUEVO: Manejar cancelación por typing
                 if (error.message === 'PROCESSING_CANCELLED_TYPING_ACTIVE' || 
@@ -2677,6 +2692,17 @@ function setupWebhooks() {
                             formattedResult = JSON.stringify(result);
                         } else {
                             formattedResult = String(result || 'success');
+                        }
+                        
+                        // Detectar si hay attachment en el resultado
+                        let attachment = null;
+                        if (result && typeof result === 'object' && result.attachment) {
+                            attachment = result.attachment;
+                            // Guardar el attachment para enviarlo después
+                            if (!globalAttachments) {
+                                globalAttachments = new Map();
+                            }
+                            globalAttachments.set(threadId, attachment);
                         }
                         
                         toolOutputs.push({

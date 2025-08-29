@@ -335,10 +335,7 @@ async function handleGenerateBookingConfirmation(args: GenerateBookingConfirmati
       path: filePath
     });
 
-    // Crear un link temporal para el PDF (simulado por ahora)
-    const pdfUrl = `https://bot-wsp-whapi-ia-10-production.up.railway.app/pdf/${fileName}`;
-    
-    // Retornar respuesta SIMPLIFICADA para evitar problemas con OpenAI
+    // Retornar respuesta con el PDF para que OpenAI lo envíe
     return {
       success: true,
       message: `✅ PDF de confirmación generado exitosamente para la reserva ${args.bookingId}\n\n` +
@@ -352,11 +349,17 @@ async function handleGenerateBookingConfirmation(args: GenerateBookingConfirmati
                `• Noches: ${templateData.nights}\n` +
                `• Propiedad: ${templateData.propertyName}\n` +
                `• Habitación: ${templateData.roomName}\n\n` +
-               `💰 **Total: ${templateData.currency} ${templateData.totalAmount}**\n\n` +
-               `📥 El PDF está listo para descargar. Por favor indícame si deseas que te lo envíe por otro medio.`,
+               `💰 **Total: ${templateData.currency} ${templateData.totalAmount}**`,
       bookingId: args.bookingId,
       fileName: fileName,
-      fileSize: `${(pdfBuffer.length / 1024).toFixed(2)}KB`
+      fileSize: `${(pdfBuffer.length / 1024).toFixed(2)}KB`,
+      // Incluir el attachment para enviarlo por WhatsApp
+      attachment: {
+        type: 'document',
+        fileName: fileName,
+        mimeType: 'application/pdf',
+        data: pdfBuffer.toString('base64')
+      }
     };
     
   } catch (error: any) {

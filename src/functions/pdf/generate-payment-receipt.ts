@@ -482,7 +482,7 @@ async function handleGeneratePaymentReceipt(args: GeneratePaymentReceiptArgs): P
       receiptNumber: receiptNumber
     });
 
-    // Retornar respuesta SIMPLIFICADA para evitar problemas con OpenAI
+    // Retornar respuesta con el PDF para que OpenAI lo envíe
     return {
       success: true,
       message: `✅ Recibo de pago generado exitosamente\n\n` +
@@ -498,12 +498,18 @@ async function handleGeneratePaymentReceipt(args: GeneratePaymentReceiptArgs): P
                `• Método: ${templateData.paymentMethod}\n` +
                `• Transacción: ${transactionId}\n` +
                `• Estado: ✅ CONFIRMADO\n\n` +
-               `💰 **Total pagado: ${templateData.currency} ${templateData.totalAmount}**\n\n` +
-               `📥 El recibo está listo para descargar. Por favor indícame si deseas que te lo envíe por otro medio.`,
+               `💰 **Total pagado: ${templateData.currency} ${templateData.totalAmount}**`,
       bookingId: args.bookingId,
       receiptNumber: receiptNumber,
       fileName: fileName,
-      fileSize: `${(pdfBuffer.length / 1024).toFixed(2)}KB`
+      fileSize: `${(pdfBuffer.length / 1024).toFixed(2)}KB`,
+      // Incluir el attachment para enviarlo por WhatsApp
+      attachment: {
+        type: 'document',
+        fileName: fileName,
+        mimeType: 'application/pdf',
+        data: pdfBuffer.toString('base64')
+      }
     };
     
   } catch (error: any) {
