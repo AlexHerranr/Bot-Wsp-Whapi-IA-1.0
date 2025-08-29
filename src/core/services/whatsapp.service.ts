@@ -788,14 +788,15 @@ export class WhatsappService {
             // Leer archivo y convertir a base64
             const fileBuffer = await fs.readFile(filePath);
             const base64Data = fileBuffer.toString('base64');
-            const mimeType = 'application/pdf';
-            const dataUrl = `data:${mimeType};base64,${base64Data}`;
             
+            // Usar mismo formato que sendDocumentFromBuffer
             const payload: any = {
                 to: chatId,
-                media: dataUrl,
+                media: base64Data,  // Solo base64, sin el prefijo data:
                 mime_type: 'application/pdf',
-                filename: fileName || 'documento.pdf'
+                filename: fileName || 'documento.pdf',
+                no_encode: false,  // Indicar que media ya está en base64
+                no_cache: true     // No cachear
             };
             
             if (quotedMessageId) {
@@ -895,14 +896,20 @@ export class WhatsappService {
                     firstBytes: buffer.slice(0, 50).toString('hex')
                 });
             }
-            const mimeType = 'application/pdf';
-            const dataUrl = `data:${mimeType};base64,${base64Data}`;
+            
+            // WHAPI: Probar enviando solo base64 sin data URL
+            // Según la documentación, media puede ser:
+            // 1. URL directa
+            // 2. Base64 string (con no_encode=false)
+            // 3. Data URL (data:mime;base64,content)
             
             const payload: any = {
                 to: chatId,
-                media: dataUrl,
+                media: base64Data,  // Solo base64, sin el prefijo data:
                 mime_type: 'application/pdf',
-                filename: fileName || 'documento.pdf'
+                filename: fileName || 'confirmacion-reserva.pdf',
+                no_encode: false,  // Indicar que media ya está en base64
+                no_cache: true     // No cachear para evitar reutilizar corrupto
             };
             
             if (quotedMessageId) {
