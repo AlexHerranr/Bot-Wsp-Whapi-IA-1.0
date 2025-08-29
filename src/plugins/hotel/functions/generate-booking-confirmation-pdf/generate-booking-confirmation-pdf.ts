@@ -622,6 +622,17 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       bufferSize: (result as any).pdfBuffer?.length || 0
     });
     
+    // DEBUG: Verificar condiciones para envío directo  
+    logInfo('DIRECT_SEND_CONDITIONS', 'Verificando condiciones para envío directo', {
+      resultSuccess: result.success,
+      hasPdfPath: !!(result as any).pdfPath,
+      hasPdfBuffer: !!(result as any).pdfBuffer,
+      hasUserContext: !!userContext,
+      hasChatId: !!userContext?.chatId,
+      chatId: userContext?.chatId,
+      bookingId: params.bookingId
+    });
+
     // ENVÍO DIRECTO DE PDF - Evitar attachment en response para prevenir OpenAI string limit
     if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer) && userContext?.chatId) {
       const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
@@ -676,7 +687,17 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       // NO agregar attachment al response - evita OpenAI string_above_max_length
       logInfo('ATTACHMENT_SKIPPED', 'Attachment NO agregado al response (evita OpenAI limit)', {
         pdfSent: true,
-        chatId: userContext.chatId,
+        chatId: userContext?.chatId,
+        bookingId: params.bookingId
+      });
+    } else {
+      // Log cuando NO se ejecuta envío directo
+      logInfo('DIRECT_SEND_SKIPPED', 'Envío directo NO ejecutado - condiciones no cumplidas', {
+        resultSuccess: result.success,
+        hasPdfPath: !!(result as any).pdfPath,
+        hasPdfBuffer: !!(result as any).pdfBuffer,
+        hasUserContext: !!userContext,
+        hasChatId: !!userContext?.chatId,
         bookingId: params.bookingId
       });
     }
