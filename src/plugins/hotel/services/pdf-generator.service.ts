@@ -1,6 +1,9 @@
 // src/plugins/hotel/services/pdf-generator.service.ts
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+
+// Type declaration for dynamic import
+declare function require(name: string): any;
 import fs from 'fs';
 import path from 'path';
 import QRCode from 'qrcode';
@@ -234,12 +237,10 @@ export class PDFGeneratorService {
             );
             logInfo('PDF_GENERATOR', '✅ Font cargado exitosamente');
             
-            // Step 2: FUERZA DESCARGA EXTERNA PARA EVITAR ENOENT
-            // Usa release compatible con Puppeteer 24.17.1 (Chromium 139)
-            const chromiumPackUrl = 'https://github.com/Sparticuz/chromium/releases/download/v138.0.0/chromium-v138.0.0-pack.tar';
-            
-            logInfo('PDF_GENERATOR', `📦 Descargando Chromium desde: ${chromiumPackUrl}`);
-            executablePath = await chromium.executablePath(chromiumPackUrl);
+            // Step 2: Obtener executable path de Sparticuz
+            // No necesita URL externa, el paquete maneja la descarga automáticamente
+            logInfo('PDF_GENERATOR', '📦 Obteniendo Chromium path de @sparticuz/chromium');
+            executablePath = await chromium.executablePath();
             chromiumArgs = chromium.args;
             
             logInfo('PDF_GENERATOR', `🎯 RAILWAY: Chromium path descargado: ${executablePath}`);
@@ -270,9 +271,13 @@ export class PDFGeneratorService {
           
           try {
             // Importar dinámicamente puppeteer completo para fallback
-            const puppeteerFull = await import('puppeteer');
-            executablePath = puppeteerFull.default.executablePath();
-            chromiumArgs = [];
+            const puppeteerFull = await import('puppeteer').catch(() => null);
+            if (puppeteerFull) {
+              executablePath = puppeteerFull.default.executablePath();
+              chromiumArgs = [];
+            } else {
+              throw new Error('Puppeteer no disponible para fallback');
+            }
             
             logInfo('PDF_GENERATOR', `🔄 FALLBACK PATH: ${executablePath}`);
             
@@ -291,10 +296,16 @@ export class PDFGeneratorService {
       } else {
         // LOCAL: usar Puppeteer bundled normal
         try {
-          const puppeteerLocal = await import('puppeteer');
-          executablePath = puppeteerLocal.default.executablePath();
-          chromiumArgs = [];
-          logInfo('PDF_GENERATOR', `🏠 LOCAL: Usando Puppeteer bundled - ${executablePath}`);
+          const puppeteerLocal = await import('puppeteer').catch(() => null);
+          if (puppeteerLocal) {
+            executablePath = puppeteerLocal.default.executablePath();
+            chromiumArgs = [];
+            logInfo('PDF_GENERATOR', `🏠 LOCAL: Usando Puppeteer bundled - ${executablePath}`);
+          } else {
+            // Si no está disponible, usar puppeteer-core
+            logInfo('PDF_GENERATOR', '⚠️ Puppeteer no disponible, usando puppeteer-core');
+            executablePath = undefined;
+          }
         } catch (localError: any) {
           logError('PDF_GENERATOR', `❌ Error importando puppeteer local: ${localError.message}`);
           // Fallback a puppeteer-core si falla
@@ -309,17 +320,18 @@ export class PDFGeneratorService {
         logInfo('PDF_GENERATOR', `🔄 FALLBACK: Usando Puppeteer bundled - ${executablePath}`);
       }
 
+      // Configuración optimizada según documentación oficial de @sparticuz/chromium
       const launchOptions: any = {
-        headless: 'shell' as const, // Requerido para sparticuz moderno
-        executablePath,
-        args: [
+        args: isRailway && chromiumArgs.length > 0 ? chromiumArgs : [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--single-process',
-          '--disable-gpu',
-          ...chromiumArgs
+          '--disable-gpu'
         ],
+        defaultViewport: null,
+        executablePath,
+        headless: 'shell' as const,
         timeout: 60000,
         handleSIGINT: false,
         handleSIGTERM: false,
@@ -356,16 +368,14 @@ export class PDFGeneratorService {
           launchOptionsUsed: JSON.stringify(launchOptions)
         });
         
-        // DEBUGGING: Log directo a console para evitar truncado
-        console.error('🔴 PUPPETEER ERROR COMPLETO:');
-        console.error('Message:', launchError.message);
-        console.error('Stack:', launchError.stack);
-        console.error('Type:', launchError.constructor.name);
-        console.error('Options used:', JSON.stringify(launchOptions, null, 2));
+        // Log simplificado del error (esperado en Railway)
+        if (process.env.DEBUG_PDF === 'true') {
+          console.error('🔴 PUPPETEER ERROR:', launchError.message);
+        }
         
         // Re-try más simple sin opciones extra si es Railway
         if (isRailway) {
-          logInfo('PDF_GENERATOR', '🔄 DEBUGGING: Iniciando retry con opciones ultra-básicas...');
+          // Retry silencioso (es normal que falle el primer intento en Railway)
           
           // Intentar con paths de sistema comunes en Railway/Alpine
           const systemPaths = [

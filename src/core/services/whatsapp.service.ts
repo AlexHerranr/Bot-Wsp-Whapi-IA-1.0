@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { TerminalLog } from '../utils/terminal-log';
 import { fetchWithRetry } from '../utils/retry-utils';
 import { getShortUserId } from '../utils/identifiers';
-import { logInfo } from '../../utils/logging';
+import { logInfo, logError } from '../../utils/logging';
 import { DatabaseService } from './database.service';
 import { MediaManager } from '../state/media-manager';
 
@@ -788,12 +788,13 @@ export class WhatsappService {
             // Leer archivo y convertir a base64
             const fileBuffer = await fs.readFile(filePath);
             const base64Data = fileBuffer.toString('base64');
-            const mimeType = 'application/pdf';
-            const dataUrl = `data:${mimeType};base64,${base64Data}`;
+            
+            // Usar formato data URL estándar (igual que sendDocumentFromBuffer)
+            const dataUrl = `data:application/pdf;base64,${base64Data}`;
             
             const payload: any = {
                 to: chatId,
-                media: dataUrl,
+                media: dataUrl,  // Data URL completo
                 mime_type: 'application/pdf',
                 filename: fileName || 'documento.pdf'
             };
@@ -865,16 +866,38 @@ export class WhatsappService {
                 throw new Error('PDF buffer vacío o nulo');
             }
 
+            // IMPORTANTE: Asegurar que es un Buffer real de Node.js
+            // Puppeteer puede retornar Uint8Array que necesita conversión
+            const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
+            
             // Convertir buffer directamente a base64 (sin FS)
-            const base64Data = pdfBuffer.toString('base64');
-            const mimeType = 'application/pdf';
-            const dataUrl = `data:${mimeType};base64,${base64Data}`;
+            const base64Data = buffer.toString('base64');
+            
+            // Validación rápida del PDF (solo si hay problemas)
+            if (process.env.DEBUG_PDF === 'true') {
+                const pdfHeader = buffer.slice(0, 4).toString('ascii');
+                const isPDF = pdfHeader === '%PDF';
+                
+                if (!isPDF) {
+                    logError('PDF_BUFFER_INVALID', 'Buffer no es un PDF válido', {
+                        header: pdfHeader,
+                        expectedHeader: '%PDF',
+                        bufferLength: buffer.length
+                    });
+                }
+            }
+            
+            // WHAPI: Usar formato data URL estándar
+            // data:[<mediatype>][;base64],<data>
+            const dataUrl = `data:application/pdf;base64,${base64Data}`;
             
             const payload: any = {
                 to: chatId,
-                media: dataUrl,
+                media: dataUrl,  // Data URL completo con prefijo
                 mime_type: 'application/pdf',
-                filename: fileName || 'documento.pdf'
+                filename: fileName || 'confirmacion-reserva.pdf'
+                // NO incluir no_encode cuando usamos data URL
+                // no_cache se puede omitir
             };
             
             if (quotedMessageId) {

@@ -58,13 +58,21 @@ export class HotelPlugin {
             );
 
             registry.register('generate_booking_confirmation_pdf', async (args, context) => {
-                const result = await generateBookingConfirmationPDFFunction.handler(args as any);
-                return JSON.stringify(result);
+                // Importar directamente la función que acepta context
+                const { generateBookingConfirmationPDF } = require('./functions/generate-booking-confirmation-pdf/generate-booking-confirmation-pdf');
+                const result = await generateBookingConfirmationPDF(args as any, context);
+                // IMPORTANTE: Retornar el objeto completo, NO hacer stringify aquí
+                // OpenAI service se encargará de manejar el attachment y hacer el stringify correcto
+                return result;
             }, source);
 
             registry.register('generate_payment_receipt_pdf', async (args, context) => {
-                const result = await generatePaymentReceiptPDFFunction.handler(args as any);
-                return JSON.stringify(result);
+                // Importar directamente la función que acepta context
+                const { generatePaymentReceiptPDF } = require('./functions/generate-payment-receipt-pdf/generate-payment-receipt-pdf');
+                const result = await generatePaymentReceiptPDF(args as any, context);
+                // IMPORTANTE: Retornar el objeto completo, NO hacer stringify aquí
+                // OpenAI service se encargará de manejar el attachment y hacer el stringify correcto
+                return result;
             }, source);
 
             console.log('🔌 hotel-plugin ✓ 8 functions registered successfully');

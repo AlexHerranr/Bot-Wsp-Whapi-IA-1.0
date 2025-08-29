@@ -26,11 +26,14 @@ WORKDIR /app
 # Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar dependencias de Node
-RUN npm ci --only=production
+# Instalar dependencias de Node sin descargar Chromium de puppeteer
+RUN PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm ci --only=production
 
 # Copiar el resto del código
 COPY . .
+
+# Generar cliente de Prisma
+RUN npx prisma generate
 
 # Compilar TypeScript
 RUN npm run build

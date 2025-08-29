@@ -599,7 +599,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     // 8. RETORNAR RESPUESTA CON ATTACHMENT PARA SISTEMA EXISTENTE
     const response: any = {
       success: true,
-      message: `Envío de PDF de confirmación de reserva ${params.bookingId} exitoso. Indícale al huésped que verifique si todo está en orden con la información de su reserva.`
+      message: `Se le ha enviado el documento de confirmación al usuario de WhatsApp, indícale que lo verifique si todo está en orden y/o cualquier paso a seguir que consideres indicarle.`
     };
     
     // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico
@@ -622,76 +622,37 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       bufferSize: (result as any).pdfBuffer?.length || 0
     });
     
-    // DEBUG: Verificar condiciones para envío directo  
-    console.log('🔍 DIRECT_SEND_DEBUG:', JSON.stringify({
-      resultSuccess: result.success,
-      hasPdfPath: !!(result as any).pdfPath, 
-      hasPdfBuffer: !!(result as any).pdfBuffer,
-      bufferLength: (result as any).pdfBuffer?.length,
-      hasUserContext: !!userContext,
-      userContextKeys: userContext ? Object.keys(userContext) : null,
-      hasChatId: !!userContext?.chatId,
-      chatId: userContext?.chatId,
-      bookingId: params.bookingId
-    }, null, 2));
-
-    // ENVÍO DIRECTO DE PDF - Evitar attachment en response para prevenir OpenAI string limit
-    if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer) && userContext?.chatId) {
-      const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
-      
-      try {
-        // Envío directo según entorno
-        if ((result as any).pdfBuffer && (result as any).pdfBuffer.length > 0) {
-          const pdfResult = await sendPDFToWhatsApp(
-            userContext.chatId, 
-            (result as any).pdfBuffer, 
-            `confirmacion-reserva-${params.bookingId}.pdf`
-          );
-          
-          logSuccess('PDF_SENT_DIRECT_FUNCTION', 'PDF enviado directamente desde función (buffer)', {
-            success: pdfResult.success,
-            messageId: pdfResult.messageId,
-            bufferSize: (result as any).pdfBuffer?.length,
-            bookingId: params.bookingId,
-            isRailway
-          });
-        } else if ((result as any).pdfPath) {
-          const pdfResult = await sendPDFToWhatsApp(
-            userContext.chatId, 
-            (result as any).pdfPath, 
-            `confirmacion-reserva-${params.bookingId}.pdf`
-          );
-          
-          logSuccess('PDF_SENT_DIRECT_FUNCTION', 'PDF enviado directamente desde función (path)', {
-            success: pdfResult.success,
-            messageId: pdfResult.messageId,
-            filePath: (result as any).pdfPath,
-            bookingId: params.bookingId,
-            isRailway
-          });
-        }
-      } catch (error) {
-        logError('PDF_SEND_ERROR_FUNCTION', 'Error enviando PDF desde función', {
-          error: error instanceof Error ? error.message : 'Unknown',
-          hasBuffer: !!(result as any).pdfBuffer,
-          hasPath: !!(result as any).pdfPath,
-          bookingId: params.bookingId
-        });
-        
-        // Continuar con response exitoso - PDF se generó OK, solo falló envío
-        logInfo('PDF_GENERATION_SUCCESS_SEND_FAILED', 'PDF generado correctamente, fallo solo en envío', {
-          bookingId: params.bookingId,
-          pdfGenerated: true,
-          sendFailed: true
-        });
-      }
-      
-      // NO agregar attachment al response - evita OpenAI string_above_max_length
-      logInfo('ATTACHMENT_SKIPPED', 'Attachment NO agregado al response (evita OpenAI limit)', {
-        pdfSent: true,
-        chatId: userContext?.chatId,
-        bookingId: params.bookingId
+    // Log simplificado (solo en caso de error)
+    if (!result.success) {
+      logInfo('PDF_GENERATION_FAILED', 'Fallo en generación de PDF', {
+        bookingId: params.bookingId,
+        success: result.success
       });
+    }
+
+    // PREPARAR ATTACHMENT PARA OPENAI SERVICE (similar a como funcionan los audios)
+    if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer)) {
+      // Formatear nombre del archivo: Confirmación + nombre cliente + fecha llegada
+      const booking = bookingDetails.booking;
+      const clientName = booking.firstName && booking.lastName 
+        ? `${booking.firstName} ${booking.lastName}`.replace(/\s+/g, '_')
+        : `Cliente_${params.bookingId}`;
+      
+      const arrivalDate = new Date(booking.arrival);
+      const formattedDate = `${arrivalDate.getDate().toString().padStart(2, '0')}-${(arrivalDate.getMonth() + 1).toString().padStart(2, '0')}-${arrivalDate.getFullYear()}`;
+      
+      const fileName = `Confirmación_${clientName}_${formattedDate}.pdf`;
+      
+      // Agregar attachment al response para que OpenAI service lo envíe
+      response.attachment = {
+        type: 'pdf',
+        fileName: fileName,
+        pdfBuffer: (result as any).pdfBuffer || undefined,
+        pdfPath: (result as any).pdfPath || undefined,
+        filePath: (result as any).pdfPath || undefined // Compatibilidad con ambos nombres
+      };
+      
+      // Attachment preparado silenciosamente
     } else {
       // Log cuando NO se ejecuta envío directo
       console.log('❌ DIRECT_SEND_FAILED - Condiciones NO cumplidas:', JSON.stringify({
