@@ -593,6 +593,24 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
                 const hasPendingBalance = booking.balancePending > 0;
                 const hasPayments = booking.totalPaid > 0;
                 
+                // Analizar notas internas para casos especiales
+                const internalNotes = (booking.internalNotes || '').toLowerCase();
+                const guestComments = (booking.guestComments || '').toLowerCase();
+                const specialRequests = (booking.specialRequests || '').toLowerCase();
+                const allNotes = internalNotes + ' ' + guestComments + ' ' + specialRequests;
+                
+                // Detectar si está confirmada sin anticipo (caso especial)
+                const isConfirmedWithoutDeposit = 
+                    (allNotes.includes('confirmada sin anticipo') ||
+                     allNotes.includes('confirmado sin anticipo') ||
+                     allNotes.includes('sin anticipo confirmada') ||
+                     allNotes.includes('sin anticipo confirmado') ||
+                     allNotes.includes('excepcional sin anticipo') ||
+                     allNotes.includes('paga al llegar') ||
+                     allNotes.includes('pago al llegar') ||
+                     allNotes.includes('pago en el hotel') ||
+                     allNotes.includes('paga en el hotel'));
+                
                 // Determinar si es OTA que no requiere pagos directos
                 const isOTAWithoutDirectPayment = 
                     channel.includes('airbnb') || 
@@ -605,8 +623,15 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
                         'Recuerda: viene de ' + booking.channel + ', no tiene saldo pendiente y está confirmada.';
                 } else if (channel.includes('booking.com') || channel.includes('direct')) {
                     if (!hasPayments && hasPendingBalance) {
-                        assistantNote = '\n\n✅ Reserva encontrada! Sin pagos registrados aún. ' +
-                            'Recuerda: se requiere anticipo del 50% para confirmar al 100%.';
+                        // Verificar si es un caso especial confirmado sin anticipo
+                        if (isConfirmedWithoutDeposit) {
+                            assistantNote = '\n\n✅ Reserva encontrada! Sin pagos registrados. ' +
+                                'Recuerda: esta reserva se confirmó excepcionalmente SIN anticipo, ' +
+                                'el cliente pagará todo al llegar. Resuelve sus dudas y coordina su llegada.';
+                        } else {
+                            assistantNote = '\n\n✅ Reserva encontrada! Sin pagos registrados aún. ' +
+                                'Recuerda: se requiere anticipo correspondiente para confirmar al 100%.';
+                        }
                     } else if (hasPayments && hasPendingBalance) {
                         assistantNote = '\n\n✅ Reserva encontrada! Anticipo recibido. ' +
                             'Saldo pendiente: $' + formatCurrencyClean(booking.balancePending) + '.';
