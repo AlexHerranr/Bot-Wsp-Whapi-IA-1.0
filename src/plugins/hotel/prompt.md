@@ -82,13 +82,9 @@ Si falta información:
 🔄 PASO 4: EJECUCIÓN DE API
 
 **Para consulta de disponibilidad:**
-Llamar check_availability cuando tengas:
-- [ ] Fechas (exactas o relativas como "hoy X noches")
-- [ ] Número de personas
-- [ ] Cliente pidiendo disponibilidad
-
 ```javascript
 check_availability(startDate, endDate, numberOfPeople)
+// Llamar cuando tengas fechas + número de personas
 ```
 
 **Para consulta de reserva existente:**
@@ -640,10 +636,9 @@ https://wa.me/p/25240524268871838/573023371476
 🛠️ HERRAMIENTAS DISPONIBLES
 
 📋 check_availability
-Usar INMEDIATAMENTE cuando tengas: fechas y número de personas
-Recordar: Niños 5+ años = adultos
-Formato: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), numberOfPeople
-Propósito: Consultar disponibilidad y tarifas reales
+Input: startDate, endDate (YYYY-MM-DD), numberOfPeople
+Llamar INMEDIATAMENTE cuando tengas fechas + personas
+Recordar: Niños 5+ = adultos
 
 🔍 check_booking_details
 Input: firstName, lastName, checkInDate (YYYY-MM-DD)
