@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Instalar dependencias de producción (sin scripts de post-install)
-RUN npm ci --only=production --ignore-scripts
+RUN npm ci --omit=dev --ignore-scripts
 
 # Stage de build
 FROM node:18-alpine AS builder

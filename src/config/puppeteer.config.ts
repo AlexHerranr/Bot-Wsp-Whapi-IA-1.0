@@ -3,9 +3,11 @@
  * Maneja las rutas de Chromium para local, Railway y otros entornos cloud
  */
 
+import * as fs from 'fs';
+
 export interface PuppeteerConfig {
   executablePath?: string;
-  headless: boolean | 'shell';
+  headless: boolean | 'shell' | 'new';
   args: string[];
   ignoreDefaultArgs?: string[];
   handleSIGINT: boolean;
@@ -61,7 +63,6 @@ function getChromiumPath(): string | undefined {
       ];
       
       // Buscar el primer path que exista
-      const fs = require('fs');
       for (const path of possiblePaths) {
         if (fs.existsSync(path)) {
           return path;
@@ -82,7 +83,7 @@ export function getPuppeteerConfig(): PuppeteerConfig {
   console.log(`🔧 Puppeteer configurado para entorno: ${environment}`);
   
   const baseConfig: PuppeteerConfig = {
-    headless: isProduction ? true : 'shell',
+    headless: isProduction ? true : 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
