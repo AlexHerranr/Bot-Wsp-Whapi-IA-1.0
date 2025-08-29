@@ -368,16 +368,14 @@ export class PDFGeneratorService {
           launchOptionsUsed: JSON.stringify(launchOptions)
         });
         
-        // DEBUGGING: Log directo a console para evitar truncado
-        console.error('🔴 PUPPETEER ERROR COMPLETO:');
-        console.error('Message:', launchError.message);
-        console.error('Stack:', launchError.stack);
-        console.error('Type:', launchError.constructor.name);
-        console.error('Options used:', JSON.stringify(launchOptions, null, 2));
+        // Log simplificado del error (esperado en Railway)
+        if (process.env.DEBUG_PDF === 'true') {
+          console.error('🔴 PUPPETEER ERROR:', launchError.message);
+        }
         
         // Re-try más simple sin opciones extra si es Railway
         if (isRailway) {
-          logInfo('PDF_GENERATOR', '🔄 DEBUGGING: Iniciando retry con opciones ultra-básicas...');
+          // Retry silencioso (es normal que falle el primer intento en Railway)
           
           // Intentar con paths de sistema comunes en Railway/Alpine
           const systemPaths = [

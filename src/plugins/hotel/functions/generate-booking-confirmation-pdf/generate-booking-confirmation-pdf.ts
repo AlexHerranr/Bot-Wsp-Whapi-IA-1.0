@@ -622,18 +622,13 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       bufferSize: (result as any).pdfBuffer?.length || 0
     });
     
-    // DEBUG: Verificar condiciones para envío directo  
-    console.log('🔍 DIRECT_SEND_DEBUG:', JSON.stringify({
-      resultSuccess: result.success,
-      hasPdfPath: !!(result as any).pdfPath, 
-      hasPdfBuffer: !!(result as any).pdfBuffer,
-      bufferLength: (result as any).pdfBuffer?.length,
-      hasUserContext: !!userContext,
-      userContextKeys: userContext ? Object.keys(userContext) : null,
-      hasChatId: !!userContext?.chatId,
-      chatId: userContext?.chatId,
-      bookingId: params.bookingId
-    }, null, 2));
+    // Log simplificado (solo en caso de error)
+    if (!result.success) {
+      logInfo('PDF_GENERATION_FAILED', 'Fallo en generación de PDF', {
+        bookingId: params.bookingId,
+        success: result.success
+      });
+    }
 
     // PREPARAR ATTACHMENT PARA OPENAI SERVICE (similar a como funcionan los audios)
     if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer)) {
@@ -646,13 +641,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
         filePath: (result as any).pdfPath || undefined // Compatibilidad con ambos nombres
       };
       
-      logInfo('ATTACHMENT_PREPARED', 'Attachment preparado para OpenAI service', {
-        bookingId: params.bookingId,
-        hasBuffer: !!(result as any).pdfBuffer,
-        hasPath: !!(result as any).pdfPath,
-        bufferSize: (result as any).pdfBuffer?.length || 0,
-        willBeSentBy: 'OpenAI service'
-      });
+      // Attachment preparado silenciosamente
     } else {
       // Log cuando NO se ejecuta envío directo
       console.log('❌ DIRECT_SEND_FAILED - Condiciones NO cumplidas:', JSON.stringify({

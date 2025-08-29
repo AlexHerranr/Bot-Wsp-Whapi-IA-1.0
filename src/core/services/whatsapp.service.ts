@@ -873,28 +873,18 @@ export class WhatsappService {
             // Convertir buffer directamente a base64 (sin FS)
             const base64Data = buffer.toString('base64');
             
-            // Log para debugging
-            const pdfHeader = buffer.slice(0, 4).toString('ascii');
-            const isPDF = pdfHeader === '%PDF';
-            
-            logInfo('PDF_BUFFER_VALIDATION', 'Validación de buffer PDF', {
-                isBuffer: Buffer.isBuffer(pdfBuffer),
-                isUint8Array: pdfBuffer instanceof Uint8Array,
-                originalType: typeof pdfBuffer,
-                originalConstructor: pdfBuffer.constructor.name,
-                bufferLength: buffer.length,
-                firstBytes: buffer.slice(0, 20).toString('hex'), // Primeros bytes en hex
-                pdfHeader: pdfHeader,
-                isPDF: isPDF,
-                base64Preview: base64Data.substring(0, 50) + '...' // Preview del base64
-            });
-            
-            if (!isPDF) {
-                logError('PDF_BUFFER_INVALID', 'Buffer no es un PDF válido', {
-                    header: pdfHeader,
-                    expectedHeader: '%PDF',
-                    firstBytes: buffer.slice(0, 50).toString('hex')
-                });
+            // Validación rápida del PDF (solo si hay problemas)
+            if (process.env.DEBUG_PDF === 'true') {
+                const pdfHeader = buffer.slice(0, 4).toString('ascii');
+                const isPDF = pdfHeader === '%PDF';
+                
+                if (!isPDF) {
+                    logError('PDF_BUFFER_INVALID', 'Buffer no es un PDF válido', {
+                        header: pdfHeader,
+                        expectedHeader: '%PDF',
+                        bufferLength: buffer.length
+                    });
+                }
             }
             
             // WHAPI: Usar formato data URL estándar
