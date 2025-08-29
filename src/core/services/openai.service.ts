@@ -1450,34 +1450,42 @@ export class OpenAIService implements IOpenAIService {
             
             // Si hay attachment (PDF) y tenemos WhatsApp service, enviar directamente
             if (result?.attachment && this.whatsappService && this.currentChatId) {
-                logInfo('ATTACHMENT_DETECTED', 'Attachment encontrado en result', {
-                    hasBuffer: !!result.attachment.pdfBuffer,
-                    hasFilePath: !!result.attachment.filePath,
-                    hasPdfPath: !!result.attachment.pdfPath,
-                    fileName: result.attachment.fileName,
-                    bufferSize: result.attachment.pdfBuffer?.length || 0,
-                    functionName
+                // Guardar el attachment antes de eliminarlo
+                const attachmentToSend = result.attachment;
+                
+                // IMPORTANTE: Eliminar attachment ANTES de cualquier procesamiento
+                // para evitar que se incluya en el JSON enviado a OpenAI
+                delete result.attachment;
+                
+                logInfo('ATTACHMENT_DETECTED', 'Attachment encontrado y extraído del result', {
+                    hasBuffer: !!attachmentToSend.pdfBuffer,
+                    hasFilePath: !!attachmentToSend.filePath,
+                    hasPdfPath: !!attachmentToSend.pdfPath,
+                    fileName: attachmentToSend.fileName,
+                    bufferSize: attachmentToSend.pdfBuffer?.length || 0,
+                    functionName,
+                    attachmentRemoved: !result.attachment
                 });
                 
                 try {
-                    if (result.attachment.pdfBuffer) {
+                    if (attachmentToSend.pdfBuffer) {
                         const whapiRes = await this.whatsappService.sendDocumentFromBuffer(
                             this.currentChatId,
-                            result.attachment.pdfBuffer,
-                            result.attachment.fileName
+                            attachmentToSend.pdfBuffer,
+                            attachmentToSend.fileName
                         );
                         logSuccess('PDF_SENT_WHAPI', 'PDF enviado via Whapi (buffer)', { 
                             success: whapiRes.success, 
                             messageId: whapiRes.messageId,
-                            bufferSize: result.attachment.pdfBuffer.length 
+                            bufferSize: attachmentToSend.pdfBuffer.length 
                         });
-                    } else if (result.attachment.pdfPath || result.attachment.filePath) {
+                    } else if (attachmentToSend.pdfPath || attachmentToSend.filePath) {
                         // Usar filePath (commit original) o pdfPath como fallback
-                        const pdfPath = result.attachment.filePath || result.attachment.pdfPath;
+                        const pdfPath = attachmentToSend.filePath || attachmentToSend.pdfPath;
                         const whapiRes = await this.whatsappService.sendDocument(
                             this.currentChatId,
                             pdfPath,
-                            result.attachment.fileName
+                            attachmentToSend.fileName
                         );
                         logSuccess('PDF_SENT_WHAPI', 'PDF enviado via Whapi (path)', { 
                             success: whapiRes.success, 
@@ -1489,13 +1497,10 @@ export class OpenAIService implements IOpenAIService {
                     logError('PDF_SEND_ERROR', 'Fallo envío Whapi', { 
                         error: error instanceof Error ? error.message : 'Unknown',
                         functionName,
-                        hasBuffer: !!result.attachment.pdfBuffer,
-                        hasPath: !!(result.attachment.pdfPath || result.attachment.filePath)
+                        hasBuffer: !!attachmentToSend.pdfBuffer,
+                        hasPath: !!(attachmentToSend.pdfPath || attachmentToSend.filePath)
                     });
                 }
-                
-                // Eliminar attachment del result para que OpenAI solo vea datos textuales
-                delete result.attachment;
             }
             
             // Return the result directly for OpenAI to see the actual data
