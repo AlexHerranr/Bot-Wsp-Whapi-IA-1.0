@@ -584,7 +584,7 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
                 }
             }
             
-            // Agregar nota interna contextual para el asistente
+            // Agregar nota interna contextual para el asistente (breve y directa)
             let assistantNote = '';
             
             // Analizar el contexto de la(s) reserva(s)
@@ -601,30 +601,25 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
                     channel.includes('hoteles.com');
                 
                 if (isOTAWithoutDirectPayment) {
-                    assistantNote = '\n\n📌 NOTA INTERNA: Esta reserva proviene de ' + booking.channel + 
-                        ', por lo que el pago se gestiona directamente a través de esa plataforma. ' +
-                        'No hay saldo pendiente con el hotel. Enfócate en confirmar los detalles de la estadía ' +
-                        'y coordinar la logística de llegada.';
+                    assistantNote = '\n\n✅ Reserva encontrada! Coordina llegada con el huésped o resuelve sus dudas. ' +
+                        'Recuerda: viene de ' + booking.channel + ', no tiene saldo pendiente y está confirmada.';
                 } else if (channel.includes('booking.com') || channel.includes('direct')) {
                     if (!hasPayments && hasPendingBalance) {
-                        assistantNote = '\n\n📌 NOTA INTERNA: Reserva confirmada pero SIN PAGOS registrados. ' +
-                            'Según las políticas del hotel, se requiere un anticipo del 50% para garantizar la reserva al 100%. ' +
-                            'Sugiere amablemente el pago del anticipo y ofrece los métodos de pago disponibles.';
+                        assistantNote = '\n\n✅ Reserva encontrada! Sin pagos registrados aún. ' +
+                            'Recuerda: se requiere anticipo del 50% para confirmar al 100%.';
                     } else if (hasPayments && hasPendingBalance) {
-                        assistantNote = '\n\n📌 NOTA INTERNA: Reserva con anticipo parcial recibido. ' +
-                            'Hay un saldo pendiente de $' + formatCurrencyClean(booking.balancePending) + 
-                            '. Puedes mencionar esto si es relevante, pero enfócate en resolver cualquier duda del huésped.';
+                        assistantNote = '\n\n✅ Reserva encontrada! Anticipo recibido. ' +
+                            'Saldo pendiente: $' + formatCurrencyClean(booking.balancePending) + '.';
                     } else if (hasPayments && !hasPendingBalance) {
-                        assistantNote = '\n\n📌 NOTA INTERNA: Reserva completamente pagada. ' +
-                            'Enfócate en confirmar detalles y coordinar la llegada del huésped.';
+                        assistantNote = '\n\n✅ Reserva encontrada! Totalmente pagada. ' +
+                            'Coordina detalles de llegada.';
                     }
                 }
             }
             
             // Si no se agregó nota específica, agregar una genérica
             if (!assistantNote) {
-                assistantNote = '\n\n📌 NOTA INTERNA: Consulta exitosa. Responde las dudas del huésped ' +
-                    'sobre su reserva según las políticas del hotel y coordina los detalles necesarios.';
+                assistantNote = '\n\n✅ Reserva encontrada! Responde según corresponda.';
             }
             
             // 📋 AUDIT LOG: Final response sent to OpenAI
