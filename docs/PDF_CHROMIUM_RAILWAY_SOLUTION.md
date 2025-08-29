@@ -316,17 +316,52 @@ Causa: puppeteer-core sin chromium.executablePath() válido
 **Resultado:** ❌ Fallback NO se ejecuta - sigue throw error en Railway
 
 **Intento 4:** Debug detallado step-by-step + fallback automático real  
-**Resultado:** 🚀 **IMPLEMENTANDO** - Enhanced logging + true fallback
+**Resultado:** ❌ Fallback ejecuta pero falla - `/usr/bin/chromium` no existe
+
+**Intento 5:** Análisis puppeteer vs puppeteer-core en Railway  
+**Resultado:** 🔍 **ROOT CAUSE FOUND** - Puppeteer bundled NO disponible Railway
+
+**Intento 6:** Railway Puppeteer Buildpack oficial (nixpacks.toml)  
+**Resultado:** 🚀 **IMPLEMENTANDO** - Chrome dependencies + buildpack config
 
 ### **Root Cause Analysis:**
-- **Railway environment:** Chromium download policy changed/restricted  
-- **puppeteer-core limitation:** No bundled fallback when @sparticuz fails  
-- **Version matrix:** Compatible pero Railway filesystem issues  
+- **@sparticuz/chromium:** ENOENT filesystem/network restriction Railway
+- **puppeteer bundled:** NO disponible en Railway (solo local)
+- **puppeteer-core:** Requiere external executable (más compatible Railway)
+- **Railway constraint:** Ni Sparticuz download ni bundled Chromium disponible
+
+### **Core Technical Issue:**
+```bash
+Local:   puppeteer.executablePath() → node_modules/puppeteer/.../chrome  
+Railway: puppeteer.executablePath() → /usr/bin/chromium (NO EXISTS)
+```
+
+**Neither Sparticuz nor bundled Chromium work on Railway current environment**
+
+### **Timeline Analysis:**
+```bash
+2024 (Commit 4a41699): puppeteer-core + @sparticuz/chromium ✅ FUNCIONABA
+2025 (Actual):         puppeteer/puppeteer-core + @sparticuz ❌ ENOENT
+
+Railway Policy Change: Browser automation restrictions tightened
+```
+
+### **Railway Environment Changes:**
+- **Filesystem restrictive:** No permite Chromium downloads automáticos  
+- **Cache path issues:** `/root/.cache/puppeteer` mal configurado
+- **Missing system fonts:** Packages no disponibles por defecto
+- **Network restrictions:** Downloads @sparticuz bloqueados
+
+### **Railway Official Solutions:**
+1. **Browserless Template:** https://railway.com/template/browserless
+2. **Puppeteer Buildpack:** ryannono/Puppeteer-Railway-Buildpack  
+3. **Manual install:** `npx puppeteer browsers install chrome`
 
 ### **Next Actions:**
-- ✅ Railway logs validation con nueva config  
-- ⏳ Si persiste ENOENT: Railway infrastructure limitation  
-- 🎯 Fallback a puppeteer bundled debe activarse automáticamente  
+- 🚀 **OPCIÓN A:** Usar Railway Browserless template (recommended)
+- 🔧 **OPCIÓN B:** Implementar Puppeteer buildpack
+- ⚙️ **OPCIÓN C:** Manual Chrome installation en startup
+- ❌ **NO VIABLE:** Continuar con approach actual  
 
 ---
 

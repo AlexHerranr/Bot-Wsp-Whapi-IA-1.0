@@ -1,0 +1,23 @@
+# Railway Puppeteer Buildpack Configuration
+# Installs Chrome dependencies for Puppeteer automation
+
+[phases.setup]
+nixPkgs = [
+    "nodejs",
+    "npm",
+    "chromium",
+    "nss",
+    "freetype",
+    "harfbuzz",
+    "ca-certificates",
+    "ttf-freefont"
+]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build] 
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm start"

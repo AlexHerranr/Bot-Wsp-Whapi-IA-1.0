@@ -270,15 +270,19 @@ export class PDFGeneratorService {
       }
 
       const launchOptions = {
-        headless: 'shell' as const, // Optimizado para serverless
-        args: [...browserArgs, ...chromiumArgs], // Combinar args propios + sparticuz
-        executablePath: executablePath,
+        headless: true, // REQUIRED for Railway buildpack (not 'shell')
+        args: isRailway ? [
+          '--no-sandbox',
+          '--disable-setuid-sandbox'
+        ] : [...browserArgs, ...chromiumArgs],
+        executablePath: isRailway ? undefined : executablePath, // Let Railway buildpack find Chrome
         ...(isRailway && {
           timeout: 60000,
+          ignoreDefaultArgs: ['--disable-extensions'], // Buildpack specific
           handleSIGINT: false,
           handleSIGTERM: false,
           handleSIGHUP: false,
-          dumpio: true // Debug output para Railway
+          dumpio: true
         })
       };
 

@@ -1,0 +1,359 @@
+Starting Container
+
+> tealquilamos-bot@1.0.0 start
+> node dist/main.js
+
+🚀 Starting TeAlquilamos Bot...
+2025-08-29T02:10:39Z [APP_STAR:unknown] sys: Iniciando TeAlquilamos Bot
+✅ Configuration loaded successfully
+2025-08-29T02:10:39Z [CONFIG_L:unknown] sys: Configuración cargada exitosamente
+🌍 Server will start on 0.0.0.0:8080
+🔧 DI ✓ 5 services, 1 function
+🔌 hotel-plugin registering 8 functions...
+✅ check_availability registered
+✅ check_booking_details registered
+✅ create_new_booking registered
+✅ edit_booking registered
+✅ cancel_booking registered
+✅ informar_movimiento_manana registered
+✅ generate_booking_confirmation_pdf registered
+✅ generate_payment_receipt_pdf registered
+🔌 hotel-plugin ✓ 8 functions registered successfully
+2025-08-29T02:10:39Z [PLUGIN_R:unknown] sys: hotel-plugin ✓ 8 functions
+2025-08-29T02:10:39Z [DI_COMPL:unknown] sys: DI ✓ 2 services, 1 function (CRM jobs de...
+Cache unificado inyectado en DB service - MemoryStore eliminado
+2025-08-29T02:10:39Z [WEBHOOK_:unknown] sys: WebhookRouter inicializado
+2025-08-29T02:10:39Z [DATABASE:database] sys: 🗄️ Conectado a la base de datos Postgre...
+2025-08-29T02:10:39Z [DATABASE:unknown] sys: Conexión exitosa a PostgreSQL
+2025-08-29T02:10:39Z [SYNC_DEP:unknown] sys: Sync deprecado - Cache unificado mantien...
+2025-08-29T02:10:39Z [CONTEXT_:unknown] sys: Cache limpiado post-reinicio para contex...
+🔧 Cleanup tasks configured
+2025-08-29T02:10:39Z [SERVER_S:unknown] sys: Servidor HTTP iniciado
+=== Bot TeAlquilamos Iniciado ===
+🚀 Servidor: 0.0.0.0:8080
+🔗 Webhook: configurando...
+✅ Sistema listo
+
+🚀 CoreBot started successfully on 0.0.0.0:8080
+📊 Functions registered: 8
+2025-08-29T02:10:39Z [BOT_READ:unknown] sys: Bot completamente inicializado
+2025-08-29T02:10:51Z [WEBHOOK_:unknown] sys: Webhook enrutado
+2025-08-29T02:10:51Z [WEBHOOK_:unknown] sys: Procesando webhook [MAIN]
+2025-08-29T02:10:51Z [WEBHOOK:webhook] pres:1
+2025-08-29T02:10:51Z [BUFFER_E:unknown] 57300...251: Evento de presencia detectado [MAIN]
+2025-08-29T02:10:51Z [BUFFER_T:unknown] 57300...251: Timeout configurado por processor
+✍️ Usuario está escribiendo...
+2025-08-29T02:10:52Z [WEBHOOK_:unknown] sys: Webhook enrutado
+2025-08-29T02:10:52Z [WEBHOOK_:unknown] sys: Procesando webhook [MAIN]
+2025-08-29T02:10:52Z [WEBHOOK:webhook] msg:1
+2025-08-29T02:10:52Z [NEW_USER:unknown] sys: Usuario nuevo detectado - enriquecimient...
+2025-08-29T02:10:52Z [USERNAME:unknown] sys: Actualizando userName desde from_name
+2025-08-29T02:10:52Z [RECONCIL:unknown] sys: Cliente creado por reconciliación
+WEBHOOK_CACHE_SYNC: Updated clientCache for 573003913251, preserving threadId: null
+2025-08-29T02:10:52Z [CLIENT_U:unknown] sys: Cliente actualizado desde webhook [MAIN]
+2025-08-29T02:10:52Z [DELAYED_:unknown] 57300...251: Update programado para 2min
+2025-08-29T02:10:52Z [SYNC_ENR:unknown] sys: Enriquecimiento síncrono para usuario nu...
+2025-08-29T02:10:53Z [USER_ENR:database] sys: Labels actualizados automáticamente: 573...
+2025-08-29T02:10:53Z [DB_QUERY:database] 57300...251: type:enrich time:718ms res:labels=2 cache:updated
+2025-08-29T02:10:53Z [SYNC_ENR:unknown] sys: Usuario enriquecido síncronamente [MAIN]
+2025-08-29T02:10:53Z [MSG_RX:webhook] 57300...251: text "Hola ejecuta la func..."
+🗣️ Sr Alex: 💬 "Hola ejecuta la función de generar PDF de confirmación para ..." → 🤖
+2025-08-29T02:10:53Z [BUFFER_C:unknown] 57300...251: Buffer creado para mensaje
+2025-08-29T02:10:53Z [BUFFER_S:buffer] 57300...251: Mensaje agregado, estado actual buffer
+2025-08-29T02:10:53Z [BUFFER_S:unknown] 57300...251: Buffer esperando agrupación
+2025-08-29T02:10:58Z [BUFFER:buffer] 57300...251: 1msg, 79ch
+2025-08-29T02:10:58Z [MESSAGE_:webhook] 57300...251: Iniciando procesamiento de buffer
+2025-08-29T02:10:58Z [CACHE_HIT:cache] 57300...251
+2025-08-29T02:10:58Z [CONTEXT_:unknown] 57300...251: Contexto completo enviado a OpenAI
+2025-08-29T02:10:58Z [OPENAI_M:unknown] 57300...251: Mensaje preparado para OpenAI
+CACHE_GET: key=573003913251, found=true, size=1
+Cache HIT for thread: 573003913251
+CACHE_DEBUG: threadId=null, tokenCount=0, cachedAt=Fri Aug 29 2025 02:10:58 GMT+0000 (Coordinated Universal Time)
+Cache HIT but no threadId - checking BD as fallback: 573003913251
+2025-08-29T02:10:58Z [DB_QUERY:database] 57300...251: type:thread_fetch time:10ms res:thread:... cache:no_change
+BD HIT (cache miss) for thread: 573003913251, syncing cache
+[THREAD_SOURCE:cache] 573003913251: bd:0 cache:0 thread: src:bd_fallback
+CACHE_SET: stored for 573003913251, size: 1
+CACHE_SET_DEBUG: threadId=, tokenCount=0
+2025-08-29T02:10:58Z [OPENAI_R:unknown] 57300...251: Iniciando run de OpenAI
+2025-08-29T02:10:58Z [ASSISTAN:unknown] 57300...251: Assistant seleccionado para procesamient...
+2025-08-29T02:10:58Z [ASSISTAN:unknown] 57300...251: Assistant ID efectivo para procesamiento
+2025-08-29T02:10:58Z [OPENAI_C:unknown] 57300...251: Estado de concurrencia OpenAI
+2025-08-29T02:10:58Z [AI_START:openai] 57300...251 | null
+2025-08-29T02:10:58Z [THR_NEW:unknown] th_threa...u3y
+2025-08-29T02:10:58Z [OPENAI_P:unknown] 57300...251: Prompt completo compactado enviado a Ope...
+[OPENAI_RAW_CONTENT] 573003913251: "Cliente: NOHAYREGISTRO\nTags: NOHAYREGISTRO\nHora actual: 28 de ago de 2025, 9:10 p. m.\n\nMensaje del cliente:\nHola ejecuta..." (192ch total)
+2025-08-29T02:10:58Z [OPENAI_M:openai] 57300...251: Mensaje enviado al thread de OpenAI
+2025-08-29T02:10:58Z [MODEL_DE:unknown] sys: Usando configuración por defecto del Ass...
+2025-08-29T02:10:59Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-29T02:11:05Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-29T02:11:09Z [OPENAI_P:unknown] sys: Esperando respuesta - status: requires_a...
+2025-08-29T02:11:09Z [RUN_REQU:unknown] sys: Run requiere action para function callin...
+[2:11:09 AM] ℹ️ Processing 1 function calls for Sr Alex
+2025-08-29T02:11:09Z [FUNC:functions] unknown()
+[2:11:09 AM] ⚙️ generate_booking_confirmation_pdf()
+2025-08-29T02:11:09Z [OPENAI_F:unknown] sys: Llamando función desde OpenAI
+2025-08-29T02:11:09Z [FUNCTION:unknown] sys: Ejecutando función generate_booking_conf...
+🔍 CURRENT_VALUES_DEBUG: {
+  "currentChatId": "573003913251@s.whatsapp.net",
+  "currentUserId": "573003913251",
+  "currentThreadId": "thread_rGTwx9MyFjC33pOrR3eFuu3y",
+  "userContextResult": {
+    "chatId": "573003913251@s.whatsapp.net",
+    "userId": "573003913251",
+    "threadId": "thread_rGTwx9MyFjC33pOrR3eFuu3y"
+  }
+}
+2025-08-29T02:11:09Z [FUNCTION:unknown] 57300...251: Contexto pasado a función
+🔧 Executing function: generate_booking_confirmation_pdf
+2025-08-29T02:11:09Z [USER_CON:unknown] sys: 🔍 UserContext recibido en función
+2025-08-29T02:11:09Z [GENERATE:unknown] sys: 🚀 Iniciando generación PDF para reserva...
+2025-08-29T02:11:09Z [GENERATE:unknown] sys: 🔍 Consultando datos reales de la reserv...
+2025-08-29T02:11:09Z [FETCH_BO:unknown] sys: 🔍 Consultando reserva directamente: 747...
+2025-08-29T02:11:09Z [BEDS24_A:unknown] sys: GET https://api.beds24.com/v2/bookings?b...
+2025-08-29T02:11:11Z [BEDS24:beds24] 0 rooms found
+2025-08-29T02:11:11Z [BEDS24_C:beds24] sys: Búsqueda de reservas exitosa
+2025-08-29T02:11:11Z [FETCH_BO:unknown] sys: API Response structure: {"success":true,...
+2025-08-29T02:11:11Z [FETCH_BO:unknown] sys: Booking específico encontrado: {"id":747...
+2025-08-29T02:11:11Z [PROCESS_:unknown] sys: Datos procesados: {"id":74793397,"name":...
+2025-08-29T02:11:11Z [FETCH_BO:unknown] sys: ✅ Reserva encontrada exitosamente
+2025-08-29T02:11:11Z [GENERATE:unknown] sys: ⚠️ Canal no clasificado, permitiendo: Un...
+2025-08-29T02:11:11Z [TRAN:unknown] sys: 💰 PAYMENTS PROCESADOS: 1 pagos
+2025-08-29T02:11:11Z [GENERATE:unknown] sys: 🚀 Iniciando generación PDF para reserva...
+2025-08-29T02:11:11Z [GENERATE:unknown] sys: 📋 Datos procesados - Tipo: CONFIRMACIÓN...
+🔧 PDF_GENERATOR_CONSTRUCTOR: {
+  "cwd": "/app",
+  "baseDir": "dist",
+  "isBuilt": true,
+  "templatePath": "/app/dist/plugins/hotel/functions/generate-booking-confirmation-pdf/templates/invoice-template.html",
+  "configPath": "/app/dist/plugins/hotel/functions/generate-booking-confirmation-pdf/config/invoice-config.json",
+  "templatePathType": "string",
+  "configPathType": "string"
+}
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 📁 Base directory: dist/ (built: true)
+2025-08-29T02:11:11Z [PDF_LIFE:unknown] sys: 🛡️ Handlers de Graceful Shutdown regist...
+2025-08-29T02:11:11Z [PDF_LIFE:unknown] sys: 🚀 PDFGeneratorService inicializado con ...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: Generando PDF para reserva: 74793397
+2025-08-29T02:11:11Z [TEMPLATE:unknown] sys: Verificando template path en Railway
+2025-08-29T02:11:11Z [TEMPLATE:unknown] sys: Template cargado exitosamente (17469 cha...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: Configuración cargada desde: /app/dist/p...
+2025-08-29T02:11:11Z [PDF_:unknown] sys: 🔍 CONTEXT PAYMENTITEMS: 1 items
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: Inicializando navegador Puppeteer...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 🚀 Railway detectado - usando Puppeteer ...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 🎯 RAILWAY detectado - intentando Sparti...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: ❌ SPARTICUZ FAILED: ENOENT: no such file...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: ❌ SPARTICUZ STACK: Error: ENOENT: no suc...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 🔄 ACTIVATING FALLBACK: Puppeteer bundle...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 🔄 FALLBACK PATH: /usr/bin/chromium
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 🔄 FALLBACK ARGS: 0 total
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: ✅ FALLBACK Puppeteer bundled configured
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 🚀 Lanzando Chromium con opciones: {"hea...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 🔍 DEBUGGING: Iniciando puppeteer.launch...
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: ⚠️ Launch FAILED - ERROR COMPLETO:
+🔴 PUPPETEER ERROR COMPLETO:
+Message: Browser was not found at the configured executablePath (/usr/bin/chromium)
+Stack: Error: Browser was not found at the configured executablePath (/usr/bin/chromium)
+    at ChromeLauncher.launch (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserLauncher.js:89:19)
+    at async PDFGeneratorService.initializeBrowser (/app/dist/plugins/hotel/services/pdf-generator.service.js:193:32)
+    at async PDFGeneratorService.ensureBrowserHealth (/app/dist/plugins/hotel/services/pdf-generator.service.js:259:13)
+    at async PDFGeneratorService.generatePDFFromHTML (/app/dist/plugins/hotel/services/pdf-generator.service.js:511:13)
+    at async PDFGeneratorService.generateInvoicePDF (/app/dist/plugins/hotel/services/pdf-generator.service.js:316:31)
+    at async generateInternalPDF (/app/dist/plugins/hotel/functions/generate-booking-confirmation-pdf/generate-booking-confirmation-pdf.js:679:24)
+    at async Object.generateBookingConfirmationPDF [as handler] (/app/dist/plugins/hotel/functions/generate-booking-confirmation-pdf/generate-booking-confirmation-pdf.js:498:24)
+    at async /app/dist/plugins/hotel/index.js:43:32
+    at async FunctionRegistryService.execute (/app/dist/core/services/function-registry.service.js:49:32)
+    at async OpenAIService.executeFunctionCall (/app/dist/core/services/openai.service.js:1184:28)
+Type: Error
+Options used: {
+  "headless": "shell",
+  "args": [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--font-render-hinting=medium",
+    "--disable-font-subpixel-positioning",
+    "--disable-dev-shm-usage",
+    "--disable-background-networking",
+    "--disable-default-apps",
+    "--disable-sync",
+    "--disable-translate",
+    "--disable-ipc-flooding-protection",
+    "--hide-scrollbars",
+    "--disable-client-side-phishing-detection",
+    "--metrics-recording-only",
+    "--mute-audio",
+    "--disable-component-update",
+}
+    "--no-first-run",
+    "--disable-domain-reliability",
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 🔄 DEBUGGING: Iniciando retry con opcion...
+    "--safebrowsing-disable-auto-update",
+    "--font-render-hinting=none",
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: 🔍 RETRY OPTIONS:
+    "--ignore-certificate-errors",
+    "--disable-crash-reporter",
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: ❌ RETRY TAMBIÉN FALLÓ:
+    "--ignore-ssl-errors",
+    "--disable-breakpad",
+    "hasPdf": false,
+    "--font-render-hinting=none",
+    "--ignore-certificate-errors-spki-list",
+    "--disable-font-subpixel-positioning"
+    "--crash-dumps-dir=/tmp",
+    "hasChatId": false,
+    "--disable-background-timer-throttling",
+  ],
+    "--enable-logging=stderr",
+    "fullCondition": false
+  "resultSuccess": false,
+    "--disable-backgrounding-occluded-windows",
+  "executablePath": "/usr/bin/chromium",
+    "--disable-logging-redirect",
+  "hasPdfPath": false,
+    "--disable-renderer-backgrounding",
+  "hasUserContext": false,
+  "timeout": 60000,
+    "--disable-crashpad",
+  "hasPdfBuffer": false,
+    "--disable-ipc-flooding-protection",
+  "userContextKeys": null,
+    "--no-crash-upload",
+  "handleSIGINT": false,
+🔴 RETRY ERROR COMPLETO:
+    "--disable-web-security",
+    "--no-sandbox",
+    "--disable-crash-uploads",
+  "handleSIGTERM": false,
+    "--no-first-run",
+Retry Message: Browser was not found at the configured executablePath (/usr/bin/chromium)
+    "--disable-setuid-sandbox",
+  "hasChatId": false,
+  "handleSIGHUP": false,
+    "--no-default-browser-check",
+Retry Stack: Error: Browser was not found at the configured executablePath (/usr/bin/chromium)
+    "--disable-dev-shm-usage"
+  "bookingId": "74793397"
+  "dumpio": true
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: Error generando PDF: Browser was not fou...
+    "--single-process",
+  ]
+2025-08-29T02:11:11Z [RESULT_D:unknown] sys: Result object completo del PDF service
+}
+    "--disable-extensions",
+}
+2025-08-29T02:11:11Z [GENERATE:unknown] sys: ❌ Falló generación PDF: Browser was not ...
+  "hasPdfBuffer": false,
+2025-08-29T02:11:11Z [ATTACHME:unknown] sys: Preparando attachment para response
+  "hasChatId": false,
+2025-08-29T02:11:11Z [PDF_GENE:unknown] sys: ❌ Error específico en Railway generando ...
+  "hasUserContext": false,
+2025-08-29T02:11:11Z [GENERATE:unknown] sys: ✅ PDF generado exitosamente
+    "--no-sandbox",
+  "bookingId": "74793397",
+🔍 DIRECT_SEND_DEBUG: {
+  "userContextKeys": null,
+    at ChromeLauncher.launch (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserLauncher.js:89:19)
+    at async PDFGeneratorService.initializeBrowser (/app/dist/plugins/hotel/services/pdf-generator.service.js:229:40)
+    "--disable-setuid-sandbox",
+  "conditionCheck": {
+    at async PDFGeneratorService.ensureBrowserHealth (/app/dist/plugins/hotel/services/pdf-generator.service.js:259:13)
+    at async FunctionRegistryService.execute (/app/dist/core/services/function-registry.service.js:49:32)
+❌ DIRECT_SEND_FAILED - Condiciones NO cumplidas: {
+    "success": false,
+    at async PDFGeneratorService.generatePDFFromHTML (/app/dist/plugins/hotel/services/pdf-generator.service.js:511:13)
+    at async OpenAIService.executeFunctionCall (/app/dist/core/services/openai.service.js:1184:28)
+  "resultSuccess": false,
+    at async PDFGeneratorService.generateInvoicePDF (/app/dist/plugins/hotel/services/pdf-generator.service.js:316:31)
+  "hasPdfPath": false,
+Retry Options: {
+    at async generateInternalPDF (/app/dist/plugins/hotel/functions/generate-booking-confirmation-pdf/generate-booking-confirmation-pdf.js:679:24)
+    at async Object.generateBookingConfirmationPDF [as handler] (/app/dist/plugins/hotel/functions/generate-booking-confirmation-pdf/generate-booking-confirmation-pdf.js:498:24)
+  "headless": "shell",
+    at async /app/dist/plugins/hotel/index.js:43:32
+  "executablePath": "/usr/bin/chromium",
+  "args": [
+  }
+}
+✅ Function generate_booking_confirmation_pdf completed in 1612ms
+2025-08-29T02:11:11Z [TOOL_OUT:unknown] sys: Result antes de stringify para OpenAI
+2025-08-29T02:11:11Z [TOOL_OUT:unknown] sys: String JSON para OpenAI generado
+2025-08-29T02:11:11Z [PLUGIN_R:unknown] sys: Respuesta completa de función enviada a ...
+2025-08-29T02:11:11Z [FUNCTION:functions] sys: Función generate_booking_confirmation_pd...
+2025-08-29T02:11:11Z [OPENAI_T:unknown] sys: Enviando tool outputs exactos a OpenAI
+2025-08-29T02:11:14Z [TOOL_OUT:unknown] sys: Tool outputs enviados a OpenAI
+2025-08-29T02:11:14Z [OPENAI_P:unknown] sys: Esperando respuesta - status: queued
+2025-08-29T02:11:19Z [OPENAI_P:unknown] sys: Esperando respuesta - status: in_progres...
+2025-08-29T02:11:22Z [OPENAI_P:unknown] sys: Esperando respuesta - status: completed
+2025-08-29T02:11:22Z [FUNCTION:unknown] sys: Respuesta recibida después de function c...
+2025-08-29T02:11:22Z [AI_DONE:openai] 57300...251 | th_threa...u3y | 24s | 
+2025-08-29T02:11:22Z [OPENAI_R:openai] 57300...251: Respuesta completa de OpenAI
+2025-08-29T02:11:22Z [HIGH_LAT:performance] 57300...251: Latencia alta detectada en procesamiento
+2025-08-29T02:11:22Z [OPENAI_R:unknown] 57300...251: Run de OpenAI completado
+2025-08-29T02:11:22Z [DEBUG_FU:unknown] 57300...251: FunctionCalls: true
+2025-08-29T02:11:22Z [DEBUG_FU:unknown] 57300...251: Detalles de functionCalls
+2025-08-29T02:11:22Z [ATTACHME:unknown] 57300...251: Buscando attachments en functionCalls
+2025-08-29T02:11:22Z [ATTACHME:unknown] 57300...251: Analizando funcCall individual
+2025-08-29T02:11:22Z [FUNCTION:unknown] 57300...251: Estructura completa del resultado
+New thread created for 573003913251: thread_rGTwx9MyFjC33pOrR3eFuu3y, resetting tokenCount
+2025-08-29T02:11:22Z [RECONCIL:unknown] 57300...251: Registro actualizado por reconciliación
+2025-08-29T02:11:22Z [THREAD_S:unknown] 57300...251: ✅ Thread guardado con lógica simplificad...
+2025-08-29T02:11:22Z [THREAD_METRIC:database] 57300...251: id:th_threa...u3y msgs:0 tokens:0 reused:false age:0m
+2025-08-29T02:11:22Z [TOKEN_CO:unknown] sys: 📊 Token count actualizado: 573003913251...
+BD: Reset token count for new thread 573003913251: thread_rGTwx9MyFjC33pOrR3eFuu3y
+2025-08-29T02:11:22Z [TOKEN_CO:unknown] sys: 📊 Token count actualizado: 573003913251...
+2025-08-29T02:11:22Z [TOKEN_RE:unknown] 57300...251: Reset tokens a 0: Nuevo thread sin relac...
+2025-08-29T02:11:22Z [TOKEN_CO:unknown] 57300...251: Token count actualizado en memoria
+2025-08-29T02:11:22Z [QUOTE_DE:unknown] 57300...251: Decisión de citado calculada
+2025-08-29T02:11:22Z [TIMING_H:unknown] sys: Iniciando timing por chunks
+2025-08-29T02:11:22Z [WHAPI_CH:whapi] 57300...net: Enviando chunk 1/1
+2025-08-29T02:11:22Z [HUMAN_DE:unknown] sys: text:215ch=2000ms
+2025-08-29T02:11:23Z [PRESENCE:unknown] sys: ✍️ch1/1:2000ms
+2025-08-29T02:11:25Z [WHAPI_CH:unknown] 57300...251: Resultado envío chunk
+2025-08-29T02:11:25Z [WHAPI_RE:unknown] sys: Respuesta completa de WHAPI
+2025-08-29T02:11:25Z [WHAPI_ID:unknown] sys: IDs colectados para chunk
+2025-08-29T02:11:25Z [TIMING_H:unknown] sys: Timing humano completado
+🤖 OpenAI → Sr Alex (24.3s)
+2025-08-29T02:11:25Z [TYPING_F:whapi] 57300...251: Flag de typing reseteado post-procesamie...
+2025-08-29T02:11:25Z [SENT:webhook] 57300...251 | 215ch | 24s
+2025-08-29T02:11:25Z [FLAG_RES:unknown] 57300...251: duringRunMsgId reseteado post-procesamie...
+2025-08-29T02:11:26Z [WEBHOOK_:unknown] sys: Webhook enrutado
+2025-08-29T02:11:26Z [WEBHOOK_:unknown] sys: Procesando webhook [MAIN]
+2025-08-29T02:11:26Z [WEBHOOK:webhook] msg:1
+2025-08-29T02:11:26Z [WEBHOOK_:unknown] sys: Webhook enrutado
+2025-08-29T02:11:26Z [WEBHOOK_:unknown] sys: Procesando webhook [MAIN]
+2025-08-29T02:11:26Z [WEBHOOK:webhook] stat:1
+2025-08-29T02:11:26Z [WEBHOOK_:unknown] sys: 📥 stat:1 [MAIN]
+2025-08-29T02:11:26Z [RECONCIL:unknown] sys: Cliente actualizado por reconciliación
+WEBHOOK_CACHE_SYNC: Updated clientCache for 573003913251, preserving threadId: thread_rGTwx9MyFjC33pOrR3eFuu3y
+2025-08-29T02:11:26Z [CLIENT_U:unknown] sys: Cliente actualizado desde webhook [MAIN]
+2025-08-29T02:11:39Z [SYS_METRIC:system] sys: mem:30/512MB cpu:0% conn:0 uptime:0h1m activeUsers:1
+2025-08-29T02:11:39Z [CACHE_METRIC:cache] sys: hits:100% misses:0% size:0MB users:1 evicts:0
+2025-08-29T02:11:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T02:11:39Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:187ch funcs:0 errs:0
+2025-08-29T02:11:39Z [LATENCY_METRIC:system] null: openai:24315ms beds24:0ms whapi:0ms db:0ms total:24315ms
+2025-08-29T02:11:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T02:12:39Z [SYS_METRIC:system] sys: mem:31/512MB cpu:0% conn:0 uptime:0h2m activeUsers:1
+2025-08-29T02:12:39Z [CACHE_METRIC:cache] sys: hits:100% misses:0% size:0MB users:1 evicts:0
+2025-08-29T02:12:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T02:12:39Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:187ch funcs:0 errs:0
+2025-08-29T02:12:39Z [LATENCY_METRIC:system] null: openai:24315ms beds24:0ms whapi:0ms db:0ms total:24315ms
+2025-08-29T02:12:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T02:12:52Z [DB_QUERY:database] 57300...251: type:thread_fetch time:9ms res:thread:thread_r... cache:no_change
+2025-08-29T02:12:52Z [TOKENS_S:unknown] 57300...251: Tokens acumulados
+2025-08-29T02:12:52Z [TOKEN_CO:unknown] 57300...251: Token count inválido - solo actualiza la...
+2025-08-29T02:12:52Z [RECONCIL:unknown] 57300...251: Thread activity actualizado por reconcil...
+2025-08-29T02:12:52Z [THREAD_A:unknown] 57300...251: Thread activity + tokens actualizados: 5...
+2025-08-29T02:12:52Z [DELAYED_:unknown] 57300...251: lastActivity + tokens actualizados
+2025-08-29T02:13:39Z [SYS_METRIC:system] sys: mem:31/512MB cpu:0% conn:0 uptime:0h3m activeUsers:1
+2025-08-29T02:13:39Z [CACHE_METRIC:cache] sys: hits:100% misses:0% size:0MB users:1 evicts:0
+2025-08-29T02:13:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T02:13:39Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:187ch funcs:0 errs:0
+2025-08-29T02:13:39Z [LATENCY_METRIC:system] null: openai:24315ms beds24:0ms whapi:0ms db:0ms total:24315ms
+2025-08-29T02:13:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T02:14:39Z [SYS_METRIC:system] sys: mem:31/512MB cpu:0% conn:0 uptime:0h4m activeUsers:1
+2025-08-29T02:14:39Z [CACHE_METRIC:cache] sys: hits:100% misses:0% size:0MB users:1 evicts:0
+2025-08-29T02:14:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T02:14:39Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:187ch funcs:0 errs:0
+2025-08-29T02:14:39Z [LATENCY_METRIC:system] null: openai:24315ms beds24:0ms whapi:0ms db:0ms total:24315ms
+2025-08-29T02:14:39Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
