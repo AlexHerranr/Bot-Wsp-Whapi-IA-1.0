@@ -10,6 +10,8 @@ import { checkAvailabilityFunction } from '../availability/beds24-availability.j
 import { escalateToHumanFunction } from '../escalation/escalate-to-human.js';
 import { injectHistoryFunction } from '../history/inject-history.js';
 import { getConversationContextFunction } from '../context/get-conversation-context.js';
+import { generateBookingConfirmationPDFFunction } from '../pdf/generate-booking-confirmation.js';
+import { generatePaymentReceiptPDFFunction } from '../pdf/generate-payment-receipt.js';
 
 /**
  * Registro de todas las funciones disponibles
@@ -24,6 +26,10 @@ export const FUNCTION_REGISTRY: Record<string, FunctionDefinition> = {
   // Funciones de contexto e historial
   // inject_history: injectHistoryFunction, // DESACTIVADO: OpenAI ya no necesita inyectar automáticamente
   get_conversation_context: getConversationContextFunction, // ✅ ACTIVO: OpenAI solicita contexto bajo demanda
+  
+  // Funciones de generación de PDFs
+  generate_booking_confirmation_pdf: generateBookingConfirmationPDFFunction,
+  generate_payment_receipt_pdf: generatePaymentReceiptPDFFunction,
   
   // Funciones de booking (documentadas, pendientes de implementación)
   // create_booking: createBookingFunction,

@@ -14,6 +14,9 @@ export * from './availability/beds24-availability.js';
 export * from './escalation/escalate-to-human.js';
 export * from './context/get-conversation-context.js';
 
+// Exportar funciones de PDF
+export * from './pdf/index.js';
+
 // Funciones de booking (documentadas, pendientes de implementación)
 // export * from './booking/create-booking.js';
 // export * from './booking/get-booking-details.js';
