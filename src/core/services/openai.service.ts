@@ -1268,12 +1268,15 @@ export class OpenAIService implements IOpenAIService {
                     // Execute function using the real registry
                     const result = await this.executeFunctionCall(functionCall);
                     
-                    // DEBUG: Verificar attachment antes de stringify
-                    logInfo('TOOL_OUTPUT_PRE_STRINGIFY', 'Result antes de stringify para OpenAI', {
-                        hasAttachment: !!(result as any).attachment,
-                        attachmentType: (result as any).attachment?.type,
-                        bufferSize: (result as any).attachment?.pdfBuffer?.length,
-                        resultKeys: Object.keys(result)
+                    // DEBUG: Verificar resultado después de executeFunctionCall
+                    // NOTA: El attachment ya debe estar eliminado en este punto
+                    logInfo('TOOL_OUTPUT_POST_EXECUTE', 'Result después de executeFunctionCall', {
+                        resultType: typeof result,
+                        hasAttachment: !!(result as any)?.attachment,
+                        attachmentType: (result as any)?.attachment?.type,
+                        bufferSize: (result as any)?.attachment?.pdfBuffer?.length,
+                        resultKeys: result && typeof result === 'object' ? Object.keys(result) : [],
+                        note: 'El attachment debe estar eliminado aquí'
                     });
                     
                     // NUEVO: Guardar resultado en functionCall para bot.ts
