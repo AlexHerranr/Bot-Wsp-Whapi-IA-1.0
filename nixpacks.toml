@@ -2,12 +2,45 @@
 # Este archivo configura el entorno de Railway para soportar Puppeteer y Chromium
 
 [phases.setup]
-# Instalar paquetes del sistema necesarios
-nixPkgs = ["nodejs-18_x", "chromium", "glib", "nss", "nspr", "atk", "at-spi2-atk", "cups", "drm", "dbus", "expat", "libxcb", "libxkbcommon", "x11", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "cairo", "pango", "alsa-lib"]
+# Instalar Node.js y Chromium con TODAS las dependencias necesarias
+nixPkgs = [
+  "nodejs-18_x",
+  "chromium",
+  "glib",
+  "nss", 
+  "nspr",
+  "atk",
+  "at-spi2-atk",
+  "at-spi2-core",
+  "cups",
+  "drm",
+  "dbus",
+  "expat",
+  "libxcb",
+  "libxkbcommon",
+  "x11",
+  "xorg.libX11",
+  "xorg.libXcomposite",
+  "xorg.libXdamage",
+  "xorg.libXext",
+  "xorg.libXfixes",
+  "xorg.libXrandr",
+  "xorg.libxcb",
+  "xorg.libxcb",
+  "xorg.libXi",
+  "xorg.libXrender",
+  "xorg.libXtst",
+  "cairo",
+  "pango",
+  "alsa-lib",
+  "gtk3",
+  "fontconfig",
+  "freetype"
+]
 
 [phases.install]
 # Instalar dependencias de Node.js
-cmds = ["npm ci --only=production"]
+cmds = ["npm ci --omit=dev"]
 
 [phases.build]
 # Compilar la aplicación TypeScript
@@ -22,3 +55,5 @@ cmd = "node dist/app-unified.js"
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
 PUPPETEER_EXECUTABLE_PATH = "/nix/store/*/bin/chromium"
 NODE_OPTIONS = "--max-old-space-size=768"
+# Agregar variable para indicar que estamos en Railway
+RAILWAY_ENVIRONMENT = "production"

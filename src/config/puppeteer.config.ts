@@ -83,7 +83,7 @@ export function getPuppeteerConfig(): PuppeteerConfig {
   console.log(`🔧 Puppeteer configurado para entorno: ${environment}`);
   
   const baseConfig: PuppeteerConfig = {
-    headless: isProduction ? true : 'new',
+    headless: true, // Railway necesita headless classic, no 'new'
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -92,11 +92,16 @@ export function getPuppeteerConfig(): PuppeteerConfig {
       '--disable-gpu',
       '--no-first-run',
       '--no-zygote',
-      '--single-process', // Importante para contenedores
       '--disable-extensions',
       '--disable-background-timer-throttling',
       '--disable-backgrounding-occluded-windows',
       '--disable-renderer-backgrounding',
+      '--disable-features=TranslateUI',
+      '--disable-ipc-flooding-protection',
+      '--disable-default-apps',
+      '--no-default-browser-check',
+      '--disable-site-isolation-trials',
+      '--disable-audio-output'
     ],
     ignoreDefaultArgs: ['--disable-extensions'],
     handleSIGINT: false,
@@ -117,9 +122,16 @@ export function getPuppeteerConfig(): PuppeteerConfig {
   
   // Configuraciones específicas por entorno
   if (environment === 'railway') {
-    // Railway tiene limitaciones de memoria
-    baseConfig.args.push('--max-old-space-size=512');
-    baseConfig.args.push('--memory-pressure-off');
+    // Railway necesita configuración especial
+    baseConfig.args = [
+      ...baseConfig.args,
+      '--disable-dev-shm-usage', // Crítico para Railway
+      '--disable-blink-features=AutomationControlled',
+      '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+    ];
+    
+    // Usar timeout más largo para Railway
+    baseConfig.timeout = 120000; // 2 minutos
   }
   
   return baseConfig;
@@ -132,28 +144,53 @@ export async function launchPuppeteerWithRetry(
   puppeteer: any,
   maxRetries: number = 3
 ): Promise<any> {
-  const config = getPuppeteerConfig();
   let lastError: Error | null = null;
   
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  // Intentar diferentes configuraciones
+  const configs = [
+    // Intento 1: Configuración normal
+    getPuppeteerConfig(),
+    
+    // Intento 2: Sin executable path (usar Chromium empaquetado)
+    (() => {
+      const config = getPuppeteerConfig();
+      delete config.executablePath;
+      return config;
+    })(),
+    
+    // Intento 3: Configuración mínima para Railway
+    {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote'
+      ],
+      timeout: 0 // Sin timeout
+    }
+  ];
+  
+  for (let attempt = 0; attempt < configs.length && attempt < maxRetries; attempt++) {
     try {
-      console.log(`🚀 Intento ${attempt} de lanzar Puppeteer...`);
-      const browser = await puppeteer.launch(config);
+      console.log(`🚀 Intento ${attempt + 1} de lanzar Puppeteer...`);
+      if (attempt === 1) {
+        console.log('🔄 Intentando con Chromium empaquetado...');
+      } else if (attempt === 2) {
+        console.log('🔧 Intentando con configuración mínima...');
+      }
+      
+      const browser = await puppeteer.launch(configs[attempt]);
       console.log('✅ Puppeteer lanzado exitosamente');
       return browser;
     } catch (error: any) {
       lastError = error;
-      console.error(`❌ Intento ${attempt} falló:`, error.message);
+      console.error(`❌ Intento ${attempt + 1} falló:`, error.message);
       
-      if (attempt < maxRetries) {
+      if (attempt < maxRetries - 1) {
         // Esperar antes de reintentar
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        
-        // En el segundo intento, probar sin ruta específica
-        if (attempt === 2 && config.executablePath) {
-          delete config.executablePath;
-          console.log('🔄 Intentando con Chromium empaquetado...');
-        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
   }
