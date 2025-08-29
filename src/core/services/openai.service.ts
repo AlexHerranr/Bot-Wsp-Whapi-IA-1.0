@@ -1419,6 +1419,14 @@ export class OpenAIService implements IOpenAIService {
                 threadId: this.currentThreadId
             };
             
+            // DEBUG: Verificar valores específicos
+            console.log('🔍 CURRENT_VALUES_DEBUG:', JSON.stringify({
+                currentChatId: this.currentChatId,
+                currentUserId: this.currentUserId,
+                currentThreadId: this.currentThreadId,
+                userContextResult: userContext
+            }, null, 2));
+            
             // DEBUG: Log del contexto que se está pasando
             logInfo('FUNCTION_CONTEXT_DEBUG', 'Contexto pasado a función', {
                 functionName,

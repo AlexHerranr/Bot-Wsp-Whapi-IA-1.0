@@ -149,7 +149,12 @@
       "Bash(start \"src\\temp\\pdfs\\invoice-74793397-1756319506318.pdf\")",
       "Bash(git pull:*)",
       "Bash(git fetch:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(cross-env:*)",
+      "Bash(set PORT=3012)",
+      "Bash(set NODE_ENV=development)",
+      "Bash(set RAILWAY_PROJECT_ID=local-dev)",
+      "Bash(set RAILWAY_ENVIRONMENT_NAME=development)"
     ],
     "deny": [],
     "additionalDirectories": [

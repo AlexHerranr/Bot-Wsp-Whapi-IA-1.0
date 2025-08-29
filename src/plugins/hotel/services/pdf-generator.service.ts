@@ -1,5 +1,5 @@
 // src/plugins/hotel/services/pdf-generator.service.ts
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer';
 import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
@@ -68,6 +68,17 @@ export class PDFGeneratorService {
     this.templatePath = path.join(process.cwd(), `${baseDir}/plugins/hotel/functions/generate-booking-confirmation-pdf/templates/invoice-template.html`);
     this.configPath = path.join(process.cwd(), `${baseDir}/plugins/hotel/functions/generate-booking-confirmation-pdf/config/invoice-config.json`);
     
+    // DEBUG: Verificar paths en constructor
+    console.log('🔧 PDF_GENERATOR_CONSTRUCTOR:', JSON.stringify({
+      cwd: process.cwd(),
+      baseDir,
+      isBuilt,
+      templatePath: this.templatePath,
+      configPath: this.configPath,
+      templatePathType: typeof this.templatePath,
+      configPathType: typeof this.configPath
+    }, null, 2));
+    
     logInfo('PDF_GENERATOR', `📁 Base directory: ${baseDir}/ (built: ${isBuilt})`);
     this.initializeHandlebars();
   }
@@ -126,8 +137,10 @@ export class PDFGeneratorService {
     if (!this.browser) {
       logInfo('PDF_GENERATOR', 'Inicializando navegador Puppeteer...');
       
-      // Detectar si estamos en Railway y agregar configuraciones específicas
+      // ESTRATEGIA: Siempre usar sparticuz para probar exactamente lo mismo que Railway
       const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
+      const isRealRailway = (process.env.RAILWAY_PROJECT_ID && process.env.RAILWAY_PROJECT_ID !== 'local-dev') || 
+                           (process.env.RAILWAY_ENVIRONMENT_NAME === 'production');
       
       const browserArgs = [
         '--no-sandbox',
@@ -194,28 +207,39 @@ export class PDFGeneratorService {
       let executablePath: string;
       let chromiumArgs: string[] = [];
       
-      const isRealRailway = process.env.RAILWAY_PROJECT_ID && process.env.RAILWAY_PROJECT_ID !== 'local-dev';
-      
-      if (isRealRailway) {
-        // En Railway REAL, usar @sparticuz/chromium
+      if (isRailway) {
+        // SIEMPRE usar @sparticuz/chromium cuando hay RAILWAY env vars (local o real)
         try {
+          // SOLUCIÓN: Cargar fonts antes del executablePath
+          await chromium.font(
+            'https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2'
+          );
+          
           executablePath = await chromium.executablePath();
           chromiumArgs = chromium.args;
-          logInfo('PDF_GENERATOR', `🎯 SPARTICUZ: Chromium path: ${executablePath}`);
-          logInfo('PDF_GENERATOR', `🎯 SPARTICUZ: Extra args: ${chromiumArgs.length} args`);
+          
+          const environment = isRealRailway ? 'RAILWAY REAL' : 'RAILWAY SIMULADO';
+          logInfo('PDF_GENERATOR', `🎯 ${environment}: Chromium path: ${executablePath}`);
+          logInfo('PDF_GENERATOR', `🎯 ${environment}: Extra args: ${chromiumArgs.length} args`);
         } catch (pathError) {
           logError('PDF_GENERATOR', `⚠️ Error obteniendo Sparticuz Chromium: ${pathError.message}`);
-          throw new Error(`Sparticuz Chromium failed: ${pathError.message}`);
+          
+          // FALLBACK: Si sparticuz falla, usar puppeteer bundled
+          logInfo('PDF_GENERATOR', '🔄 Fallback a Puppeteer bundled por error sparticuz');
+          executablePath = puppeteer.executablePath();
+          chromiumArgs = [];
         }
       } else {
-        // Local (incluyendo Railway simulado): usar Puppeteer bundled
+        // Sin RAILWAY env vars: usar Puppeteer bundled
         executablePath = puppeteer.executablePath();
-        logInfo('PDF_GENERATOR', `🏠 LOCAL/DEV-RAILWAY: Usando Puppeteer bundled`);
-        
-        // Si estamos simulando Railway, usar flags similares
-        if (isRailway) {
-          logInfo('PDF_GENERATOR', '🧪 Modo Railway simulado - usando args Railway con Puppeteer local');
-        }
+        logInfo('PDF_GENERATOR', `🏠 LOCAL PURO: Usando Puppeteer bundled - ${executablePath}`);
+      }
+
+      // VALIDACIÓN: Asegurar que executablePath no sea undefined
+      if (!executablePath) {
+        logError('PDF_GENERATOR', 'executablePath es undefined - fallback a Puppeteer bundled');
+        executablePath = puppeteer.executablePath();
+        logInfo('PDF_GENERATOR', `🔄 FALLBACK: Usando Puppeteer bundled - ${executablePath}`);
       }
 
       const launchOptions = {
@@ -238,7 +262,13 @@ export class PDFGeneratorService {
       try {
         logInfo('PDF_GENERATOR', '🔍 DEBUGGING: Iniciando puppeteer.launch() con options:', launchOptions);
         this.browser = await puppeteer.launch(launchOptions);
-        logSuccess('PDF_GENERATOR', '✅ Puppeteer bundled browser launched successfully');
+        
+        // VALIDACIÓN POST-LANZAMIENTO
+        if (!this.browser) {
+          throw new Error('Browser launch returned null');
+        }
+        
+        logSuccess('PDF_GENERATOR', '✅ Puppeteer browser launched successfully');
       } catch (launchError) {
         // Log específico con stack trace completo para debugging
         logError('PDF_GENERATOR', `⚠️ Launch FAILED - ERROR COMPLETO:`, {
@@ -310,22 +340,13 @@ export class PDFGeneratorService {
     }
 
     try {
-      // SOLUCIÓN DEFINITIVA: No usar isConnected() que puede causar connect()
-      // Test directo con pages() - si falla, el browser está roto
-      const pages = await this.browser.pages();
-      logInfo('PDF_GENERATOR', `✅ Browser healthy - ${pages.length} pages activas`);
+      // SIMPLIFICADO: Test básico con pages() - si falla, el browser está roto
+      await this.browser.pages();
     } catch (error) {
-      // Si pages() falla, el browser está roto - relanzar con launch()
-      logInfo('PDF_GENERATOR', `⚠️ Browser no healthy - relanzando: ${error.message}`);
-      try {
-        if (this.browser) await this.browser.close().catch(() => {});
-      } catch (closeError) {
-        logError('PDF_GENERATOR', `Error cerrando browser: ${closeError.message}`);
-      }
-      
+      // Browser roto - reinicializar completamente
+      logInfo('PDF_GENERATOR', `⚠️ Browser no healthy - reiniciando: ${error.message}`);
       this.browser = null;
-      await this.initializeBrowser();  // Relanza con launch, NUNCA connect
-      logSuccess('PDF_GENERATOR', '🔄 Browser relanzado exitosamente');
+      await this.initializeBrowser();
     }
   }
 

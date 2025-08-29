@@ -6,7 +6,9 @@
   "main": "src/main.ts",
   "scripts": {
     "dev": "tsx --watch src/main.ts",
+    "dev:railway": "cross-env NODE_ENV=development PORT=3010 RAILWAY_PROJECT_ID=local-dev RAILWAY_ENVIRONMENT_NAME=development tsx --watch src/main.ts",
     "dev:local": "concurrently -k -n BOT,NGROK -c green,cyan \"cross-env PORT=3010 npm run dev\" \"ngrok http 3010 --domain=actual-bobcat-handy.ngrok-free.app\"",
+    "dev:local:railway": "concurrently -k -n BOT,NGROK -c green,cyan \"npm run dev:railway\" \"ngrok http 3010 --domain=actual-bobcat-handy.ngrok-free.app\"",
     "dev:local:clean": "powershell -ExecutionPolicy Bypass -File scripts/windows/start-dev-local.ps1",
     "dev:local:fix": "powershell -ExecutionPolicy Bypass -File scripts/windows/ngrok-manager.ps1",
     "dev:local:alt": "concurrently -k -n BOT,TUNNEL -c green,cyan \"npm run dev\" \"lt --port 3010 --subdomain tealquilamos-bot\"",
