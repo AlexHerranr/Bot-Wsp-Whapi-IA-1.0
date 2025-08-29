@@ -1280,7 +1280,9 @@ export class OpenAIService implements IOpenAIService {
                     (functionCall as any).result = result;
                     
                     // Formatear respuesta para envío a OpenAI
-                    const formattedForOpenAI = JSON.stringify(result);
+                    // Si ya es string (desde el plugin), usarlo directamente
+                    // Si es objeto, hacer stringify
+                    const formattedForOpenAI = typeof result === 'string' ? result : JSON.stringify(result);
                     
                     // DEBUG: Verificar tamaño del string para OpenAI
                     logInfo('TOOL_OUTPUT_STRINGIFIED', 'String JSON para OpenAI generado', {
@@ -1446,7 +1448,21 @@ export class OpenAIService implements IOpenAIService {
             });
             
             // Execute function using the real registry con contexto
-            const result: any = await this.functionRegistry.execute(functionName, args, userContext);
+            let result: any = await this.functionRegistry.execute(functionName, args, userContext);
+            
+            // Si el resultado viene como string JSON (desde el plugin), parsearlo
+            if (typeof result === 'string') {
+                try {
+                    result = JSON.parse(result);
+                } catch (e) {
+                    // Si no se puede parsear, mantener como string
+                    logInfo('RESULT_PARSE_INFO', 'Result is string but not JSON', {
+                        functionName,
+                        resultLength: result.length,
+                        resultPreview: result.substring(0, 100)
+                    });
+                }
+            }
             
             // Si hay attachment (PDF) y tenemos WhatsApp service, enviar directamente
             if (result?.attachment && this.whatsappService && this.currentChatId) {

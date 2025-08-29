@@ -61,6 +61,16 @@ export class HotelPlugin {
                 // Importar directamente la función que acepta context
                 const { generateBookingConfirmationPDF } = require('./functions/generate-booking-confirmation-pdf/generate-booking-confirmation-pdf');
                 const result = await generateBookingConfirmationPDF(args as any, context);
+                
+                // IMPORTANTE: NO incluir el attachment en el JSON para OpenAI
+                // El attachment será manejado por OpenAI service antes de este stringify
+                // Pero como medida de seguridad, lo eliminamos aquí también
+                if (result && result.attachment) {
+                    // Crear una copia del resultado sin el attachment
+                    const { attachment, ...resultWithoutAttachment } = result;
+                    return JSON.stringify(resultWithoutAttachment);
+                }
+                
                 return JSON.stringify(result);
             }, source);
 
@@ -68,6 +78,16 @@ export class HotelPlugin {
                 // Importar directamente la función que acepta context
                 const { generatePaymentReceiptPDF } = require('./functions/generate-payment-receipt-pdf/generate-payment-receipt-pdf');
                 const result = await generatePaymentReceiptPDF(args as any, context);
+                
+                // IMPORTANTE: NO incluir el attachment en el JSON para OpenAI
+                // El attachment será manejado por OpenAI service antes de este stringify
+                // Pero como medida de seguridad, lo eliminamos aquí también
+                if (result && result.attachment) {
+                    // Crear una copia del resultado sin el attachment
+                    const { attachment, ...resultWithoutAttachment } = result;
+                    return JSON.stringify(resultWithoutAttachment);
+                }
+                
                 return JSON.stringify(result);
             }, source);
 
