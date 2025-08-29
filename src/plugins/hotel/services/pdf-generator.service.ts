@@ -1,6 +1,9 @@
 // src/plugins/hotel/services/pdf-generator.service.ts
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+
+// Type declaration for dynamic import
+declare function require(name: string): any;
 import fs from 'fs';
 import path from 'path';
 import QRCode from 'qrcode';
@@ -270,9 +273,13 @@ export class PDFGeneratorService {
           
           try {
             // Importar dinámicamente puppeteer completo para fallback
-            const puppeteerFull = await import('puppeteer');
-            executablePath = puppeteerFull.default.executablePath();
-            chromiumArgs = [];
+            const puppeteerFull = await import('puppeteer').catch(() => null);
+            if (puppeteerFull) {
+              executablePath = puppeteerFull.default.executablePath();
+              chromiumArgs = [];
+            } else {
+              throw new Error('Puppeteer no disponible para fallback');
+            }
             
             logInfo('PDF_GENERATOR', `🔄 FALLBACK PATH: ${executablePath}`);
             
@@ -291,10 +298,16 @@ export class PDFGeneratorService {
       } else {
         // LOCAL: usar Puppeteer bundled normal
         try {
-          const puppeteerLocal = await import('puppeteer');
-          executablePath = puppeteerLocal.default.executablePath();
-          chromiumArgs = [];
-          logInfo('PDF_GENERATOR', `🏠 LOCAL: Usando Puppeteer bundled - ${executablePath}`);
+          const puppeteerLocal = await import('puppeteer').catch(() => null);
+          if (puppeteerLocal) {
+            executablePath = puppeteerLocal.default.executablePath();
+            chromiumArgs = [];
+            logInfo('PDF_GENERATOR', `🏠 LOCAL: Usando Puppeteer bundled - ${executablePath}`);
+          } else {
+            // Si no está disponible, usar puppeteer-core
+            logInfo('PDF_GENERATOR', '⚠️ Puppeteer no disponible, usando puppeteer-core');
+            executablePath = undefined;
+          }
         } catch (localError: any) {
           logError('PDF_GENERATOR', `❌ Error importando puppeteer local: ${localError.message}`);
           // Fallback a puppeteer-core si falla
