@@ -265,3 +265,33 @@ WEBHOOK_CACHE_SYNC: Updated clientCache for 573003913251, preserving threadId: t
 2025-08-29T01:52:41Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:187ch funcs:0 errs:0
 2025-08-29T01:52:41Z [LATENCY_METRIC:system] null: openai:24323ms beds24:0ms whapi:0ms db:0ms total:24323ms
 2025-08-29T01:52:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T01:53:41Z [SYS_METRIC:system] sys: mem:31/512MB cpu:0% conn:0 uptime:0h7m activeUsers:1
+2025-08-29T01:53:41Z [CACHE_METRIC:cache] sys: hits:100% misses:0% size:0MB users:1 evicts:0
+2025-08-29T01:53:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T01:53:41Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:187ch funcs:0 errs:0
+2025-08-29T01:53:41Z [LATENCY_METRIC:system] null: openai:24323ms beds24:0ms whapi:0ms db:0ms total:24323ms
+2025-08-29T01:53:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T01:54:41Z [SYS_METRIC:system] sys: mem:31/512MB cpu:0% conn:0 uptime:0h8m activeUsers:1
+2025-08-29T01:54:41Z [CACHE_METRIC:cache] sys: hits:100% misses:0% size:0MB users:1 evicts:0
+2025-08-29T01:54:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T01:54:41Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:187ch funcs:0 errs:0
+2025-08-29T01:54:41Z [LATENCY_METRIC:system] null: openai:24323ms beds24:0ms whapi:0ms db:0ms total:24323ms
+2025-08-29T01:54:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T01:55:41Z [SYS_METRIC:system] sys: mem:31/512MB cpu:0% conn:0 uptime:0h9m activeUsers:1
+2025-08-29T01:55:41Z [CACHE_METRIC:cache] sys: hits:100% misses:0% size:0MB users:1 evicts:0
+2025-08-29T01:55:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+2025-08-29T01:55:41Z [USAGE_STATS:system] sys: msgs:1/hr chunks:0 avgLen:187ch funcs:0 errs:0
+2025-08-29T01:55:41Z [LATENCY_METRIC:system] null: openai:24323ms beds24:0ms whapi:0ms db:0ms total:24323ms
+2025-08-29T01:55:41Z [BUFFER_METRIC:buffer] sys: active:0 merged:0 abandoned:0 voice:0 text:0
+Stopping Container
+npm error path /app
+npm error command failed
+npm error signal SIGTERM
+npm error command sh -c node dist/main.js
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.5.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+npm notice To update run: npm install -g npm@11.5.2
+npm notice
+npm error Log files were not written due to an error writing to the directory: /home/nodejs/.npm/_logs
+npm error You can rerun the command with `--loglevel=verbose` to see the logs in your terminal

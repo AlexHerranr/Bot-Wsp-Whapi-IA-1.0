@@ -1,5 +1,5 @@
 // src/plugins/hotel/services/pdf-generator.service.ts
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
