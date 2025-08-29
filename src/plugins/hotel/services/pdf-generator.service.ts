@@ -194,8 +194,10 @@ export class PDFGeneratorService {
       let executablePath: string;
       let chromiumArgs: string[] = [];
       
-      if (isRailway) {
-        // En Railway, usar @sparticuz/chromium optimizado para contenedores
+      const isRealRailway = process.env.RAILWAY_PROJECT_ID && process.env.RAILWAY_PROJECT_ID !== 'local-dev';
+      
+      if (isRealRailway) {
+        // En Railway REAL, usar @sparticuz/chromium
         try {
           executablePath = await chromium.executablePath();
           chromiumArgs = chromium.args;
@@ -206,8 +208,14 @@ export class PDFGeneratorService {
           throw new Error(`Sparticuz Chromium failed: ${pathError.message}`);
         }
       } else {
-        // En local, usar Puppeteer normal
+        // Local (incluyendo Railway simulado): usar Puppeteer bundled
         executablePath = puppeteer.executablePath();
+        logInfo('PDF_GENERATOR', `🏠 LOCAL/DEV-RAILWAY: Usando Puppeteer bundled`);
+        
+        // Si estamos simulando Railway, usar flags similares
+        if (isRailway) {
+          logInfo('PDF_GENERATOR', '🧪 Modo Railway simulado - usando args Railway con Puppeteer local');
+        }
       }
 
       const launchOptions = {
