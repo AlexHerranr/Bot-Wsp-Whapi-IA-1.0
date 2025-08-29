@@ -1260,11 +1260,26 @@ export class OpenAIService implements IOpenAIService {
                     // Execute function using the real registry
                     const result = await this.executeFunctionCall(functionCall);
                     
+                    // DEBUG: Verificar attachment antes de stringify
+                    logInfo('TOOL_OUTPUT_PRE_STRINGIFY', 'Result antes de stringify para OpenAI', {
+                        hasAttachment: !!(result as any).attachment,
+                        attachmentType: (result as any).attachment?.type,
+                        bufferSize: (result as any).attachment?.pdfBuffer?.length,
+                        resultKeys: Object.keys(result)
+                    });
+                    
                     // NUEVO: Guardar resultado en functionCall para bot.ts
                     (functionCall as any).result = result;
                     
                     // Formatear respuesta para envío a OpenAI
                     const formattedForOpenAI = JSON.stringify(result);
+                    
+                    // DEBUG: Verificar tamaño del string para OpenAI
+                    logInfo('TOOL_OUTPUT_STRINGIFIED', 'String JSON para OpenAI generado', {
+                        stringLength: formattedForOpenAI.length,
+                        exceedsLimit: formattedForOpenAI.length > 1048576,
+                        openAiLimit: 1048576
+                    });
                     
                     // 📤 NUEVO: Respuesta completa compactada de función enviada a OpenAI
                     const compactFunctionResult = formattedForOpenAI

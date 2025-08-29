@@ -45,13 +45,18 @@ interface InternalPDFParams {
 /**
  * Función utilitaria para enviar PDF por WhatsApp
  */
-async function sendPDFToWhatsApp(chatId: string, filePath: string, fileName: string): Promise<void> {
+async function sendPDFToWhatsApp(chatId: string, filePathOrBuffer: string | Buffer, fileName: string): Promise<{success: boolean, messageId?: string}> {
   try {
-    const fs = await import('fs').then(m => m.promises);
+    let base64Data: string;
     
-    // Leer archivo y convertir a base64
-    const fileBuffer = await fs.readFile(filePath);
-    const base64Data = fileBuffer.toString('base64');
+    // Manejar tanto buffer como filePath
+    if (Buffer.isBuffer(filePathOrBuffer)) {
+      base64Data = filePathOrBuffer.toString('base64');
+    } else {
+      const fs = await import('fs').then(m => m.promises);
+      const fileBuffer = await fs.readFile(filePathOrBuffer);
+      base64Data = fileBuffer.toString('base64');
+    }
     const mimeType = 'application/pdf';
     const dataUrl = `data:${mimeType};base64,${base64Data}`;
     
@@ -92,11 +97,20 @@ async function sendPDFToWhatsApp(chatId: string, filePath: string, fileName: str
       throw new Error(`Error ${response.status}: ${errorText}`);
     }
     
+    const responseData = await response.json() as any;
+    const fileSize = Buffer.isBuffer(filePathOrBuffer) ? filePathOrBuffer.length : (await import('fs').then(m => m.promises.stat(filePathOrBuffer))).size;
+    
     logInfo('WHATSAPP_PDF_SENT', 'PDF enviado exitosamente por WhatsApp', {
       chatId,
       fileName,
-      fileSize: Math.round(fileBuffer.length / 1024) + 'KB'
+      fileSize: Math.round(fileSize / 1024) + 'KB',
+      messageId: responseData?.id
     });
+    
+    return {
+      success: true,
+      messageId: responseData?.id
+    };
     
   } catch (error) {
     logError('WHATSAPP_PDF_ERROR', 'Error enviando PDF por WhatsApp', {
@@ -104,7 +118,9 @@ async function sendPDFToWhatsApp(chatId: string, filePath: string, fileName: str
       fileName,
       error: error instanceof Error ? error.message : String(error)
     });
-    throw error;
+    return {
+      success: false
+    };
   }
 }
 
@@ -606,46 +622,62 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       bufferSize: (result as any).pdfBuffer?.length || 0
     });
     
-    if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer)) {
+    // ENVÍO DIRECTO DE PDF - Evitar attachment en response para prevenir OpenAI string limit
+    if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer) && userContext?.chatId) {
       const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
       
-      // Priorizar pdfBuffer para Railway (in-memory), pdfPath para local
-      if ((result as any).pdfBuffer && (result as any).pdfBuffer.length > 0) {
-        response.attachment = {
-          type: 'pdf',
-          pdfBuffer: (result as any).pdfBuffer, // Buffer directo
-          fileName: `confirmacion-reserva-${params.bookingId}.pdf`
-        };
-        
-        logInfo('PDF_ATTACHMENT_ADDED_BUFFER', 'PDF attachment añadido (buffer in-memory)', {
-          bookingId: params.bookingId,
-          bufferSize: (result as any).pdfBuffer?.length,
-          fileName: response.attachment.fileName,
-          isRailway
+      try {
+        // Envío directo según entorno
+        if ((result as any).pdfBuffer && (result as any).pdfBuffer.length > 0) {
+          const pdfResult = await sendPDFToWhatsApp(
+            userContext.chatId, 
+            (result as any).pdfBuffer, 
+            `confirmacion-reserva-${params.bookingId}.pdf`
+          );
+          
+          logSuccess('PDF_SENT_DIRECT_FUNCTION', 'PDF enviado directamente desde función (buffer)', {
+            success: pdfResult.success,
+            messageId: pdfResult.messageId,
+            bufferSize: (result as any).pdfBuffer?.length,
+            bookingId: params.bookingId,
+            isRailway
+          });
+        } else if ((result as any).pdfPath) {
+          const pdfResult = await sendPDFToWhatsApp(
+            userContext.chatId, 
+            (result as any).pdfPath, 
+            `confirmacion-reserva-${params.bookingId}.pdf`
+          );
+          
+          logSuccess('PDF_SENT_DIRECT_FUNCTION', 'PDF enviado directamente desde función (path)', {
+            success: pdfResult.success,
+            messageId: pdfResult.messageId,
+            filePath: (result as any).pdfPath,
+            bookingId: params.bookingId,
+            isRailway
+          });
+        }
+      } catch (error) {
+        logError('PDF_SEND_ERROR_FUNCTION', 'Error enviando PDF desde función', {
+          error: error instanceof Error ? error.message : 'Unknown',
+          hasBuffer: !!(result as any).pdfBuffer,
+          hasPath: !!(result as any).pdfPath,
+          bookingId: params.bookingId
         });
-      } else if ((result as any).pdfPath) {
-        // Fallback local con archivo
-        response.attachment = {
-          type: 'pdf',
-          filePath: (result as any).pdfPath,
-          fileName: `confirmacion-reserva-${params.bookingId}.pdf`
-        };
         
-        logInfo('PDF_ATTACHMENT_ADDED_FILE', 'PDF attachment añadido (archivo local)', {
+        // Continuar con response exitoso - PDF se generó OK, solo falló envío
+        logInfo('PDF_GENERATION_SUCCESS_SEND_FAILED', 'PDF generado correctamente, fallo solo en envío', {
           bookingId: params.bookingId,
-          filePath: (result as any).pdfPath,
-          fileName: response.attachment.fileName,
-          isRailway: false
+          pdfGenerated: true,
+          sendFailed: true
         });
       }
       
-      // DEBUG: Verificar que attachment se devuelve correctamente a OpenAI
-      logInfo('ATTACHMENT_RETURNED', 'Attachment devuelto a OpenAI', {
-        hasAttachment: !!response.attachment,
-        attachmentType: response.attachment?.type,
-        filePath: response.attachment?.filePath,
-        fileName: response.attachment?.fileName,
-        responseStructure: Object.keys(response)
+      // NO agregar attachment al response - evita OpenAI string_above_max_length
+      logInfo('ATTACHMENT_SKIPPED', 'Attachment NO agregado al response (evita OpenAI limit)', {
+        pdfSent: true,
+        chatId: userContext.chatId,
+        bookingId: params.bookingId
       });
     }
     
