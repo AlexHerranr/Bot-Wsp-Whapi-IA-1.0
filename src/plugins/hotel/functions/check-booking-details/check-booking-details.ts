@@ -619,25 +619,27 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
                     channel.includes('hoteles.com');
                 
                 if (isOTAWithoutDirectPayment) {
-                    assistantNote = '\n\n✅ Reserva encontrada! Coordina llegada con el huésped o resuelve sus dudas. ' +
-                        'Recuerda: viene de ' + booking.channel + ', no tiene saldo pendiente y está confirmada.';
+                    assistantNote = '\n\n✅ Reserva encontrada! ' +
+                        'Recuerda: viene de ' + booking.channel + ', no tiene saldo pendiente y está confirmada. ' +
+                        'Coordina su llegada o resuelve sus dudas si lo pide.';
                 } else if (channel.includes('booking.com') || channel.includes('direct')) {
                     if (!hasPayments && hasPendingBalance) {
                         // Verificar si es un caso especial confirmado sin anticipo
                         if (isConfirmedWithoutDeposit) {
                             assistantNote = '\n\n✅ Reserva encontrada! Sin pagos registrados. ' +
                                 'Recuerda: esta reserva se confirmó excepcionalmente SIN anticipo, ' +
-                                'el cliente pagará todo al llegar. Resuelve sus dudas y coordina su llegada.';
+                                'el cliente pagará todo al llegar. Coordina su llegada o resuelve sus dudas si lo pide.';
                         } else {
                             assistantNote = '\n\n✅ Reserva encontrada! Sin pagos registrados aún. ' +
                                 'Recuerda: se requiere anticipo correspondiente para confirmar al 100%.';
                         }
                     } else if (hasPayments && hasPendingBalance) {
                         assistantNote = '\n\n✅ Reserva encontrada! Anticipo recibido. ' +
-                            'Saldo pendiente: $' + formatCurrencyClean(booking.balancePending) + '.';
+                            'Saldo pendiente: $' + formatCurrencyClean(booking.balancePending) + '. ' +
+                            'Coordina su llegada o resuelve sus dudas si lo pide.';
                     } else if (hasPayments && !hasPendingBalance) {
                         assistantNote = '\n\n✅ Reserva encontrada! Totalmente pagada. ' +
-                            'Coordina detalles de llegada.';
+                            'Coordina su llegada o resuelve sus dudas si lo pide.';
                     }
                 }
             }
