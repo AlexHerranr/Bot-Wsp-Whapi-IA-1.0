@@ -1,5 +1,5 @@
 // src/plugins/hotel/services/pdf-generator.service.ts
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
@@ -202,64 +202,104 @@ export class PDFGeneratorService {
       }
       
       // SPARTICUZ CHROMIUM FIX: Usar Chromium serverless optimizado para Railway
-      let executablePath: string;
+      let executablePath: string | undefined;
       let chromiumArgs: string[] = [];
       
       if (isRailway) {
-        // RAILWAY: Intentar @sparticuz/chromium con fallback a bundled
-        try {
-          logInfo('PDF_GENERATOR', '🎯 RAILWAY detectado - intentando Sparticuz Chromium');
+        // RAILWAY: Prioridad a variable de entorno, luego Sparticuz con descarga externa
+        
+        // Opción 1: Usar PUPPETEER_EXECUTABLE_PATH si está definido (Dockerfile)
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+          executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+          logInfo('PDF_GENERATOR', `🔧 Usando PUPPETEER_EXECUTABLE_PATH: ${executablePath}`);
           
-          // Step 1: Font loading
-          await chromium.font(
-            'https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2'
-          );
-          logInfo('PDF_GENERATOR', '✅ Font loaded successfully');
-          
-          // Step 2: Get executable path
-          executablePath = await chromium.executablePath();
-          chromiumArgs = chromium.args;
-          
-          logInfo('PDF_GENERATOR', `🎯 SPARTICUZ: Path: ${executablePath}`);
-          logInfo('PDF_GENERATOR', `🎯 SPARTICUZ: Args: ${chromiumArgs.length} total`);
-          
-          // Step 3: Validate path
-          if (!executablePath || executablePath === '/usr/bin/chromium' || executablePath.includes('undefined')) {
-            throw new Error(`Invalid Sparticuz path: "${executablePath}"`);
+          // Validar que existe
+          if (!fs.existsSync(executablePath)) {
+            logError('PDF_GENERATOR', `❌ PUPPETEER_EXECUTABLE_PATH no existe: ${executablePath}`);
+            executablePath = undefined;
+          } else {
+            logSuccess('PDF_GENERATOR', '✅ Chromium del sistema encontrado y validado');
+            chromiumArgs = []; // No usar args de sparticuz con chromium del sistema
           }
-          
-          logSuccess('PDF_GENERATOR', '✅ Sparticuz Chromium configured successfully');
-          
-        } catch (sparticuzError) {
-          logError('PDF_GENERATOR', `❌ SPARTICUZ FAILED: ${sparticuzError.message}`);
-          logError('PDF_GENERATOR', `❌ SPARTICUZ STACK: ${sparticuzError.stack}`);
-          
-          // CRITICAL FALLBACK: Use puppeteer bundled
-          logInfo('PDF_GENERATOR', '🔄 ACTIVATING FALLBACK: Puppeteer bundled');
+        }
+        
+        // Opción 2: Si no hay env var o falló, intentar Sparticuz
+        if (!executablePath) {
+          try {
+            logInfo('PDF_GENERATOR', '🎯 Intentando Sparticuz Chromium con descarga externa');
+            
+            // Step 1: Font loading (crítico para renderizado)
+            await chromium.font(
+              'https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2'
+            );
+            logInfo('PDF_GENERATOR', '✅ Font cargado exitosamente');
+            
+            // Step 2: FUERZA DESCARGA EXTERNA PARA EVITAR ENOENT
+            // Usa release compatible con Puppeteer 24.17.1 (Chromium 139)
+            const chromiumPackUrl = 'https://github.com/Sparticuz/chromium/releases/download/v138.0.0/chromium-v138.0.0-pack.tar';
+            
+            logInfo('PDF_GENERATOR', `📦 Descargando Chromium desde: ${chromiumPackUrl}`);
+            executablePath = await chromium.executablePath(chromiumPackUrl);
+            chromiumArgs = chromium.args;
+            
+            logInfo('PDF_GENERATOR', `🎯 RAILWAY: Chromium path descargado: ${executablePath}`);
+            logInfo('PDF_GENERATOR', `🎯 RAILWAY: Args count: ${chromiumArgs.length}`);
+            
+            // Step 3: Validación estricta
+            if (!executablePath || executablePath === '/usr/bin/chromium' || executablePath.includes('undefined')) {
+              throw new Error(`Sparticuz path inválido: "${executablePath}"`);
+            }
+            
+            // Verificar que el archivo existe
+            if (executablePath && !fs.existsSync(executablePath)) {
+              logError('PDF_GENERATOR', `❌ Chromium descargado pero no existe en: ${executablePath}`);
+              throw new Error(`Chromium no encontrado en path descargado: ${executablePath}`);
+            }
+            
+            logSuccess('PDF_GENERATOR', '✅ Sparticuz Chromium descargado y configurado exitosamente');
+            
+          } catch (sparticuzError: any) {
+            logError('PDF_GENERATOR', `❌ Sparticuz falló: ${sparticuzError.message}`);
+            executablePath = undefined;
+          }
+        }
+        
+        // Opción 3: Si aún no hay executablePath, intentar con puppeteer bundled
+        if (!executablePath) {
+          logInfo('PDF_GENERATOR', '🔄 Intentando fallback con Puppeteer bundled');
           
           try {
-            executablePath = puppeteer.executablePath();
+            // Importar dinámicamente puppeteer completo para fallback
+            const puppeteerFull = await import('puppeteer');
+            executablePath = puppeteerFull.default.executablePath();
             chromiumArgs = [];
             
             logInfo('PDF_GENERATOR', `🔄 FALLBACK PATH: ${executablePath}`);
-            logInfo('PDF_GENERATOR', `🔄 FALLBACK ARGS: ${chromiumArgs.length} total`);
             
-            if (!executablePath) {
-              throw new Error('Puppeteer bundled path también undefined');
+            if (!executablePath || !fs.existsSync(executablePath)) {
+              throw new Error(`Puppeteer bundled no disponible o path inválido: ${executablePath}`);
             }
             
-            logSuccess('PDF_GENERATOR', '✅ FALLBACK Puppeteer bundled configured');
+            logSuccess('PDF_GENERATOR', '✅ FALLBACK Puppeteer bundled configurado');
             
-          } catch (fallbackError) {
-            logError('PDF_GENERATOR', `❌ FALLBACK ALSO FAILED: ${fallbackError.message}`);
-            throw new Error(`Both Sparticuz and Puppeteer bundled failed: ${fallbackError.message}`);
+          } catch (fallbackError: any) {
+            logError('PDF_GENERATOR', `❌ Todos los métodos fallaron: ${fallbackError.message}`);
+            // Dejar executablePath como undefined para último intento
+            executablePath = undefined;
           }
         }
       } else {
         // LOCAL: usar Puppeteer bundled normal
-        executablePath = puppeteer.executablePath();
-        chromiumArgs = [];
-        logInfo('PDF_GENERATOR', `🏠 LOCAL: Usando Puppeteer bundled - ${executablePath}`);
+        try {
+          const puppeteerLocal = await import('puppeteer');
+          executablePath = puppeteerLocal.default.executablePath();
+          chromiumArgs = [];
+          logInfo('PDF_GENERATOR', `🏠 LOCAL: Usando Puppeteer bundled - ${executablePath}`);
+        } catch (localError: any) {
+          logError('PDF_GENERATOR', `❌ Error importando puppeteer local: ${localError.message}`);
+          // Fallback a puppeteer-core si falla
+          executablePath = undefined;
+        }
       }
 
       // VALIDACIÓN: Asegurar que executablePath no sea undefined
@@ -269,22 +309,28 @@ export class PDFGeneratorService {
         logInfo('PDF_GENERATOR', `🔄 FALLBACK: Usando Puppeteer bundled - ${executablePath}`);
       }
 
-      const launchOptions = {
-        headless: true, // REQUIRED for Railway buildpack (not 'shell')
-        args: isRailway ? [
+      const launchOptions: any = {
+        headless: 'shell' as const, // Requerido para sparticuz moderno
+        executablePath,
+        args: [
           '--no-sandbox',
-          '--disable-setuid-sandbox'
-        ] : [...browserArgs, ...chromiumArgs],
-        executablePath: isRailway ? undefined : executablePath, // Let Railway buildpack find Chrome
-        ...(isRailway && {
-          timeout: 60000,
-          ignoreDefaultArgs: ['--disable-extensions'], // Buildpack specific
-          handleSIGINT: false,
-          handleSIGTERM: false,
-          handleSIGHUP: false,
-          dumpio: true
-        })
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--single-process',
+          '--disable-gpu',
+          ...chromiumArgs
+        ],
+        timeout: 60000,
+        handleSIGINT: false,
+        handleSIGTERM: false,
+        handleSIGHUP: false
       };
+      
+      // Si no hay executablePath, intentar sin él (para que puppeteer-core busque automáticamente)
+      if (!executablePath) {
+        logInfo('PDF_GENERATOR', '⚠️ Sin executablePath específico, puppeteer intentará detectar automáticamente');
+        delete launchOptions.executablePath;
+      }
 
       if (isRailway) {
         logInfo('PDF_GENERATOR', `🚀 Lanzando Chromium con opciones: ${JSON.stringify(launchOptions)}`);
@@ -321,9 +367,26 @@ export class PDFGeneratorService {
         if (isRailway) {
           logInfo('PDF_GENERATOR', '🔄 DEBUGGING: Iniciando retry con opciones ultra-básicas...');
           
+          // Intentar con paths de sistema comunes en Railway/Alpine
+          const systemPaths = [
+            '/usr/bin/chromium-browser', // Alpine Linux
+            '/usr/bin/chromium',          // Debian/Ubuntu
+            '/usr/bin/google-chrome',     // Google Chrome
+            executablePath                // Path original de sparticuz
+          ].filter(Boolean);
+          
+          let workingPath: string | undefined;
+          for (const testPath of systemPaths) {
+            if (testPath && fs.existsSync(testPath)) {
+              logInfo('PDF_GENERATOR', `✅ Encontrado Chromium en: ${testPath}`);
+              workingPath = testPath;
+              break;
+            }
+          }
+          
           const retryOptions = {
             headless: 'shell' as const,
-            executablePath: executablePath, // Usar mismo path de sparticuz
+            executablePath: workingPath, // Usar path encontrado o undefined
             args: [
               '--no-sandbox',
               '--disable-setuid-sandbox', 
