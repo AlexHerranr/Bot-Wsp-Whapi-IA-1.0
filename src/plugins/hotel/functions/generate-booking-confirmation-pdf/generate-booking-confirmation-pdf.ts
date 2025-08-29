@@ -599,7 +599,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     // 8. RETORNAR RESPUESTA CON ATTACHMENT PARA SISTEMA EXISTENTE
     const response: any = {
       success: true,
-      message: `Envío de PDF de confirmación de reserva ${params.bookingId} exitoso. Indícale al huésped que verifique si todo está en orden con la información de su reserva.`
+      message: `Se le ha enviado el documento de confirmación al usuario de WhatsApp, indícale que lo verifique si todo está en orden y/o cualquier paso a seguir que consideres indicarle.`
     };
     
     // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico
@@ -632,10 +632,21 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
 
     // PREPARAR ATTACHMENT PARA OPENAI SERVICE (similar a como funcionan los audios)
     if (result.success && ((result as any).pdfPath || (result as any).pdfBuffer)) {
+      // Formatear nombre del archivo: Confirmación + nombre cliente + fecha llegada
+      const booking = bookingDetails.booking;
+      const clientName = booking.firstName && booking.lastName 
+        ? `${booking.firstName} ${booking.lastName}`.replace(/\s+/g, '_')
+        : `Cliente_${params.bookingId}`;
+      
+      const arrivalDate = new Date(booking.arrival);
+      const formattedDate = `${arrivalDate.getDate().toString().padStart(2, '0')}-${(arrivalDate.getMonth() + 1).toString().padStart(2, '0')}-${arrivalDate.getFullYear()}`;
+      
+      const fileName = `Confirmación_${clientName}_${formattedDate}.pdf`;
+      
       // Agregar attachment al response para que OpenAI service lo envíe
       response.attachment = {
         type: 'pdf',
-        fileName: `confirmacion-reserva-${params.bookingId}.pdf`,
+        fileName: fileName,
         pdfBuffer: (result as any).pdfBuffer || undefined,
         pdfPath: (result as any).pdfPath || undefined,
         filePath: (result as any).pdfPath || undefined // Compatibilidad con ambos nombres
