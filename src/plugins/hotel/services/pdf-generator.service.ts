@@ -137,10 +137,9 @@ export class PDFGeneratorService {
     if (!this.browser) {
       logInfo('PDF_GENERATOR', 'Inicializando navegador Puppeteer...');
       
-      // ESTRATEGIA: Siempre usar sparticuz para probar exactamente lo mismo que Railway
-      const isRailway = process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT_NAME;
-      const isRealRailway = (process.env.RAILWAY_PROJECT_ID && process.env.RAILWAY_PROJECT_ID !== 'local-dev') || 
-                           (process.env.RAILWAY_ENVIRONMENT_NAME === 'production');
+      // DETECCIÓN CORRECTA: Solo usar sparticuz en Railway REAL
+      const isRealRailway = !!(process.env.RAILWAY_PROJECT_ID && process.env.RAILWAY_PROJECT_ID !== 'local-dev');
+      const isRailway = isRealRailway;
       
       const browserArgs = [
         '--no-sandbox',
@@ -208,31 +207,39 @@ export class PDFGeneratorService {
       let chromiumArgs: string[] = [];
       
       if (isRailway) {
-        // SIEMPRE usar @sparticuz/chromium cuando hay RAILWAY env vars (local o real)
+        // EN RAILWAY REAL: usar @sparticuz/chromium obligatorio
         try {
-          // SOLUCIÓN: Cargar fonts antes del executablePath
+          logInfo('PDF_GENERATOR', '🎯 RAILWAY REAL detectado - inicializando Sparticuz Chromium');
+          
+          // CRITICAL: Cargar fonts antes del executablePath  
           await chromium.font(
             'https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2'
           );
+          logInfo('PDF_GENERATOR', '✅ Font cargado exitosamente');
           
           executablePath = await chromium.executablePath();
           chromiumArgs = chromium.args;
           
-          const environment = isRealRailway ? 'RAILWAY REAL' : 'RAILWAY SIMULADO';
-          logInfo('PDF_GENERATOR', `🎯 ${environment}: Chromium path: ${executablePath}`);
-          logInfo('PDF_GENERATOR', `🎯 ${environment}: Extra args: ${chromiumArgs.length} args`);
-        } catch (pathError) {
-          logError('PDF_GENERATOR', `⚠️ Error obteniendo Sparticuz Chromium: ${pathError.message}`);
+          logInfo('PDF_GENERATOR', `🎯 RAILWAY: Chromium path: ${executablePath}`);
+          logInfo('PDF_GENERATOR', `🎯 RAILWAY: Args count: ${chromiumArgs.length}`);
           
-          // FALLBACK: Si sparticuz falla, usar puppeteer bundled
-          logInfo('PDF_GENERATOR', '🔄 Fallback a Puppeteer bundled por error sparticuz');
-          executablePath = puppeteer.executablePath();
-          chromiumArgs = [];
+          // VALIDACIÓN CRÍTICA del path
+          if (!executablePath || executablePath === '/usr/bin/chromium') {
+            throw new Error('Sparticuz executablePath inválido: ' + executablePath);
+          }
+          
+        } catch (pathError) {
+          logError('PDF_GENERATOR', `❌ SPARTICUZ COMPLETAMENTE FALLIDO: ${pathError.message}`);
+          logError('PDF_GENERATOR', `❌ Stack: ${pathError.stack}`);
+          
+          // EN RAILWAY: Si sparticuz falla, es error crítico
+          throw new Error(`Railway PDF requires Sparticuz Chromium: ${pathError.message}`);
         }
       } else {
-        // Sin RAILWAY env vars: usar Puppeteer bundled
+        // LOCAL: usar Puppeteer bundled normal
         executablePath = puppeteer.executablePath();
-        logInfo('PDF_GENERATOR', `🏠 LOCAL PURO: Usando Puppeteer bundled - ${executablePath}`);
+        chromiumArgs = [];
+        logInfo('PDF_GENERATOR', `🏠 LOCAL: Usando Puppeteer bundled - ${executablePath}`);
       }
 
       // VALIDACIÓN: Asegurar que executablePath no sea undefined
