@@ -30,13 +30,26 @@ COPY config/ ./config/
 # Compilar aplicación
 RUN npm run build
 
-# Stage de producción - imagen mínima
+# Stage de producción - imagen mínima con Chromium
 FROM node:18-alpine AS runner
 WORKDIR /app
 
 # Variables de entorno para producción (Railway setea PORT dinámicamente)
 ENV NODE_ENV=production \
-    NODE_OPTIONS="--max-old-space-size=768"
+    NODE_OPTIONS="--max-old-space-size=768" \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Instalar Chromium y dependencias necesarias para Puppeteer
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    && rm -rf /var/cache/apk/*
 
 # Crear usuario no-root
 RUN addgroup -g 1001 -S nodejs && \
