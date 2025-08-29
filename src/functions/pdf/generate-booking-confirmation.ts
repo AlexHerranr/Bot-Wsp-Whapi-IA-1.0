@@ -8,6 +8,7 @@ import { getPuppeteerConfig, launchPuppeteerWithRetry } from '../../config/puppe
 import { getBeds24Service } from '../../services/beds24/beds24.service.js';
 import { getBeds24Config } from '../../config/integrations/beds24.config.js';
 import { logInfo, logError, logSuccess } from '../../utils/logging/index.js';
+import { sendPDFViaWhatsApp } from '../../utils/whapi/send-file.js';
 import * as puppeteer from 'puppeteer';
 import * as handlebars from 'handlebars';
 import * as fs from 'fs/promises';
@@ -334,23 +335,28 @@ async function handleGenerateBookingConfirmation(args: GenerateBookingConfirmati
       path: filePath
     });
 
+    // Crear un link temporal para el PDF (simulado por ahora)
+    const pdfUrl = `https://bot-wsp-whapi-ia-10-production.up.railway.app/pdf/${fileName}`;
+    
+    // Retornar respuesta SIMPLIFICADA para evitar problemas con OpenAI
     return {
       success: true,
-      message: `PDF de confirmación generado exitosamente para la reserva ${args.bookingId}`,
+      message: `✅ PDF de confirmación generado exitosamente para la reserva ${args.bookingId}\n\n` +
+               `📄 **Detalles del documento:**\n` +
+               `• Archivo: ${fileName}\n` +
+               `• Tamaño: ${(pdfBuffer.length / 1024).toFixed(2)}KB\n` +
+               `• Huésped: ${templateData.guestName}\n\n` +
+               `📅 **Estancia:**\n` +
+               `• Check-in: ${templateData.checkIn}\n` +
+               `• Check-out: ${templateData.checkOut}\n` +
+               `• Noches: ${templateData.nights}\n` +
+               `• Propiedad: ${templateData.propertyName}\n` +
+               `• Habitación: ${templateData.roomName}\n\n` +
+               `💰 **Total: ${templateData.currency} ${templateData.totalAmount}**\n\n` +
+               `📥 El PDF está listo para descargar. Por favor indícame si deseas que te lo envíe por otro medio.`,
       bookingId: args.bookingId,
-      guestName: templateData.guestName,
       fileName: fileName,
-      filePath: filePath,
-      fileSize: `${(pdfBuffer.length / 1024).toFixed(2)}KB`,
-      pdfBuffer: pdfBuffer.toString('base64'), // Para enviar por WhatsApp
-      details: {
-        checkIn: templateData.checkIn,
-        checkOut: templateData.checkOut,
-        nights: templateData.nights,
-        totalAmount: `${templateData.currency} ${templateData.totalAmount}`,
-        property: templateData.propertyName,
-        room: templateData.roomName
-      }
+      fileSize: `${(pdfBuffer.length / 1024).toFixed(2)}KB`
     };
     
   } catch (error: any) {

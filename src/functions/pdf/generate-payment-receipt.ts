@@ -482,25 +482,28 @@ async function handleGeneratePaymentReceipt(args: GeneratePaymentReceiptArgs): P
       receiptNumber: receiptNumber
     });
 
+    // Retornar respuesta SIMPLIFICADA para evitar problemas con OpenAI
     return {
       success: true,
-      message: `Recibo de pago generado exitosamente para la reserva ${args.bookingId}`,
+      message: `✅ Recibo de pago generado exitosamente\n\n` +
+               `🧾 **Detalles del recibo:**\n` +
+               `• Número: ${receiptNumber}\n` +
+               `• Archivo: ${fileName}\n` +
+               `• Tamaño: ${(pdfBuffer.length / 1024).toFixed(2)}KB\n\n` +
+               `👤 **Cliente:**\n` +
+               `• Nombre: ${templateData.guestName}\n` +
+               `• Reserva: #${args.bookingId}\n\n` +
+               `💳 **Información del pago:**\n` +
+               `• Fecha: ${templateData.paymentDate}\n` +
+               `• Método: ${templateData.paymentMethod}\n` +
+               `• Transacción: ${transactionId}\n` +
+               `• Estado: ✅ CONFIRMADO\n\n` +
+               `💰 **Total pagado: ${templateData.currency} ${templateData.totalAmount}**\n\n` +
+               `📥 El recibo está listo para descargar. Por favor indícame si deseas que te lo envíe por otro medio.`,
       bookingId: args.bookingId,
       receiptNumber: receiptNumber,
-      transactionId: transactionId,
-      guestName: templateData.guestName,
       fileName: fileName,
-      filePath: filePath,
-      fileSize: `${(pdfBuffer.length / 1024).toFixed(2)}KB`,
-      pdfBuffer: pdfBuffer.toString('base64'), // Para enviar por WhatsApp
-      details: {
-        paymentDate: templateData.paymentDate,
-        paymentMethod: templateData.paymentMethod,
-        totalAmount: `${templateData.currency} ${templateData.totalAmount}`,
-        status: 'CONFIRMADO',
-        property: templateData.propertyName,
-        period: `${templateData.checkIn} - ${templateData.checkOut}`
-      }
+      fileSize: `${(pdfBuffer.length / 1024).toFixed(2)}KB`
     };
     
   } catch (error: any) {
