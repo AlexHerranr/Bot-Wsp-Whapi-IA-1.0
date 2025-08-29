@@ -32,6 +32,9 @@ RUN PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm ci --only=production
 # Copiar el resto del código
 COPY . .
 
+# Generar cliente de Prisma
+RUN npx prisma generate
+
 # Compilar TypeScript
 RUN npm run build
 
