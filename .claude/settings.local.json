@@ -154,7 +154,9 @@
       "Bash(set PORT=3012)",
       "Bash(set NODE_ENV=development)",
       "Bash(set RAILWAY_PROJECT_ID=local-dev)",
-      "Bash(set RAILWAY_ENVIRONMENT_NAME=development)"
+      "Bash(set RAILWAY_ENVIRONMENT_NAME=development)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm view:*)"
     ],
     "deny": [],
     "additionalDirectories": [

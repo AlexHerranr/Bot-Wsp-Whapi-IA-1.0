@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsx --watch src/main.ts",
     "dev:railway": "cross-env NODE_ENV=development PORT=3010 RAILWAY_PROJECT_ID=local-dev RAILWAY_ENVIRONMENT_NAME=development tsx --watch src/main.ts",
+    "postinstall": "node -e \"console.log('POST-INSTALL: Verificando Chromium...'); try { const chromium = require('@sparticuz/chromium'); console.log('Chromium path check:', chromium.executablePath); } catch(e) { console.log('Chromium check failed:', e.message); }\"",
     "dev:local": "concurrently -k -n BOT,NGROK -c green,cyan \"cross-env PORT=3010 npm run dev\" \"ngrok http 3010 --domain=actual-bobcat-handy.ngrok-free.app\"",
     "dev:local:railway": "concurrently -k -n BOT,NGROK -c green,cyan \"npm run dev:railway\" \"ngrok http 3010 --domain=actual-bobcat-handy.ngrok-free.app\"",
     "dev:local:clean": "powershell -ExecutionPolicy Bypass -File scripts/windows/start-dev-local.ps1",
@@ -86,7 +87,7 @@
     "@google-cloud/secret-manager": "^6.1.0",
     "@google/generative-ai": "^0.21.0",
     "@prisma/client": "^6.13.0",
-    "@sparticuz/chromium": "^138.0.2",
+    "@sparticuz/chromium": "^131.0.1",
     "@types/handlebars": "^4.0.40",
     "@types/qrcode": "^1.5.5",
     "axios": "^1.11.0",
