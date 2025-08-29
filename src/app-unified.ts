@@ -3004,6 +3004,18 @@ function setupWebhooks() {
                             const duration = ((Date.now() - startTime) / 1000).toFixed(1);
                             terminalLog.response(userName, finalResponse, parseFloat(duration));
                             
+                            // Verificar si hay attachment guardado para este thread
+                            const attachment = globalAttachments.get(threadId);
+                            if (attachment) {
+                                // Limpiar el attachment del mapa
+                                globalAttachments.delete(threadId);
+                                // Retornar respuesta con attachment
+                                return {
+                                    message: finalResponse,
+                                    attachment: attachment
+                                };
+                            }
+                            
                             return finalResponse;
                         }
                     }
