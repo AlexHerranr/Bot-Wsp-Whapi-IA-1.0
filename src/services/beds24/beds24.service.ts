@@ -94,6 +94,38 @@ export class Beds24Service {
     }
 
     /**
+     * Obtiene detalles de una reserva específica
+     */
+    async getBooking(bookingId: string): Promise<any> {
+        try {
+            logBeds24Request(`Consultando reserva ${bookingId}`, { bookingId });
+            
+            const response = await this.apiClient.get('/bookings', {
+                params: {
+                    bookingId: bookingId
+                }
+            });
+
+            if (response.data?.success && response.data?.data?.length > 0) {
+                const booking = response.data.data[0];
+                logSuccess('BEDS24_SERVICE', `Reserva ${bookingId} encontrada`, {
+                    guestName: booking.guestFirstName + ' ' + booking.guestLastName,
+                    checkIn: booking.firstNight,
+                    checkOut: booking.lastNight
+                });
+                return booking;
+            }
+
+            throw new Error(`Reserva ${bookingId} no encontrada`);
+        } catch (error: any) {
+            logError('BEDS24_SERVICE', `Error obteniendo reserva ${bookingId}`, {
+                error: error.message
+            });
+            throw error;
+        }
+    }
+
+    /**
      * Obtiene disponibilidad en tiempo real para fechas específicas
      */
     async getAvailability(query: AvailabilityQuery): Promise<AvailabilityInfo[]> {
