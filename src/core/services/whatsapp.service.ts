@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { TerminalLog } from '../utils/terminal-log';
 import { fetchWithRetry } from '../utils/retry-utils';
 import { getShortUserId } from '../utils/identifiers';
-import { logInfo } from '../../utils/logging';
+import { logInfo, logError } from '../../utils/logging';
 import { DatabaseService } from './database.service';
 import { MediaManager } from '../state/media-manager';
 
@@ -865,8 +865,36 @@ export class WhatsappService {
                 throw new Error('PDF buffer vacío o nulo');
             }
 
+            // IMPORTANTE: Asegurar que es un Buffer real de Node.js
+            // Puppeteer puede retornar Uint8Array que necesita conversión
+            const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
+            
             // Convertir buffer directamente a base64 (sin FS)
-            const base64Data = pdfBuffer.toString('base64');
+            const base64Data = buffer.toString('base64');
+            
+            // Log para debugging
+            const pdfHeader = buffer.slice(0, 4).toString('ascii');
+            const isPDF = pdfHeader === '%PDF';
+            
+            logInfo('PDF_BUFFER_VALIDATION', 'Validación de buffer PDF', {
+                isBuffer: Buffer.isBuffer(pdfBuffer),
+                isUint8Array: pdfBuffer instanceof Uint8Array,
+                originalType: typeof pdfBuffer,
+                originalConstructor: pdfBuffer.constructor.name,
+                bufferLength: buffer.length,
+                firstBytes: buffer.slice(0, 20).toString('hex'), // Primeros bytes en hex
+                pdfHeader: pdfHeader,
+                isPDF: isPDF,
+                base64Preview: base64Data.substring(0, 50) + '...' // Preview del base64
+            });
+            
+            if (!isPDF) {
+                logError('PDF_BUFFER_INVALID', 'Buffer no es un PDF válido', {
+                    header: pdfHeader,
+                    expectedHeader: '%PDF',
+                    firstBytes: buffer.slice(0, 50).toString('hex')
+                });
+            }
             const mimeType = 'application/pdf';
             const dataUrl = `data:${mimeType};base64,${base64Data}`;
             
