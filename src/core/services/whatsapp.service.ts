@@ -789,14 +789,14 @@ export class WhatsappService {
             const fileBuffer = await fs.readFile(filePath);
             const base64Data = fileBuffer.toString('base64');
             
-            // Usar mismo formato que sendDocumentFromBuffer
+            // Usar formato data URL estándar (igual que sendDocumentFromBuffer)
+            const dataUrl = `data:application/pdf;base64,${base64Data}`;
+            
             const payload: any = {
                 to: chatId,
-                media: base64Data,  // Solo base64, sin el prefijo data:
+                media: dataUrl,  // Data URL completo
                 mime_type: 'application/pdf',
-                filename: fileName || 'documento.pdf',
-                no_encode: false,  // Indicar que media ya está en base64
-                no_cache: true     // No cachear
+                filename: fileName || 'documento.pdf'
             };
             
             if (quotedMessageId) {
@@ -897,19 +897,17 @@ export class WhatsappService {
                 });
             }
             
-            // WHAPI: Probar enviando solo base64 sin data URL
-            // Según la documentación, media puede ser:
-            // 1. URL directa
-            // 2. Base64 string (con no_encode=false)
-            // 3. Data URL (data:mime;base64,content)
+            // WHAPI: Usar formato data URL estándar
+            // data:[<mediatype>][;base64],<data>
+            const dataUrl = `data:application/pdf;base64,${base64Data}`;
             
             const payload: any = {
                 to: chatId,
-                media: base64Data,  // Solo base64, sin el prefijo data:
+                media: dataUrl,  // Data URL completo con prefijo
                 mime_type: 'application/pdf',
-                filename: fileName || 'confirmacion-reserva.pdf',
-                no_encode: false,  // Indicar que media ya está en base64
-                no_cache: true     // No cachear para evitar reutilizar corrupto
+                filename: fileName || 'confirmacion-reserva.pdf'
+                // NO incluir no_encode cuando usamos data URL
+                // no_cache se puede omitir
             };
             
             if (quotedMessageId) {
