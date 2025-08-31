@@ -21,7 +21,7 @@ model WhatsApp {
   fechaProximaAccion DateTime?
   prioridad          Int?
 
-  @@map("ClientView")
+  @@map("Chats")
 }
 
 model Apartamentos {
