@@ -33,6 +33,7 @@ interface Beds24Availability {
 // Interface enriquecida con datos locales de BD
 interface EnrichedApartment extends Beds24Availability {
     roomName: string; // Nombre real del apartamento desde BD
+    propertyName?: string; // Nombre de la propiedad desde BD
     extraCharge: {
         description: string; // Texto completo desde BD
         amount: number;      // Valor numérico para cálculos
@@ -359,6 +360,7 @@ export class Beds24Client {
                 return apartments.map(apt => ({
                     ...apt,
                     roomName: `Apartamento ${apt.roomId}`,
+                    propertyName: 'TeAlquilamos',
                     extraCharge: {
                         description: "Cargo adicional:",
                         amount: 70000
@@ -376,6 +378,7 @@ export class Beds24Client {
                 return {
                     ...apt,
                     roomName: details?.roomName || `Apartamento ${apt.roomId}`,
+                    propertyName: details?.propertyName || 'TeAlquilamos',
                     extraCharge: details?.extraCharge || {
                         description: "Cargo adicional:",
                         amount: 70000
@@ -395,6 +398,7 @@ export class Beds24Client {
             return apartments.map(apt => ({
                 ...apt,
                 roomName: `Apartamento ${apt.roomId}`,
+                propertyName: 'TeAlquilamos',
                 extraCharge: {
                     description: "Cargo adicional:",
                     amount: 70000
@@ -439,7 +443,12 @@ export class Beds24Client {
             // Calcular total final con cargo extra
             const totalFinal = apt.totalPrice + apt.extraCharge.amount;
             
-            response += `*${apt.roomName}*\n`;
+            response += `*${apt.roomName}*`;
+            // Incluir nombre de propiedad si es diferente de TeAlquilamos
+            if (apt.propertyName && apt.propertyName !== 'TeAlquilamos') {
+                response += ` (${apt.propertyName})`;
+            }
+            response += `\n`;
             response += `- $${apt.pricePerNight.toLocaleString()}/noche × ${totalNights} = $${apt.totalPrice.toLocaleString()}\n`;
             response += `- ${apt.extraCharge.description} $${apt.extraCharge.amount.toLocaleString()}\n`;
             response += `- Total: $${totalFinal.toLocaleString()}\n`;

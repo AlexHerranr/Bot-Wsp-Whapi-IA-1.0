@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 
 export interface ApartmentDetails {
   propertyId: number;
+  propertyName?: string; // Nombre de la propiedad
   roomId: number;
   roomName: string;
   extraCharge: {
@@ -54,6 +55,7 @@ export class ApartmentDataService {
         const apartments = await prisma.apartamentos.findMany({
           select: {
             propertyId: true,
+            propertyName: true,
             roomId: true,
             roomName: true,
             extraCharge: true,
@@ -89,6 +91,7 @@ export class ApartmentDataService {
           const cacheKey = `apartment:${apt.roomId}`;
           const apartmentData: ApartmentDetails = {
             propertyId: apt.propertyId,
+            propertyName: apt.propertyName,
             roomId: apt.roomId,
             roomName: apt.roomName,
             extraCharge: apt.extraCharge as { description: string; amount: number },
@@ -103,6 +106,7 @@ export class ApartmentDataService {
         apartments.forEach(apt => {
           apartmentMap.set(apt.roomId, {
             propertyId: apt.propertyId,
+            propertyName: apt.propertyName,
             roomId: apt.roomId,
             roomName: apt.roomName,
             extraCharge: apt.extraCharge as { description: string; amount: number }
@@ -200,6 +204,7 @@ export class ApartmentDataService {
         },
         select: {
           propertyId: true,
+          propertyName: true,
           roomId: true,
           roomName: true,
           extraCharge: true
@@ -213,6 +218,7 @@ export class ApartmentDataService {
       apartments.forEach(apt => {
         const details: ApartmentDetails = {
           propertyId: apt.propertyId,
+          propertyName: apt.propertyName,
           roomId: apt.roomId,
           roomName: apt.roomName,
           extraCharge: apt.extraCharge as { description: string; amount: number }
@@ -273,12 +279,14 @@ export class ApartmentDataService {
         where: { roomId: data.roomId },
         create: {
           propertyId: data.propertyId,
+          propertyName: data.propertyName || 'TeAlquilamos',
           roomId: data.roomId,
           roomName: data.roomName,
           extraCharge: data.extraCharge
         },
         update: {
           propertyId: data.propertyId,
+          propertyName: data.propertyName || 'TeAlquilamos',
           roomName: data.roomName,
           extraCharge: data.extraCharge
         }
@@ -291,6 +299,7 @@ export class ApartmentDataService {
       
       return {
         propertyId: apartment.propertyId,
+        propertyName: apartment.propertyName,
         roomId: apartment.roomId,
         roomName: apartment.roomName,
         extraCharge: apartment.extraCharge as { description: string; amount: number }
