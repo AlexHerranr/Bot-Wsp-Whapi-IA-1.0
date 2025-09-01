@@ -58,10 +58,10 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
   logInfo('CREATE_NEW_BOOKING_PARAMS', 'Parámetros recibidos completos', { 
     params,
     paramsType: typeof params,
-    hasRoomIds: 'roomIds' in params,
+    hasRoomIds: params && 'roomIds' in params,
     roomIdsType: params?.roomIds ? typeof params.roomIds : 'undefined',
     roomIdsValue: params?.roomIds,
-    allKeys: Object.keys(params || {})
+    allKeys: params ? Object.keys(params) : []
   }, 'create-new-booking.ts');
 
   // Validación temprana de params
@@ -72,7 +72,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     }, 'create-new-booking.ts');
     return {
       success: false,
-      message: "❌ Error: No se recibieron parámetros válidos para crear la reserva. Por favor consulte con su superior.",
+      message: "ERROR_INTERNO: No se recibieron parámetros válidos. Indícale al huésped que necesitas recopilar nuevamente los datos de la reserva (fechas, apartamento, datos personales y pago).",
       error: "invalid_params"
     };
   }
@@ -129,7 +129,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
       }, 'create-new-booking.ts');
       return {
         success: false,
-        message: `❌ Error al crear la reserva. Faltan los siguientes campos: ${missingFields.join(', ')}. Por favor, proporcione todos los datos necesarios o consulte con su superior.`,
+        message: `ERROR_DATOS_INCOMPLETOS: Faltan campos requeridos [${missingFields.join(', ')}]. Indícale al huésped que necesitas confirmar todos los datos de la reserva antes de proceder. Solicita amablemente la información faltante.`,
         error: "missing_required_fields"
       };
     }
@@ -139,7 +139,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     if (invalidRoomIds.length > 0) {
       return {
         success: false,
-        message: `IDs de apartamentos inválidos: ${invalidRoomIds.join(', ')}. Deben ser números enteros >= 100000`,
+        message: `ERROR_APARTAMENTO_INVALIDO: Los IDs de apartamento [${invalidRoomIds.join(', ')}] no son válidos. Indícale al huésped que hubo un problema técnico al identificar el apartamento y que estás consultando con tu superior para resolverlo de inmediato.`,
         error: "invalid_room_ids"
       };
     }
@@ -150,7 +150,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     if (!dateRegex.test(arrival) || !dateRegex.test(departure)) {
       return {
         success: false,
-        message: "Formato de fechas inválido. Use YYYY-MM-DD",
+        message: "ERROR_FORMATO_FECHA: Las fechas tienen formato incorrecto. Indícale al huésped que necesitas confirmar las fechas exactas de entrada y salida en formato correcto.",
         error: "invalid_date_format"
       };
     }
@@ -159,7 +159,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     if (new Date(arrival) >= new Date(departure)) {
       return {
         success: false,
-        message: "La fecha de salida debe ser posterior a la fecha de entrada",
+        message: "ERROR_RANGO_FECHAS: La fecha de salida debe ser posterior a la de entrada. Indícale al huésped que parece haber un error con las fechas y solicita que las confirme nuevamente.",
         error: "invalid_date_range"
       };
     }
@@ -271,7 +271,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
       
       return {
         success: false,
-        message: "Error: ninguna reserva fue creada en Beds24",
+        message: "ERROR_CREACION_RESERVA: No se pudo crear la reserva en el sistema. Indícale al huésped que estás experimentando un problema técnico con la plataforma de reservas y que vas a consultar con tu superior para resolverlo lo más pronto posible. Pídele disculpas por el inconveniente.",
         error: "no_bookings_created"
       };
     }
@@ -388,11 +388,11 @@ ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleStrin
       }
     }, 'create-new-booking.ts');
 
-    // Manejar errores específicos con mensajes para el usuario
+    // Manejar errores específicos con instrucciones para OpenAI
     if (error.response?.status === 401) {
       return {
         success: false,
-        message: "❌ Error al crear la reserva: problema de autenticación con el sistema. Por favor consulte con su superior para revisar la configuración.",
+        message: "ERROR_AUTENTICACION: Hay un problema de autenticación con la plataforma Beds24. Indícale al huésped que estás presentando problemas técnicos con el sistema de reservas y que hablarás con tu superior para resolverlo lo más pronto posible. Discúlpate por el inconveniente y asegúrale que su reserva será procesada en breve.",
         error: "auth_error"
       };
     }
@@ -401,7 +401,7 @@ ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleStrin
       const errorMsg = error.response?.data?.message || 'Datos inválidos';
       return {
         success: false,
-        message: `❌ Error al crear la reserva: ${errorMsg}. Por favor verifique que las fechas estén disponibles y los datos sean correctos, o consulte con su superior.`,
+        message: `ERROR_VALIDACION: El sistema rechazó la reserva (${errorMsg}). Indícale al huésped que puede haber un problema con la disponibilidad o los datos ingresados. Verifica con el huésped si las fechas y el apartamento son correctos, y menciona que si el problema persiste, consultarás con tu superior.`,
         error: "validation_error"
       };
     }
@@ -409,15 +409,15 @@ ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleStrin
     if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
       return {
         success: false,
-        message: "❌ Error de conexión con el sistema de reservas. Por favor intente nuevamente en unos minutos o consulte con su superior si el problema persiste.",
+        message: "ERROR_CONEXION: No se pudo conectar con el sistema de reservas. Indícale al huésped que hay un problema temporal de conexión con la plataforma. Menciona que intentarás nuevamente en unos momentos y que si el problema persiste, escalarás el caso con tu superior para garantizar que su reserva se procese.",
         error: "connection_error"
       };
     }
 
-    // Error genérico con instrucción de consultar al superior
+    // Error genérico con instrucción para OpenAI
     return {
       success: false,
-      message: `❌ Ha ocurrido un error al crear la reserva: ${errorMessage}. Por favor consulte con su superior para resolver este problema.`,
+      message: `ERROR_SISTEMA: Ocurrió un error inesperado (${errorMessage}). Indícale al huésped que encontraste un problema técnico al procesar la reserva. Discúlpate sinceramente y asegúrale que consultarás inmediatamente con tu superior para resolver la situación y procesar su reserva lo antes posible.`,
       error: errorDetails
     };
   }
