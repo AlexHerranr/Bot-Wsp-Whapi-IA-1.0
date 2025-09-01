@@ -72,7 +72,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     }, 'create-new-booking.ts');
     return {
       success: false,
-      message: "Error: No se recibieron parámetros válidos para crear la reserva",
+      message: "❌ Error: No se recibieron parámetros válidos para crear la reserva. Por favor consulte con su superior.",
       error: "invalid_params"
     };
   }
@@ -95,8 +95,24 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
 
   try {
     // 1. Validar SOLO parámetros básicos OBLIGATORIOS (apartamentos + pago + datos huésped)
-    if (!roomIds || !Array.isArray(roomIds) || roomIds.length === 0 || !arrival || !departure || !firstName || !lastName || !email || !phone || !numAdult || !accommodationRate || !advancePayment || !advanceDescription) {
+    const missingFields = [];
+    if (!roomIds) missingFields.push('roomIds');
+    if (!Array.isArray(roomIds)) missingFields.push('roomIds debe ser array');
+    if (roomIds && Array.isArray(roomIds) && roomIds.length === 0) missingFields.push('roomIds está vacío');
+    if (!arrival) missingFields.push('arrival');
+    if (!departure) missingFields.push('departure');
+    if (!firstName) missingFields.push('firstName');
+    if (!lastName) missingFields.push('lastName');
+    if (!email) missingFields.push('email');
+    if (!phone) missingFields.push('phone');
+    if (!numAdult) missingFields.push('numAdult');
+    if (!accommodationRate) missingFields.push('accommodationRate');
+    if (!advancePayment) missingFields.push('advancePayment');
+    if (!advanceDescription) missingFields.push('advanceDescription');
+
+    if (missingFields.length > 0) {
       logError('CREATE_NEW_BOOKING_MISSING_FIELDS', 'Campos requeridos faltantes', {
+        missingFields,
         hasRoomIds: !!roomIds,
         isRoomIdsArray: Array.isArray(roomIds),
         roomIdsLength: roomIds?.length,
@@ -113,7 +129,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
       }, 'create-new-booking.ts');
       return {
         success: false,
-        message: "Faltan datos BÁSICOS requeridos: apartamentos (array), fechas, nombres, email, teléfono, adultos, tarifa alojamiento y anticipo con descripción",
+        message: `❌ Error al crear la reserva. Faltan los siguientes campos: ${missingFields.join(', ')}. Por favor, proporcione todos los datos necesarios o consulte con su superior.`,
         error: "missing_required_fields"
       };
     }
@@ -353,9 +369,15 @@ ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleStrin
       message: formattedMessage
     };
 
-  } catch (error) {
-    logError('CREATE_NEW_BOOKING', `Error creando reserva: ${error.message}`, {
-      error: error.response?.data || error.message,
+  } catch (error: any) {
+    const errorMessage = error?.message || 'Error desconocido';
+    const errorDetails = error?.response?.data || error;
+    
+    logError('CREATE_NEW_BOOKING_ERROR', `Error creando reserva: ${errorMessage}`, {
+      error: errorDetails,
+      errorType: error?.constructor?.name,
+      errorCode: error?.code,
+      errorStatus: error?.response?.status,
       params: {
         roomIds,
         arrival,
@@ -366,35 +388,37 @@ ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleStrin
       }
     }, 'create-new-booking.ts');
 
-    // Manejar errores específicos
+    // Manejar errores específicos con mensajes para el usuario
     if (error.response?.status === 401) {
       return {
         success: false,
-        message: "❌ Error de autenticación. Token de escritura inválido o expirado.",
+        message: "❌ Error al crear la reserva: problema de autenticación con el sistema. Por favor consulte con su superior para revisar la configuración.",
         error: "auth_error"
       };
     }
 
     if (error.response?.status === 400) {
+      const errorMsg = error.response?.data?.message || 'Datos inválidos';
       return {
         success: false,
-        message: "❌ Datos de reserva inválidos. Verifique las fechas y disponibilidad del apartamento.",
+        message: `❌ Error al crear la reserva: ${errorMsg}. Por favor verifique que las fechas estén disponibles y los datos sean correctos, o consulte con su superior.`,
         error: "validation_error"
       };
     }
 
-    if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
+    if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
       return {
         success: false,
-        message: "❌ Error de conexión con Beds24. Intente nuevamente en unos minutos.",
+        message: "❌ Error de conexión con el sistema de reservas. Por favor intente nuevamente en unos minutos o consulte con su superior si el problema persiste.",
         error: "connection_error"
       };
     }
 
+    // Error genérico con instrucción de consultar al superior
     return {
       success: false,
-      message: "❌ Error interno creando la reserva. Contacte soporte técnico.",
-      error: error.response?.data || error.message
+      message: `❌ Ha ocurrido un error al crear la reserva: ${errorMessage}. Por favor consulte con su superior para resolver este problema.`,
+      error: errorDetails
     };
   }
 }
