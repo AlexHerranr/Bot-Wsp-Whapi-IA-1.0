@@ -156,7 +156,25 @@ export async function checkAvailability(args: {
         // Log técnico resumido en una línea
         logInfo('HOTEL_AVAILABILITY', `${args.startDate}_${args.endDate}_${numAdults}adl | ${apartmentCount}apts | ${duration}ms | BD:${hasFixedCharges?'OK':'MISS'} | Ages:${hasAgeInfo?'OK':'MISS'} | ${result.length}chars`, {}, 'check-availability.ts');
 
-        return result; // Ya viene formateado o con mensaje de error
+        // Agregar instrucciones para OpenAI cuando hay disponibilidad
+        if (apartmentCount > 0) {
+            return `EXITO_DISPONIBILIDAD: Se encontraron ${apartmentCount} opciones disponibles.
+
+${result}
+
+INSTRUCCION: Presenta las opciones al huésped de forma clara y amable. 
+Si muestra interés en alguna, procede a recopilar sus datos para crear la reserva.
+Si los precios no están disponibles, menciona que puedes consultarlos.`;
+        } else if (result.includes('No hay disponibilidad')) {
+            return `SIN_DISPONIBILIDAD: No hay apartamentos disponibles para las fechas solicitadas.
+
+${result}
+
+INSTRUCCION: Informa amablemente al huésped que no hay disponibilidad. 
+Sugiere fechas alternativas cercanas o que puede contactar directamente al 3023371476.`;
+        }
+        
+        return result; // Otros casos (errores, mensajes especiales)
 
     } catch (error: any) {
         const duration = Date.now() - startTime;

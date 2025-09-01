@@ -702,9 +702,12 @@ export async function checkBookingDetails(params: CheckBookingParams, context?: 
                 }
             }
             
-            // Si no se agregó nota específica, agregar una genérica
+            // Si no se agregó nota específica, agregar una genérica con formato estándar
             if (!assistantNote) {
-                assistantNote = '\n\n✅ Reserva encontrada! Responde según corresponda.';
+                assistantNote = `\n\nEXITO_CONSULTA: Reserva(s) encontrada(s) correctamente.
+
+INSTRUCCION: Presenta los detalles de la reserva al huésped de forma clara. 
+Si necesita hacer cambios, ofrece ayuda. Si todo está bien, confirma que está todo listo para su llegada.`;
             }
             
             // 📋 AUDIT LOG: Final response sent to OpenAI

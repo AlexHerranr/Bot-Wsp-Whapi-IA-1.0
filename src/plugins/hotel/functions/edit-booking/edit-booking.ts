@@ -255,26 +255,26 @@ directamente en la plataforma, que vas a consultar con tu superior si tiene duda
       status: modifiedBooking.status
     }, 'edit-booking.ts');
 
-    // 7. Formatear respuesta con sugerencia condicional
-    const suggestion = isSecondPaymentOrMore 
-      ? '🔔 **Sugerencia para OpenAI:** Se ha registrado un pago adicional (pago #' + (existingPayments + 1) + '). Procede a llamar a la función `generate_payment_receipt_pdf` para generar y enviar el recibo de pago específico al huésped.'
-      : '🔔 **Sugerencia para OpenAI:** Se ha registrado el primer pago de la reserva. Procede a llamar a la función `generate_booking_confirmation_pdf` para generar y enviar el documento PDF de confirmación actualizada al huésped.';
+    // 7. Formatear respuesta con formato estándar para OpenAI
+    const nextStep = isSecondPaymentOrMore 
+      ? 'Procede a ejecutar generate_payment_receipt_pdf para generar el recibo de este pago.'
+      : 'Procede a ejecutar generate_booking_confirmation_pdf para generar el documento actualizado.';
     
-    const formattedMessage = `✅ **PAGO REGISTRADO EXITOSAMENTE**
+    const formattedMessage = `EXITO_PAGO_REGISTRADO: Comprobante registrado correctamente en la reserva ${bookingId}.
 
-📋 **DETALLES DEL PAGO:**
-• **Código reserva:** ${bookingId}
-• **Status actual:** ${modifiedBooking.status} (sin cambios)
-• **Pago registrado:** $${params.paymentAmount?.toLocaleString()} COP
-• **Comprobante:** ${params.paymentDescription}
-• **Fecha registro:** ${new Date().toLocaleDateString('es-CO')}
-• **Número de pago:** #${existingPayments + 1}
+DATOS_CONFIRMADOS:
+• Código reserva: ${bookingId}
+• Status: ${modifiedBooking.status}
+• Monto registrado: $${params.paymentAmount?.toLocaleString()} COP
+• Comprobante: ${params.paymentDescription}
+• Número de pago: #${existingPayments + 1}
+• Fecha: ${new Date().toLocaleDateString('es-CO')}
 
-💰 ¡Pago registrado en el sistema!
+SIGUIENTE_PASO: ${nextStep}
 
-📧 Se enviará documento actualizado por email
-
-${suggestion}`;
+INSTRUCCION: Confirma al huésped que su pago fue registrado exitosamente. 
+Menciona que recibirá un documento actualizado por email. 
+${isSecondPaymentOrMore ? 'Es un pago adicional.' : 'Es el primer pago de la reserva.'}`;
 
     return {
       success: true,

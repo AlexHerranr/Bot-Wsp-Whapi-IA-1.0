@@ -386,17 +386,21 @@ export async function generatePaymentReceiptPDF(params: GeneratePaymentReceiptPD
       paymentsProcessed: receiptData.paymentItems.length
     });
     
-    // 7. RETORNAR RESPUESTA CON ATTACHMENT
+    // 7. RETORNAR RESPUESTA CON FORMATO ESTÁNDAR
     const response: any = {
       success: true,
-      message: `✅ Recibo de pago generado exitosamente para la reserva ${params.bookingId}. 
+      message: `EXITO_RECIBO: Recibo de pago generado y enviado exitosamente.
 
-📄 **Documento:** Recibo de Pago
-💰 **Último pago registrado:** ${receiptData.paymentItems[0]?.formattedAmount || 'N/A'} COP
-📊 **Total pagado:** ${receiptData.totalPaid} COP
-💳 **Saldo pendiente:** ${receiptData.balance} COP
+DATOS_CONFIRMADOS:
+• Reserva: ${params.bookingId}
+• Documento: Recibo de Pago
+• Último pago: ${receiptData.paymentItems[0]?.formattedAmount || 'N/A'} COP
+• Total pagado: ${receiptData.totalPaid} COP
+• Saldo pendiente: ${receiptData.balance} COP
 
-El recibo PDF ha sido generado y está listo para enviar al huésped.`
+INSTRUCCION: Confirma al huésped que le enviaste el recibo de pago. 
+Si hay saldo pendiente, recuérdale amablemente el monto. 
+Si está todo pagado, felicítalo y confirma que su reserva está completa.`
     };
     
     // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico

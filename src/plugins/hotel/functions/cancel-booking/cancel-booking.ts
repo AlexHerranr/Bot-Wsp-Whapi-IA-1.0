@@ -272,20 +272,22 @@ Tenemos ofertas especiales para nuevas cotizaciones que podrían resultar en un 
 **¿Te gustaría cotizar nuevamente desde cero a ver si encuentras una opción mejor?**`;
     }
     
-    const formattedMessage = `✅ **RESERVA CANCELADA EXITOSAMENTE**
+    const formattedMessage = `EXITO_CANCELACION: Reserva ${bookingId} cancelada correctamente.
 
-📋 **DETALLES DE LA CANCELACIÓN:**
-• **Código reserva:** ${bookingId}
-• **Status anterior:** ${currentStatus}
-• **Nuevo status:** CANCELADA ❌
-• **Motivo:** ${reason}
-• **Fecha cancelación:** ${cancelDate}
+DATOS_CONFIRMADOS:
+• Código reserva: ${bookingId}
+• Status anterior: ${currentStatus}
+• Nuevo status: CANCELADA
+• Motivo: ${reason}
+• Fecha cancelación: ${cancelDate}
+• Espacio liberado: Sí
 
-📝 **ESPACIO LIBERADO:**
-• La reserva ha sido cancelada en el sistema
-• El apartamento queda disponible para nuevas reservas
+${notes ? `NOTAS: ${notes}` : ''}
 
-${notes ? `📝 **Notas:** ${notes}` : ''}${nextStepMessage}`;
+${nextStepMessage ? `PROMOCION_DISPONIBLE: ${nextStepMessage}` : ''}
+
+INSTRUCCION: Confirma al huésped que la reserva fue cancelada exitosamente. 
+El espacio ya está liberado. ${nextStepMessage ? 'Menciona la promoción disponible y ofrece ayuda para una nueva cotización.' : 'Si necesita algo más, estás disponible para ayudar.'}`;
 
     return {
       success: true,
