@@ -158,6 +158,7 @@ export class ThreadPersistenceService {
                 console.info(`BD: Reset token count for new thread ${userId}: ${threadId}`);
             } else {
                 console.info(`BD: Preserving token count for existing thread ${userId}: ${threadId}`);
+            }
         } catch (error) {
             // BD failure no debe interrumpir - cache tiene los datos
             console.warn('BD update failed, but cache is updated:', error);
