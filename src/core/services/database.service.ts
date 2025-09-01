@@ -151,7 +151,8 @@ export class DatabaseService {
                         data: { 
                             phoneNumber: userId, 
                             chatId: cid, 
-                            ...Object.fromEntries(Object.entries(clientViewData).filter(([k]) => k !== 'phoneNumber' && k !== 'chatId'))
+                            lastActivity: new Date(),
+                            ...Object.fromEntries(Object.entries(clientViewData).filter(([k]) => k !== 'phoneNumber' && k !== 'chatId' && k !== 'lastActivity'))
                         }
                     });
                     logInfo('RECONCILE_CREATE', 'Nuevo registro creado por reconciliación', { 
@@ -273,7 +274,8 @@ export class DatabaseService {
                     await this.prisma.whatsApp.create({
                         data: { 
                             phoneNumber: userId, 
-                            ...Object.fromEntries(Object.entries(updateData).filter(([k]) => k !== 'phoneNumber' && k !== 'chatId'))
+                            lastActivity: new Date(),
+                            ...Object.fromEntries(Object.entries(updateData).filter(([k]) => k !== 'phoneNumber' && k !== 'chatId' && k !== 'lastActivity'))
                         }
                     });
                     logInfo('RECONCILE_CREATE', 'Registro básico creado por reconciliación', { 

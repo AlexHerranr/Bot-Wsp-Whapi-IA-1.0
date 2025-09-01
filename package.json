@@ -86,7 +86,7 @@
   "dependencies": {
     "@google-cloud/secret-manager": "^6.1.0",
     "@google/generative-ai": "^0.21.0",
-    "@prisma/client": "^6.13.0",
+    "@prisma/client": "^6.15.0",
     "@sparticuz/chromium": "^138.0.2",
     "@types/handlebars": "^4.0.40",
     "@types/qrcode": "^1.5.5",
@@ -123,7 +123,7 @@
     "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
     "jest": "^30.0.5",
-    "prisma": "^6.13.0",
+    "prisma": "^6.15.0",
     "rollup": "^4.27.4",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.0",

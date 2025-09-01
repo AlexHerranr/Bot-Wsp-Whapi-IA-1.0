@@ -349,7 +349,7 @@ export class MainWebhookProcessor extends BaseWebhookProcessor {
             try {
                 await this.databaseService.upsertClient({
                     phoneNumber,
-                    userName: phoneNumber, // ✅ CORREGIDO: Usar phoneNumber original como userName legacy
+                    userName: userName || phoneNumber, // Usar userName actual o phoneNumber como fallback
                     chatId: chatId || `${phoneNumber}@s.whatsapp.net`,
                     lastActivity: webhookTimestamp, // ✅ MEJORADO: Usar timestamp real del mensaje
                     chat_name: hasValidChatName ? webhookChatName : null,
