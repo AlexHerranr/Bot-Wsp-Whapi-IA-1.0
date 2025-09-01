@@ -53,9 +53,7 @@ export class HotelPlugin {
             }, source);
 
             registry.register('informar_movimiento_manana', (args, context) =>
-                informarMovimientoMananaFunction.handler(args as any),
-                source
-            );
+                informarMovimientoMananaFunction.handler(args as any), source);
 
             registry.register('generate_booking_confirmation_pdf', async (args, context) => {
                 // Importar directamente la función que acepta context
