@@ -624,16 +624,20 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     // Construir mensaje con detalles e instrucciones
     const response: any = {
       success: true,
-      message: `PDF_ENVIADO: Documento enviado.
+      message: `PDF_ENVIADO: Documento enviado exitosamente.
 
 RESUMEN:
-${booking.id} | ${booking.firstName} ${booking.lastName}
-${booking.arrival} al ${booking.departure} (${nights}n)
-${booking.roomName || 'Apartamento'}
-Total: $${grandTotal.toLocaleString()} | Pagado: $${totalPaid.toLocaleString()} | Saldo: $${pendingBalance.toLocaleString()}
+Reserva: ${booking.id}
+Cliente: ${booking.firstName} ${booking.lastName}
+Fechas: ${booking.arrival} al ${booking.departure} (${nights} noches)
+Apartamento: ${booking.roomName || 'Por confirmar'}
+Huéspedes: ${booking.numAdult} adultos${booking.numChild ? ` + ${booking.numChild} niños` : ''}
+Total: $${grandTotal.toLocaleString()} COP
+Pagado: $${totalPaid.toLocaleString()} COP
+Saldo: $${pendingBalance.toLocaleString()} COP
 
-INSTRUCCION: Dile al cliente:
-"¡Hola! 👋 Te envié el PDF con los detalles. Revísalo cuando puedas. ¿A qué hora llegarás? ¿Necesitas recomendaciones? Estoy aquí para ayudarte."`
+INSTRUCCION: Dile al cliente algo así:
+"¡Hola! 👋 Te envié el PDF con los detalles. Revísalo cuando puedas para verificar que todo esté en orden. ¿Sabes aproximadamente tu hora de llegada? Si necesitas recomendaciones de actividades, tours? Estoy aquí para ayudarte."`
     };
     
     // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico

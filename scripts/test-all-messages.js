@@ -8,18 +8,22 @@
 console.log('📊 RESUMEN DE MENSAJES EN generate_booking_confirmation_pdf');
 console.log('=' .repeat(80));
 
-console.log('\n✅ MENSAJE DE ÉXITO (corto y claro):');
+console.log('\n✅ MENSAJE DE ÉXITO (detallado y claro):');
 console.log('-'.repeat(40));
-console.log(`PDF_ENVIADO: Documento enviado.
+console.log(`PDF_ENVIADO: Documento enviado exitosamente.
 
 RESUMEN:
-75078508 | TestFlow Simplificado
-2025-11-10 al 2025-11-13 (3n)
-Apartamento 0715
-Total: $670,000 | Pagado: $250,000 | Saldo: $420,000
+Reserva: 75078508
+Cliente: TestFlow Simplificado
+Fechas: 2025-11-10 al 2025-11-13 (3 noches)
+Apartamento: Apartamento 0715
+Huéspedes: 2 adultos + 1 niños
+Total: $670,000 COP
+Pagado: $250,000 COP
+Saldo: $420,000 COP
 
-INSTRUCCION: Dile al cliente:
-"¡Hola! 👋 Te envié el PDF con los detalles. Revísalo cuando puedas. ¿A qué hora llegarás? ¿Necesitas recomendaciones? Estoy aquí para ayudarte."`);
+INSTRUCCION: Dile al cliente algo así:
+"¡Hola! 👋 Te envié el PDF con los detalles. Revísalo cuando puedas para verificar que todo esté en orden. ¿Sabes aproximadamente tu hora de llegada? Si necesitas recomendaciones de actividades, tours? Estoy aquí para ayudarte."`);
 
 console.log('\n❌ MENSAJES DE ERROR (cortos con instrucciones claras):');
 console.log('-'.repeat(40));
