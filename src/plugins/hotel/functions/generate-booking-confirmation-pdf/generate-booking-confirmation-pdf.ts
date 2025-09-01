@@ -162,7 +162,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       return { 
         success: false, 
         error: 'Reserva no encontrada',
-        message: `ERROR_RESERVA_NO_ENCONTRADA: No se pudo encontrar la reserva ${bookingId}. Indícale al cliente que estás verificando el número de reserva en el sistema y que consultarás con tu superior para resolver este inconveniente de inmediato.`
+        message: `ERROR_RESERVA: No se encontró ${bookingId}. Dile al cliente que verificarás con tu superior.`
       };
     }
 
@@ -182,7 +182,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       return { 
         success: false, 
         error: 'Booking específico no encontrado en respuesta de API',
-        message: `ERROR_API_BEDS24: La reserva ${bookingId} no se encontró en el sistema. Indícale al cliente que hay un problema técnico con el sistema de reservas y que vas a gestionar con tu superior para resolverlo rápidamente.`
+        message: `ERROR_SISTEMA: Reserva ${bookingId} no encontrada. Indica problema técnico, consultarás con superior.`
       };
     }
 
@@ -200,7 +200,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       return { 
         success: false, 
         error: `Status no confirmado: ${targetBooking.status}`,
-        message: `ERROR_STATUS_RESERVA: La reserva ${bookingId} tiene un estado inusual (${targetBooking.status}). Indícale al cliente que estás revisando el estado de su reserva y que consultarás con tu superior para asegurar que todo esté en orden.` 
+        message: `ERROR_STATUS: Reserva ${bookingId} con estado ${targetBooking.status}. Indica que revisarás con superior.` 
       };
     }
 
@@ -245,7 +245,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
     return { 
       success: false, 
       error: `Error consultando reserva: ${error instanceof Error ? error.message : error}`,
-      message: 'ERROR_ACCESO_DATOS: Hubo un problema técnico accediendo a los datos de la reserva. Indícale al cliente que estás experimentando dificultades técnicas con el sistema y que vas a gestionar inmediatamente con tu superior para resolver este inconveniente.'
+      message: 'ERROR_ACCESO: Problema técnico con datos. Dile que consultarás con superior.'
     };
   }
 }
@@ -491,7 +491,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       return { 
         success: false, 
         error: bookingDetails.error || 'Reserva no encontrada o no se pudo acceder a los datos',
-        message: `ERROR_DETALLES_RESERVA: No se pudieron obtener los detalles de la reserva ${params.bookingId}. Indícale al cliente que hay un problema técnico con el sistema y que vas a gestionar con tu superior para resolverlo lo antes posible.` 
+        message: `ERROR_DETALLES: Sin detalles de ${params.bookingId}. Indica problema técnico, gestionarás con superior.` 
       };
     }
 
@@ -505,7 +505,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       return { 
         success: false, 
         error: 'Datos API inválidos: falta ID de reserva',
-        message: `ERROR_DATOS_INCOMPLETOS: Los datos de la reserva ${params.bookingId} están incompletos en el sistema. Indícale al cliente que hay un problema con la información de su reserva y que vas a consultar con tu superior para completar los datos faltantes.` 
+        message: `ERROR_INCOMPLETO: Datos incompletos de ${params.bookingId}. Consultarás con superior.` 
       };
     }
 
@@ -534,7 +534,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       return { 
         success: false, 
         error: `Canal ${rawChannel} no permitido para PDF`,
-        message: `ERROR_CANAL_NO_PERMITIDO: El canal de reserva "${rawChannel}" no permite generar PDF de confirmación. Indícale al cliente que debido al origen de su reserva no es posible generar el documento automáticamente, pero que consultarás con tu superior para buscar una solución alternativa.` 
+        message: `ERROR_CANAL: ${rawChannel} no permite PDF. Buscarás alternativa con superior.` 
       };
     }
 
@@ -624,35 +624,16 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     // Construir mensaje con detalles e instrucciones
     const response: any = {
       success: true,
-      message: `PDF_ENVIADO: El documento de confirmación fue enviado exitosamente.
+      message: `PDF_ENVIADO: Documento enviado.
 
-DATOS_CONFIRMADOS:
-- Código de reserva: ${booking.id || params.bookingId}
-- Apartamento: ${booking.roomName || 'No especificado'}
-- Fechas: ${booking.arrival} al ${booking.departure} (${nights} noches)
-- Titular: ${booking.firstName} ${booking.lastName}
-- Email: ${booking.email}
-- Teléfono: ${booking.phone || 'No especificado'}
-- Huéspedes: ${booking.numAdult} adultos${booking.numChild ? ` + ${booking.numChild} niños` : ''}
+RESUMEN:
+${booking.id} | ${booking.firstName} ${booking.lastName}
+${booking.arrival} al ${booking.departure} (${nights}n)
+${booking.roomName || 'Apartamento'}
+Total: $${grandTotal.toLocaleString()} | Pagado: $${totalPaid.toLocaleString()} | Saldo: $${pendingBalance.toLocaleString()}
 
-DATOS_FINANCIEROS:
-- Alojamiento: $${accommodationTotal.toLocaleString()} COP
-${extrasTotal > 0 ? `- Servicios adicionales: $${extrasTotal.toLocaleString()} COP` : ''}
-- Total: $${grandTotal.toLocaleString()} COP
-- Anticipo pagado: $${totalPaid.toLocaleString()} COP
-- Saldo pendiente: $${pendingBalance.toLocaleString()} COP
-
-INSTRUCCION_PARA_ASISTENTE: Resúmele al cliente los detalles de su reserva y envíale un mensaje amigable como este:
-
-"¡Hola! 👋 Ya está todo listo para tu llegada. Te envié un PDF con los detalles de tu reserva.
-
-Cuando puedas, échale un vistazo para asegurarte de que todo esté correcto. 👀✅
-
-Por cierto, ¿tienes idea de a qué hora llegarás más o menos? 🕒 Así podemos prepararnos para darte la bienvenida como se merece.
-
-Si te apetece, tengo algunas recomendaciones geniales para tu estancia. Solo avísame si quieres que te cuente. 😊
-
-¿Alguna duda? Estoy aquí para lo que necesites. ¡Nos vemos pronto! 🌟"`
+INSTRUCCION: Dile al cliente:
+"¡Hola! 👋 Te envié el PDF con los detalles. Revísalo cuando puedas. ¿A qué hora llegarás? ¿Necesitas recomendaciones? Estoy aquí para ayudarte."`
     };
     
     // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico
@@ -738,7 +719,7 @@ Si te apetece, tengo algunas recomendaciones geniales para tu estancia. Solo av�
     });
     return {
       success: false,
-      message: `ERROR_PDF: Hubo un problema técnico generando el PDF de confirmación. Indícale al cliente que estás experimentando un inconveniente técnico con el sistema de documentos, que vas a consultar con tu superior para resolverlo rápidamente, y que mientras tanto la reserva está confirmada correctamente.`
+      message: `ERROR_PDF: Problema generando documento. Dile que consultarás con superior, reserva está confirmada.`
     };
   }
 }
