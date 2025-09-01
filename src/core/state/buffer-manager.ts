@@ -4,6 +4,14 @@ import { IBufferManager } from '../../shared/interfaces';
 import { BUFFER_DELAY_MS, MAX_BUFFER_MESSAGES } from '../utils/constants';
 import { logInfo, logSuccess, logWarning, logDebug } from '../../utils/logging';
 
+// Log del valor real de BUFFER_DELAY_MS al iniciar
+logInfo('BUFFER_CONFIG', 'Configuración de buffer timing', {
+    BUFFER_DELAY_MS,
+    MAX_BUFFER_MESSAGES,
+    envValue: process.env.BUFFER_DELAY_MS || 'not_set',
+    actualValue: BUFFER_DELAY_MS
+}, 'buffer-manager.ts');
+
 export class BufferManager implements IBufferManager {
     private buffers: Map<string, MessageBuffer> = new Map();
     private activeRuns: Map<string, boolean> = new Map(); // Flag simple para evitar concurrent runs per user/thread
@@ -191,7 +199,7 @@ export class BufferManager implements IBufferManager {
             }, 'buffer-manager.ts');
         }
 
-        // Crear nuevo timer de 5s
+        // Crear nuevo timer con delay dinámico
         buffer.timer = setTimeout(() => {
             this.processBuffer(userId);
         }, delay);
@@ -447,14 +455,14 @@ export class BufferManager implements IBufferManager {
         const operationsChatId = process.env.OPERATIONS_CHAT_ID;
         const isOperations = (userId === operationsChatId);
         
-        // Timeouts optimizados por processor
+        // Timeouts optimizados por processor - CONSISTENTE con setOrExtendTimer
         let timeoutMs: number;
         if (triggerType === 'voice') {
-            timeoutMs = isOperations ? 1000 : 8000;  // Operations: 1s, Main: 8s
+            timeoutMs = isOperations ? 1000 : 3000;  // Operations: 1s, Main: 3s (consistente con setOrExtendTimer)
         } else if (triggerType === 'typing' || triggerType === 'recording') {
             timeoutMs = isOperations ? 1000 : 5000;  // Operations: 1s, Main: 5s  
         } else { // message
-            timeoutMs = isOperations ? 1000 : 3000;  // Operations: 1s, Main: 3s
+            timeoutMs = isOperations ? 1000 : 5000;  // Operations: 1s, Main: 5s (usar BUFFER_DELAY_MS)
         }
         
         logInfo('BUFFER_TIMEOUT_DYNAMIC', 'Timeout configurado por processor', {
