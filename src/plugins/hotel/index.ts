@@ -27,10 +27,10 @@ export class HotelPlugin {
         console.log('🔌 hotel-plugin registering 8 functions...');
         
         try {
-            registry.register('check_availability', (args, context) => 
-                checkAvailability(args as { startDate: string; endDate: string; numAdults: number }),
-                source
-            );
+            registry.register('check_availability', async (args, context) => {
+                const { checkAvailability } = require('./functions/check-availability/check-availability');
+                return await checkAvailability(args as { startDate: string; endDate: string; numAdults: number }, context);
+            }, source);
 
             registry.register('check_booking_details', (args, context) =>
                 checkBookingDetailsFunction.handler(args as { firstName: string; lastName: string; checkInDate: string }),
