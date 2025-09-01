@@ -38,7 +38,9 @@ export class HotelPlugin {
             );
 
             registry.register('create_new_booking', async (args, context) => {
-                const result = await createNewBookingFunction.handler(args as any);
+                // Importar directamente la función que acepta context
+                const { createNewBooking } = require('./functions/create-new-booking/create-new-booking');
+                const result = await createNewBooking(args as any, context);
                 return JSON.stringify(result);
             }, source);
 

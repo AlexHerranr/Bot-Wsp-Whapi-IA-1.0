@@ -15,6 +15,7 @@ import axios from 'axios';
 import type { FunctionDefinition } from '../../../../functions/types/function-types.js';
 import { logInfo, logError, logSuccess } from '../../../../utils/logging';
 import { Beds24Client } from '../../services/beds24-client';
+import { fetchWithRetry } from '../../../../core/utils/retry-utils';
 
 // ============================================================================
 // INTERFACES TYPESCRIPT PARA TYPE SAFETY
@@ -50,10 +51,59 @@ interface CreateBookingResult {
 }
 
 // ============================================================================
+// FUNCIÓN AUXILIAR PARA ENVIAR MENSAJE DURANTE EL RUN
+// ============================================================================
+
+async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
+  try {
+    const WHAPI_API_URL = process.env.WHAPI_API_URL;
+    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
+    
+    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
+      // Si no hay configuración, simplemente no enviar el mensaje
+      return;
+    }
+
+    const payload = {
+      to: chatId,
+      body: message
+    };
+
+    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHAPI_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    logInfo('INTERIM_MESSAGE_SENT', 'Mensaje durante run enviado exitosamente', {
+      chatId,
+      userId,
+      messagePreview: message.substring(0, 50)
+    }, 'create-new-booking.ts');
+
+  } catch (error) {
+    // No lanzar error para no interrumpir el proceso principal
+    logError('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje durante run', {
+      chatId,
+      userId,
+      error: error instanceof Error ? error.message : String(error)
+    }, 'create-new-booking.ts');
+  }
+}
+
+// ============================================================================
 // FUNCIÓN PRINCIPAL
 // ============================================================================
 
-export async function createNewBooking(params: CreateBookingParams): Promise<CreateBookingResult> {
+export async function createNewBooking(params: CreateBookingParams, context?: any): Promise<CreateBookingResult> {
   // Log completo de parámetros recibidos para debugging
   logInfo('CREATE_NEW_BOOKING_PARAMS', 'Parámetros recibidos completos', { 
     params,
@@ -78,6 +128,19 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
   }
 
   const { roomIds, arrival, departure, firstName, lastName, email, phone, numAdult, accommodationRate, advancePayment, advanceDescription } = params;
+  
+  // ENVIAR MENSAJE INMEDIATO AL USUARIO durante el run activo
+  if (context?.chatId) {
+    try {
+      await sendInterimMessage(
+        context.chatId, 
+        "⏳ Voy a proceder a crear la reserva...",
+        context.userId
+      );
+    } catch (error) {
+      // El error ya se maneja dentro de sendInterimMessage, continuamos
+    }
+  }
   
   // Log después de destructuring
   logInfo('CREATE_NEW_BOOKING', 'Iniciando creación de reservas múltiples', { 
@@ -525,5 +588,5 @@ export const createNewBookingFunction: FunctionDefinition = {
     required: ['roomIds', 'arrival', 'departure', 'firstName', 'lastName', 'email', 'phone', 'numAdult', 'accommodationRate', 'advancePayment', 'advanceDescription'],
     additionalProperties: false
   },
-  handler: createNewBooking
+  handler: createNewBooking as any
 };
