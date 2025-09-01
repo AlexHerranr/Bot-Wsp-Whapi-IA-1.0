@@ -47,9 +47,11 @@ interface ClientData {
 // Cada mensaje actualiza BD automáticamente
 await this.databaseService.upsertClient({
     phoneNumber,
-    userName,        // ← Nombre del webhook  
+    userName,        // ← Fallback legacy (se usa si no hay from_name)
     chatId,
-    lastActivity: new Date()
+    lastActivity: new Date(),
+    chat_name,       // ← Nombre del contacto guardado en WhatsApp
+    from_name        // ← Display name del perfil de WhatsApp
 });
 ```
 
@@ -111,18 +113,16 @@ probando, probando
 
 ## 🗄️ **Datos de BD Disponibles**
 
-### 📋 **Esquema ClientView** (`prisma/schema.prisma`)
+### 📋 **Esquema Chats (antes ClientView)** (`prisma/schema.prisma`)
 ```typescript
-model ClientView {
+model WhatsApp {
   // IDENTIFICACIÓN
   phoneNumber         String   @id
-  name                String?  // Nombre real (WHAPI getChatInfo)
-  userName            String?  // Nombre WhatsApp (webhook)
+  name                String?  // chat_name: Nombre del contacto guardado
+  userName            String?  // from_name: Display name del perfil WhatsApp
   
   // ETIQUETAS
-  label1              String?  // Primera etiqueta
-  label2              String?  // Segunda etiqueta  
-  label3              String?  // Tercera etiqueta
+  labels              String?  // Etiquetas concatenadas con '/'
   
   // CONTACTO
   chatId              String?  // ID del chat
