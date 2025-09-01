@@ -18,6 +18,7 @@ import { PrismaClient } from '@prisma/client';
 import type { FunctionDefinition } from '../../../../functions/types/function-types.js';
 import { logInfo, logError, logSuccess } from '../../../../utils/logging';
 import { Beds24Client } from '../../services/beds24-client';
+import { fetchWithRetry } from '../../../../core/utils/retry-utils';
 
 // ============================================================================
 // PRISMA CONNECTION SINGLETON PARA MEJOR PERFORMANCE
@@ -25,6 +26,50 @@ import { Beds24Client } from '../../services/beds24-client';
 const globalPrisma = new PrismaClient();
 
 // Using imported FunctionDefinition from types/function-types.ts
+
+// Función helper para enviar mensaje durante el run
+async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
+  try {
+    const WHAPI_API_URL = process.env.WHAPI_API_URL;
+    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
+    
+    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
+      return;
+    }
+
+    const payload = {
+      to: chatId,
+      body: message
+    };
+
+    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHAPI_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    logInfo('INTERIM_MESSAGE_SENT', 'Mensaje durante run enviado', {
+      chatId,
+      userId,
+      messagePreview: message.substring(0, 50)
+    });
+
+  } catch (error) {
+    logError('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje', {
+      chatId,
+      userId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
 
 // ============================================================================
 // INTERFACES TYPESCRIPT PARA TYPE SAFETY
@@ -481,8 +526,21 @@ interface BookingResult {
     source?: 'beds24' | 'local_db';
 }
 
-export async function checkBookingDetails(params: CheckBookingParams): Promise<BookingResult> {
+export async function checkBookingDetails(params: CheckBookingParams, context?: any): Promise<BookingResult> {
     const { firstName, lastName, checkInDate } = params;
+    
+    // ENVIAR MENSAJE INMEDIATO AL USUARIO
+    if (context?.chatId) {
+        try {
+            await sendInterimMessage(
+                context.chatId, 
+                "📋 Permíteme buscar tu reserva, un momento...",
+                context.userId
+            );
+        } catch (error) {
+            // Continuar sin interrumpir
+        }
+    }
     
     logInfo('CHECK_BOOKING', 'Iniciando consulta reserva', { firstName, lastName, checkInDate }, 'check-booking-details.ts');
 
@@ -644,9 +702,15 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
                 }
             }
             
-            // Si no se agregó nota específica, agregar una genérica
+            // Si no se agregó nota específica, agregar una genérica con formato estándar
             if (!assistantNote) {
-                assistantNote = '\n\n✅ Reserva encontrada! Responde según corresponda.';
+                assistantNote = `\n\nEXITO_CONSULTA: Reserva(s) encontrada(s) correctamente.
+
+INSTRUCCION: Presenta los detalles de la reserva al huésped de forma clara. 
+Si es de Booking.com o Directa y no tiene pago registrado, procede inmediatamente 
+a dar instrucciones para confirmar al 100% su reserva con el anticipo requerido de una noche.
+Luego de que envíe soporte de pago y se valide el monto, procede a llamar 
+a la función edit_booking para cambiar status a confirmed y agregar el pago.`;
             }
             
             // 📋 AUDIT LOG: Final response sent to OpenAI
@@ -675,7 +739,10 @@ export async function checkBookingDetails(params: CheckBookingParams): Promise<B
         logError('CHECK_BOOKING', 'Error consultando reserva', { error: error instanceof Error ? error.message : error, firstName, lastName, checkInDate }, 'check-booking-details.ts');
         return {
             success: false,
-            message: "Error interno al consultar la reserva. Por favor intenta nuevamente.",
+            message: `ERROR_CONSULTA: Error interno al consultar la reserva.
+
+INSTRUCCION: Dile al huésped que hubo un problema técnico al buscar su reserva, 
+que vas a notificar a tu superior para resolverlo de inmediato.`,
             booking: null,
             source: null
         };

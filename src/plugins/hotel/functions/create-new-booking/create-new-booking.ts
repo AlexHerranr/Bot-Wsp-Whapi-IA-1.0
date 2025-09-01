@@ -15,6 +15,7 @@ import axios from 'axios';
 import type { FunctionDefinition } from '../../../../functions/types/function-types.js';
 import { logInfo, logError, logSuccess } from '../../../../utils/logging';
 import { Beds24Client } from '../../services/beds24-client';
+import { fetchWithRetry } from '../../../../core/utils/retry-utils';
 
 // ============================================================================
 // INTERFACES TYPESCRIPT PARA TYPE SAFETY
@@ -50,22 +51,148 @@ interface CreateBookingResult {
 }
 
 // ============================================================================
+// FUNCIÓN AUXILIAR PARA ENVIAR MENSAJE DURANTE EL RUN
+// ============================================================================
+
+async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
+  try {
+    const WHAPI_API_URL = process.env.WHAPI_API_URL;
+    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
+    
+    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
+      // Si no hay configuración, simplemente no enviar el mensaje
+      return;
+    }
+
+    const payload = {
+      to: chatId,
+      body: message
+    };
+
+    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHAPI_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    logInfo('INTERIM_MESSAGE_SENT', 'Mensaje durante run enviado exitosamente', {
+      chatId,
+      userId,
+      messagePreview: message.substring(0, 50)
+    }, 'create-new-booking.ts');
+
+  } catch (error) {
+    // No lanzar error para no interrumpir el proceso principal
+    logError('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje durante run', {
+      chatId,
+      userId,
+      error: error instanceof Error ? error.message : String(error)
+    }, 'create-new-booking.ts');
+  }
+}
+
+// ============================================================================
 // FUNCIÓN PRINCIPAL
 // ============================================================================
 
-export async function createNewBooking(params: CreateBookingParams): Promise<CreateBookingResult> {
+export async function createNewBooking(params: CreateBookingParams, context?: any): Promise<CreateBookingResult> {
+  // Log completo de parámetros recibidos para debugging
+  logInfo('CREATE_NEW_BOOKING_PARAMS', 'Parámetros recibidos completos', { 
+    params,
+    paramsType: typeof params,
+    hasRoomIds: params && 'roomIds' in params,
+    roomIdsType: params?.roomIds ? typeof params.roomIds : 'undefined',
+    roomIdsValue: params?.roomIds,
+    allKeys: params ? Object.keys(params) : []
+  }, 'create-new-booking.ts');
+
+  // Validación temprana de params
+  if (!params || typeof params !== 'object') {
+    logError('CREATE_NEW_BOOKING_INVALID_PARAMS', 'Parámetros inválidos o vacíos', {
+      params,
+      type: typeof params
+    }, 'create-new-booking.ts');
+    return {
+      success: false,
+      message: "ERROR_INTERNO: No se recibieron parámetros válidos. Indícale al huésped que necesitas recopilar nuevamente los datos de la reserva (fechas, apartamento, datos personales y pago).",
+      error: "invalid_params"
+    };
+  }
+
   const { roomIds, arrival, departure, firstName, lastName, email, phone, numAdult, accommodationRate, advancePayment, advanceDescription } = params;
   
+  // ENVIAR MENSAJE INMEDIATO AL USUARIO durante el run activo
+  if (context?.chatId) {
+    try {
+                  await sendInterimMessage(
+                context.chatId,
+                "⏳ Voy a crear tu reserva ahora mismo...",
+                context.userId
+            );
+    } catch (error) {
+      // El error ya se maneja dentro de sendInterimMessage, continuamos
+    }
+  }
+  
+  // Log después de destructuring
   logInfo('CREATE_NEW_BOOKING', 'Iniciando creación de reservas múltiples', { 
-    roomIds, roomCount: roomIds.length, arrival, departure, firstName, lastName, phone, numAdult, accommodationRate, advancePayment 
+    roomIds, 
+    roomCount: roomIds ? (Array.isArray(roomIds) ? roomIds.length : 'not_array') : 'undefined', 
+    arrival, 
+    departure, 
+    firstName, 
+    lastName, 
+    phone, 
+    numAdult, 
+    accommodationRate, 
+    advancePayment 
   }, 'create-new-booking.ts');
 
   try {
     // 1. Validar SOLO parámetros básicos OBLIGATORIOS (apartamentos + pago + datos huésped)
-    if (!roomIds || !Array.isArray(roomIds) || roomIds.length === 0 || !arrival || !departure || !firstName || !lastName || !email || !phone || !numAdult || !accommodationRate || !advancePayment || !advanceDescription) {
+    const missingFields = [];
+    if (!roomIds) missingFields.push('roomIds');
+    if (!Array.isArray(roomIds)) missingFields.push('roomIds debe ser array');
+    if (roomIds && Array.isArray(roomIds) && roomIds.length === 0) missingFields.push('roomIds está vacío');
+    if (!arrival) missingFields.push('arrival');
+    if (!departure) missingFields.push('departure');
+    if (!firstName) missingFields.push('firstName');
+    if (!lastName) missingFields.push('lastName');
+    if (!email) missingFields.push('email');
+    if (!phone) missingFields.push('phone');
+    if (!numAdult) missingFields.push('numAdult');
+    if (!accommodationRate) missingFields.push('accommodationRate');
+    if (!advancePayment) missingFields.push('advancePayment');
+    if (!advanceDescription) missingFields.push('advanceDescription');
+
+    if (missingFields.length > 0) {
+      logError('CREATE_NEW_BOOKING_MISSING_FIELDS', 'Campos requeridos faltantes', {
+        missingFields,
+        hasRoomIds: !!roomIds,
+        isRoomIdsArray: Array.isArray(roomIds),
+        roomIdsLength: roomIds?.length,
+        hasArrival: !!arrival,
+        hasDeparture: !!departure,
+        hasFirstName: !!firstName,
+        hasLastName: !!lastName,
+        hasEmail: !!email,
+        hasPhone: !!phone,
+        hasNumAdult: !!numAdult,
+        hasAccommodationRate: !!accommodationRate,
+        hasAdvancePayment: !!advancePayment,
+        hasAdvanceDescription: !!advanceDescription
+      }, 'create-new-booking.ts');
       return {
         success: false,
-        message: "Faltan datos BÁSICOS requeridos: apartamentos (array), fechas, nombres, email, teléfono, adultos, tarifa alojamiento y anticipo con descripción",
+        message: `ERROR_DATOS_INCOMPLETOS: Faltan campos requeridos [${missingFields.join(', ')}]. Indícale al huésped que necesitas confirmar todos los datos de la reserva antes de proceder. Solicita amablemente la información faltante.`,
         error: "missing_required_fields"
       };
     }
@@ -75,7 +202,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     if (invalidRoomIds.length > 0) {
       return {
         success: false,
-        message: `IDs de apartamentos inválidos: ${invalidRoomIds.join(', ')}. Deben ser números enteros >= 100000`,
+        message: `ERROR_APARTAMENTO_INVALIDO: Los IDs de apartamento [${invalidRoomIds.join(', ')}] no son válidos. Indícale al huésped que hubo un problema técnico al identificar el apartamento y que estás consultando con tu superior para resolverlo de inmediato.`,
         error: "invalid_room_ids"
       };
     }
@@ -86,7 +213,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     if (!dateRegex.test(arrival) || !dateRegex.test(departure)) {
       return {
         success: false,
-        message: "Formato de fechas inválido. Use YYYY-MM-DD",
+        message: "ERROR_FORMATO_FECHA: Las fechas tienen formato incorrecto. Indícale al huésped que necesitas confirmar las fechas exactas de entrada y salida en formato correcto.",
         error: "invalid_date_format"
       };
     }
@@ -95,7 +222,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     if (new Date(arrival) >= new Date(departure)) {
       return {
         success: false,
-        message: "La fecha de salida debe ser posterior a la fecha de entrada",
+        message: "ERROR_RANGO_FECHAS: La fecha de salida debe ser posterior a la de entrada. Indícale al huésped que parece haber un error con las fechas y solicita que las confirme nuevamente.",
         error: "invalid_date_range"
       };
     }
@@ -207,7 +334,7 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
       
       return {
         success: false,
-        message: "Error: ninguna reserva fue creada en Beds24",
+        message: "ERROR_CREACION_RESERVA: No se pudo crear la reserva en el sistema. Indícale al huésped que estás experimentando un problema técnico con la plataforma de reservas y que vas a consultar con tu superior para resolverlo lo más pronto posible. Pídele disculpas por el inconveniente.",
         error: "no_bookings_created"
       };
     }
@@ -236,36 +363,13 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     const grandTotal = accommodationGrandTotal + extrasTotal;
     const pendingBalance = grandTotal - advancePayment;
     
-    // 10. Formatear respuesta detallada para múltiples reservas
+    // 10. Mensaje simple de éxito - los detalles se enviarán desde generate_booking_confirmation_pdf
     const bookingIds = newBookings.map(b => b.id).join(', ');
-    const apartmentsList = roomIds.map(id => `Room ID ${id}`).join(', ');
     
-    const formattedMessage = `✅ **${roomCount > 1 ? 'RESERVAS MÚLTIPLES' : 'RESERVA'} CREADA${roomCount > 1 ? 'S' : ''} EXITOSAMENTE**
+    // Mensaje SIMPLE - solo confirmar éxito y sugerir siguiente paso
+    const internalMessage = `EXITO_RESERVA: La reserva ${bookingIds} se creó correctamente en Beds24.
 
-📋 **DETALLES DE LA${roomCount > 1 ? 'S' : ''} RESERVA${roomCount > 1 ? 'S' : ''}:**
-• **Código${roomCount > 1 ? 's' : ''}:** ${bookingIds}
-• **Apartamento${roomCount > 1 ? 's' : ''}:** ${apartmentsList}
-• **Fechas:** ${arrival} al ${departure} (${nights} noche${nights > 1 ? 's' : ''})
-• **Huéspedes:** ${numAdult} adulto${numAdult > 1 ? 's' : ''}${params.numChild ? ` + ${params.numChild} niño${params.numChild > 1 ? 's' : ''}` : ''}
-• **Titular:** ${firstName} ${lastName}
-• **Email:** ${email}
-• **Teléfono:** ${phone}
-• **Status:** ${newBookings[0].status}
-${params.arrivalTime ? `• **Hora llegada:** ${params.arrivalTime}` : ''}
-${roomCount > 1 ? `• **Apartamentos reservados:** ${roomCount}` : ''}
-${failedBookings.length > 0 ? `• **⚠️ Advertencia:** ${failedBookings.length} apartamento(s) no pudieron ser reservados` : ''}
-
-💰 **DESGLOSE FINANCIERO:**
-• **Alojamiento:** $${accommodationGrandTotal.toLocaleString()} COP (${roomCount} apt${roomCount > 1 ? 's' : ''} × ${nights} noches × $${accommodationRate.toLocaleString()})
-${params.extraServices?.map(extra => `• **${extra.description}:** $${(extra.amount * (extra.qty || 1)).toLocaleString()} COP`).join('\n') || ''}
-• **TOTAL:** $${grandTotal.toLocaleString()} COP
-• **Anticipo recibido:** $${advancePayment.toLocaleString()} COP (${advanceDescription})
-${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleString()} COP por apartamento` : ''}
-• **SALDO PENDIENTE:** $${pendingBalance.toLocaleString()} COP
-
-📧 Se enviará confirmación detallada por email a ${email}
-
-🔔 **Sugerencia para OpenAI:** Procede a llamar a la función \`generate_booking_confirmation_pdf\` con los datos de esta reserva para generar y enviar el documento PDF de confirmación al huésped.`;
+SIGUIENTE_PASO: Procede a ejecutar generate_booking_confirmation_pdf con el bookingId ${newBookings[0].id}.`;
 
     return {
       success: true,
@@ -302,12 +406,18 @@ ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleStrin
         pendingBalance: pendingBalance,
         paymentPerRoom: paymentPerRoom
       }),
-      message: formattedMessage
+      message: internalMessage
     };
 
-  } catch (error) {
-    logError('CREATE_NEW_BOOKING', `Error creando reserva: ${error.message}`, {
-      error: error.response?.data || error.message,
+  } catch (error: any) {
+    const errorMessage = error?.message || 'Error desconocido';
+    const errorDetails = error?.response?.data || error;
+    
+    logError('CREATE_NEW_BOOKING_ERROR', `Error creando reserva: ${errorMessage}`, {
+      error: errorDetails,
+      errorType: error?.constructor?.name,
+      errorCode: error?.code,
+      errorStatus: error?.response?.status,
       params: {
         roomIds,
         arrival,
@@ -318,35 +428,37 @@ ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleStrin
       }
     }, 'create-new-booking.ts');
 
-    // Manejar errores específicos
+    // Manejar errores específicos con instrucciones para OpenAI
     if (error.response?.status === 401) {
       return {
         success: false,
-        message: "❌ Error de autenticación. Token de escritura inválido o expirado.",
+        message: "ERROR_AUTENTICACION: Hay un problema de autenticación con la plataforma Beds24. Indícale al huésped que estás presentando problemas técnicos con el sistema de reservas y que hablarás con tu superior para resolverlo lo más pronto posible. Discúlpate por el inconveniente y asegúrale que su reserva será procesada en breve.",
         error: "auth_error"
       };
     }
 
     if (error.response?.status === 400) {
+      const errorMsg = error.response?.data?.message || 'Datos inválidos';
       return {
         success: false,
-        message: "❌ Datos de reserva inválidos. Verifique las fechas y disponibilidad del apartamento.",
+        message: `ERROR_VALIDACION: El sistema rechazó la reserva (${errorMsg}). Indícale al huésped que puede haber un problema con la disponibilidad o los datos ingresados. Verifica con el huésped si las fechas y el apartamento son correctos, y menciona que si el problema persiste, consultarás con tu superior.`,
         error: "validation_error"
       };
     }
 
-    if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
+    if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
       return {
         success: false,
-        message: "❌ Error de conexión con Beds24. Intente nuevamente en unos minutos.",
+        message: "ERROR_CONEXION: No se pudo conectar con el sistema de reservas. Indícale al huésped que hay un problema temporal de conexión con la plataforma. Menciona que intentarás nuevamente en unos momentos y que si el problema persiste, escalarás el caso con tu superior para garantizar que su reserva se procese.",
         error: "connection_error"
       };
     }
 
+    // Error genérico con instrucción para OpenAI
     return {
       success: false,
-      message: "❌ Error interno creando la reserva. Contacte soporte técnico.",
-      error: error.response?.data || error.message
+      message: `ERROR_SISTEMA: Ocurrió un error inesperado (${errorMessage}). Indícale al huésped que encontraste un problema técnico al procesar la reserva. Discúlpate sinceramente y asegúrale que consultarás inmediatamente con tu superior para resolver la situación y procesar su reserva lo antes posible.`,
+      error: errorDetails
     };
   }
 }
@@ -474,5 +586,5 @@ export const createNewBookingFunction: FunctionDefinition = {
     required: ['roomIds', 'arrival', 'departure', 'firstName', 'lastName', 'email', 'phone', 'numAdult', 'accommodationRate', 'advancePayment', 'advanceDescription'],
     additionalProperties: false
   },
-  handler: createNewBooking
+  handler: createNewBooking as any
 };

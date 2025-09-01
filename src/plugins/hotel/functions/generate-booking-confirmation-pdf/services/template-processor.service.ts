@@ -180,7 +180,7 @@ export class TemplateProcessor {
       
       // Apartamento
       roomName: openAIData.roomName,
-      aptDescription: openAIData.roomName, // Usar roomName como fallback
+      aptDescription: openAIData.roomName, // Usar roomName como descripción
       distribucion: openAIData.distribucion,
       
       // Financiero
