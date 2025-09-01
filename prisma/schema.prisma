@@ -35,7 +35,7 @@ model Apartamentos {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @map("updated_at")
 
-  @@map("propiedades")
+  @@map("Propiedades")
 }
 
 model Reservas {
