@@ -597,9 +597,62 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     });
     
     // 8. RETORNAR RESPUESTA CON ATTACHMENT PARA SISTEMA EXISTENTE
+    // Extraer datos de la reserva para el mensaje
+    const booking = bookingDetails.booking;
+    const nights = Math.ceil((new Date(booking.departure).getTime() - new Date(booking.arrival).getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calcular totales financieros
+    let accommodationTotal = 0;
+    let extrasTotal = 0;
+    let totalPaid = 0;
+    
+    booking.invoiceItems?.forEach((item: any) => {
+      if (item.type === 'charge') {
+        if (item.description?.toLowerCase().includes('alojamiento')) {
+          accommodationTotal += item.lineTotal || (item.amount * item.qty) || 0;
+        } else {
+          extrasTotal += item.lineTotal || (item.amount * item.qty) || 0;
+        }
+      } else if (item.type === 'payment') {
+        totalPaid += Math.abs(item.amount || 0);
+      }
+    });
+    
+    const grandTotal = accommodationTotal + extrasTotal;
+    const pendingBalance = grandTotal - totalPaid;
+    
+    // Construir mensaje con detalles e instrucciones
     const response: any = {
       success: true,
-      message: `Se le ha enviado el documento de confirmación al usuario de WhatsApp, indícale que lo verifique si todo está en orden y/o cualquier paso a seguir que consideres indicarle.`
+      message: `PDF_ENVIADO: El documento de confirmación fue enviado exitosamente.
+
+DATOS_CONFIRMADOS:
+- Código de reserva: ${booking.id || params.bookingId}
+- Apartamento: ${booking.roomName || 'No especificado'}
+- Fechas: ${booking.arrival} al ${booking.departure} (${nights} noches)
+- Titular: ${booking.firstName} ${booking.lastName}
+- Email: ${booking.email}
+- Teléfono: ${booking.phone || 'No especificado'}
+- Huéspedes: ${booking.numAdult} adultos${booking.numChild ? ` + ${booking.numChild} niños` : ''}
+
+DATOS_FINANCIEROS:
+- Alojamiento: $${accommodationTotal.toLocaleString()} COP
+${extrasTotal > 0 ? `- Servicios adicionales: $${extrasTotal.toLocaleString()} COP` : ''}
+- Total: $${grandTotal.toLocaleString()} COP
+- Anticipo pagado: $${totalPaid.toLocaleString()} COP
+- Saldo pendiente: $${pendingBalance.toLocaleString()} COP
+
+INSTRUCCION_PARA_ASISTENTE: Resúmele al cliente los detalles de su reserva y envíale un mensaje amigable como este:
+
+"¡Hola! 👋 Ya está todo listo para tu llegada. Te envié un PDF con los detalles de tu reserva.
+
+Cuando puedas, échale un vistazo para asegurarte de que todo esté correcto. 👀✅
+
+Por cierto, ¿tienes idea de a qué hora llegarás más o menos? 🕒 Así podemos prepararnos para darte la bienvenida como se merece.
+
+Si te apetece, tengo algunas recomendaciones geniales para tu estancia. Solo avísame si quieres que te cuente. 😊
+
+¿Alguna duda? Estoy aquí para lo que necesites. ¡Nos vemos pronto! 🌟"`
     };
     
     // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico
@@ -685,7 +738,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     });
     return {
       success: false,
-      message: `❌ Hubo un problema técnico generando el PDF de confirmación. Dile al cliente que vas a consultar con tu superior para resolver este inconveniente.`
+      message: `ERROR_PDF: Hubo un problema técnico generando el PDF de confirmación. Indícale al cliente que estás experimentando un inconveniente técnico con el sistema de documentos, que vas a consultar con tu superior para resolverlo rápidamente, y que mientras tanto la reserva está confirmada correctamente.`
     };
   }
 }

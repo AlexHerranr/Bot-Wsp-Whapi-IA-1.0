@@ -300,41 +300,15 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     const grandTotal = accommodationGrandTotal + extrasTotal;
     const pendingBalance = grandTotal - advancePayment;
     
-    // 10. Formatear respuesta como instrucción interna para OpenAI
+    // 10. Mensaje simple de éxito - los detalles se enviarán desde generate_booking_confirmation_pdf
     const bookingIds = newBookings.map(b => b.id).join(', ');
-    const apartmentsList = roomIds.map(id => `Room ID ${id}`).join(', ');
     
-    // Construir mensaje interno con todos los datos para que OpenAI pueda responder apropiadamente
-    const internalMessage = `EXITO_RESERVA: La reserva se creó correctamente en Beds24.
+    // Mensaje SIMPLE - solo confirmar éxito y sugerir siguiente paso
+    const internalMessage = `EXITO_RESERVA: La reserva ${bookingIds} se creó correctamente en Beds24.
 
-DATOS_CONFIRMADOS:
-- Códigos de reserva: ${bookingIds}
-- Apartamentos: ${apartmentsList}
-- Fechas: ${arrival} al ${departure} (${nights} noches)
-- Titular: ${firstName} ${lastName}
-- Email: ${email}
-- Teléfono: ${phone}
-- Huéspedes: ${numAdult} adultos${params.numChild ? ` + ${params.numChild} niños` : ''}
-${params.arrivalTime ? `- Hora de llegada: ${params.arrivalTime}` : ''}
+SIGUIENTE_PASO: Procede a ejecutar generate_booking_confirmation_pdf con el bookingId ${newBookings[0].id} para enviar los detalles al huésped.
 
-DATOS_FINANCIEROS:
-- Alojamiento: $${accommodationGrandTotal.toLocaleString()} COP
-${params.extraServices?.map(extra => `- ${extra.description}: $${(extra.amount * (extra.qty || 1)).toLocaleString()} COP`).join('\n') || ''}
-- Total: $${grandTotal.toLocaleString()} COP
-- Anticipo pagado: $${advancePayment.toLocaleString()} COP
-- Saldo pendiente: $${pendingBalance.toLocaleString()} COP
-
-INSTRUCCIONES_PARA_ASISTENTE:
-1. Confirma al huésped que la reserva fue creada exitosamente
-2. Proporciona el código de reserva: ${bookingIds}
-3. Resume los detalles principales (fechas, apartamento, total, saldo)
-4. Menciona que se enviará confirmación por email a ${email}
-5. Si el huésped lo solicita, puedes generar el PDF de confirmación usando la función generate_booking_confirmation_pdf
-6. Agradece al huésped por su reserva y ofrece asistencia adicional
-
-${failedBookings.length > 0 ? `NOTA: ${failedBookings.length} apartamentos no pudieron ser reservados. Menciona esto si es relevante.` : ''}
-
-SIGUIENTE_PASO_SUGERIDO: Puedes llamar a generate_booking_confirmation_pdf para enviar el documento de confirmación.`;
+Luego sigue las instrucciones que recibirás de esa función.`;
 
     return {
       success: true,
