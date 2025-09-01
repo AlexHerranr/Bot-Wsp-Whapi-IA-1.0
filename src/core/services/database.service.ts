@@ -840,16 +840,6 @@ export class DatabaseService {
 
     // --- Thread Token Management ---
     public async updateThreadTokenCount(phoneNumber: string, tokenCount: number): Promise<void> {
-        // CONFIGURACIÓN PROVISIONAL - NO GUARDAR TOKENS PARA 3003913251
-        if (phoneNumber === '3003913251') {
-            logInfo('PROVISIONAL_SKIP', '⚠️ PROVISIONAL: Omitiendo guardado de tokens en BD para 3003913251', {
-                phoneNumber,
-                tokenCount,
-                action: 'skip_db_update'
-            }, MOD);
-            return; // No actualizar BD para este chat
-        }
-        
         if (this.isConnected) {
             try {
                 // Obtener conteo actual de BD para detectar lag/inconsistencias

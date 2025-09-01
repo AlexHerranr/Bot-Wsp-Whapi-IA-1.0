@@ -95,12 +95,6 @@ export class ThreadPersistenceService {
     }
 
     async setThread(userId: string, threadId: string, chatId?: string, userName?: string): Promise<void> {
-        // CONFIGURACIÓN PROVISIONAL - NO GUARDAR THREAD EN BD PARA 3003913251
-        const skipDbUpdate = userId === '3003913251';
-        if (skipDbUpdate) {
-            console.info('⚠️ PROVISIONAL: Omitiendo guardado de thread en BD para 3003913251');
-        }
-        
         // Siempre actualizar cache primero para asegurar disponibilidad
         try {
             const clientCache = this.databaseService.getClientCache();
@@ -146,33 +140,24 @@ export class ThreadPersistenceService {
             console.warn('Cache update failed, continuing with BD operations:', error);
         }
 
-        // Intentar BD - si falla, cache ya tiene datos actualizados (SKIP PARA 3003913251)
-        if (!skipDbUpdate) {
-            try {
-                await this.databaseService.saveOrUpdateThread(userId, {
-                    threadId,
-                    chatId,
-                    userName
-                });
-                
-                // Solo resetear tokens en BD si es thread nuevo (consistente con cache)
-                const clientCache = this.databaseService.getClientCache();
-                const cachedData = clientCache?.get(userId);
-                const isNewThread = !cachedData?.threadId || cachedData.threadId !== threadId || cachedData.threadTokenCount === 0;
-                
-                if (isNewThread) {
-                    await this.databaseService.updateThreadTokenCount(userId, 0);
-                    console.info(`BD: Reset token count for new thread ${userId}: ${threadId}`);
-                } else {
-                    console.info(`BD: Preserving token count for existing thread ${userId}: ${threadId}`);
-                }
-            } catch (error) {
-                console.error('Failed to update BD:', error);
-                // No throw - cache ya actualizado
-            }
-        } else {
-            console.info(`⚠️ BD UPDATE SKIPPED (PROVISIONAL) for ${userId}: thread=${threadId}`);
-            // Cache se actualiza normal, solo se omite BD
+        // Intentar BD - si falla, cache ya tiene datos actualizados
+        try {
+            await this.databaseService.saveOrUpdateThread(userId, {
+                threadId,
+                chatId,
+                userName
+            });
+            
+            // Solo resetear tokens en BD si es thread nuevo (consistente con cache)
+            const clientCache = this.databaseService.getClientCache();
+            const cachedData = clientCache?.get(userId);
+            const isNewThread = !cachedData?.threadId || cachedData.threadId !== threadId || cachedData.threadTokenCount === 0;
+            
+            if (isNewThread) {
+                await this.databaseService.updateThreadTokenCount(userId, 0);
+                console.info(`BD: Reset token count for new thread ${userId}: ${threadId}`);
+            } else {
+                console.info(`BD: Preserving token count for existing thread ${userId}: ${threadId}`);
         } catch (error) {
             // BD failure no debe interrumpir - cache tiene los datos
             console.warn('BD update failed, but cache is updated:', error);
