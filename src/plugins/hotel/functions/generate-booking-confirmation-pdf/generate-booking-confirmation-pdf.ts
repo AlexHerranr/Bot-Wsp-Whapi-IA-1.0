@@ -162,7 +162,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       return { 
         success: false, 
         error: 'Reserva no encontrada',
-        message: `❌ Hubo un problema técnico consultando la reserva ${bookingId}. Dile al cliente que vas a consultar con tu superior para verificar el ID de reserva.`
+        message: `ERROR_RESERVA_NO_ENCONTRADA: No se pudo encontrar la reserva ${bookingId}. Indícale al cliente que estás verificando el número de reserva en el sistema y que consultarás con tu superior para resolver este inconveniente de inmediato.`
       };
     }
 
@@ -182,7 +182,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       return { 
         success: false, 
         error: 'Booking específico no encontrado en respuesta de API',
-        message: `La reserva ${bookingId} no se encontró en la respuesta de Beds24`
+        message: `ERROR_API_BEDS24: La reserva ${bookingId} no se encontró en el sistema. Indícale al cliente que hay un problema técnico con el sistema de reservas y que vas a gestionar con tu superior para resolverlo rápidamente.`
       };
     }
 
@@ -200,7 +200,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
       return { 
         success: false, 
         error: `Status no confirmado: ${targetBooking.status}`,
-        message: `❌ Hubo un problema técnico con el estado de la reserva ${bookingId}. Dile al cliente que vas a consultar con tu superior para revisar el status de su reserva.` 
+        message: `ERROR_STATUS_RESERVA: La reserva ${bookingId} tiene un estado inusual (${targetBooking.status}). Indícale al cliente que estás revisando el estado de su reserva y que consultarás con tu superior para asegurar que todo esté en orden.` 
       };
     }
 
@@ -245,7 +245,7 @@ async function fetchBookingByIdFromBeds24(bookingId: string) {
     return { 
       success: false, 
       error: `Error consultando reserva: ${error instanceof Error ? error.message : error}`,
-      message: '❌ Hubo un problema técnico accediendo a los datos de la reserva. Dile al cliente que vas a consultar con tu superior para resolver este inconveniente.'
+      message: 'ERROR_ACCESO_DATOS: Hubo un problema técnico accediendo a los datos de la reserva. Indícale al cliente que estás experimentando dificultades técnicas con el sistema y que vas a gestionar inmediatamente con tu superior para resolver este inconveniente.'
     };
   }
 }
@@ -491,7 +491,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       return { 
         success: false, 
         error: bookingDetails.error || 'Reserva no encontrada o no se pudo acceder a los datos',
-        message: `❌ Hubo un problema técnico obteniendo los detalles de la reserva ${params.bookingId}. Dile al cliente que vas a consultar con tu superior para resolver este inconveniente.` 
+        message: `ERROR_DETALLES_RESERVA: No se pudieron obtener los detalles de la reserva ${params.bookingId}. Indícale al cliente que hay un problema técnico con el sistema y que vas a gestionar con tu superior para resolverlo lo antes posible.` 
       };
     }
 
@@ -505,7 +505,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       return { 
         success: false, 
         error: 'Datos API inválidos: falta ID de reserva',
-        message: `Los datos obtenidos de la API están incompletos para la reserva ${params.bookingId}` 
+        message: `ERROR_DATOS_INCOMPLETOS: Los datos de la reserva ${params.bookingId} están incompletos en el sistema. Indícale al cliente que hay un problema con la información de su reserva y que vas a consultar con tu superior para completar los datos faltantes.` 
       };
     }
 
@@ -533,8 +533,8 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
       });
       return { 
         success: false, 
-        error: `No se puede generar pdf de confirmación, indícale al huésped que no es posible generar pdf de confirmación de ese canal de reserva, dile que consultarás con tu superior alguna solución`,
-        message: `Canal "${rawChannel}" no permitido para generación de PDF. Solo Booking.com, Direct y PaCartagena están habilitados.` 
+        error: `Canal ${rawChannel} no permitido para PDF`,
+        message: `ERROR_CANAL_NO_PERMITIDO: El canal de reserva "${rawChannel}" no permite generar PDF de confirmación. Indícale al cliente que debido al origen de su reserva no es posible generar el documento automáticamente, pero que consultarás con tu superior para buscar una solución alternativa.` 
       };
     }
 
