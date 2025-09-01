@@ -300,36 +300,41 @@ export async function createNewBooking(params: CreateBookingParams): Promise<Cre
     const grandTotal = accommodationGrandTotal + extrasTotal;
     const pendingBalance = grandTotal - advancePayment;
     
-    // 10. Formatear respuesta detallada para múltiples reservas
+    // 10. Formatear respuesta como instrucción interna para OpenAI
     const bookingIds = newBookings.map(b => b.id).join(', ');
     const apartmentsList = roomIds.map(id => `Room ID ${id}`).join(', ');
     
-    const formattedMessage = `✅ **${roomCount > 1 ? 'RESERVAS MÚLTIPLES' : 'RESERVA'} CREADA${roomCount > 1 ? 'S' : ''} EXITOSAMENTE**
+    // Construir mensaje interno con todos los datos para que OpenAI pueda responder apropiadamente
+    const internalMessage = `EXITO_RESERVA: La reserva se creó correctamente en Beds24.
 
-📋 **DETALLES DE LA${roomCount > 1 ? 'S' : ''} RESERVA${roomCount > 1 ? 'S' : ''}:**
-• **Código${roomCount > 1 ? 's' : ''}:** ${bookingIds}
-• **Apartamento${roomCount > 1 ? 's' : ''}:** ${apartmentsList}
-• **Fechas:** ${arrival} al ${departure} (${nights} noche${nights > 1 ? 's' : ''})
-• **Huéspedes:** ${numAdult} adulto${numAdult > 1 ? 's' : ''}${params.numChild ? ` + ${params.numChild} niño${params.numChild > 1 ? 's' : ''}` : ''}
-• **Titular:** ${firstName} ${lastName}
-• **Email:** ${email}
-• **Teléfono:** ${phone}
-• **Status:** ${newBookings[0].status}
-${params.arrivalTime ? `• **Hora llegada:** ${params.arrivalTime}` : ''}
-${roomCount > 1 ? `• **Apartamentos reservados:** ${roomCount}` : ''}
-${failedBookings.length > 0 ? `• **⚠️ Advertencia:** ${failedBookings.length} apartamento(s) no pudieron ser reservados` : ''}
+DATOS_CONFIRMADOS:
+- Códigos de reserva: ${bookingIds}
+- Apartamentos: ${apartmentsList}
+- Fechas: ${arrival} al ${departure} (${nights} noches)
+- Titular: ${firstName} ${lastName}
+- Email: ${email}
+- Teléfono: ${phone}
+- Huéspedes: ${numAdult} adultos${params.numChild ? ` + ${params.numChild} niños` : ''}
+${params.arrivalTime ? `- Hora de llegada: ${params.arrivalTime}` : ''}
 
-💰 **DESGLOSE FINANCIERO:**
-• **Alojamiento:** $${accommodationGrandTotal.toLocaleString()} COP (${roomCount} apt${roomCount > 1 ? 's' : ''} × ${nights} noches × $${accommodationRate.toLocaleString()})
-${params.extraServices?.map(extra => `• **${extra.description}:** $${(extra.amount * (extra.qty || 1)).toLocaleString()} COP`).join('\n') || ''}
-• **TOTAL:** $${grandTotal.toLocaleString()} COP
-• **Anticipo recibido:** $${advancePayment.toLocaleString()} COP (${advanceDescription})
-${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleString()} COP por apartamento` : ''}
-• **SALDO PENDIENTE:** $${pendingBalance.toLocaleString()} COP
+DATOS_FINANCIEROS:
+- Alojamiento: $${accommodationGrandTotal.toLocaleString()} COP
+${params.extraServices?.map(extra => `- ${extra.description}: $${(extra.amount * (extra.qty || 1)).toLocaleString()} COP`).join('\n') || ''}
+- Total: $${grandTotal.toLocaleString()} COP
+- Anticipo pagado: $${advancePayment.toLocaleString()} COP
+- Saldo pendiente: $${pendingBalance.toLocaleString()} COP
 
-📧 Se enviará confirmación detallada por email a ${email}
+INSTRUCCIONES_PARA_ASISTENTE:
+1. Confirma al huésped que la reserva fue creada exitosamente
+2. Proporciona el código de reserva: ${bookingIds}
+3. Resume los detalles principales (fechas, apartamento, total, saldo)
+4. Menciona que se enviará confirmación por email a ${email}
+5. Si el huésped lo solicita, puedes generar el PDF de confirmación usando la función generate_booking_confirmation_pdf
+6. Agradece al huésped por su reserva y ofrece asistencia adicional
 
-🔔 **Sugerencia para OpenAI:** Procede a llamar a la función \`generate_booking_confirmation_pdf\` con los datos de esta reserva para generar y enviar el documento PDF de confirmación al huésped.`;
+${failedBookings.length > 0 ? `NOTA: ${failedBookings.length} apartamentos no pudieron ser reservados. Menciona esto si es relevante.` : ''}
+
+SIGUIENTE_PASO_SUGERIDO: Puedes llamar a generate_booking_confirmation_pdf para enviar el documento de confirmación.`;
 
     return {
       success: true,
@@ -366,7 +371,7 @@ ${roomCount > 1 ? `• **Anticipo distribuido:** $${paymentPerRoom.toLocaleStrin
         pendingBalance: pendingBalance,
         paymentPerRoom: paymentPerRoom
       }),
-      message: formattedMessage
+      message: internalMessage
     };
 
   } catch (error: any) {
