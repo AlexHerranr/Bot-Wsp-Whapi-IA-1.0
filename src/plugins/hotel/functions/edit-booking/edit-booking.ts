@@ -15,6 +15,51 @@ import axios from 'axios';
 import type { FunctionDefinition } from '../../../../functions/types/function-types.js';
 import { logInfo, logError, logSuccess } from '../../../../utils/logging';
 import { Beds24Client } from '../../services/beds24-client';
+import { fetchWithRetry } from '../../../../core/utils/retry-utils';
+
+// Función helper para enviar mensaje durante el run
+async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
+  try {
+    const WHAPI_API_URL = process.env.WHAPI_API_URL;
+    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
+    
+    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
+      return;
+    }
+
+    const payload = {
+      to: chatId,
+      body: message
+    };
+
+    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHAPI_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    logInfo('INTERIM_MESSAGE_SENT', 'Mensaje durante run enviado', {
+      chatId,
+      userId,
+      messagePreview: message.substring(0, 50)
+    });
+
+  } catch (error) {
+    logError('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje', {
+      chatId,
+      userId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
 
 // ============================================================================
 // INTERFACES TYPESCRIPT PARA TYPE SAFETY
@@ -40,8 +85,21 @@ interface EditBookingResult {
 // FUNCIÓN PRINCIPAL
 // ============================================================================
 
-export async function editBooking(params: EditBookingParams): Promise<EditBookingResult> {
+export async function editBooking(params: EditBookingParams, context?: any): Promise<EditBookingResult> {
   const { bookingId } = params;
+  
+  // ENVIAR MENSAJE INMEDIATO AL USUARIO
+  if (context?.chatId) {
+    try {
+      await sendInterimMessage(
+        context.chatId, 
+        "✅ Perfecto, voy a confirmar tu reserva al 100%...",
+        context.userId
+      );
+    } catch (error) {
+      // Continuar sin interrumpir
+    }
+  }
   
   logInfo('EDIT_BOOKING', 'Iniciando registro de pago', { 
     bookingId, paymentAmount: params.paymentAmount 

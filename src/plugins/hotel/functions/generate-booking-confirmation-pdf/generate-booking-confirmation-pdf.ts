@@ -468,7 +468,7 @@ export async function generateBookingConfirmationPDF(params: GenerateBookingConf
     try {
       await sendInterimMessage(
         userContext.chatId, 
-        "📄 Voy a proceder a generar el documento de confirmación actualizado de tu reserva...",
+        "📄 Déjame generar tu documento de confirmación...",
         userContext.userId
       );
     } catch (error) {

@@ -132,11 +132,11 @@ export async function createNewBooking(params: CreateBookingParams, context?: an
   // ENVIAR MENSAJE INMEDIATO AL USUARIO durante el run activo
   if (context?.chatId) {
     try {
-      await sendInterimMessage(
-        context.chatId, 
-        "⏳ Voy a proceder a crear la reserva...",
-        context.userId
-      );
+                  await sendInterimMessage(
+                context.chatId,
+                "⏳ Voy a crear tu reserva ahora mismo...",
+                context.userId
+            );
     } catch (error) {
       // El error ya se maneja dentro de sendInterimMessage, continuamos
     }

@@ -1,6 +1,7 @@
 import { Beds24Client } from '../../services/beds24-client';
 import { logInfo, logError, logSuccess } from '../../../../utils/logging';
 import { FunctionDefinition } from '../../../../functions/types/function-types';
+import { fetchWithRetry } from '../../../../core/utils/retry-utils';
 
 /**
  * CANCEL BOOKING - Cancelación de reservas
@@ -14,6 +15,50 @@ import { FunctionDefinition } from '../../../../functions/types/function-types';
  * - Promoción automática según motivo
  * - Registro de motivo de cancelación
  */
+
+// Función helper para enviar mensaje durante el run
+async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
+  try {
+    const WHAPI_API_URL = process.env.WHAPI_API_URL;
+    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
+    
+    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
+      return;
+    }
+
+    const payload = {
+      to: chatId,
+      body: message
+    };
+
+    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHAPI_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    logInfo('INTERIM_MESSAGE_SENT', 'Mensaje durante run enviado', {
+      chatId,
+      userId,
+      messagePreview: message.substring(0, 50)
+    });
+
+  } catch (error) {
+    logError('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje', {
+      chatId,
+      userId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
 
 interface CancelBookingParams {
   bookingId: number;
@@ -30,8 +75,21 @@ interface CancelBookingResult {
   details?: any;
 }
 
-export async function cancelBooking(params: CancelBookingParams): Promise<CancelBookingResult> {
+export async function cancelBooking(params: CancelBookingParams, context?: any): Promise<CancelBookingResult> {
   try {
+    // ENVIAR MENSAJE INMEDIATO AL USUARIO
+    if (context?.chatId) {
+      try {
+        await sendInterimMessage(
+          context.chatId, 
+          "🔓 Ok, voy a cancelar y liberar esas fechas...",
+          context.userId
+        );
+      } catch (error) {
+        // Continuar sin interrumpir
+      }
+    }
+    
     logInfo('CANCEL_BOOKING', 'Iniciando cancelación de reserva', {
       bookingId: params.bookingId,
       reason: params.reason

@@ -32,10 +32,10 @@ export class HotelPlugin {
                 return await checkAvailability(args as { startDate: string; endDate: string; numAdults: number }, context);
             }, source);
 
-            registry.register('check_booking_details', (args, context) =>
-                checkBookingDetailsFunction.handler(args as { firstName: string; lastName: string; checkInDate: string }),
-                source
-            );
+            registry.register('check_booking_details', async (args, context) => {
+                const { checkBookingDetails } = require('./functions/check-booking-details/check-booking-details');
+                return await checkBookingDetails(args as { firstName: string; lastName: string; checkInDate: string }, context);
+            }, source);
 
             registry.register('create_new_booking', async (args, context) => {
                 // Importar directamente la función que acepta context
@@ -45,12 +45,14 @@ export class HotelPlugin {
             }, source);
 
             registry.register('edit_booking', async (args, context) => {
-                const result = await editBookingFunction.handler(args as any);
+                const { editBooking } = require('./functions/edit-booking/edit-booking');
+                const result = await editBooking(args as any, context);
                 return JSON.stringify(result);
             }, source);
 
             registry.register('cancel_booking', async (args, context) => {
-                const result = await cancelBooking(args as any);
+                const { cancelBooking } = require('./functions/cancel-booking/cancel-booking');
+                const result = await cancelBooking(args as any, context);
                 return JSON.stringify(result);
             }, source);
 

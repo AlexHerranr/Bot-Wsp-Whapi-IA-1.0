@@ -323,7 +323,7 @@ export async function generatePaymentReceiptPDF(params: GeneratePaymentReceiptPD
     try {
       await sendInterimMessage(
         userContext.chatId, 
-        "🧾 Voy a proceder a generar el recibo de pago específico para tu reserva...",
+        "🧾 Voy a generar tu recibo de pago, un segundo...",
         userContext.userId
       );
     } catch (error) {

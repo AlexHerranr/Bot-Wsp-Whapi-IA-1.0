@@ -534,7 +534,7 @@ export async function checkBookingDetails(params: CheckBookingParams, context?: 
         try {
             await sendInterimMessage(
                 context.chatId, 
-                "📋 Buscando los detalles de tu reserva...",
+                "📋 Permíteme buscar tu reserva, un momento...",
                 context.userId
             );
         } catch (error) {

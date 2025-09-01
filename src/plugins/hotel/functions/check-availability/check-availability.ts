@@ -60,7 +60,7 @@ export async function checkAvailability(args: {
         try {
             await sendInterimMessage(
                 context.chatId, 
-                "🔍 Consultando disponibilidad en nuestro sistema...",
+                "🔍 Déjame consultar qué tenemos disponible para esas fechas...",
                 context.userId
             );
         } catch (error) {
