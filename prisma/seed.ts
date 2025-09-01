@@ -53,10 +53,22 @@ async function main() {
 
   // Usar upsert para evitar duplicados
   for (const apartment of apartments) {
-    await prisma.hotelApartment.upsert({
+    // Adaptar datos al nuevo esquema
+    const apartmentData = {
+      propertyId: 1, // ID de propiedad por defecto
+      roomId: apartment.roomId,
+      roomName: apartment.apartmentName,
+      extraCharge: {
+        amount: apartment.fixedCharge || apartment.extraCharges?.fixed_charge || 70000,
+        description: "Cargo adicional:"
+      },
+      capacity: parseInt(apartment.maxAdults) || 4
+    };
+    
+    await prisma.apartamentos.upsert({
       where: { roomId: apartment.roomId },
-      update: apartment,
-      create: apartment,
+      update: apartmentData,
+      create: apartmentData,
     });
     console.log(`✅ Apartment ${apartment.apartmentName} (roomId: ${apartment.roomId})`);
   }
