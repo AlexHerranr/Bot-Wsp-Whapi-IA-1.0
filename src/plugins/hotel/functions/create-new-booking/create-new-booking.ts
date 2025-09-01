@@ -369,9 +369,7 @@ export async function createNewBooking(params: CreateBookingParams, context?: an
     // Mensaje SIMPLE - solo confirmar éxito y sugerir siguiente paso
     const internalMessage = `EXITO_RESERVA: La reserva ${bookingIds} se creó correctamente en Beds24.
 
-SIGUIENTE_PASO: Procede a ejecutar generate_booking_confirmation_pdf con el bookingId ${newBookings[0].id} para enviar los detalles al huésped.
-
-Luego sigue las instrucciones que recibirás de esa función.`;
+SIGUIENTE_PASO: Procede a ejecutar generate_booking_confirmation_pdf con el bookingId ${newBookings[0].id}.`;
 
     return {
       success: true,

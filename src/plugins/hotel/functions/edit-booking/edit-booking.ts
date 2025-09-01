@@ -270,11 +270,7 @@ DATOS_CONFIRMADOS:
 • Número de pago: #${existingPayments + 1}
 • Fecha: ${new Date().toLocaleDateString('es-CO')}
 
-SIGUIENTE_PASO: ${nextStep}
-
-INSTRUCCION: Confirma al huésped que su pago fue registrado exitosamente. 
-Menciona que recibirá un documento actualizado por email. 
-${isSecondPaymentOrMore ? 'Es un pago adicional.' : 'Es el primer pago de la reserva.'}`;
+SIGUIENTE_PASO: ${nextStep}`;
 
     return {
       success: true,

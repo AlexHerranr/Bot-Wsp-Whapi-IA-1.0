@@ -162,9 +162,8 @@ export async function checkAvailability(args: {
 
 ${result}
 
-INSTRUCCION: Presenta las opciones al huésped de forma clara y amable. 
-Si muestra interés en alguna, procede a recopilar sus datos para crear la reserva.
-Si los precios no están disponibles, menciona que puedes consultarlos.`;
+INSTRUCCION: Presenta las opciones al huésped de forma clara y amable, una opción por párrafo. 
+Si muestra interés en alguna, pregúntale si desea saber más detalles o ver fotos.`;
         } else if (result.includes('No hay disponibilidad')) {
             return `SIN_DISPONIBILIDAD: No hay apartamentos disponibles para las fechas solicitadas.
 

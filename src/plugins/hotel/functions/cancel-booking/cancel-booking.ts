@@ -286,8 +286,10 @@ ${notes ? `NOTAS: ${notes}` : ''}
 
 ${nextStepMessage ? `PROMOCION_DISPONIBLE: ${nextStepMessage}` : ''}
 
-INSTRUCCION: Confirma al huésped que la reserva fue cancelada exitosamente. 
-El espacio ya está liberado. ${nextStepMessage ? 'Menciona la promoción disponible y ofrece ayuda para una nueva cotización.' : 'Si necesita algo más, estás disponible para ayudar.'}`;
+INSTRUCCION: Indícale al huésped que la reserva fue liberada. 
+${rawChannel === 'Booking.com' ? 'Si es de Booking.com, que por favor ingrese a la app para completar la anulación sin costo, que le dé cancelar reserva o solicitar cancelación sin cargos.' : ''}
+${reasonLower.includes('precio') || reasonLower.includes('caro') ? 'Ofrécele un descuento del 10% si desea hacer una nueva reserva.' : ''}
+${nextStepMessage ? 'Menciona la promoción disponible.' : ''}`;
 
     return {
       success: true,

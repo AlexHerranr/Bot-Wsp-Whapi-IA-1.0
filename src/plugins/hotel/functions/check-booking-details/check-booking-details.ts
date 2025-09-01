@@ -707,7 +707,10 @@ export async function checkBookingDetails(params: CheckBookingParams, context?: 
                 assistantNote = `\n\nEXITO_CONSULTA: Reserva(s) encontrada(s) correctamente.
 
 INSTRUCCION: Presenta los detalles de la reserva al huésped de forma clara. 
-Si necesita hacer cambios, ofrece ayuda. Si todo está bien, confirma que está todo listo para su llegada.`;
+Si es de Booking.com o Directa y no tiene pago registrado, procede inmediatamente 
+a dar instrucciones para confirmar al 100% su reserva con el anticipo requerido de una noche.
+Luego de que envíe soporte de pago y se valide el monto, procede a llamar 
+a la función edit_booking para cambiar status a confirmed y agregar el pago.`;
             }
             
             // 📋 AUDIT LOG: Final response sent to OpenAI

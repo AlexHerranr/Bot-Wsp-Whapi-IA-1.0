@@ -637,7 +637,11 @@ Pagado: $${totalPaid.toLocaleString()} COP
 Saldo: $${pendingBalance.toLocaleString()} COP
 
 INSTRUCCION: Dile al cliente algo así:
-"¡Hola! 👋 Te envié el PDF con los detalles. Revísalo cuando puedas para verificar que todo esté en orden. ¿Sabes aproximadamente tu hora de llegada? Si necesitas recomendaciones de actividades, tours? Estoy aquí para ayudarte."`
+"¡Hola! 👋 Te envié el PDF con los detalles. Verifica que todo esté en orden.
+
+Por cierto, ¿tienes idea de a qué hora llegarás más o menos? 🕒 Así podemos prepararnos para darte la bienvenida como se merece.
+
+Si te apetece, tengo algunas recomendaciones geniales para tu estancia. Solo avísame si quieres que te cuente. 😊"`
     };
     
     // SOLUCIÓN RAILWAY: Usar buffer in-memory en lugar de archivo físico
