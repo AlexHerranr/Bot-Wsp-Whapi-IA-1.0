@@ -178,9 +178,16 @@ export async function checkAvailability(args: {
         );
         
         if (error.message && (error.message.includes('network') || error.message.includes('timeout') || error.message.includes('ECONNRESET'))) {
-            return 'Error de conexión al verificar disponibilidad, intentados 3 reintentos. Intenta de nuevo más tarde o sugiere al cliente llamar al 3023371476.';
+            return `ERROR_CONEXION: No se pudo conectar con el sistema de reservas después de 3 intentos.
+
+INSTRUCCION: Dile al huésped que tuviste un problema técnico al consultar la disponibilidad, 
+que vas a notificar a tu superior para buscar una solución. Mientras tanto, puede llamar 
+directamente al 3023371476 para hacer la consulta.`;
         }
-        return 'Error inesperado al verificar disponibilidad. Intenta de nuevo.';
+        return `ERROR_INESPERADO: Ocurrió un error al verificar disponibilidad.
+
+INSTRUCCION: Dile al huésped que hubo un problema al consultar la disponibilidad, 
+que vas a notificar inmediatamente a tu superior para resolverlo.`;
     }
 }
 

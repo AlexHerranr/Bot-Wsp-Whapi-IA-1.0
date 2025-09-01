@@ -99,7 +99,10 @@ export async function cancelBooking(params: CancelBookingParams, context?: any):
     if (!params.bookingId || !params.reason) {
       return {
         success: false,
-        message: "❌ Parámetros requeridos: bookingId y reason",
+        message: `ERROR_PARAMETROS: Faltan datos requeridos para la cancelación.
+
+INSTRUCCION: Dile al huésped que necesitas el código de reserva y el motivo de cancelación 
+para proceder, que vas a consultar con tu superior si hay dudas.`,
         error: "missing_required_parameters"
       };
     }
@@ -110,7 +113,10 @@ export async function cancelBooking(params: CancelBookingParams, context?: any):
     if (!reason.trim() || reason.trim().length < 5) {
       return {
         success: false,
-        message: "❌ reason debe tener al menos 5 caracteres explicando el motivo",
+        message: `ERROR_MOTIVO_INVALIDO: El motivo de cancelación es muy corto.
+
+INSTRUCCION: Dile al huésped que necesitas un motivo más detallado para la cancelación, 
+que vas a ayudarle con el proceso.`,
         error: "invalid_reason"
       };
     }
@@ -119,7 +125,10 @@ export async function cancelBooking(params: CancelBookingParams, context?: any):
     if (!Number.isInteger(bookingId) || bookingId <= 0) {
       return {
         success: false,
-        message: "❌ bookingId debe ser un número entero positivo",
+        message: `ERROR_ID_INVALIDO: El código de reserva no es válido.
+
+INSTRUCCION: Dile al huésped que el código de reserva parece incorrecto, 
+que verifique el número o vas a consultar con tu superior.`,
         error: "invalid_booking_id"
       };
     }
@@ -138,7 +147,10 @@ export async function cancelBooking(params: CancelBookingParams, context?: any):
     if (!bookingSearchResult.success || !bookingSearchResult.data || bookingSearchResult.data.length === 0) {
       return {
         success: false,
-        message: `❌ No se encontró la reserva con ID ${bookingId}. Verifica el código de reserva.`,
+        message: `ERROR_RESERVA_NO_ENCONTRADA: No se encontró la reserva ${bookingId}.
+
+INSTRUCCION: Dile al huésped que no pudiste encontrar esa reserva para cancelar, 
+que vas a consultar con tu superior para verificar el código.`,
         error: "booking_not_found"
       };
     }
@@ -226,7 +238,10 @@ export async function cancelBooking(params: CancelBookingParams, context?: any):
       
       return {
         success: false,
-        message: "❌ Error procesando cancelación en Beds24",
+        message: `ERROR_CANCELACION: No se pudo procesar la cancelación en el sistema.
+
+INSTRUCCION: Dile al huésped que hubo un problema técnico al procesar la cancelación, 
+que vas a notificar a tu superior para resolverlo de inmediato.`,
         error: "unexpected_response"
       };
     }

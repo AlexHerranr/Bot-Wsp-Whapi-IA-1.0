@@ -110,7 +110,10 @@ export async function editBooking(params: EditBookingParams, context?: any): Pro
     if (!bookingId) {
       return {
         success: false,
-        message: "Falta dato requerido: bookingId",
+        message: `ERROR_DATOS_FALTANTES: Falta el ID de la reserva.
+
+INSTRUCCION: Dile al huésped que necesitas el código de reserva para poder registrar el pago, 
+que lo busque en su confirmación o vas a consultar con tu superior.`,
         error: "missing_required_fields"
       };
     }
@@ -119,7 +122,10 @@ export async function editBooking(params: EditBookingParams, context?: any): Pro
     if (!params.paymentAmount || !params.paymentDescription) {
       return {
         success: false,
-        message: "Se requiere: paymentAmount (del comprobante) y paymentDescription (descripción del comprobante recibido)",
+        message: `ERROR_DATOS_PAGO: Faltan datos del pago.
+
+INSTRUCCION: Dile al huésped que necesitas el monto exacto del comprobante y una descripción 
+para poder registrarlo, que vas a consultar con tu superior si hay dudas.`,
         error: "missing_payment_data"
       };
     }
@@ -127,7 +133,10 @@ export async function editBooking(params: EditBookingParams, context?: any): Pro
     if (params.paymentAmount < 1000) {
       return {
         success: false,
-        message: "El monto del comprobante debe ser mínimo $1.000 COP",
+        message: `ERROR_MONTO_INVALIDO: El monto debe ser mínimo $1.000 COP.
+
+INSTRUCCION: Dile al huésped que el monto del comprobante parece estar incorrecto, 
+que verifique el valor o vas a consultar con tu superior.`,
         error: "invalid_payment_amount"
       };
     }
@@ -146,7 +155,10 @@ export async function editBooking(params: EditBookingParams, context?: any): Pro
     if (!bookingSearchResult.success || !bookingSearchResult.data || bookingSearchResult.data.length === 0) {
       return {
         success: false,
-        message: `❌ No se encontró la reserva con ID ${bookingId}. Verifica el código de reserva.`,
+        message: `ERROR_RESERVA_NO_ENCONTRADA: No se encontró la reserva ${bookingId}.
+
+INSTRUCCION: Dile al huésped que no pudiste encontrar esa reserva en el sistema, 
+que vas a consultar con tu superior para verificar el código.`,
         error: "booking_not_found"
       };
     }
@@ -175,7 +187,10 @@ export async function editBooking(params: EditBookingParams, context?: any): Pro
     if (!isBookingCom && !isDirect) {
       return {
         success: false,
-        message: `❌ Los pagos solo se pueden registrar para reservas de Booking.com y Directas. Esta reserva es de: ${rawChannel}`,
+        message: `ERROR_CANAL_NO_PERMITIDO: Los pagos solo se registran para Booking.com y reservas directas.
+
+INSTRUCCION: Dile al huésped que para reservas de ${rawChannel} el pago se gestiona 
+directamente en la plataforma, que vas a consultar con tu superior si tiene dudas.`,
         error: "channel_not_allowed_for_payments"
       };
     }
@@ -285,7 +300,10 @@ ${suggestion}`;
     if (error.response?.status === 401) {
       return {
         success: false,
-        message: "❌ Error de autenticación. Token de escritura inválido o expirado.",
+        message: `ERROR_AUTENTICACION: Token de escritura inválido o expirado.
+
+INSTRUCCION: Dile al huésped que hubo un problema técnico al registrar el pago, 
+que vas a notificar a tu superior para resolverlo de inmediato.`,
         error: "auth_error"
       };
     }
@@ -293,7 +311,10 @@ ${suggestion}`;
     if (error.response?.status === 404) {
       return {
         success: false,
-        message: `❌ No se encontró la reserva con ID ${bookingId}. Verifica el código de reserva.`,
+        message: `ERROR_RESERVA_NO_ENCONTRADA: No se encontró la reserva ${bookingId}.
+
+INSTRUCCION: Dile al huésped que no pudiste encontrar esa reserva, 
+que vas a consultar con tu superior para verificar el código.`,
         error: "booking_not_found"
       };
     }
@@ -301,7 +322,10 @@ ${suggestion}`;
     if (error.response?.status === 400) {
       return {
         success: false,
-        message: "❌ Datos de pago inválidos. Verifica la información enviada.",
+        message: `ERROR_VALIDACION: Datos de pago inválidos.
+
+INSTRUCCION: Dile al huésped que hay un problema con los datos del comprobante, 
+que necesitas verificar la información con tu superior.`,
         error: "validation_error"
       };
     }
@@ -309,14 +333,20 @@ ${suggestion}`;
     if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
       return {
         success: false,
-        message: "❌ Error de conexión con Beds24. Intente nuevamente en unos minutos.",
+        message: `ERROR_CONEXION: No se pudo conectar con el sistema de reservas.
+
+INSTRUCCION: Dile al huésped que hay un problema de conexión con el sistema, 
+que vas a notificar a tu superior y reintentar en unos minutos.`,
         error: "connection_error"
       };
     }
 
     return {
       success: false,
-      message: "❌ Error interno registrando el pago. Contacte soporte técnico.",
+      message: `ERROR_INTERNO: Error al registrar el pago en el sistema.
+
+INSTRUCCION: Dile al huésped que hubo un problema técnico al registrar el comprobante, 
+que vas a notificar inmediatamente a tu superior para solucionarlo.`,
       error: error.response?.data || error.message
     };
   }

@@ -733,7 +733,10 @@ export async function checkBookingDetails(params: CheckBookingParams, context?: 
         logError('CHECK_BOOKING', 'Error consultando reserva', { error: error instanceof Error ? error.message : error, firstName, lastName, checkInDate }, 'check-booking-details.ts');
         return {
             success: false,
-            message: "Error interno al consultar la reserva. Por favor intenta nuevamente.",
+            message: `ERROR_CONSULTA: Error interno al consultar la reserva.
+
+INSTRUCCION: Dile al huésped que hubo un problema técnico al buscar su reserva, 
+que vas a notificar a tu superior para resolverlo de inmediato.`,
             booking: null,
             source: null
         };
