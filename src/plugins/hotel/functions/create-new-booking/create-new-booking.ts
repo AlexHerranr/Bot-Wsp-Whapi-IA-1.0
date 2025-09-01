@@ -54,15 +54,63 @@ interface CreateBookingResult {
 // ============================================================================
 
 export async function createNewBooking(params: CreateBookingParams): Promise<CreateBookingResult> {
+  // Log completo de parámetros recibidos para debugging
+  logInfo('CREATE_NEW_BOOKING_PARAMS', 'Parámetros recibidos completos', { 
+    params,
+    paramsType: typeof params,
+    hasRoomIds: 'roomIds' in params,
+    roomIdsType: params?.roomIds ? typeof params.roomIds : 'undefined',
+    roomIdsValue: params?.roomIds,
+    allKeys: Object.keys(params || {})
+  }, 'create-new-booking.ts');
+
+  // Validación temprana de params
+  if (!params || typeof params !== 'object') {
+    logError('CREATE_NEW_BOOKING_INVALID_PARAMS', 'Parámetros inválidos o vacíos', {
+      params,
+      type: typeof params
+    }, 'create-new-booking.ts');
+    return {
+      success: false,
+      message: "Error: No se recibieron parámetros válidos para crear la reserva",
+      error: "invalid_params"
+    };
+  }
+
   const { roomIds, arrival, departure, firstName, lastName, email, phone, numAdult, accommodationRate, advancePayment, advanceDescription } = params;
   
+  // Log después de destructuring
   logInfo('CREATE_NEW_BOOKING', 'Iniciando creación de reservas múltiples', { 
-    roomIds, roomCount: roomIds.length, arrival, departure, firstName, lastName, phone, numAdult, accommodationRate, advancePayment 
+    roomIds, 
+    roomCount: roomIds ? (Array.isArray(roomIds) ? roomIds.length : 'not_array') : 'undefined', 
+    arrival, 
+    departure, 
+    firstName, 
+    lastName, 
+    phone, 
+    numAdult, 
+    accommodationRate, 
+    advancePayment 
   }, 'create-new-booking.ts');
 
   try {
     // 1. Validar SOLO parámetros básicos OBLIGATORIOS (apartamentos + pago + datos huésped)
     if (!roomIds || !Array.isArray(roomIds) || roomIds.length === 0 || !arrival || !departure || !firstName || !lastName || !email || !phone || !numAdult || !accommodationRate || !advancePayment || !advanceDescription) {
+      logError('CREATE_NEW_BOOKING_MISSING_FIELDS', 'Campos requeridos faltantes', {
+        hasRoomIds: !!roomIds,
+        isRoomIdsArray: Array.isArray(roomIds),
+        roomIdsLength: roomIds?.length,
+        hasArrival: !!arrival,
+        hasDeparture: !!departure,
+        hasFirstName: !!firstName,
+        hasLastName: !!lastName,
+        hasEmail: !!email,
+        hasPhone: !!phone,
+        hasNumAdult: !!numAdult,
+        hasAccommodationRate: !!accommodationRate,
+        hasAdvancePayment: !!advancePayment,
+        hasAdvanceDescription: !!advanceDescription
+      }, 'create-new-booking.ts');
       return {
         success: false,
         message: "Faltan datos BÁSICOS requeridos: apartamentos (array), fechas, nombres, email, teléfono, adultos, tarifa alojamiento y anticipo con descripción",
