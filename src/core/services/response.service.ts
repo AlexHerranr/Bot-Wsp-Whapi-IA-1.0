@@ -57,7 +57,7 @@ export class ResponseService {
     }
     
     async createResponse(
-        instructions: string,
+        instructions: string | { id: string; version?: string },
         userMessage: string,
         context: ConversationContext,
         functions?: any[]
@@ -101,12 +101,22 @@ export class ResponseService {
             // Preparar parámetros de la llamada
             const requestParams: any = {
                 model: this.config.model,
-                instructions: instructions,
                 input: input,
                 max_output_tokens: this.config.maxOutputTokens,
                 temperature: this.config.temperature,
                 store: true, // Almacenar para poder referenciar después
             };
+            
+            // Configurar instrucciones o prompt
+            if (typeof instructions === 'string') {
+                requestParams.instructions = instructions;
+            } else {
+                // Usar prompt ID del dashboard
+                requestParams.prompt = {
+                    id: instructions.id,
+                    version: instructions.version || '1'
+                };
+            }
             
             // Agregar previous_response_id si existe
             if (context.previousResponseId) {
