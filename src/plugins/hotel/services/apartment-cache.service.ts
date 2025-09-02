@@ -17,6 +17,7 @@ export interface ApartmentInfo {
 export class ApartmentCacheService {
     private static instance: ApartmentCacheService;
     private apartmentCache: Map<number, ApartmentInfo> = new Map();
+    private apartmentCacheByPropertyId: Map<number, ApartmentInfo> = new Map();
     private initialized: boolean = false;
 
     private constructor() {}
@@ -49,15 +50,18 @@ export class ApartmentCacheService {
 
             // Limpiar caché existente
             this.apartmentCache.clear();
+            this.apartmentCacheByPropertyId.clear();
 
             // Cargar apartamentos en el Map
             apartments.forEach(apt => {
-                this.apartmentCache.set(apt.roomId, {
+                const apartmentInfo = {
                     roomId: apt.roomId,
                     roomName: apt.roomName,
                     propertyId: apt.propertyId,
                     extraCharge: apt.extraCharge as { description: string; amount: number }
-                });
+                };
+                this.apartmentCache.set(apt.roomId, apartmentInfo);
+                this.apartmentCacheByPropertyId.set(apt.propertyId, apartmentInfo);
             });
 
             const duration = Date.now() - startTime;
@@ -103,15 +107,18 @@ export class ApartmentCacheService {
         ];
 
         this.apartmentCache.clear();
+        this.apartmentCacheByPropertyId.clear();
         
         defaultApartments.forEach(apt => {
-            this.apartmentCache.set(apt.roomId, {
+            const apartmentInfo = {
                 ...apt,
                 extraCharge: {
                     description: "Aseo y Registro:",
                     amount: 70000
                 }
-            });
+            };
+            this.apartmentCache.set(apt.roomId, apartmentInfo);
+            this.apartmentCacheByPropertyId.set(apt.propertyId, apartmentInfo);
         });
 
         this.initialized = true;
@@ -134,6 +141,18 @@ export class ApartmentCacheService {
     }
 
     /**
+     * Obtiene la información de un apartamento por propertyId
+     */
+    public getApartmentByPropertyId(propertyId: number): ApartmentInfo | null {
+        if (!this.initialized) {
+            logError('APARTMENT_CACHE', 'Caché no inicializado', { propertyId }, 'apartment-cache.service.ts');
+            return null;
+        }
+
+        return this.apartmentCacheByPropertyId.get(propertyId) || null;
+    }
+
+    /**
      * Obtiene información de múltiples apartamentos
      */
     public getApartments(roomIds: number[]): Map<number, ApartmentInfo> {
@@ -150,14 +169,32 @@ export class ApartmentCacheService {
     }
 
     /**
+     * Obtiene información de múltiples apartamentos por propertyIds
+     */
+    public getApartmentsByPropertyIds(propertyIds: number[]): Map<number, ApartmentInfo> {
+        const result = new Map<number, ApartmentInfo>();
+        
+        propertyIds.forEach(propertyId => {
+            const apt = this.getApartmentByPropertyId(propertyId);
+            if (apt) {
+                result.set(propertyId, apt);
+            }
+        });
+
+        return result;
+    }
+
+    /**
      * Actualiza o agrega un apartamento al caché
      */
     public updateApartment(apartment: ApartmentInfo): void {
         this.apartmentCache.set(apartment.roomId, apartment);
+        this.apartmentCacheByPropertyId.set(apartment.propertyId, apartment);
         
         logInfo('APARTMENT_CACHE', 'Apartamento actualizado en caché', {
             roomId: apartment.roomId,
-            roomName: apartment.roomName
+            roomName: apartment.roomName,
+            propertyId: apartment.propertyId
         }, 'apartment-cache.service.ts');
     }
 

@@ -349,35 +349,61 @@ export class Beds24Client {
     // Enriquecer apartamentos con datos locales de BD (optimizado con Map)
     private async enrichWithLocalData(apartments: Beds24Availability[]): Promise<EnrichedApartment[]> {
         try {
-            // Extraer roomIds
+            // Extraer roomIds y propertyIds
             const roomIds = apartments
                 .map(apt => apt.roomId)
                 .filter((id): id is number => id !== undefined);
+            
+            const propertyIds = apartments
+                .map(apt => apt.propertyId)
+                .filter((id): id is number => id !== undefined);
 
-            if (roomIds.length === 0) {
-                // Fallback: retornar con defaults si no hay roomIds
-                return apartments.map(apt => ({
-                    ...apt,
-                    roomName: `Apartamento ${apt.roomId}`,
-                    extraCharge: {
-                        description: "Cargo adicional:",
-                        amount: 70000
-                    }
-                }));
+            // Primero intentar por roomIds si existen
+            let apartmentDetailsMap = new Map<number, ApartmentDetails>();
+            
+            if (roomIds.length > 0) {
+                apartmentDetailsMap = await this.apartmentDataService.getApartmentDetails(roomIds);
             }
-
-            // Consulta optimizada con Map lookup
-            const apartmentDetailsMap = await this.apartmentDataService.getApartmentDetails(roomIds);
+            
+            // Si no encontramos todos por roomId, intentar por propertyId
+            if (apartmentDetailsMap.size < apartments.length && propertyIds.length > 0) {
+                const apartmentDetailsByProperty = await this.apartmentDataService.getApartmentDetailsByPropertyIds(propertyIds);
+                
+                // Merge ambos mapas
+                apartmentDetailsByProperty.forEach((details, propertyId) => {
+                    // Solo agregar si no lo encontramos por roomId
+                    const apartment = apartments.find(apt => apt.propertyId === propertyId);
+                    if (apartment && apartment.roomId && !apartmentDetailsMap.has(apartment.roomId)) {
+                        apartmentDetailsMap.set(apartment.roomId, details);
+                    }
+                });
+            }
             
             // Merge optimizado O(1) lookup
             const enrichedApartments: EnrichedApartment[] = apartments.map(apt => {
-                const details = apt.roomId ? apartmentDetailsMap.get(apt.roomId) : null;
+                let details = null;
+                
+                // Primero buscar por roomId
+                if (apt.roomId) {
+                    details = apartmentDetailsMap.get(apt.roomId);
+                }
+                
+                // Si no encontramos por roomId, buscar por propertyId en el mismo mapa
+                if (!details && apt.propertyId) {
+                    // Buscar en el mapa si hay algún apartment con este propertyId
+                    for (const [_, aptDetails] of apartmentDetailsMap) {
+                        if (aptDetails.propertyId === apt.propertyId) {
+                            details = aptDetails;
+                            break;
+                        }
+                    }
+                }
                 
                 return {
                     ...apt,
-                    roomName: details?.roomName || `Apartamento ${apt.roomId}`,
+                    roomName: details?.roomName || `Apartamento ${apt.propertyId || apt.roomId}`,
                     extraCharge: details?.extraCharge || {
-                        description: "Cargo adicional:",
+                        description: "Aseo y Registro:",
                         amount: 70000
                     }
                 };

@@ -133,4 +133,81 @@ export class ApartmentDataService {
       return null;
     }
   }
+  
+  // Método para obtener apartamentos por propertyIds
+  async getApartmentDetailsByPropertyIds(propertyIds: number[]): Promise<Map<number, ApartmentDetails>> {
+    try {
+      const startTime = Date.now();
+      
+      // Primero intentar obtener del caché
+      const cachedApartments = apartmentCache.getApartmentsByPropertyIds(propertyIds);
+      
+      if (cachedApartments.size === propertyIds.length) {
+        // Todos los apartamentos encontrados en caché
+        const duration = Date.now() - startTime;
+        
+        logInfo('APARTMENT_DATA_SERVICE', 'Apartamentos obtenidos del caché por propertyId', {
+          requestedPropertyIds: propertyIds.length,
+          foundApartments: cachedApartments.size,
+          duration: `${duration}ms`,
+          source: 'cache'
+        }, 'apartment-data.service.ts');
+        
+        return cachedApartments;
+      }
+      
+      // Si no están todos en caché, consultar BD (fallback)
+      logInfo('APARTMENT_DATA_SERVICE', 'Caché incompleto, consultando BD por propertyId', {
+        requestedCount: propertyIds.length,
+        cachedCount: cachedApartments.size,
+        missingPropertyIds: propertyIds.filter(id => !cachedApartments.has(id))
+      }, 'apartment-data.service.ts');
+      
+      // Consulta bulk optimizada
+      const apartments = await prisma.apartamentos.findMany({
+        where: {
+          propertyId: {
+            in: propertyIds
+          }
+        },
+        select: {
+          propertyId: true,
+          roomId: true,
+          roomName: true,
+          extraCharge: true
+        }
+      });
+      
+      const duration = Date.now() - startTime;
+      
+      // Crear Map para lookup O(1)
+      const apartmentMap = new Map<number, ApartmentDetails>();
+      apartments.forEach(apt => {
+        apartmentMap.set(apt.propertyId, {
+          propertyId: apt.propertyId,
+          roomId: apt.roomId,
+          roomName: apt.roomName,
+          extraCharge: apt.extraCharge as { description: string; amount: number }
+        });
+      });
+      
+      logSuccess('APARTMENT_DATA_SERVICE', 'Apartment details loaded from DB by propertyId', {
+        requestedPropertyIds: propertyIds.length,
+        foundApartments: apartments.length,
+        duration: `${duration}ms`,
+        source: 'database'
+      }, 'apartment-data.service.ts');
+      
+      return apartmentMap;
+      
+    } catch (error) {
+      logError('APARTMENT_DATA_SERVICE', 'Error loading apartment details by propertyId', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        propertyIds
+      }, 'apartment-data.service.ts');
+      
+      // Retornar Map vacío en caso de error
+      return new Map();
+    }
+  }
 }
