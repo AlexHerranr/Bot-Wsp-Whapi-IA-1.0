@@ -206,27 +206,28 @@ export class MediaService implements IMediaService {
                 throw new Error('URL de imagen inválida o no disponible');
             }
 
-            // Use openAIWithRetry for vision API
+            // Use openAIWithRetry for vision API con Responses API
             const visionResponse = await openAIWithRetry(
-                () => this.openai.chat.completions.create({
+                () => this.openai.responses.create({
                     model: process.env.IMAGE_ANALYSIS_MODEL || 'gpt-4o-mini',
-                    messages: [{
+                    input: [{
+                        type: 'message',
                         role: 'user',
                         content: [
                             { 
-                                type: 'text', 
+                                type: 'input_text', 
                                 text: 'Analiza esta imagen en el contexto de un hotel. Describe brevemente qué ves, enfocándote en: habitaciones, instalaciones, documentos, o cualquier elemento relevante para consultas hoteleras. Máximo 100 palabras.' 
                             },
                             { 
-                                type: 'image_url', 
-                                image_url: { 
+                                type: 'input_image', 
+                                image: { 
                                     url: finalImageUrl,
                                     detail: 'low'
                                 } 
                             }
                         ]
                     }],
-                    max_tokens: 150,
+                    max_output_tokens: 150,
                     temperature: 0.3
                 }),
                 {
@@ -236,7 +237,13 @@ export class MediaService implements IMediaService {
                 }
             );
 
-            const analysis = visionResponse.choices[0].message.content || 'Imagen recibida';
+            // Acceder al contenido usando la nueva estructura de Responses API
+            const outputMessage = visionResponse.output?.[0];
+            let analysis = 'Imagen recibida';
+            
+            if (outputMessage?.type === 'message' && outputMessage.content?.[0]?.type === 'output_text') {
+                analysis = outputMessage.content[0].text || 'Imagen recibida';
+            }
             const duration = Date.now() - startTime;
             
             return {

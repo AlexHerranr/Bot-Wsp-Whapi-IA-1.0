@@ -96,39 +96,43 @@ export class PerceptionService {
                 maxTokens: maxOutputTokens
             }, 'perception.service.ts');
 
-            const response = await this.openai.chat.completions.create({
+            const response = await this.openai.responses.create({
                 model: 'gpt-4o-mini',
-                messages: [
+                instructions: CAPTIONER_SYSTEM,
+                input: [
                     {
-                        role: 'system',
-                        content: CAPTIONER_SYSTEM
-                    },
-                    {
+                        type: 'message',
                         role: 'user',
                         content: [
                             {
-                                type: 'text',
+                                type: 'input_text',
                                 text: CAPTIONER_USER_PREFIX
                             },
                             {
-                                type: 'image_url',
-                                image_url: {
+                                type: 'input_image',
+                                image: {
                                     url: imageUrl,
                                     detail: 'high' // Alta calidad para OCR
                                 }
                             },
                             {
-                                type: 'text',
+                                type: 'input_text',
                                 text: 'Recuerda: SOLO JSON válido.'
                             }
                         ]
                     }
                 ],
-                max_tokens: Math.min(maxOutputTokens, 300), // Crítico: Reducir latencia para comprobantes
+                max_output_tokens: Math.min(maxOutputTokens, 300), // Crítico: Reducir latencia para comprobantes
                 temperature: 0 // Óptimo para extracción factual según docs OpenAI
             });
 
-            const rawContent = response.choices[0]?.message?.content?.trim() || '{}';
+            // Acceder al contenido de la respuesta usando la nueva estructura de Responses API
+            const outputMessage = response.output?.[0];
+            let rawContent = '{}';
+            
+            if (outputMessage?.type === 'message' && outputMessage.content?.[0]?.type === 'output_text') {
+                rawContent = outputMessage.content[0].text?.trim() || '{}';
+            }
             
             logInfo('PERCEPTION_RAW', 'Respuesta cruda de percepción', {
                 userId,
