@@ -1,6 +1,7 @@
 import { Beds24Client } from '../../services/beds24-client';
 import { logInfo, logError, logSuccess } from '../../../../utils/logging';
 import { FunctionDefinition } from '../../../../functions/types/function-types';
+import { fetchWithRetry } from '../../../../core/utils/retry-utils';
 
 /**
  * CANCEL BOOKING - Cancelación de reservas
@@ -14,6 +15,50 @@ import { FunctionDefinition } from '../../../../functions/types/function-types';
  * - Promoción automática según motivo
  * - Registro de motivo de cancelación
  */
+
+// Función helper para enviar mensaje durante el run
+async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
+  try {
+    const WHAPI_API_URL = process.env.WHAPI_API_URL;
+    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
+    
+    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
+      return;
+    }
+
+    const payload = {
+      to: chatId,
+      body: message
+    };
+
+    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHAPI_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    logInfo('INTERIM_MESSAGE_SENT', 'Mensaje durante run enviado', {
+      chatId,
+      userId,
+      messagePreview: message.substring(0, 50)
+    });
+
+  } catch (error) {
+    logError('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje', {
+      chatId,
+      userId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
 
 interface CancelBookingParams {
   bookingId: number;
@@ -30,8 +75,21 @@ interface CancelBookingResult {
   details?: any;
 }
 
-export async function cancelBooking(params: CancelBookingParams): Promise<CancelBookingResult> {
+export async function cancelBooking(params: CancelBookingParams, context?: any): Promise<CancelBookingResult> {
   try {
+    // ENVIAR MENSAJE INMEDIATO AL USUARIO
+    if (context?.chatId) {
+      try {
+        await sendInterimMessage(
+          context.chatId, 
+          "🔓 Ok, voy a cancelar y liberar esas fechas...",
+          context.userId
+        );
+      } catch (error) {
+        // Continuar sin interrumpir
+      }
+    }
+    
     logInfo('CANCEL_BOOKING', 'Iniciando cancelación de reserva', {
       bookingId: params.bookingId,
       reason: params.reason
@@ -41,7 +99,10 @@ export async function cancelBooking(params: CancelBookingParams): Promise<Cancel
     if (!params.bookingId || !params.reason) {
       return {
         success: false,
-        message: "❌ Parámetros requeridos: bookingId y reason",
+        message: `ERROR_PARAMETROS: Faltan datos requeridos para la cancelación.
+
+INSTRUCCION: Dile al huésped que necesitas el código de reserva y el motivo de cancelación 
+para proceder, que vas a consultar con tu superior si hay dudas.`,
         error: "missing_required_parameters"
       };
     }
@@ -52,7 +113,10 @@ export async function cancelBooking(params: CancelBookingParams): Promise<Cancel
     if (!reason.trim() || reason.trim().length < 5) {
       return {
         success: false,
-        message: "❌ reason debe tener al menos 5 caracteres explicando el motivo",
+        message: `ERROR_MOTIVO_INVALIDO: El motivo de cancelación es muy corto.
+
+INSTRUCCION: Dile al huésped que necesitas un motivo más detallado para la cancelación, 
+que vas a ayudarle con el proceso.`,
         error: "invalid_reason"
       };
     }
@@ -61,7 +125,10 @@ export async function cancelBooking(params: CancelBookingParams): Promise<Cancel
     if (!Number.isInteger(bookingId) || bookingId <= 0) {
       return {
         success: false,
-        message: "❌ bookingId debe ser un número entero positivo",
+        message: `ERROR_ID_INVALIDO: El código de reserva no es válido.
+
+INSTRUCCION: Dile al huésped que el código de reserva parece incorrecto, 
+que verifique el número o vas a consultar con tu superior.`,
         error: "invalid_booking_id"
       };
     }
@@ -80,7 +147,10 @@ export async function cancelBooking(params: CancelBookingParams): Promise<Cancel
     if (!bookingSearchResult.success || !bookingSearchResult.data || bookingSearchResult.data.length === 0) {
       return {
         success: false,
-        message: `❌ No se encontró la reserva con ID ${bookingId}. Verifica el código de reserva.`,
+        message: `ERROR_RESERVA_NO_ENCONTRADA: No se encontró la reserva ${bookingId}.
+
+INSTRUCCION: Dile al huésped que no pudiste encontrar esa reserva para cancelar, 
+que vas a consultar con tu superior para verificar el código.`,
         error: "booking_not_found"
       };
     }
@@ -168,7 +238,10 @@ export async function cancelBooking(params: CancelBookingParams): Promise<Cancel
       
       return {
         success: false,
-        message: "❌ Error procesando cancelación en Beds24",
+        message: `ERROR_CANCELACION: No se pudo procesar la cancelación en el sistema.
+
+INSTRUCCION: Dile al huésped que hubo un problema técnico al procesar la cancelación, 
+que vas a notificar a tu superior para resolverlo de inmediato.`,
         error: "unexpected_response"
       };
     }
@@ -199,20 +272,24 @@ Tenemos ofertas especiales para nuevas cotizaciones que podrían resultar en un 
 **¿Te gustaría cotizar nuevamente desde cero a ver si encuentras una opción mejor?**`;
     }
     
-    const formattedMessage = `✅ **RESERVA CANCELADA EXITOSAMENTE**
+    const formattedMessage = `EXITO_CANCELACION: Reserva ${bookingId} cancelada correctamente.
 
-📋 **DETALLES DE LA CANCELACIÓN:**
-• **Código reserva:** ${bookingId}
-• **Status anterior:** ${currentStatus}
-• **Nuevo status:** CANCELADA ❌
-• **Motivo:** ${reason}
-• **Fecha cancelación:** ${cancelDate}
+DATOS_CONFIRMADOS:
+• Código reserva: ${bookingId}
+• Status anterior: ${currentStatus}
+• Nuevo status: CANCELADA
+• Motivo: ${reason}
+• Fecha cancelación: ${cancelDate}
+• Espacio liberado: Sí
 
-📝 **ESPACIO LIBERADO:**
-• La reserva ha sido cancelada en el sistema
-• El apartamento queda disponible para nuevas reservas
+${notes ? `NOTAS: ${notes}` : ''}
 
-${notes ? `📝 **Notas:** ${notes}` : ''}${nextStepMessage}`;
+${nextStepMessage ? `PROMOCION_DISPONIBLE: ${nextStepMessage}` : ''}
+
+INSTRUCCION: Indícale al huésped que la reserva fue liberada. 
+${rawChannel === 'Booking.com' ? 'Si es de Booking.com, que por favor ingrese a la app para completar la anulación sin costo, que le dé cancelar reserva o solicitar cancelación sin cargos.' : ''}
+${reasonLower.includes('precio') || reasonLower.includes('caro') ? 'Ofrécele un descuento del 10% si desea hacer una nueva reserva.' : ''}
+${nextStepMessage ? 'Menciona la promoción disponible.' : ''}`;
 
     return {
       success: true,

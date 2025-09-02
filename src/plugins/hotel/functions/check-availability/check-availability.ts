@@ -1,17 +1,72 @@
 // src/plugins/hotel/functions/check-availability.ts
 import { Beds24Client } from '../../services/beds24-client';
 import { logError, logInfo } from '../../../../utils/logging';
-// 🔧 NUEVO: Importar logging compacto
 import { logFunctionPerformance } from '../../../../utils/logging/integrations';
+import { fetchWithRetry } from '../../../../core/utils/retry-utils';
 
-// Función helper movida al final - ya no es necesaria aquí, beds24-client la tiene
+// Función helper para enviar mensaje durante el run
+async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
+  try {
+    const WHAPI_API_URL = process.env.WHAPI_API_URL;
+    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
+    
+    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
+      return;
+    }
+
+    const payload = {
+      to: chatId,
+      body: message
+    };
+
+    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHAPI_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    logInfo('INTERIM_MESSAGE_SENT', 'Mensaje durante run enviado', {
+      chatId,
+      userId,
+      messagePreview: message.substring(0, 50)
+    });
+
+  } catch (error) {
+    logError('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje', {
+      chatId,
+      userId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
 
 export async function checkAvailability(args: {
     startDate: string;
     endDate: string;
     numAdults: number;
-}): Promise<string> {
-    const startTime = Date.now(); // 🔧 NUEVO: Mover startTime al scope de función
+}, context?: any): Promise<string> {
+    const startTime = Date.now();
+    
+    // ENVIAR MENSAJE INMEDIATO AL USUARIO
+    if (context?.chatId) {
+        try {
+            await sendInterimMessage(
+                context.chatId, 
+                "🔍 Déjame consultar qué tenemos disponible para esas fechas...",
+                context.userId
+            );
+        } catch (error) {
+            // Continuar sin interrumpir
+        }
+    }
     
     try {
         // Validar fechas pasadas ANTES de llamar a Beds24 - USANDO HORA DE COLOMBIA
@@ -101,7 +156,24 @@ export async function checkAvailability(args: {
         // Log técnico resumido en una línea
         logInfo('HOTEL_AVAILABILITY', `${args.startDate}_${args.endDate}_${numAdults}adl | ${apartmentCount}apts | ${duration}ms | BD:${hasFixedCharges?'OK':'MISS'} | Ages:${hasAgeInfo?'OK':'MISS'} | ${result.length}chars`, {}, 'check-availability.ts');
 
-        return result; // Ya viene formateado o con mensaje de error
+        // Agregar instrucciones para OpenAI cuando hay disponibilidad
+        if (apartmentCount > 0) {
+            return `EXITO_DISPONIBILIDAD: Se encontraron ${apartmentCount} opciones disponibles.
+
+${result}
+
+INSTRUCCION: Presenta las opciones al huésped de forma clara y amable, una opción por párrafo. 
+Si muestra interés en alguna, pregúntale si desea saber más detalles o ver fotos.`;
+        } else if (result.includes('No hay disponibilidad')) {
+            return `SIN_DISPONIBILIDAD: No hay apartamentos disponibles para las fechas solicitadas.
+
+${result}
+
+INSTRUCCION: Informa amablemente al huésped que no hay disponibilidad. 
+Sugiere fechas alternativas cercanas o que puede contactar directamente al 3023371476.`;
+        }
+        
+        return result; // Otros casos (errores, mensajes especiales)
 
     } catch (error: any) {
         const duration = Date.now() - startTime;
@@ -123,9 +195,16 @@ export async function checkAvailability(args: {
         );
         
         if (error.message && (error.message.includes('network') || error.message.includes('timeout') || error.message.includes('ECONNRESET'))) {
-            return 'Error de conexión al verificar disponibilidad, intentados 3 reintentos. Intenta de nuevo más tarde o sugiere al cliente llamar al 3023371476.';
+            return `ERROR_CONEXION: No se pudo conectar con el sistema de reservas después de 3 intentos.
+
+INSTRUCCION: Dile al huésped que tuviste un problema técnico al consultar la disponibilidad, 
+que vas a notificar a tu superior para buscar una solución. Mientras tanto, puede llamar 
+directamente al 3023371476 para hacer la consulta.`;
         }
-        return 'Error inesperado al verificar disponibilidad. Intenta de nuevo.';
+        return `ERROR_INESPERADO: Ocurrió un error al verificar disponibilidad.
+
+INSTRUCCION: Dile al huésped que hubo un problema al consultar la disponibilidad, 
+que vas a notificar inmediatamente a tu superior para resolverlo.`;
     }
 }
 

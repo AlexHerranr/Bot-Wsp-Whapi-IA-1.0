@@ -15,6 +15,51 @@ import axios from 'axios';
 import type { FunctionDefinition } from '../../../../functions/types/function-types.js';
 import { logInfo, logError, logSuccess } from '../../../../utils/logging';
 import { Beds24Client } from '../../services/beds24-client';
+import { fetchWithRetry } from '../../../../core/utils/retry-utils';
+
+// Función helper para enviar mensaje durante el run
+async function sendInterimMessage(chatId: string, message: string, userId?: string): Promise<void> {
+  try {
+    const WHAPI_API_URL = process.env.WHAPI_API_URL;
+    const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
+    
+    if (!WHAPI_API_URL || !WHAPI_TOKEN) {
+      return;
+    }
+
+    const payload = {
+      to: chatId,
+      body: message
+    };
+
+    const response = await fetchWithRetry(`${WHAPI_API_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHAPI_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+
+    logInfo('INTERIM_MESSAGE_SENT', 'Mensaje durante run enviado', {
+      chatId,
+      userId,
+      messagePreview: message.substring(0, 50)
+    });
+
+  } catch (error) {
+    logError('INTERIM_MESSAGE_ERROR', 'Error enviando mensaje', {
+      chatId,
+      userId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
 
 // ============================================================================
 // INTERFACES TYPESCRIPT PARA TYPE SAFETY
@@ -40,8 +85,21 @@ interface EditBookingResult {
 // FUNCIÓN PRINCIPAL
 // ============================================================================
 
-export async function editBooking(params: EditBookingParams): Promise<EditBookingResult> {
+export async function editBooking(params: EditBookingParams, context?: any): Promise<EditBookingResult> {
   const { bookingId } = params;
+  
+  // ENVIAR MENSAJE INMEDIATO AL USUARIO
+  if (context?.chatId) {
+    try {
+      await sendInterimMessage(
+        context.chatId, 
+        "✅ Perfecto, voy a confirmar tu reserva al 100%...",
+        context.userId
+      );
+    } catch (error) {
+      // Continuar sin interrumpir
+    }
+  }
   
   logInfo('EDIT_BOOKING', 'Iniciando registro de pago', { 
     bookingId, paymentAmount: params.paymentAmount 
@@ -52,7 +110,10 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
     if (!bookingId) {
       return {
         success: false,
-        message: "Falta dato requerido: bookingId",
+        message: `ERROR_DATOS_FALTANTES: Falta el ID de la reserva.
+
+INSTRUCCION: Dile al huésped que necesitas el código de reserva para poder registrar el pago, 
+que lo busque en su confirmación o vas a consultar con tu superior.`,
         error: "missing_required_fields"
       };
     }
@@ -61,7 +122,10 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
     if (!params.paymentAmount || !params.paymentDescription) {
       return {
         success: false,
-        message: "Se requiere: paymentAmount (del comprobante) y paymentDescription (descripción del comprobante recibido)",
+        message: `ERROR_DATOS_PAGO: Faltan datos del pago.
+
+INSTRUCCION: Dile al huésped que necesitas el monto exacto del comprobante y una descripción 
+para poder registrarlo, que vas a consultar con tu superior si hay dudas.`,
         error: "missing_payment_data"
       };
     }
@@ -69,7 +133,10 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
     if (params.paymentAmount < 1000) {
       return {
         success: false,
-        message: "El monto del comprobante debe ser mínimo $1.000 COP",
+        message: `ERROR_MONTO_INVALIDO: El monto debe ser mínimo $1.000 COP.
+
+INSTRUCCION: Dile al huésped que el monto del comprobante parece estar incorrecto, 
+que verifique el valor o vas a consultar con tu superior.`,
         error: "invalid_payment_amount"
       };
     }
@@ -88,7 +155,10 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
     if (!bookingSearchResult.success || !bookingSearchResult.data || bookingSearchResult.data.length === 0) {
       return {
         success: false,
-        message: `❌ No se encontró la reserva con ID ${bookingId}. Verifica el código de reserva.`,
+        message: `ERROR_RESERVA_NO_ENCONTRADA: No se encontró la reserva ${bookingId}.
+
+INSTRUCCION: Dile al huésped que no pudiste encontrar esa reserva en el sistema, 
+que vas a consultar con tu superior para verificar el código.`,
         error: "booking_not_found"
       };
     }
@@ -117,7 +187,10 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
     if (!isBookingCom && !isDirect) {
       return {
         success: false,
-        message: `❌ Los pagos solo se pueden registrar para reservas de Booking.com y Directas. Esta reserva es de: ${rawChannel}`,
+        message: `ERROR_CANAL_NO_PERMITIDO: Los pagos solo se registran para Booking.com y reservas directas.
+
+INSTRUCCION: Dile al huésped que para reservas de ${rawChannel} el pago se gestiona 
+directamente en la plataforma, que vas a consultar con tu superior si tiene dudas.`,
         error: "channel_not_allowed_for_payments"
       };
     }
@@ -182,26 +255,22 @@ export async function editBooking(params: EditBookingParams): Promise<EditBookin
       status: modifiedBooking.status
     }, 'edit-booking.ts');
 
-    // 7. Formatear respuesta con sugerencia condicional
-    const suggestion = isSecondPaymentOrMore 
-      ? '🔔 **Sugerencia para OpenAI:** Se ha registrado un pago adicional (pago #' + (existingPayments + 1) + '). Procede a llamar a la función `generate_payment_receipt_pdf` para generar y enviar el recibo de pago específico al huésped.'
-      : '🔔 **Sugerencia para OpenAI:** Se ha registrado el primer pago de la reserva. Procede a llamar a la función `generate_booking_confirmation_pdf` para generar y enviar el documento PDF de confirmación actualizada al huésped.';
+    // 7. Formatear respuesta con formato estándar para OpenAI
+    const nextStep = isSecondPaymentOrMore 
+      ? 'Procede a ejecutar generate_payment_receipt_pdf para generar el recibo de este pago.'
+      : 'Procede a ejecutar generate_booking_confirmation_pdf para generar el documento actualizado.';
     
-    const formattedMessage = `✅ **PAGO REGISTRADO EXITOSAMENTE**
+    const formattedMessage = `EXITO_PAGO_REGISTRADO: Comprobante registrado correctamente en la reserva ${bookingId}.
 
-📋 **DETALLES DEL PAGO:**
-• **Código reserva:** ${bookingId}
-• **Status actual:** ${modifiedBooking.status} (sin cambios)
-• **Pago registrado:** $${params.paymentAmount?.toLocaleString()} COP
-• **Comprobante:** ${params.paymentDescription}
-• **Fecha registro:** ${new Date().toLocaleDateString('es-CO')}
-• **Número de pago:** #${existingPayments + 1}
+DATOS_CONFIRMADOS:
+• Código reserva: ${bookingId}
+• Status: ${modifiedBooking.status}
+• Monto registrado: $${params.paymentAmount?.toLocaleString()} COP
+• Comprobante: ${params.paymentDescription}
+• Número de pago: #${existingPayments + 1}
+• Fecha: ${new Date().toLocaleDateString('es-CO')}
 
-💰 ¡Pago registrado en el sistema!
-
-📧 Se enviará documento actualizado por email
-
-${suggestion}`;
+SIGUIENTE_PASO: ${nextStep}`;
 
     return {
       success: true,
@@ -227,7 +296,10 @@ ${suggestion}`;
     if (error.response?.status === 401) {
       return {
         success: false,
-        message: "❌ Error de autenticación. Token de escritura inválido o expirado.",
+        message: `ERROR_AUTENTICACION: Token de escritura inválido o expirado.
+
+INSTRUCCION: Dile al huésped que hubo un problema técnico al registrar el pago, 
+que vas a notificar a tu superior para resolverlo de inmediato.`,
         error: "auth_error"
       };
     }
@@ -235,7 +307,10 @@ ${suggestion}`;
     if (error.response?.status === 404) {
       return {
         success: false,
-        message: `❌ No se encontró la reserva con ID ${bookingId}. Verifica el código de reserva.`,
+        message: `ERROR_RESERVA_NO_ENCONTRADA: No se encontró la reserva ${bookingId}.
+
+INSTRUCCION: Dile al huésped que no pudiste encontrar esa reserva, 
+que vas a consultar con tu superior para verificar el código.`,
         error: "booking_not_found"
       };
     }
@@ -243,7 +318,10 @@ ${suggestion}`;
     if (error.response?.status === 400) {
       return {
         success: false,
-        message: "❌ Datos de pago inválidos. Verifica la información enviada.",
+        message: `ERROR_VALIDACION: Datos de pago inválidos.
+
+INSTRUCCION: Dile al huésped que hay un problema con los datos del comprobante, 
+que necesitas verificar la información con tu superior.`,
         error: "validation_error"
       };
     }
@@ -251,14 +329,20 @@ ${suggestion}`;
     if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
       return {
         success: false,
-        message: "❌ Error de conexión con Beds24. Intente nuevamente en unos minutos.",
+        message: `ERROR_CONEXION: No se pudo conectar con el sistema de reservas.
+
+INSTRUCCION: Dile al huésped que hay un problema de conexión con el sistema, 
+que vas a notificar a tu superior y reintentar en unos minutos.`,
         error: "connection_error"
       };
     }
 
     return {
       success: false,
-      message: "❌ Error interno registrando el pago. Contacte soporte técnico.",
+      message: `ERROR_INTERNO: Error al registrar el pago en el sistema.
+
+INSTRUCCION: Dile al huésped que hubo un problema técnico al registrar el comprobante, 
+que vas a notificar inmediatamente a tu superior para solucionarlo.`,
       error: error.response?.data || error.message
     };
   }

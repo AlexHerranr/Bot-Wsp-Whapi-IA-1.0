@@ -1238,6 +1238,22 @@ ${message}`}`;
                 reason: 'bot_restart_context_reset'
             });
             
+            // CACHE DE APARTAMENTOS: Cargar todos los nombres al inicio
+            try {
+                const { ApartmentDataService } = await import('../plugins/hotel/services/apartment-data.service');
+                const loadSuccess = await ApartmentDataService.loadAllApartmentsToCache();
+                
+                if (loadSuccess) {
+                    logSuccess('BOT_STARTUP', 'Cache de apartamentos cargado exitosamente', {}, 'bot.ts');
+                } else {
+                    logWarning('BOT_STARTUP', 'No se pudo cargar el cache de apartamentos completamente', {}, 'bot.ts');
+                }
+            } catch (error) {
+                logError('BOT_STARTUP', 'Error al cargar cache de apartamentos', {
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                }, 'bot.ts');
+            }
+            
             this.setupCleanupTasks();
             
             this.server.listen(this.config.port, this.config.host, () => {

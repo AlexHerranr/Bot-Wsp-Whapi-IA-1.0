@@ -112,13 +112,16 @@ model Oportunidades {
 }
 
 model Apartamentos {
-  id           Int    @id(map: "hotel_apartments_pkey") @default(autoincrement())
-  propertyId   Int    @map("property_id")
-  roomId       Int    @unique(map: "hotel_apartments_room_id_key") @map("room_id")
-  roomName     String @map("room_name")
-  extraCharge  Json   @default("{\"amount\": 70000, \"description\": \"Cargo adicional:\"}") @map("extra_charge")
-  capacity     Int    @default(4)
-  
+  id           Int      @id @default(autoincrement())
+  propertyId   Int      @map("property_id")
+  propertyName String   @default("TeAlquilamos") @map("property_name")
+  roomId       Int      @unique @map("room_id")
+  roomName     String   @map("room_name")
+  sobrenombre  String?  @map("sobrenombre")
+  extraCharge  Json     @default("{\"amount\": 70000, \"description\": \"Cargo adicional:\"}") @map("extra_charge")
+  capacity     Int      @default(4)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @map("updated_at")
   @@map("Propiedades")
 }
 
