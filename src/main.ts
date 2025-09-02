@@ -115,6 +115,20 @@ async function main() {
         // Create and start bot
         bot = new CoreBot(config, functionRegistry);
         
+        // Initialize apartment cache for hotel plugin
+        try {
+            const { apartmentCache } = await import('./plugins/hotel/services/apartment-cache.service');
+            await apartmentCache.initialize();
+            logInfo('APARTMENT_CACHE_INIT', 'Caché de apartamentos inicializado exitosamente', {
+                stats: apartmentCache.getStats()
+            }, 'main.ts');
+        } catch (error) {
+            console.error('⚠️ Error inicializando caché de apartamentos:', error);
+            logInfo('APARTMENT_CACHE_ERROR', 'Error al inicializar caché de apartamentos', {
+                error: error instanceof Error ? error.message : 'Unknown error'
+            }, 'main.ts');
+        }
+        
         // Setup graceful shutdown
         const handleShutdown = async (signal: string) => {
             console.log(`🛑 Received ${signal}, shutting down gracefully...`);

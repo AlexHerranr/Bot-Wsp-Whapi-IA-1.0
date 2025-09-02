@@ -1,6 +1,7 @@
 // src/plugins/hotel/services/apartment-data.service.ts
 import { PrismaClient } from '@prisma/client';
-import { logError, logSuccess } from '../../../utils/logging';
+import { logError, logSuccess, logInfo } from '../../../utils/logging';
+import { apartmentCache } from './apartment-cache.service';
 
 const prisma = new PrismaClient();
 
@@ -16,10 +17,34 @@ export interface ApartmentDetails {
 
 export class ApartmentDataService {
   
-  // Optimizado: consulta bulk con Map lookup (O(1) en lugar de O(n))
+  // Optimizado: usa caché en memoria en lugar de consulta a BD
   async getApartmentDetails(roomIds: number[]): Promise<Map<number, ApartmentDetails>> {
     try {
       const startTime = Date.now();
+      
+      // Primero intentar obtener del caché
+      const cachedApartments = apartmentCache.getApartments(roomIds);
+      
+      if (cachedApartments.size === roomIds.length) {
+        // Todos los apartamentos encontrados en caché
+        const duration = Date.now() - startTime;
+        
+        logInfo('APARTMENT_DATA_SERVICE', 'Apartamentos obtenidos del caché', {
+          requestedRoomIds: roomIds.length,
+          foundApartments: cachedApartments.size,
+          duration: `${duration}ms`,
+          source: 'cache'
+        }, 'apartment-data.service.ts');
+        
+        return cachedApartments;
+      }
+      
+      // Si no están todos en caché, consultar BD (fallback)
+      logInfo('APARTMENT_DATA_SERVICE', 'Caché incompleto, consultando BD', {
+        requestedCount: roomIds.length,
+        cachedCount: cachedApartments.size,
+        missingRoomIds: roomIds.filter(id => !cachedApartments.has(id))
+      }, 'apartment-data.service.ts');
       
       // Consulta bulk optimizada
       const apartments = await prisma.apartamentos.findMany({
@@ -49,10 +74,11 @@ export class ApartmentDataService {
         });
       });
       
-      logSuccess('APARTMENT_DATA_SERVICE', 'Apartment details loaded', {
+      logSuccess('APARTMENT_DATA_SERVICE', 'Apartment details loaded from DB', {
         requestedRoomIds: roomIds.length,
         foundApartments: apartments.length,
-        duration: `${duration}ms`
+        duration: `${duration}ms`,
+        source: 'database'
       }, 'apartment-data.service.ts');
       
       return apartmentMap;
