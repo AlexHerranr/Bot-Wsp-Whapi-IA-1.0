@@ -547,41 +547,16 @@ export class CoreBot {
                 }
             }
 
-            // Enviar indicador de estado apropiado antes de procesar
+            // REMOVIDO: No enviar presencia antes del procesamiento
+            // La presencia se enviará justo antes de enviar el mensaje real
             let userState = this.userManager.getOrCreateState(userId);
-            try {
-                if (userState.lastInputVoice) {
-                    // Si el último input fue voz, mostrar "grabando"
-                    await this.whatsappService.sendRecordingIndicator(chatId);
-                    logInfo('INDICATOR_SENT', 'Indicador de grabación enviado exitosamente', { 
-                        userId, 
-                        userName, 
-                        chatId,
-                        indicatorType: 'recording',
-                        success: true
-                    }, 'bot.ts');
-                } else {
-                    // Para mensajes de texto, enviar indicador de escribiendo
-                    await this.whatsappService.sendTypingIndicator(chatId);
-                    logInfo('INDICATOR_SENT', 'Indicador de escribiendo enviado exitosamente', {
-                        userId,
-                        userName,
-                        chatId,
-                        indicatorType: 'typing',
-                        success: true
-                    }, 'bot.ts');
-                }
-            } catch (indicatorError) {
-                // No bloquear el procesamiento si falla el indicador
-                logWarning('INDICATOR_FAILED', 'Error enviando indicador de presencia', {
-                    userId,
-                    userName,
-                    chatId,
-                    indicatorType: userState.lastInputVoice ? 'recording' : 'typing',
-                    error: indicatorError instanceof Error ? indicatorError.message : String(indicatorError),
-                    success: false
-                });
-            }
+            logInfo('PRESENCE_DELAYED', 'Presencia diferida hasta tener respuesta lista', {
+                userId,
+                userName,
+                chatId,
+                inputType: userState.lastInputVoice ? 'voice' : 'text',
+                reason: 'avoid_stuck_presence'
+            }, 'bot.ts');
 
             // Log técnico: inicio de run OpenAI
             logInfo('OPENAI_RUN_START', 'Iniciando run de OpenAI', {
