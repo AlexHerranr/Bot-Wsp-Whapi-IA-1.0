@@ -69,7 +69,7 @@ export class OpenAIResponsesService implements IOpenAIService {
         this.responseService = new ResponseService(
             {
                 apiKey: config.apiKey,
-                model: config.model || 'gpt-4o',
+                model: config.model || 'gpt-5',
                 maxOutputTokens: config.maxOutputTokens || 4096,
                 temperature: config.temperature || 0.7
             },
