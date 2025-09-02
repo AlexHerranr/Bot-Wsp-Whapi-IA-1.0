@@ -95,4 +95,37 @@ export class FunctionRegistryService implements IFunctionRegistry {
         }
         return existed;
     }
+    
+    // Nuevo método para Responses API
+    public getFunction(name: string): { handler: ToolCallFunction; name: string; description?: string; parameters?: any } | undefined {
+        const func = this.functions.get(name);
+        if (!func) return undefined;
+        
+        return {
+            handler: func,
+            name: name,
+            description: `Function ${name}`, // Esto debería venir de metadata
+            parameters: {} // Esto debería venir de metadata
+        };
+    }
+    
+    // Nuevo método para obtener todas las funciones con metadata
+    public getAllFunctions(): Array<{ name: string; handler: ToolCallFunction; description: string; parameters: any }> {
+        const result: Array<{ name: string; handler: ToolCallFunction; description: string; parameters: any }> = [];
+        
+        for (const [name, func] of this.functions) {
+            result.push({
+                name,
+                handler: func,
+                description: `Function ${name}`, // Por defecto
+                parameters: {
+                    type: 'object',
+                    properties: {},
+                    required: []
+                }
+            });
+        }
+        
+        return result;
+    }
 }

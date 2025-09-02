@@ -8,6 +8,26 @@ import type { ClientDataCache } from '../state/client-data-cache';
 import { logDatabaseOperation, logThreadUsage } from '../../utils/logging/integrations';
 import { setCacheSize } from '../../utils/logging/collectors';
 
+// Interfaces para Responses API
+interface ConversationRecord {
+    user_id: string;
+    chat_id: string;
+    last_response_id?: string;
+    message_count: number;
+    token_count: number;
+    last_activity: Date;
+    metadata?: any;
+}
+
+interface MessageRecord {
+    user_id: string;
+    chat_id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    response_id?: string;
+    timestamp: Date;
+}
+
 const MOD = 'database.service.ts';
 
 // ELIMINADO: MemoryStore interface - migrado a ClientDataCache unificado
@@ -995,6 +1015,141 @@ export class DatabaseService {
             }
         } catch (error) {
             logError('WHAPI_ENRICHMENT', `Error enriqueciendo usuario ${phoneNumber}`, { phoneNumber, operation: 'enrichUserFromWhapi', error: error instanceof Error ? error.message : error }, MOD);
+        }
+    }
+    
+    // ========== MÉTODOS PARA RESPONSES API ==========
+    
+    async getConversation(userId: string, chatId: string): Promise<ConversationRecord | null> {
+        try {
+            const result = await this.prisma.$queryRaw<ConversationRecord[]>`
+                SELECT * FROM Conversations 
+                WHERE user_id = ${userId} AND chat_id = ${chatId}
+                LIMIT 1
+            `;
+            
+            return result[0] || null;
+        } catch (error) {
+            logError('GET_CONVERSATION_ERROR', 'Error obteniendo conversación', {
+                userId,
+                chatId,
+                error: error instanceof Error ? error.message : 'Unknown'
+            });
+            return null;
+        }
+    }
+    
+    async getRecentConversations(hoursBack: number = 24): Promise<ConversationRecord[]> {
+        try {
+            const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+            
+            const result = await this.prisma.$queryRaw<ConversationRecord[]>`
+                SELECT * FROM Conversations 
+                WHERE last_activity > ${cutoffTime}
+                ORDER BY last_activity DESC
+            `;
+            
+            return result;
+        } catch (error) {
+            logError('GET_RECENT_CONVERSATIONS_ERROR', 'Error obteniendo conversaciones recientes', {
+                hoursBack,
+                error: error instanceof Error ? error.message : 'Unknown'
+            });
+            return [];
+        }
+    }
+    
+    async updateConversation(conversation: ConversationRecord): Promise<void> {
+        try {
+            await this.prisma.$executeRaw`
+                INSERT INTO Conversations (
+                    user_id, chat_id, last_response_id, 
+                    message_count, token_count, last_activity, metadata
+                ) VALUES (
+                    ${conversation.user_id}, ${conversation.chat_id}, ${conversation.last_response_id},
+                    ${conversation.message_count}, ${conversation.token_count}, ${conversation.last_activity},
+                    ${conversation.metadata || {}}::jsonb
+                )
+                ON CONFLICT (user_id, chat_id) DO UPDATE SET
+                    last_response_id = EXCLUDED.last_response_id,
+                    message_count = EXCLUDED.message_count,
+                    token_count = EXCLUDED.token_count,
+                    last_activity = EXCLUDED.last_activity,
+                    metadata = EXCLUDED.metadata,
+                    updated_at = CURRENT_TIMESTAMP
+            `;
+            
+            logInfo('CONVERSATION_UPDATED', 'Conversación actualizada', {
+                userId: conversation.user_id,
+                chatId: conversation.chat_id,
+                responseId: conversation.last_response_id
+            });
+        } catch (error) {
+            logError('UPDATE_CONVERSATION_ERROR', 'Error actualizando conversación', {
+                userId: conversation.user_id,
+                chatId: conversation.chat_id,
+                error: error instanceof Error ? error.message : 'Unknown'
+            });
+            throw error;
+        }
+    }
+    
+    async saveMessage(message: MessageRecord): Promise<void> {
+        try {
+            await this.prisma.$executeRaw`
+                INSERT INTO ConversationMessages (
+                    user_id, chat_id, response_id, role, content, timestamp
+                ) VALUES (
+                    ${message.user_id}, ${message.chat_id}, ${message.response_id},
+                    ${message.role}, ${message.content}, ${message.timestamp}
+                )
+            `;
+            
+            logInfo('MESSAGE_SAVED', 'Mensaje guardado', {
+                userId: message.user_id,
+                chatId: message.chat_id,
+                role: message.role,
+                responseId: message.response_id
+            });
+        } catch (error) {
+            logError('SAVE_MESSAGE_ERROR', 'Error guardando mensaje', {
+                userId: message.user_id,
+                chatId: message.chat_id,
+                error: error instanceof Error ? error.message : 'Unknown'
+            });
+        }
+    }
+    
+    async resetConversation(userId: string, chatId: string): Promise<void> {
+        try {
+            // Resetear conversación
+            await this.prisma.$executeRaw`
+                UPDATE Conversations 
+                SET last_response_id = NULL,
+                    message_count = 0,
+                    token_count = 0,
+                    last_activity = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ${userId} AND chat_id = ${chatId}
+            `;
+            
+            // Opcional: Limpiar mensajes antiguos
+            await this.prisma.$executeRaw`
+                DELETE FROM ConversationMessages
+                WHERE user_id = ${userId} AND chat_id = ${chatId}
+                AND timestamp < CURRENT_TIMESTAMP - INTERVAL '7 days'
+            `;
+            
+            logInfo('CONVERSATION_RESET', 'Conversación reseteada', {
+                userId,
+                chatId
+            });
+        } catch (error) {
+            logError('RESET_CONVERSATION_ERROR', 'Error reseteando conversación', {
+                userId,
+                chatId,
+                error: error instanceof Error ? error.message : 'Unknown'
+            });
         }
     }
 }
