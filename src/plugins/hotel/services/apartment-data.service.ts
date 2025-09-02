@@ -14,6 +14,7 @@ export interface ApartmentDetails {
     amount: number;      // 70000
   };
   capacity: number;
+}
 
 export class ApartmentDataService {
   
