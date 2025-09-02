@@ -955,6 +955,13 @@ export class DatabaseService {
 
             const chatInfo = await response.json() as any;
             const labels = (chatInfo as any).labels || [];
+            
+            logInfo('WHAPI_CHAT_INFO', `Información del chat obtenida para ${phoneNumber}`, {
+                phoneNumber,
+                hasLabels: labels.length > 0,
+                labelsCount: labels.length,
+                labelNames: labels.map((l: any) => l?.name || l).slice(0, 5) // Primeros 5 labels
+            }, MOD);
 
             // Solo procesar labels - names ya vienen del webhook
             if (labels.length > 0) {
