@@ -59,7 +59,7 @@ export class CoreBot {
     // private hotelPlugin: HotelPlugin; // Moved to main.ts
     private functionRegistry: IFunctionRegistry;
     private cleanupIntervals: NodeJS.Timeout[] = [];
-    private lastError: Record<string, { time: number }> = {};
+    private lastError: Record<string, { time: number; error?: string }> = {};
     private hotelValidation: HotelValidation;
 
     constructor(
