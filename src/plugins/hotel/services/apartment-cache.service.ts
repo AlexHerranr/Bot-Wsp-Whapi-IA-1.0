@@ -204,6 +204,13 @@ export class ApartmentCacheService {
     }
 
     /**
+     * Obtiene todos los apartamentos del caché
+     */
+    public getAllApartments(): ApartmentInfo[] {
+        return Array.from(this.apartmentCache.values());
+    }
+
+    /**
      * Obtiene estadísticas del caché
      */
     public getStats() {

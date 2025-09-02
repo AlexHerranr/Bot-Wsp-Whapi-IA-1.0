@@ -73,8 +73,8 @@ function setupDependencyInjection() {
     container.registerInstance('DatabaseService', databaseService);
     
     // Register Apartment Cache Service (singleton)
-    const apartmentCacheService = new ApartmentCacheService();
-    container.registerInstance(ApartmentCacheService, apartmentCacheService);
+    const apartmentCacheService = ApartmentCacheService.getInstance();
+    container.registerInstance('ApartmentCacheService', apartmentCacheService);
     
     // Register Response Validator
     container.register(ResponseValidator, { useClass: ResponseValidator });
@@ -127,7 +127,7 @@ async function main() {
         // Initialize apartment cache for hotel plugin
         try {
             // Usar la instancia registrada en el contenedor
-            const apartmentCacheService = container.resolve(ApartmentCacheService);
+            const apartmentCacheService = container.resolve('ApartmentCacheService') as ApartmentCacheService;
             await apartmentCacheService.initialize();
             logInfo('APARTMENT_CACHE_INIT', 'Caché de apartamentos inicializado exitosamente', {
                 stats: apartmentCacheService.getStats()

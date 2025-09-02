@@ -1,6 +1,6 @@
 // src/core/validators/response-validator.ts
-import { injectable } from 'tsyringe';
-import { logInfo, logWarning } from '../../utils/logger';
+import { injectable, inject } from 'tsyringe';
+import { logInfo, logWarning, logSuccess, logError } from '../../utils/logging';
 import { ApartmentCacheService } from '../../plugins/hotel/services/apartment-cache.service';
 
 export interface ValidationResult {
@@ -21,7 +21,7 @@ export class ResponseValidator {
     private filters: ValidationFilter[] = [];
     
     constructor(
-        private apartmentCache: ApartmentCacheService
+        @inject('ApartmentCacheService') private readonly apartmentCache: ApartmentCacheService
     ) {
         this.initializeFilters();
     }
@@ -67,7 +67,7 @@ export class ResponseValidator {
                     return {
                         isValid: false,
                         reason: 'Confirmación de reserva sin número de referencia',
-                        internalObservation: 'Observación interna: Estás enviando palabras como "reserva confirmada" o "ha sido confirmada" sin incluir el número de reserva. Si aún no ha pagado anticipo o no es de Airbnb/Hotels/Expedia, reconsidera tu respuesta. Mejor indícale que está pendiente de confirmación, o en caso contrario envía junto con el número de reserva (siempre y cuando haya pagado anticipo o sea de plataformas verificadas).',
+                        internalObservation: 'Observación interna: Estás enviando palabras como "reserva confirmada" o "ha sido confirmada" sin incluir el número de reserva. Si aún no ha pagado anticipo o no es de Airbnb/Hotels/Expedia, reconsidera tu respuesta. Mejor indícale que está pendiente de confirmación, o en caso contrario envía junto con el número de reserva (siempre y cuando haya pagado anticipo o sea de plataformas verificadas). (Si es directa o de Booking y tienes pago 100% confirmado del anticipo, omite este mensaje).',
                         suggestedAction: 'retry'
                     };
                 }
