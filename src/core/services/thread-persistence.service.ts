@@ -106,7 +106,7 @@ export class ThreadPersistenceService {
                     userName: userName || null,
                     labels: [],
                     chatId: chatId || null,
-                    threadId: undefined,
+                    threadId: null,
                     lastActivity: new Date(),
                     cachedAt: new Date(),
                     threadTokenCount: 0
