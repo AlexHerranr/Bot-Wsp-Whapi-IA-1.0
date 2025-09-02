@@ -97,24 +97,26 @@ export class ApartmentCacheService {
      */
     private initializeDefaults(): void {
         const defaultApartments = [
-            { roomId: 378110, roomName: 'Apto 2005A', propertyId: 173307 },
-            { roomId: 378316, roomName: 'Apto 1820', propertyId: 173207 },
-            { roomId: 378120, roomName: 'Apto 2505', propertyId: 173308 },
-            { roomId: 378317, roomName: 'Apto 3111', propertyId: 173309 },
-            { roomId: 378318, roomName: 'Apto 411', propertyId: 173311 },
-            { roomId: 378319, roomName: 'Apto 1008', propertyId: 173312 },
-            { roomId: 478062, roomName: 'Apto 1505', propertyId: 240061 }
+            { roomId: 378110, roomName: 'Apartamento 1 Alcoba 2005 A', propertyId: 173207 },
+            { roomId: 378316, roomName: 'Apartamento 1 Alcoba 1820', propertyId: 173307 },
+            { roomId: 378317, roomName: 'Apartamento 1 Alcoba 1317', propertyId: 173308 },
+            { roomId: 378318, roomName: 'Aparta Estudio 1722B', propertyId: 173309 },
+            { roomId: 378320, roomName: 'Aparta Estudio 2005 B', propertyId: 173311 },
+            { roomId: 378321, roomName: 'Apartamento 1 Alcoba 1722 A', propertyId: 173312 },
+            { roomId: 506591, roomName: 'Apartamento 1 Alcoba 0715', propertyId: 240061 }
         ];
 
         this.apartmentCache.clear();
         this.apartmentCacheByPropertyId.clear();
         
         defaultApartments.forEach(apt => {
+            // Usar el monto correcto según el tipo de apartamento
+            const amount = apt.propertyId === 173309 || apt.propertyId === 173311 ? 60000 : 70000;
             const apartmentInfo = {
                 ...apt,
                 extraCharge: {
-                    description: "Aseo y Registro:",
-                    amount: 70000
+                    description: "Registro y Limpieza",
+                    amount: amount
                 }
             };
             this.apartmentCache.set(apt.roomId, apartmentInfo);
