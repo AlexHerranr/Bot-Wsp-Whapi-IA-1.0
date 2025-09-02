@@ -547,8 +547,15 @@ export class CoreBot {
                         success: true
                     }, 'bot.ts');
                 } else {
-                    // Evitar indicador de escritura largo antes del run de OpenAI para no simular escritura durante toda la latencia
-                    // El indicador se envía justo antes de cada chunk en WhatsappService
+                    // Para mensajes de texto, enviar indicador de escribiendo
+                    await this.whatsappService.sendTypingIndicator(chatId);
+                    logInfo('INDICATOR_SENT', 'Indicador de escribiendo enviado exitosamente', {
+                        userId,
+                        userName,
+                        chatId,
+                        indicatorType: 'typing',
+                        success: true
+                    }, 'bot.ts');
                 }
             } catch (indicatorError) {
                 // No bloquear el procesamiento si falla el indicador
