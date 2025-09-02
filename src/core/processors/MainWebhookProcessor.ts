@@ -124,6 +124,12 @@ export class MainWebhookProcessor extends BaseWebhookProcessor {
                 type: webhookType,
                 processor: 'main'
             }, 'main-webhook-processor.ts');
+            
+            // Procesar webhooks de labels
+            if (labels && Array.isArray(labels)) {
+                await this.handleLabelsWebhook(labels);
+            }
+            
             return;
         }
 
@@ -684,6 +690,96 @@ export class MainWebhookProcessor extends BaseWebhookProcessor {
                 agentName,
                 error: error instanceof Error ? error.message : String(error)
             });
+        }
+    }
+
+    private async handleLabelsWebhook(labels: any[]): Promise<void> {
+        try {
+            logInfo('LABELS_WEBHOOK', 'Procesando webhook de labels', {
+                labelsCount: labels.length
+            }, 'main-webhook-processor.ts');
+
+            // Procesar cada evento de label
+            for (const labelEvent of labels) {
+                try {
+                    // Estructura típica del webhook de labels:
+                    // {
+                    //   "label": { "id": "1", "name": "VIP" },
+                    //   "chat": "573001234567@s.whatsapp.net",
+                    //   "action": "add" // o "remove"
+                    // }
+                    
+                    const { label, chat, action } = labelEvent;
+                    
+                    if (!chat || !label) {
+                        continue;
+                    }
+
+                    // Extraer número de teléfono
+                    let phoneNumber = chat;
+                    if (phoneNumber.includes('@')) {
+                        phoneNumber = phoneNumber.split('@')[0];
+                    }
+
+                    // Obtener usuario actual
+                    const user = await this.databaseService.findUserByPhoneNumber(phoneNumber);
+                    if (!user) {
+                        logWarning('LABEL_USER_NOT_FOUND', 'Usuario no encontrado para actualizar label', {
+                            phoneNumber,
+                            labelName: label.name
+                        }, 'main-webhook-processor.ts');
+                        continue;
+                    }
+
+                    // Obtener labels actuales
+                    const currentLabels = user.labels ? user.labels.split('/').filter(Boolean) : [];
+                    let updatedLabels = [...currentLabels];
+
+                    if (action === 'add') {
+                        // Agregar label si no existe
+                        if (!updatedLabels.includes(label.name)) {
+                            updatedLabels.push(label.name);
+                        }
+                    } else if (action === 'remove') {
+                        // Remover label
+                        updatedLabels = updatedLabels.filter(l => l !== label.name);
+                    }
+
+                    // Actualizar en base de datos
+                    const newLabelsString = updatedLabels.join('/');
+                    await this.databaseService.updateClient(phoneNumber, {
+                        labels: newLabelsString || null
+                    });
+
+                    // Actualizar cache
+                    const clientCache = this.databaseService.getClientCache();
+                    if (clientCache) {
+                        const cachedData = clientCache.get(phoneNumber);
+                        if (cachedData) {
+                            cachedData.labels = updatedLabels;
+                            cachedData.cachedAt = new Date();
+                            clientCache.set(phoneNumber, cachedData);
+                        }
+                    }
+
+                    logInfo('LABEL_UPDATED', `Label ${action === 'add' ? 'agregado' : 'removido'}: ${label.name} para ${phoneNumber}`, {
+                        phoneNumber,
+                        labelName: label.name,
+                        action,
+                        totalLabels: updatedLabels.length
+                    }, 'main-webhook-processor.ts');
+
+                } catch (error) {
+                    logError('LABEL_PROCESS_ERROR', 'Error procesando evento de label individual', {
+                        error: error instanceof Error ? error.message : String(error),
+                        labelEvent
+                    }, 'main-webhook-processor.ts');
+                }
+            }
+        } catch (error) {
+            logError('LABELS_WEBHOOK_ERROR', 'Error procesando webhook de labels', {
+                error: error instanceof Error ? error.message : String(error)
+            }, 'main-webhook-processor.ts');
         }
     }
 }
