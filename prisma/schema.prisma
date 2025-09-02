@@ -16,10 +16,6 @@ model WhatsApp {
   lastActivity       DateTime  @updatedAt
   threadId           String?
   threadTokenCount   Int?      @default(0)
-  profileStatus      String?
-  proximaAccion      String?
-  fechaProximaAccion DateTime?
-  prioridad          Int?
 
   @@map("Chats")
 }
