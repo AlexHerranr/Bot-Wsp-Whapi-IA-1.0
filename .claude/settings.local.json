@@ -156,7 +156,14 @@
       "Bash(set RAILWAY_PROJECT_ID=local-dev)",
       "Bash(set RAILWAY_ENVIRONMENT_NAME=development)",
       "Bash(npm uninstall:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git remote:*)",
+      "Bash(pip install:*)",
+      "Read(C:\\Users\\alex-\\Downloads/**)",
+      "Read(C:\\Users\\alex-\\Downloads/**)",
+      "Bash(set NO_THREAD_CHAT_IDS=573003913251@s.whatsapp.net)",
+      "Bash(NO_THREAD_CHAT_IDS=\"573003913251@s.whatsapp.net\" node setup-smart-trigger.js)"
     ],
     "deny": [],
     "additionalDirectories": [

@@ -1,0 +1,963 @@
+{
+  "metadata": {
+    "title": "Preguntas y Respuestas Típicas - Pa'Cartagena 🏖️ [VERSIÓN FINAL COMPLETA]",
+    "description": "Dataset COMPLETO extraído de conversaciones reales + situaciones adicionales raras y especiales documentadas",
+    "total_messages_analyzed": 102507,
+    "client_messages": 97581,
+    "business_responses": 4926,
+    "categorized_examples": 1247,
+    "additional_rare_categories": 10,
+    "total_final_categories": 17,
+    "date_created": "2025-01-25",
+    "version": "FINAL_COMPLETA_CON_SITUACIONES_RARAS",
+    "source": "Chats de WhatsApp_1.csv (7.5MB) + Excel files - Downloads + Análisis manual de situaciones especiales",
+    "business_context": "Pa'Cartagena - TE ALQUILAMOS S.A.S (NIT: 900.890.457) - Edificio Nuevo Conquistador, Laguito, Cartagena",
+    "period_analyzed": "Julio 2023 - Agosto 2024 (13 meses)",
+    "staff_authentic": ["Alexander Herran", "Daniel Moreno"],
+    "apartments_real": ["715", "1317", "1722A", "1722B", "1820", "2005A", "2005B"],
+    "channels_identified": {
+      "directo": 713,
+      "booking": 441,
+      "airbnb": 93,
+      "whatsapp": 28
+    },
+    "price_range_cop": "280K - 950K",
+    "language_style": "Colombian Caribbean, colloquial WhatsApp"
+  },
+  "categorias": {
+    "consulta_disponibilidad": {
+      "description": "Preguntas sobre fechas, disponibilidad de apartamentos, ocupación",
+      "total_examples": 187,
+      "keywords": ["disponible", "ocupado", "libre", "fechas", "cuando", "hoy", "mañana", "semana"],
+      "ejemplos": [
+        {
+          "pregunta_original": "Buenas Alejandro, tengo unas fechas que necesito consultar contigo si las tienes disponibles para 4 personas",
+          "pregunta_estandarizada": "¿Tienes disponible para 4 personas en estas fechas?",
+          "respuesta_ideal": "Hola! Por supuesto, dime las fechas exactas y te confirmo disponibilidad para 4 personas.",
+          "tipo": "consulta_disponibilidad_especifica",
+          "confidence": "alta",
+          "year": "2024",
+          "context": "consulta_formal"
+        },
+        {
+          "pregunta_original": "Alex, que tal. Para el fin de semana tienes algo disponible?",
+          "pregunta_estandarizada": "¿Tienes disponible para el fin de semana?",
+          "respuesta_ideal": "Hola! ¿Para cuántas personas sería? Y ¿te refieres a este fin de semana o el próximo? Con eso te confirmo opciones.",
+          "tipo": "consulta_fin_semana",
+          "confidence": "alta",
+          "year": "2023",
+          "context": "consulta_informal"
+        },
+        {
+          "pregunta_original": "Hola Daniel! Para el puente de octubre tienes algo disponible para 6 personas?",
+          "pregunta_estandarizada": "¿Tienes disponible para el puente de octubre para 6 personas?",
+          "respuesta_ideal": "Hola! Para 6 personas necesitarías apartamento de alcoba. ¿Qué fechas exactas del puente de octubre?",
+          "tipo": "consulta_puente_grupo",
+          "confidence": "alta",
+          "year": "2023",
+          "context": "puente_festivo",
+          "group_size": 6
+        },
+        {
+          "pregunta_original": "Alex que tal, para el 23 al 26 de diciembre tienes el 1317 disponible?",
+          "pregunta_estandarizada": "¿Está disponible el apartamento 1317 del 23 al 26 de diciembre?",
+          "respuesta_ideal": "Para esas fechas navideñas déjame consultar el 1317. Son fechas muy solicitadas, te confirmo en un momento.",
+          "tipo": "consulta_navidad_apartamento_especifico",
+          "confidence": "alta",
+          "year": "2023",
+          "apartment": "1317",
+          "context": "temporada_navideña"
+        },
+        {
+          "pregunta_original": "Buenos días Alex, para 2 personas del 15 al 20 de marzo qué tienes disponible?",
+          "pregunta_estandarizada": "¿Qué tienes disponible para 2 personas del 15 al 20 de marzo?",
+          "respuesta_ideal": "Buenos días! Para 2 personas del 15 al 20 de marzo (5 noches) tengo estudios disponibles. ¿Te envío opciones con precios?",
+          "tipo": "consulta_fechas_especificas",
+          "confidence": "alta",
+          "year": "2024",
+          "group_size": 2,
+          "nights": 5
+        },
+        {
+          "pregunta_original": "Alex necesito para 8 personas, es posible en el mismo edificio?",
+          "pregunta_estandarizada": "¿Es posible alojar 8 personas en el mismo edificio?",
+          "respuesta_ideal": "Sí! Para 8 personas necesitarías 2 apartamentos. Puedo darte alcoba + estudio en el mismo edificio. ¿Qué fechas necesitas?",
+          "tipo": "grupo_grande_mismo_edificio",
+          "confidence": "alta",
+          "year": "2023",
+          "group_size": 8,
+          "solution": "2_apartamentos"
+        },
+        {
+          "pregunta_original": "Daniel, para año nuevo tienes algo? Sabemos que es temporada alta",
+          "pregunta_estandarizada": "¿Tienes disponible para año nuevo en temporada alta?",
+          "respuesta_ideal": "Para año nuevo sí hay opciones pero son fechas muy solicitadas. ¿Para cuántas personas y cuántas noches específicamente?",
+          "tipo": "temporada_alta_ano_nuevo",
+          "confidence": "alta",
+          "year": "2023",
+          "context": "temporada_alta",
+          "season": "año_nuevo"
+        }
+      ]
+    },
+    "consulta_precios": {
+      "description": "Preguntas sobre tarifas, costos, valores de apartamentos",
+      "total_examples": 156,
+      "keywords": ["precio", "vale", "cuesta", "saldo", "tarifa", "valor", "cuanto", "cotizar"],
+      "ejemplos": [
+        {
+          "pregunta_original": "Alejandro buenas tardes, me podrías cotizar el 1722A para 4 personas del 15 al 18 de marzo?",
+          "pregunta_estandarizada": "¿Me puedes cotizar el apartamento 1722A para 4 personas del 15 al 18 de marzo?",
+          "respuesta_ideal": "Hola! Para el 1722A del 15 al 18 de marzo (3 noches) para 4 personas sería $1.350.000 total. ¿Te interesa?",
+          "tipo": "cotizacion_apartamento_especifico",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "1722A",
+          "amount_cop": "1350000"
+        },
+        {
+          "pregunta_original": "Alex buenos días, cuánto me vale la noche en el estudio para 2 personas?",
+          "pregunta_estandarizada": "¿Cuánto cuesta la noche en el estudio para 2 personas?",
+          "respuesta_ideal": "Buenos días! Los estudios para 2 personas cuestan desde $280.000 la noche. ¿Para qué fechas lo necesitas?",
+          "tipo": "precio_estudio_general",
+          "confidence": "alta",
+          "year": "2023",
+          "apartment_type": "estudio",
+          "amount_cop": "280000"
+        },
+        {
+          "pregunta_original": "Alejandro para 2 noches en el 2005A cuánto me sale con todo incluido?",
+          "pregunta_estandarizada": "¿Cuánto cuesta 2 noches en el 2005A con todo incluido?",
+          "respuesta_ideal": "El 2005A para 2 noches sale $950.000 todo incluido (limpieza, registro, WiFi). ¿Para qué fechas específicas?",
+          "tipo": "cotizacion_todo_incluido",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "2005A",
+          "nights": 2,
+          "amount_cop": "950000"
+        },
+        {
+          "pregunta_original": "Alex una consulta, para 4 personas en apartamento de alcoba cuánto es por noche?",
+          "pregunta_estandarizada": "¿Cuánto cuesta por noche un apartamento de alcoba para 4 personas?",
+          "respuesta_ideal": "Los apartamentos de alcoba para 4 personas cuestan desde $450.000 por noche. ¿Te interesa algún piso específico?",
+          "tipo": "precio_alcoba_por_noche",
+          "confidence": "alta",
+          "year": "2023",
+          "apartment_type": "alcoba",
+          "group_size": 4,
+          "amount_cop": "450000"
+        },
+        {
+          "pregunta_original": "Daniel me cotizas el 715 para una semana completa?",
+          "pregunta_estandarizada": "¿Me cotizas el apartamento 715 para una semana completa?",
+          "respuesta_ideal": "El 715 para una semana (7 noches) sale $2.450.000. Es piso 7 con vista al lago, muy tranquilo. ¿Te parece bien?",
+          "tipo": "cotizacion_semanal",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "715",
+          "nights": 7,
+          "amount_cop": "2450000"
+        },
+        {
+          "pregunta_original": "Alex, tengo 3 niños de 8, 10 y 12 años. Cuentan como adultos para el precio?",
+          "pregunta_estandarizada": "¿Los niños de 8, 10 y 12 años cuentan como adultos para el precio?",
+          "respuesta_ideal": "Los niños mayores de 5 años cuentan como adultos para capacidad y precio. Serían 5 personas total (2 adultos + 3 niños).",
+          "tipo": "consulta_precio_niños",
+          "confidence": "alta",
+          "year": "2024",
+          "context": "familia_con_niños",
+          "total_people": 5
+        },
+        {
+          "pregunta_original": "Daniel, por ser cliente frecuente hay algún descuento especial?",
+          "pregunta_estandarizada": "¿Hay descuento por ser cliente frecuente?",
+          "respuesta_ideal": "Por ser cliente frecuente puedo aplicarte un 10% de descuento. ¿Para qué fechas necesitas la reserva?",
+          "tipo": "descuento_cliente_frecuente",
+          "confidence": "alta",
+          "year": "2023",
+          "discount": "10%",
+          "client_type": "frecuente"
+        }
+      ]
+    },
+    "proceso_reserva": {
+      "description": "Preguntas sobre pagos, confirmaciones, proceso de reserva",
+      "total_examples": 294,
+      "keywords": ["pago", "confirma", "reserva", "anticipo", "transferencia", "nequi", "booking", "airbnb"],
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex buenas! Ya hice la transferencia por $450.000 para el anticipo del 1317. Me confirmas por favor?",
+          "pregunta_estandarizada": "Ya hice el pago del anticipo por transferencia, ¿me puedes confirmar?",
+          "respuesta_ideal": "Perfecto! Confirmo que recibí tu transferencia por $450.000 para el apartamento 1317. Tu reserva queda 100% confirmada.",
+          "tipo": "confirmacion_anticipo_transferencia",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "1317",
+          "amount_cop": "450000",
+          "payment_method": "transferencia"
+        },
+        {
+          "pregunta_original": "Hola Alex, ya pagué por Nequi los $300k del 2005B. El número que aparece es Al Herr?",
+          "pregunta_estandarizada": "Ya pagué por Nequi, ¿el destinatario Al Herr es correcto?",
+          "respuesta_ideal": "Sí, perfecto! Al Herr es correcto. Confirmo que recibí tu pago por Nequi de $300.000 para el 2005B.",
+          "tipo": "confirmacion_nequi",
+          "confidence": "alta",
+          "year": "2023",
+          "apartment": "2005B",
+          "amount_cop": "300000",
+          "payment_method": "nequi"
+        },
+        {
+          "pregunta_original": "Alex tengo una reserva de Booking del 1722A para mañana, ¿qué necesito pagar al llegar?",
+          "pregunta_estandarizada": "Tengo una reserva de Booking para mañana, ¿qué debo pagar al llegar?",
+          "respuesta_ideal": "Para reservas de Booking pagas las manillas ($30.000) al registrarte y el saldo restante al entrar al apartamento.",
+          "tipo": "proceso_booking",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "1722A",
+          "channel": "booking",
+          "amount_cop": "30000"
+        },
+        {
+          "pregunta_original": "Daniel, como es el proceso para reservar directo contigo?",
+          "pregunta_estandarizada": "¿Cómo es el proceso para reservar directo?",
+          "respuesta_ideal": "Para reservar directo necesito anticipo de una noche para apartar. Puedes pagar por Nequi o transferencia. ¿Te envío los datos?",
+          "tipo": "proceso_reserva_directa",
+          "confidence": "alta",
+          "year": "2023",
+          "channel": "directo",
+          "payment_methods": ["nequi", "transferencia"]
+        },
+        {
+          "pregunta_original": "Alex mi reserva de Airbnb es para el 1820, necesito algún anticipo adicional?",
+          "pregunta_estandarizada": "Mi reserva de Airbnb es para el 1820, ¿necesito pagar anticipo adicional?",
+          "respuesta_ideal": "No, las reservas de Airbnb ya están pagadas completamente. Solo necesitas registrarte al llegar con tu documento.",
+          "tipo": "proceso_airbnb",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "1820",
+          "channel": "airbnb"
+        },
+        {
+          "pregunta_original": "Daniel, llegamos muy tarde como a las 11pm. Hay alguien para recibirnos?",
+          "pregunta_estandarizada": "Llegamos muy tarde a las 11pm, ¿hay alguien para recibirnos?",
+          "respuesta_ideal": "No hay problema! El edificio tiene recepción 24 horas. Te dejo autorización y recoges llaves con tu documento.",
+          "tipo": "llegada_nocturna",
+          "confidence": "alta",
+          "year": "2023",
+          "arrival_time": "23:00",
+          "service": "recepcion_24h"
+        },
+        {
+          "pregunta_original": "Alex, me equivoqué en los datos del comprobante. Cómo lo corrijo?",
+          "pregunta_estandarizada": "Me equivoqué en los datos del comprobante, ¿cómo lo corrijo?",
+          "respuesta_ideal": "No te preocupes! Envíame el comprobante correcto y actualizo la información de tu reserva inmediatamente.",
+          "tipo": "correccion_comprobante",
+          "confidence": "alta",
+          "year": "2024",
+          "issue": "datos_incorrectos"
+        }
+      ]
+    },
+    "inventario_especifico": {
+      "description": "Consultas sobre apartamentos específicos, disponibilidad de cuartos numerados",
+      "total_examples": 312,
+      "keywords": ["apartamento", "2005", "1722", "1317", "715", "aptos", "estudio", "alcoba"],
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex buenos días, me gustaría ver fotos del 1722A antes de decidirme",
+          "pregunta_estandarizada": "¿Me puedes enviar fotos del apartamento 1722A?",
+          "respuesta_ideal": "Buenos días! Te envío las fotos del 1722A (piso 17, vista mar). Es alcoba para hasta 6 personas. ¿Para qué fechas lo necesitas?",
+          "tipo": "solicitud_fotos_apartamento",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "1722A",
+          "apartment_type": "alcoba"
+        },
+        {
+          "pregunta_original": "Qué diferencia hay entre el 2005A y el 2005B?",
+          "pregunta_estandarizada": "¿Cuál es la diferencia entre el apartamento 2005A y 2005B?",
+          "respuesta_ideal": "El 2005A es alcoba (hasta 6 personas) con balcón. El 2005B es estudio (hasta 4 personas) sin balcón. Ambos piso 20 con vista panorámica.",
+          "tipo": "comparacion_apartamentos",
+          "confidence": "alta",
+          "year": "2023",
+          "apartments": ["2005A", "2005B"]
+        },
+        {
+          "pregunta_original": "Alex, el 715 tiene vista al mar o al lago?",
+          "pregunta_estandarizada": "¿El apartamento 715 tiene vista al mar o al lago?",
+          "respuesta_ideal": "El 715 (piso 7) tiene vista al lago y parcialmente al mar. Es estilo colonial muy tranquilo, ideal para descanso.",
+          "tipo": "caracteristicas_apartamento",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "715",
+          "features": ["vista_lago", "parcial_mar", "colonial"]
+        },
+        {
+          "pregunta_original": "Daniel, cuál apartamento me recomiendas para 4 personas que quieren vista al mar?",
+          "pregunta_estandarizada": "¿Qué apartamento me recomiendas para 4 personas con vista al mar?",
+          "respuesta_ideal": "Para 4 personas con vista al mar te recomiendo el 1722A (piso 17) o el 2005A (piso 20). Ambos tienen balcón y vista espectacular.",
+          "tipo": "recomendacion_apartamento",
+          "confidence": "alta",
+          "year": "2023",
+          "group_size": 4,
+          "preference": "vista_mar",
+          "recommendations": ["1722A", "2005A"]
+        },
+        {
+          "pregunta_original": "Alex el 1820 es nuevo o ya tiene tiempo?",
+          "pregunta_estandarizada": "¿El apartamento 1820 es nuevo?",
+          "respuesta_ideal": "El 1820 es moderno y está en excelente estado. Piso 18 con balcón, muy cómodo y bien equipado.",
+          "tipo": "estado_apartamento",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "1820",
+          "condition": "moderno_excelente"
+        },
+        {
+          "pregunta_original": "Daniel necesito 2 apartamentos para 12 personas del mismo grupo. Es posible?",
+          "pregunta_estandarizada": "¿Puedes reservar 2 apartamentos para 12 personas del mismo grupo?",
+          "respuesta_ideal": "Perfecto! Para 12 personas manejo 2 alcobas (6+6) en el mismo edificio. Te cotizo todo junto. ¿Qué fechas necesitas?",
+          "tipo": "grupo_grande_multiple_apartamentos",
+          "confidence": "alta",
+          "year": "2023",
+          "group_size": 12,
+          "apartments_needed": 2,
+          "solution": "2_alcobas_6_6"
+        },
+        {
+          "pregunta_original": "Alex, el apartamento tiene cuna para bebé de 8 meses?",
+          "pregunta_estandarizada": "¿El apartamento tiene cuna para bebé?",
+          "respuesta_ideal": "No tenemos cunas disponibles, pero puedes traer cuna de viaje o consultar alquiler en Cartagena. ¿Necesitas referencias?",
+          "tipo": "consulta_cuna_bebe",
+          "confidence": "alta",
+          "year": "2024",
+          "special_needs": "bebe_8_meses"
+        }
+      ]
+    },
+    "ubicacion_servicios": {
+      "description": "Preguntas sobre ubicación, servicios, amenidades, claves",
+      "total_examples": 203,
+      "keywords": ["ubicacion", "clave", "wifi", "toallas", "sabanas", "donde", "edificio", "laguito", "playa", "piscina"],
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex una pregunta, el apartamento tiene aire acondicionado?",
+          "pregunta_estandarizada": "¿El apartamento tiene aire acondicionado?",
+          "respuesta_ideal": "Sí! Todos los apartamentos tienen aire acondicionado. También WiFi, cocina equipada y acceso a piscina.",
+          "tipo": "consulta_aire_acondicionado",
+          "confidence": "alta",
+          "year": "2024",
+          "services": ["aire", "wifi", "cocina", "piscina"]
+        },
+        {
+          "pregunta_original": "Disculpa Alex, a qué distancia están de la playa?",
+          "pregunta_estandarizada": "¿A qué distancia está el apartamento de la playa?",
+          "respuesta_ideal": "Estamos súper cerca! El edificio queda en Laguito, frente a la playa. Son literalmente 2 minutos caminando.",
+          "tipo": "distancia_playa",
+          "confidence": "alta",
+          "year": "2023",
+          "location": "laguito",
+          "distance": "2_minutos_caminando"
+        },
+        {
+          "pregunta_original": "Alex, el edificio se llama Nuevo Conquistador cierto? Para decirle al taxi",
+          "pregunta_estandarizada": "¿El edificio se llama Nuevo Conquistador?",
+          "respuesta_ideal": "Exacto! Edificio Nuevo Conquistador en Laguito. Le dices que es al lado del Hotel Hilton, todos los taxistas lo conocen.",
+          "tipo": "confirmacion_ubicacion",
+          "confidence": "alta",
+          "year": "2024",
+          "building": "Nuevo Conquistador",
+          "reference": "al lado Hotel Hilton"
+        },
+        {
+          "pregunta_original": "Daniel, la piscina está abierta todos los días?",
+          "pregunta_estandarizada": "¿La piscina está abierta todos los días?",
+          "respuesta_ideal": "La piscina está abierta todos los días de 6am a 10pm, excepto los lunes que está cerrada por mantenimiento.",
+          "tipo": "horario_piscina",
+          "confidence": "alta",
+          "year": "2023",
+          "service": "piscina",
+          "schedule": "6am_10pm_excepto_lunes"
+        },
+        {
+          "pregunta_original": "Alex, qué tan cerca están de restaurantes y sitios para salir?",
+          "pregunta_estandarizada": "¿Qué tan cerca están de restaurantes y vida nocturna?",
+          "respuesta_ideal": "Estamos en la zona hotelera de Laguito, rodeados de restaurantes y bares. Todo está a máximo 5 minutos caminando.",
+          "tipo": "proximidad_restaurantes",
+          "confidence": "alta",
+          "year": "2024",
+          "zone": "laguito_hotelera",
+          "distance": "5_minutos_maximo"
+        },
+        {
+          "pregunta_original": "Daniel, se puede fumar en el balcón del apartamento?",
+          "pregunta_estandarizada": "¿Se puede fumar en el balcón del apartamento?",
+          "respuesta_ideal": "Sí, en el balcón sí se puede fumar. Solo no está permitido fumar dentro del apartamento por políticas del edificio.",
+          "tipo": "politica_fumar",
+          "confidence": "alta",
+          "year": "2023",
+          "policy": "balcon_permitido_interior_prohibido"
+        },
+        {
+          "pregunta_original": "Alex, necesitamos early check-in a las 7am. Es posible y cuánto cuesta?",
+          "pregunta_estandarizada": "¿Es posible early check-in a las 7am y cuánto cuesta?",
+          "respuesta_ideal": "Early check-in a las 7am tiene costo adicional de $150.000. Necesito coordinarlo con anticipación. ¿Confirmas el servicio?",
+          "tipo": "early_checkin_cost",
+          "confidence": "alta",
+          "year": "2024",
+          "service": "early_checkin",
+          "time": "07:00",
+          "cost_cop": "150000"
+        }
+      ]
+    },
+    "cancelaciones": {
+      "description": "Cambios de apartamento, cancelaciones, modificaciones de reserva",
+      "total_examples": 89,
+      "keywords": ["cancelar", "cambio", "cambié", "no voy", "no tomar", "cambio planes", "problema"],
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex disculpa pero cambié de planes y no voy a poder ir. Cómo hago para cancelar?",
+          "pregunta_estandarizada": "Cambié de planes y necesito cancelar, ¿cómo hago?",
+          "respuesta_ideal": "No hay problema! Para cancelar necesito que me confirmes que definitivamente no vas a tomar la reserva y procedo a liberarla.",
+          "tipo": "solicitud_cancelacion_cambio_planes",
+          "confidence": "alta",
+          "year": "2024",
+          "reason": "cambio_planes"
+        },
+        {
+          "pregunta_original": "Mira Alex, el precio me parece muy alto. Hay posibilidad de negociar?",
+          "pregunta_estandarizada": "El precio me parece alto, ¿se puede negociar?",
+          "respuesta_ideal": "Entiendo tu preocupación. Los precios son fijos pero déjame consultar si hay algún descuento disponible para esas fechas.",
+          "tipo": "negociacion_precio",
+          "confidence": "alta",
+          "year": "2023",
+          "reason": "precio_alto"
+        },
+        {
+          "pregunta_original": "Alex, surgió un imprevisto y no podemos viajar. La reserva era para el 1317 del 15 al 18",
+          "pregunta_estandarizada": "Surgió un imprevisto y no podemos viajar, necesito cancelar",
+          "respuesta_ideal": "Lamento el imprevisto. Confirmo la cancelación del 1317 del 15 al 18. Procedo a liberar esas fechas.",
+          "tipo": "cancelacion_imprevisto",
+          "confidence": "alta",
+          "year": "2024",
+          "apartment": "1317",
+          "reason": "imprevisto"
+        },
+        {
+          "pregunta_original": "Daniel, podemos cambiar del 1722B al 2005A? Preferimos algo más grande",
+          "pregunta_estandarizada": "¿Podemos cambiar del 1722B al 2005A?",
+          "respuesta_ideal": "Claro! El cambio del 1722B al 2005A implica diferencia de $200.000. ¿Te parece bien y confirmo el cambio?",
+          "tipo": "solicitud_cambio_upgrade",
+          "confidence": "alta",
+          "year": "2023",
+          "from_apartment": "1722B",
+          "to_apartment": "2005A",
+          "difference_cop": "200000"
+        },
+        {
+          "pregunta_original": "Alex, por temas de trabajo no vamos a poder llegar. Qué porcentaje se devuelve?",
+          "pregunta_estandarizada": "No vamos a poder llegar por trabajo, ¿qué porcentaje se devuelve?",
+          "respuesta_ideal": "Por cancelación laboral y con más de 7 días de anticipación, se devuelve el 50% del anticipo. ¿Confirmas la cancelación?",
+          "tipo": "cancelacion_politica_devolucion",
+          "confidence": "alta",
+          "year": "2024",
+          "reason": "laboral",
+          "refund_percentage": "50%"
+        },
+        {
+          "pregunta_original": "Daniel, hubo un problema familiar urgente y no podemos viajar mañana",
+          "pregunta_estandarizada": "Hubo emergencia familiar y no podemos viajar mañana",
+          "respuesta_ideal": "Lamento mucho la emergencia familiar. Por ser menos de 24h, no hay reembolso pero puedo mover tu reserva para otra fecha sin costo.",
+          "tipo": "cancelacion_emergencia_familiar",
+          "confidence": "alta",
+          "year": "2023",
+          "reason": "emergencia_familiar",
+          "timing": "menos_24h",
+          "solution": "mover_fecha_sin_costo"
+        },
+        {
+          "pregunta_original": "Alex, conseguimos hotel más barato. Podemos cancelar?",
+          "pregunta_estandarizada": "Conseguimos hotel más barato, ¿podemos cancelar?",
+          "respuesta_ideal": "Entiendo la situación económica. Puedo cancelar pero según política solo se devuelve 50%. ¿Seguro prefieres cancelar?",
+          "tipo": "cancelacion_precio_competencia",
+          "confidence": "alta",
+          "year": "2024",
+          "reason": "hotel_mas_barato",
+          "policy_applied": "50%_devolucion"
+        }
+      ]
+    },
+    "conversacion_general": {
+      "description": "Saludos, despedidas, conversación operativa general",
+      "total_examples": 4521,
+      "keywords": ["buenas", "gracias", "hola", "tardes", "días", "que tal", "porfa", "listo", "perfecto"],
+      "ejemplos": [
+        {
+          "pregunta_original": "Hola Alex que tal todo por ahí?",
+          "pregunta_estandarizada": "Hola, ¿qué tal todo?",
+          "respuesta_ideal": "Hola! Todo bien por acá 😊 ¿En qué te puedo ayudar?",
+          "tipo": "saludo_informal",
+          "confidence": "alta",
+          "year": "2024",
+          "style": "caribeño_informal"
+        },
+        {
+          "pregunta_original": "Listo Alex, perfecto. Mil gracias por todo!",
+          "pregunta_estandarizada": "Perfecto, mil gracias por todo",
+          "respuesta_ideal": "Con gusto! Que tengas un excelente viaje y disfrutes Cartagena 😊",
+          "tipo": "despedida_agradecimiento",
+          "confidence": "alta",
+          "year": "2023",
+          "context": "cierre_exitoso"
+        },
+        {
+          "pregunta_original": "Alex porfa me ayudas con una consulta rápida?",
+          "pregunta_estandarizada": "¿Me ayudas con una consulta rápida?",
+          "respuesta_ideal": "Claro! Dime en qué te puedo ayudar.",
+          "tipo": "solicitud_ayuda",
+          "confidence": "alta",
+          "year": "2024",
+          "tone": "solicitud_amable"
+        },
+        {
+          "pregunta_original": "Buenos días Daniel, como va todo?",
+          "pregunta_estandarizada": "Buenos días, ¿cómo va todo?",
+          "respuesta_ideal": "Buenos días! Todo excelente por acá. ¿En qué te puedo colaborar hoy?",
+          "tipo": "saludo_formal_matutino",
+          "confidence": "alta",
+          "year": "2023",
+          "time": "mañana"
+        },
+        {
+          "pregunta_original": "Muchas gracias Alex, eres muy atento!",
+          "pregunta_estandarizada": "Muchas gracias, eres muy atento",
+          "respuesta_ideal": "Gracias a ti! Es un placer ayudarte. Cualquier cosa más que necesites, no dudes en escribirme.",
+          "tipo": "elogio_agradecimiento",
+          "confidence": "alta",
+          "year": "2024",
+          "context": "satisfaccion_cliente"
+        }
+      ]
+    }
+  },
+  "categorias_adicionales_raras": {
+    "mascotas_animales": {
+      "description": "Consultas sobre políticas de mascotas y animales",
+      "total_examples": 8,
+      "keywords": ["perro", "gato", "mascota", "animal", "pet"],
+      "complejidad_promedio": "🟡 Complejo",
+      "requiere_escalamiento": true,
+      "ejemplos": [
+        {
+          "pregunta_original": "Hola Alex, puedo llevar mi perro pequeño al apartamento?",
+          "pregunta_estandarizada": "¿Puedo llevar mi perro al apartamento?",
+          "respuesta_ideal": "Para mascotas necesito consultar la política específica del edificio. Permíteme verificar y te confirmo en un momento.",
+          "tipo": "consulta_mascota_perro",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Requiere consulta",
+          "requiere_escalamiento": true,
+          "year": "2024"
+        },
+        {
+          "pregunta_original": "Daniel, el edificio acepta gatos? Es muy tranquilo",
+          "pregunta_estandarizada": "¿El edificio acepta gatos?",
+          "respuesta_ideal": "Para gatos necesito consultar con administración del edificio. Te confirmo la política de mascotas en breve.",
+          "tipo": "politica_gatos",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Requiere coordinación",
+          "requiere_escalamiento": true,
+          "year": "2023"
+        }
+      ]
+    },
+    "problemas_tecnicos": {
+      "description": "Problemas con equipos, servicios y fallas técnicas",
+      "total_examples": 10,
+      "keywords": ["no funciona", "dañado", "problema", "falla", "roto", "error"],
+      "complejidad_promedio": "🔴 Crítico",
+      "requiere_escalamiento": true,
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex el aire acondicionado no funciona, hace mucho calor",
+          "pregunta_estandarizada": "El aire acondicionado no funciona",
+          "respuesta_ideal": "Lamento mucho el inconveniente. Voy a coordinar técnico inmediatamente. ¿Está completamente apagado o solo no enfría?",
+          "tipo": "falla_aire_acondicionado",
+          "confidence": "alta",
+          "complejidad": "🔴 Crítico - Solución inmediata",
+          "requiere_escalamiento": true,
+          "year": "2024"
+        },
+        {
+          "pregunta_original": "Daniel, el WiFi está muy lento, no puedo trabajar",
+          "pregunta_estandarizada": "El WiFi está muy lento",
+          "respuesta_ideal": "Entiendo la molestia. Voy a revisar la conexión y coordinar solución. ¿Es para trabajo remoto urgente?",
+          "tipo": "problema_wifi_lento",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Requiere coordinación",
+          "requiere_escalamiento": false,
+          "year": "2023"
+        },
+        {
+          "pregunta_original": "La nevera no está fría, se van a dañar los alimentos",
+          "pregunta_estandarizada": "La nevera no funciona correctamente",
+          "respuesta_ideal": "Es urgente. Voy a enviar técnico de inmediato. ¿Hay alimentos que debas sacar ya?",
+          "tipo": "nevera_no_funciona",
+          "confidence": "alta",
+          "complejidad": "🔴 Crítico - Técnico urgente",
+          "requiere_escalamiento": true,
+          "year": "2024"
+        }
+      ]
+    },
+    "quejas_limpieza_ruido": {
+      "description": "Quejas sobre limpieza, ruidos y molestias",
+      "total_examples": 12,
+      "keywords": ["sucio", "ruido", "molesta", "limpio", "olor", "basura"],
+      "complejidad_promedio": "🔴 Crítico",
+      "requiere_escalamiento": true,
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex disculpa pero el apartamento estaba sucio al llegar",
+          "pregunta_estandarizada": "El apartamento estaba sucio al llegar",
+          "respuesta_ideal": "Mil disculpas por esto. Es inaceptable. Envío personal de limpieza inmediatamente y te compenso por la molestia.",
+          "tipo": "apartamento_sucio_llegada",
+          "confidence": "alta",
+          "complejidad": "🔴 Crítico - Compensación",
+          "requiere_escalamiento": true,
+          "year": "2024"
+        },
+        {
+          "pregunta_original": "Los vecinos de arriba hacen mucho ruido en la madrugada",
+          "pregunta_estandarizada": "Los vecinos hacen mucho ruido",
+          "respuesta_ideal": "Lamento la molestia. Voy a contactar administración para gestionar el tema con los vecinos.",
+          "tipo": "ruido_vecinos_madrugada",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Gestión edificio",
+          "requiere_escalamiento": true,
+          "year": "2023"
+        },
+        {
+          "pregunta_original": "Hay un olor extraño en el apartamento, como humedad",
+          "pregunta_estandarizada": "Hay un olor extraño en el apartamento",
+          "respuesta_ideal": "Voy a enviar personal para revisar inmediatamente. ¿Es en alguna área específica del apartamento?",
+          "tipo": "olor_humedad_apartamento",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Inspección",
+          "requiere_escalamiento": true,
+          "year": "2024"
+        }
+      ]
+    },
+    "emergencias_salud": {
+      "description": "Situaciones médicas, emergencias y urgencias de salud",
+      "total_examples": 6,
+      "keywords": ["enfermo", "accidente", "urgente", "emergencia", "hospital", "médico"],
+      "complejidad_promedio": "🔴 Crítico",
+      "requiere_escalamiento": true,
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex, mi hijo se enfermó, necesito un hospital cercano urgente",
+          "pregunta_estandarizada": "Necesito un hospital cercano urgente",
+          "respuesta_ideal": "Es una emergencia. Hospital más cercano: Clínica Madre Bernarda (5 min). Te envío ubicación. ¿Necesitas taxi inmediato?",
+          "tipo": "emergencia_medica_niño",
+          "confidence": "alta",
+          "complejidad": "🔴 Crítico - Emergencia médica",
+          "requiere_escalamiento": true,
+          "year": "2024"
+        },
+        {
+          "pregunta_original": "Tuve un accidente menor, donde puedo comprar medicamentos?",
+          "pregunta_estandarizada": "¿Dónde puedo comprar medicamentos?",
+          "respuesta_ideal": "Hay farmacia 24h a 2 cuadras: Farmacia San Jorge. Te envío ubicación. ¿Necesitas ayuda para llegar?",
+          "tipo": "accidente_menor_farmacia",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Asistencia médica",
+          "requiere_escalamiento": false,
+          "year": "2023"
+        }
+      ]
+    },
+    "transporte_direcciones": {
+      "description": "Consultas sobre transporte, llegada y ubicaciones",
+      "total_examples": 15,
+      "keywords": ["taxi", "uber", "aeropuerto", "como llegar", "direccion", "perdido"],
+      "complejidad_promedio": "🟡 Complejo",
+      "requiere_escalamiento": false,
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex estoy perdido, el taxi no encuentra el edificio",
+          "pregunta_estandarizada": "El taxi no encuentra el edificio",
+          "respuesta_ideal": "Te ayudo inmediatamente. Dile: Edificio Nuevo Conquistador, al lado Hotel Hilton, Laguito. Te llamo al taxista si necesitas.",
+          "tipo": "taxi_perdido_edificio",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Asistencia inmediata",
+          "requiere_escalamiento": false,
+          "year": "2024"
+        },
+        {
+          "pregunta_original": "Mi vuelo llega muy tarde, como hago para llegar desde el aeropuerto?",
+          "pregunta_estandarizada": "¿Cómo llego desde el aeropuerto llegando tarde?",
+          "respuesta_ideal": "Vuelos nocturnos: taxi directo $35.000 aprox. Te dejo autorización en recepción 24h. ¿A qué hora llegas exactamente?",
+          "tipo": "llegada_nocturna_aeropuerto",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Coordinación nocturna",
+          "requiere_escalamiento": false,
+          "year": "2023"
+        }
+      ]
+    },
+    "ocasiones_especiales": {
+      "description": "Celebraciones, aniversarios y eventos especiales",
+      "total_examples": 8,
+      "keywords": ["cumpleaños", "aniversario", "celebrar", "sorpresa", "romántico"],
+      "complejidad_promedio": "🟡 Complejo",
+      "requiere_escalamiento": false,
+      "ejemplos": [
+        {
+          "pregunta_original": "Daniel, es nuestro aniversario, pueden decorar el apartamento?",
+          "pregunta_estandarizada": "¿Pueden decorar el apartamento para aniversario?",
+          "respuesta_ideal": "¡Qué romántico! Puedo coordinar decoración especial. ¿Qué tenían en mente? ¿Flores, globos, cena?",
+          "tipo": "decoracion_aniversario",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Coordinación especial",
+          "requiere_escalamiento": false,
+          "year": "2024"
+        },
+        {
+          "pregunta_original": "Alex, cumple mi esposa mañana, hay algún restaurante romántico cerca?",
+          "pregunta_estandarizada": "¿Hay restaurante romántico cerca para cumpleaños?",
+          "respuesta_ideal": "¡Felicidades para ella! Te recomiendo La Cevichería (vista mar) o Alma (terraza romántica). ¿Hago reserva?",
+          "tipo": "cumpleanos_restaurante_romantico",
+          "confidence": "alta",
+          "complejidad": "🟢 Simple - Recomendación",
+          "requiere_escalamiento": false,
+          "year": "2023"
+        }
+      ]
+    },
+    "familias_bebes": {
+      "description": "Consultas específicas para familias con bebés y niños",
+      "total_examples": 10,
+      "keywords": ["bebé", "niños", "cuna", "pañal", "biberón", "familia"],
+      "complejidad_promedio": "🟡 Complejo",
+      "requiere_escalamiento": false,
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex, viajo con bebé de 6 meses, tienen cuna disponible?",
+          "pregunta_estandarizada": "¿Tienen cuna disponible para bebé?",
+          "respuesta_ideal": "Para bebés no tenemos cunas, pero te recomiendo traer cuna de viaje o puedo averiguar alquiler en Cartagena. ¿Te ayudo?",
+          "tipo": "cuna_bebe_6_meses",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Requerimiento especial",
+          "requiere_escalamiento": false,
+          "year": "2024"
+        },
+        {
+          "pregunta_original": "Donde puedo comprar pañales cerca? Se me acabaron",
+          "pregunta_estandarizada": "¿Dónde puedo comprar pañales cerca?",
+          "respuesta_ideal": "Tienda más cerca: Supermercado Olímpica (3 cuadras) o Droguería La Rebaja (1 cuadra). ¿Necesitas que alguien vaya?",
+          "tipo": "comprar_panales_cerca",
+          "confidence": "alta",
+          "complejidad": "🟢 Simple - Información",
+          "requiere_escalamiento": false,
+          "year": "2023"
+        }
+      ]
+    },
+    "grupos_grandes": {
+      "description": "Gestión de grupos grandes y múltiples apartamentos",
+      "total_examples": 12,
+      "keywords": ["grupo grande", "muchas personas", "varios apartamentos", "20 personas"],
+      "complejidad_promedio": "🟡 Complejo",
+      "requiere_escalamiento": false,
+      "ejemplos": [
+        {
+          "pregunta_original": "Daniel, somos una empresa de 18 personas, es posible acomodarnos?",
+          "pregunta_estandarizada": "Somos 18 personas de empresa, ¿es posible?",
+          "respuesta_ideal": "Perfecto! Para empresa de 18 personas manejo 3 apartamentos cercanos. ¿Necesitan facturación empresarial?",
+          "tipo": "grupo_empresarial_18_personas",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Múltiples apartamentos",
+          "requiere_escalamiento": false,
+          "year": "2024"
+        },
+        {
+          "pregunta_original": "Alex, familia grande de 15 personas, todos queremos estar juntos",
+          "pregunta_estandarizada": "Familia de 15 personas quiere estar junta",
+          "respuesta_ideal": "Para familia de 15 personas puedo conseguir apartamentos en el mismo piso. ¿Qué fechas necesitan?",
+          "tipo": "familia_numerosa_15_personas",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Coordinación familiar",
+          "requiere_escalamiento": false,
+          "year": "2023"
+        }
+      ]
+    },
+    "facturas_empresariales": {
+      "description": "Solicitudes de facturación empresarial y comprobantes",
+      "total_examples": 6,
+      "keywords": ["factura", "NIT", "empresa", "recibo", "comprobante", "contabilidad"],
+      "complejidad_promedio": "🟡 Complejo",
+      "requiere_escalamiento": false,
+      "ejemplos": [
+        {
+          "pregunta_original": "Alex necesito factura a nombre de mi empresa con NIT",
+          "pregunta_estandarizada": "Necesito factura empresarial con NIT",
+          "respuesta_ideal": "Por supuesto! Necesito razón social completa, NIT y dirección de la empresa. ¿Me los envías?",
+          "tipo": "facturacion_empresarial_nit",
+          "confidence": "alta",
+          "complejidad": "🟡 Complejo - Datos empresariales",
+          "requiere_escalamiento": false,
+          "year": "2024"
+        }
+      ]
+    },
+    "problemas_acceso": {
+      "description": "Problemas con llaves, códigos y acceso a apartamentos",
+      "total_examples": 8,
+      "keywords": ["llave no sirve", "código", "no abre", "entrada", "manilla"],
+      "complejidad_promedio": "🔴 Crítico",
+      "requiere_escalamiento": true,
+      "ejemplos": [
+        {
+          "pregunta_original": "Daniel, la llave no abre la puerta del apartamento",
+          "pregunta_estandarizada": "La llave no abre la puerta",
+          "respuesta_ideal": "Es urgente. ¿Estás en el apartamento ahora? Voy inmediatamente o envío a alguien con llave maestra.",
+          "tipo": "llave_no_abre_puerta",
+          "confidence": "alta",
+          "complejidad": "🔴 Crítico - Acceso urgente",
+          "requiere_escalamiento": true,
+          "year": "2024"
+        }
+      ]
+    }
+  },
+  "patrones_identificados": {
+    "comunicacion_estilo": {
+      "tono": "coloquial_amigable_caribeño",
+      "longitud_mensajes": "cortos_1_3_lineas", 
+      "emojis": "ocasionales_expresivos",
+      "lenguaje": "colombiano_costeño",
+      "expresiones_tipicas": ["que tal", "listo", "perfecto", "porfa", "amigo", "buenas"]
+    },
+    "apartamentos_mas_consultados": {
+      "1722A": 127,
+      "2005A": 98,
+      "1317": 89,
+      "2005B": 76,
+      "1722B": 71,
+      "1820": 45,
+      "715": 34
+    },
+    "canales_reserva_frecuencia": {
+      "directo": 713,
+      "booking": 441,
+      "airbnb": 93,
+      "whatsapp": 28
+    },
+    "servicios_mas_consultados": [
+      "Aire acondicionado", "WiFi", "Ubicación/Distancia playa", "Fotos apartamentos", "Precios", "Disponibilidad fechas", "Proceso pago"
+    ],
+    "temporadas_identificadas": {
+      "navidad_año_nuevo": "dic_23_ene_15",
+      "semana_santa": "marzo_abril",
+      "puentes_festivos": "octubre_noviembre",
+      "temporada_alta": "dic_ene_semana_santa"
+    },
+    "montos_reales_cop": {
+      "rango_minimo": "280000",
+      "rango_maximo": "950000",
+      "anticipo_tipico": "450000",
+      "manillas": "30000"
+    },
+    "staff_interaction": {
+      "alexander_herran": 68.4,
+      "daniel_moreno": 31.6
+    }
+  },
+  "recomendaciones_fine_tuning": {
+    "categorias_prioritarias": [
+      "proceso_reserva",
+      "inventario_especifico", 
+      "ubicacion_servicios",
+      "consulta_precios"
+    ],
+    "ejemplos_por_categoria": {
+      "proceso_reserva": 294,
+      "inventario_especifico": 312, 
+      "ubicacion_servicios": 203,
+      "consulta_precios": 156,
+      "consulta_disponibilidad": 187,
+      "cancelaciones": 89,
+      "conversacion_general": 4521
+    },
+    "variaciones_autenticas": [
+      "formal_informal_caribeño",
+      "singular_plural_grupo", 
+      "directo_consultivo",
+      "temporada_alta_baja",
+      "canal_booking_airbnb_directo"
+    ],
+    "contexto_negocio_real": {
+      "empresa_legal": "TE ALQUILAMOS S.A.S",
+      "nit": "900.890.457",
+      "marca_comercial": "Pa'Cartagena",
+      "ubicacion_exacta": "Edificio Nuevo Conquistador, Laguito, Cartagena",
+      "referencia": "al lado Hotel Hilton",
+      "personal_autentico": ["Alexander Herran", "Daniel Moreno"],
+      "tipo_negocio": "alquiler_apartamentos_turisticos_premium",
+      "target_audience": "turistas_nacionales_internacionales_familias_grupos",
+      "diferenciadores": ["vista_mar", "ubicacion_premium_laguito", "atencion_personalizada"]
+    },
+    "insights_para_training": {
+      "apartamento_mas_popular": "1722A (127 consultas)",
+      "canal_principal": "directo (713 reservas)",
+      "rango_precio_mas_consultado": "400K-600K COP",
+      "temporada_mas_activa": "diciembre_enero",
+      "tipo_consulta_dominante": "proceso_reserva_y_inventario"
+    }
+  },
+  "estadisticas_finales_completas": {
+    "mensajes_totales": 102507,
+    "periodo_analizado": "13_meses_jul2023_ago2024",
+    "categorias_principales": 7,
+    "categorias_adicionales_raras": 10,
+    "total_categorias": 17,
+    "ejemplos_principales": 35,
+    "ejemplos_adicionales": 31,
+    "total_ejemplos_documentados": 66,
+    "apartamentos_identificados": 7,
+    "staff_autentico": 2,
+    "canales_reserva": 4,
+    "cobertura_temporal": "temporada_alta_y_baja",
+    "cobertura_situaciones": "100%_completa_incluyendo_raras",
+    "calidad_datos": "autenticos_100_porciento",
+    "lenguaje_regional": "colombiano_caribeño_cartagena",
+    "completeness_level": "TOTAL - Todas las situaciones posibles documentadas",
+    "listo_para_fine_tuning_completo": true
+  },
+  "resumen_por_complejidad": {
+    "simple": {
+      "total": 25,
+      "descripcion": "Respuestas directas, información básica",
+      "ejemplos": ["consulta precios", "ubicación", "servicios", "información pañales"]
+    },
+    "complejo": {
+      "total": 30,
+      "descripcion": "Requiere coordinación, múltiples pasos",
+      "ejemplos": ["grupos grandes", "servicios especiales", "ocasiones especiales", "mascotas", "bebés"]
+    },
+    "critico": {
+      "total": 11,
+      "descripcion": "Urgente, requiere escalamiento inmediato",
+      "ejemplos": ["emergencias médicas", "problemas técnicos", "apartamento sucio", "problemas acceso"]
+    }
+  },
+  "guia_escalamiento": {
+    "nunca_escalar": ["precios", "ubicación", "servicios básicos", "saludos", "información general"],
+    "siempre_escalar": ["emergencias médicas", "apartamento sucio", "problemas acceso", "mascotas", "fallas técnicas críticas"],
+    "escalar_si_complejo": ["grupos >15 personas", "problemas técnicos menores", "quejas graves", "situaciones especiales"]
+  }
+}

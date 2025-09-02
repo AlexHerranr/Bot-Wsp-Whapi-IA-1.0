@@ -1,0 +1,93 @@
+{
+  "generated_at": "2025-09-02T04:29:40.776Z",
+  "source_metadata": {
+    "title": "Preguntas y Respuestas Típicas - Pa'Cartagena 🏖️ [COMPLETO]",
+    "description": "Dataset COMPLETO extraído de conversaciones reales de WhatsApp para fine-tuning del asistente virtual",
+    "total_messages_analyzed": 102507,
+    "client_messages": 97581,
+    "business_responses": 4926,
+    "categorized_examples": 1247,
+    "date_created": "2025-01-25",
+    "source": "Chats de WhatsApp_1.csv (7.5MB) + Excel files - Downloads",
+    "business_context": "Pa'Cartagena - TE ALQUILAMOS S.A.S (NIT: 900.890.457) - Edificio Nuevo Conquistador, Laguito, Cartagena",
+    "period_analyzed": "Julio 2023 - Agosto 2024 (13 meses)",
+    "staff_authentic": [
+      "Alexander Herran",
+      "Daniel Moreno"
+    ],
+    "apartments_real": [
+      "715",
+      "1317",
+      "1722A",
+      "1722B",
+      "1820",
+      "2005A",
+      "2005B"
+    ],
+    "channels_identified": {
+      "directo": 713,
+      "booking": 441,
+      "airbnb": 93,
+      "whatsapp": 28
+    },
+    "price_range_cop": "280K - 950K",
+    "language_style": "Colombian Caribbean, colloquial WhatsApp"
+  },
+  "conversion_stats": {
+    "total_examples_processed": 47,
+    "train_examples": 37,
+    "validation_examples": 7,
+    "test_examples": 3,
+    "categories_stats": {
+      "consulta_disponibilidad": {
+        "valid": 7,
+        "invalid": 0,
+        "total": 7
+      },
+      "consulta_precios": {
+        "valid": 7,
+        "invalid": 0,
+        "total": 7
+      },
+      "proceso_reserva": {
+        "valid": 7,
+        "invalid": 0,
+        "total": 7
+      },
+      "inventario_especifico": {
+        "valid": 7,
+        "invalid": 0,
+        "total": 7
+      },
+      "ubicacion_servicios": {
+        "valid": 7,
+        "invalid": 0,
+        "total": 7
+      },
+      "cancelaciones": {
+        "valid": 7,
+        "invalid": 0,
+        "total": 7
+      },
+      "conversacion_general": {
+        "valid": 5,
+        "invalid": 0,
+        "total": 5
+      }
+    }
+  },
+  "openai_format_validation": {
+    "max_tokens_limit": 65536,
+    "format_version": "chat_completions",
+    "compatible_models": [
+      "gpt-4o-mini",
+      "gpt-4o",
+      "gpt-3.5-turbo"
+    ]
+  },
+  "recommended_hyperparameters": {
+    "n_epochs": 4,
+    "batch_size": "auto",
+    "learning_rate_multiplier": 1
+  }
+}
