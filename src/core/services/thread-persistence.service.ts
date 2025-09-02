@@ -7,7 +7,7 @@ import { injectable } from 'tsyringe';
 import { setCacheSize, trackCache } from '../../utils/logging/collectors';
 
 interface ThreadRecord {
-    threadId: string;
+    threadId: string | null;
     chatId: string;
     userName?: string;
     lastActivity: Date;

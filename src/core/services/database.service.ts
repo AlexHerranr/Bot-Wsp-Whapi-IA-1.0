@@ -98,7 +98,7 @@ export class DatabaseService {
     // --- Operaciones con Threads ---
     public async saveOrUpdateThread(userId: string, threadData: Partial<ThreadRecord>): Promise<ThreadRecord> {
         const threadRecord: ThreadRecord = {
-            threadId: threadData.threadId || '',
+            threadId: threadData.threadId || null,
             chatId: threadData.chatId || '',
             userName: threadData.userName,
             lastActivity: new Date(),
@@ -370,7 +370,7 @@ export class DatabaseService {
                 // OPTIMIZADO: Enriquecimiento automático deshabilitado - se hace via hook externo
                 // Solo usar datos del cliente actual sin enriquecer automáticamente
                 const result = {
-                    threadId: client.threadId || '',
+                    threadId: client.threadId || null,
                     chatId: client.chatId || '',
                     userName: client.userName,
                     lastActivity: client.lastActivity,
