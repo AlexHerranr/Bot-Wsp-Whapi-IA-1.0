@@ -13,7 +13,7 @@ export interface ApartmentDetails {
     description: string; // "Aseo y Registro:"
     amount: number;      // 70000
   };
-}
+  capacity: number;
 
 export class ApartmentDataService {
   
@@ -57,7 +57,8 @@ export class ApartmentDataService {
           propertyId: true,
           roomId: true,
           roomName: true,
-          extraCharge: true
+          extraCharge: true,
+          capacity: true
         }
       });
       
@@ -70,7 +71,8 @@ export class ApartmentDataService {
           propertyId: apt.propertyId,
           roomId: apt.roomId,
           roomName: apt.roomName,
-          extraCharge: apt.extraCharge as { description: string; amount: number }
+          extraCharge: apt.extraCharge as { description: string; amount: number },
+          capacity: apt.capacity
         });
       });
       
@@ -121,7 +123,8 @@ export class ApartmentDataService {
         propertyId: apartment.propertyId,
         roomId: apartment.roomId,
         roomName: apartment.roomName,
-        extraCharge: apartment.extraCharge as { description: string; amount: number }
+        extraCharge: apartment.extraCharge as { description: string; amount: number },
+        capacity: apartment.capacity
       };
       
     } catch (error) {
@@ -174,7 +177,8 @@ export class ApartmentDataService {
           propertyId: true,
           roomId: true,
           roomName: true,
-          extraCharge: true
+          extraCharge: true,
+          capacity: true
         }
       });
       
@@ -187,7 +191,8 @@ export class ApartmentDataService {
           propertyId: apt.propertyId,
           roomId: apt.roomId,
           roomName: apt.roomName,
-          extraCharge: apt.extraCharge as { description: string; amount: number }
+          extraCharge: apt.extraCharge as { description: string; amount: number },
+          capacity: apt.capacity
         });
       });
       

@@ -37,6 +37,7 @@ interface EnrichedApartment extends Beds24Availability {
         description: string; // Texto completo desde BD
         amount: number;      // Valor numérico para cálculos
     };
+    capacity: number; // Capacidad máxima del apartamento
 }
 
 // Combinación de apartamentos para grupos grandes
@@ -405,7 +406,8 @@ export class Beds24Client {
                     extraCharge: details?.extraCharge || {
                         description: "Aseo y Registro:",
                         amount: 70000
-                    }
+                    },
+                    capacity: details?.capacity || 4 // Default capacity si no se encuentra
                 };
             });
 
@@ -424,7 +426,8 @@ export class Beds24Client {
                 extraCharge: {
                     description: "Cargo adicional:",
                     amount: 70000
-                }
+                },
+                capacity: 4 // Default capacity
             }));
         }
     }
@@ -466,6 +469,10 @@ export class Beds24Client {
             const totalFinal = apt.totalPrice + apt.extraCharge.amount;
             
             response += `*${apt.roomName}*\n`;
+            // Mostrar capacidad si es relevante
+            if (apt.capacity && (numAdults >= apt.capacity - 1 || numAdults > 2)) {
+                response += `- Capacidad máxima: ${apt.capacity} personas\n`;
+            }
             response += `- $${apt.pricePerNight.toLocaleString()}/noche × ${totalNights} = $${apt.totalPrice.toLocaleString()}\n`;
             response += `- ${apt.extraCharge.description} $${apt.extraCharge.amount.toLocaleString()}\n`;
             response += `- Total: $${totalFinal.toLocaleString()}\n`;

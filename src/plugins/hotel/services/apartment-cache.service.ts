@@ -13,8 +13,6 @@ export interface ApartmentInfo {
         amount: number;
     };
     capacity: number;
-    propertyName: string;
-    sobrenombre: string;
 }
 
 export class ApartmentCacheService {
@@ -48,9 +46,7 @@ export class ApartmentCacheService {
                     roomName: true,
                     propertyId: true,
                     extraCharge: true,
-                    capacity: true,
-                    propertyName: true,
-                    sobrenombre: true
+                    capacity: true
                 }
             });
 
@@ -65,9 +61,7 @@ export class ApartmentCacheService {
                     roomName: apt.roomName,
                     propertyId: apt.propertyId,
                     extraCharge: apt.extraCharge as { description: string; amount: number },
-                    capacity: apt.capacity,
-                    propertyName: apt.propertyName,
-                    sobrenombre: apt.sobrenombre
+                    capacity: apt.capacity
                 };
                 this.apartmentCache.set(apt.roomId, apartmentInfo);
                 this.apartmentCacheByPropertyId.set(apt.propertyId, apartmentInfo);
@@ -106,13 +100,13 @@ export class ApartmentCacheService {
      */
     private initializeDefaults(): void {
         const defaultApartments = [
-            { roomId: 378110, roomName: 'Apartamento 1 Alcoba 2005 A', propertyId: 173207, capacity: 6, propertyName: '2005-A', sobrenombre: 'Apto de 1 Alcoba piso 20' },
-            { roomId: 378316, roomName: 'Apartamento 1 Alcoba 1820', propertyId: 173307, capacity: 6, propertyName: '1820', sobrenombre: 'Apto de 1 Alcoba piso 18' },
-            { roomId: 378317, roomName: 'Apartamento 1 Alcoba 1317', propertyId: 173308, capacity: 6, propertyName: '1317', sobrenombre: 'Apto de 1 Alcoba piso 13' },
-            { roomId: 378318, roomName: 'Aparta Estudio 1722B', propertyId: 173309, capacity: 4, propertyName: '1722-B', sobrenombre: 'Estudio piso 17' },
-            { roomId: 378320, roomName: 'Aparta Estudio 2005 B', propertyId: 173311, capacity: 3, propertyName: '2005-B', sobrenombre: 'Estudio piso 20' },
-            { roomId: 378321, roomName: 'Apartamento 1 Alcoba 1722 A', propertyId: 173312, capacity: 6, propertyName: '1722-A', sobrenombre: 'Apto de 1 Alcoba piso 17' },
-            { roomId: 506591, roomName: 'Apartamento 1 Alcoba 0715', propertyId: 240061, capacity: 5, propertyName: '0715', sobrenombre: 'Apto de 1 Alcoba piso 7' }
+            { roomId: 378110, roomName: 'Apartamento 1 Alcoba 2005 A', propertyId: 173207, capacity: 6 },
+            { roomId: 378316, roomName: 'Apartamento 1 Alcoba 1820', propertyId: 173307, capacity: 6 },
+            { roomId: 378317, roomName: 'Apartamento 1 Alcoba 1317', propertyId: 173308, capacity: 6 },
+            { roomId: 378318, roomName: 'Aparta Estudio 1722B', propertyId: 173309, capacity: 4 },
+            { roomId: 378320, roomName: 'Aparta Estudio 2005 B', propertyId: 173311, capacity: 3 },
+            { roomId: 378321, roomName: 'Apartamento 1 Alcoba 1722 A', propertyId: 173312, capacity: 6 },
+            { roomId: 506591, roomName: 'Apartamento 1 Alcoba 0715', propertyId: 240061, capacity: 5 }
         ];
 
         this.apartmentCache.clear();
