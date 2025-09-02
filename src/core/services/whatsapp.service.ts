@@ -196,7 +196,7 @@ export class WhatsappService {
             }
         } else {
             // Si llega aquí, se envía como texto (no resetea flag de voz)
-            const textResult = await this.sendTextMessage(chatId, actualMessage, isQuoteOrPrice, finalQuotedId, enableHumanTiming);
+            const textResult = await this.sendTextMessage(chatId, actualMessage, isQuoteOrPrice, finalQuotedId, enableHumanTiming, userState);
             result = { success: textResult.success, sentAsVoice: false, messageIds: textResult.messageIds };
         }
 
@@ -420,7 +420,7 @@ export class WhatsappService {
         return { success: true, messageIds: collectedIds };
     }
 
-    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string, enableHumanTiming: boolean = true): Promise<{ success: boolean; messageIds: string[] }> {
+    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string, enableHumanTiming: boolean = true, userState?: any): Promise<{ success: boolean; messageIds: string[] }> {
         // CRÍTICO: Verificar si ya se envió como voz para prevenir duplicados
         if (this.mediaManager.isBotSentContent(chatId, message)) {
             logInfo('DUPLICATE_PREVENTED', 'Texto skipped - ya enviado como voz', { 
@@ -473,15 +473,29 @@ export class WhatsappService {
             // TIMING HUMANO: Calcular delay variable por chunk (o instantáneo para Operations)
             const delay = enableHumanTiming ? this.calculateHumanDelayForChunk(chunk.length, 'text') : 0;
             
-            // Envía presencia inmediatamente antes del chunk
-            await this.sendTypingIndicator(chatId);
-            logInfo('PRESENCE_CHUNK_TEXT', `✍️ch${i+1}/${chunks.length}:${delay}ms`, { 
-                chatId, 
-                chunkIndex: i + 1, 
-                totalChunks: chunks.length, 
-                chunkLength: chunk.length,
-                delay 
-            });
+            // Envía presencia apropiada basada en el origen del mensaje
+            if (userState?.lastInputVoice) {
+                // Si el input original fue voz, mantener indicador de grabando
+                await this.sendRecordingIndicator(chatId);
+                logInfo('PRESENCE_CHUNK_TEXT', `🎙️ch${i+1}/${chunks.length}:${delay}ms (origen: voz)`, { 
+                    chatId, 
+                    chunkIndex: i + 1, 
+                    totalChunks: chunks.length, 
+                    chunkLength: chunk.length,
+                    delay,
+                    originalInputType: 'voice'
+                });
+            } else {
+                // Para mensajes de texto normales, enviar indicador de escribiendo
+                await this.sendTypingIndicator(chatId);
+                logInfo('PRESENCE_CHUNK_TEXT', `✍️ch${i+1}/${chunks.length}:${delay}ms`, { 
+                    chatId, 
+                    chunkIndex: i + 1, 
+                    totalChunks: chunks.length, 
+                    chunkLength: chunk.length,
+                    delay 
+                });
+            }
             
             // NUEVO: Delay humano variable por chunk con timeout defensivo
             await Promise.race([
@@ -522,9 +536,13 @@ export class WhatsappService {
             }
 
             const attemptStart = Date.now();
-            // Mantener typing vivo durante reintentos o latencias largas
+            // Mantener presencia viva durante reintentos o latencias largas
             const keepTyping = setInterval(() => {
-                this.sendTypingIndicator(chatId).catch(() => {});
+                if (userState?.lastInputVoice) {
+                    this.sendRecordingIndicator(chatId).catch(() => {});
+                } else {
+                    this.sendTypingIndicator(chatId).catch(() => {});
+                }
             }, 15000);
 
             let response: Response;
