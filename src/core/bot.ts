@@ -885,7 +885,8 @@ export class CoreBot {
                     userId,
                     userName,
                     imageCount: pendingImages.length,
-                    reason: 'successful_processing'
+                    reason: 'successful_processing',
+                    processingTimeMs: processingResult.processingTime
                 }, 'bot.ts');
             }
 
@@ -1103,10 +1104,21 @@ export class CoreBot {
             this.bufferManager.releaseRun(userId);
             
             // Mark recent error to prevent secondary buffer processing
-            this.lastError[userId] = { time: Date.now() };
+            this.lastError[userId] = { time: Date.now(), error: error.message };
             
             // Also mark error in buffer manager for timer extension
             this.bufferManager.markRecentError(userId);
+            
+            // Log error pattern for monitoring
+            const errorPattern = error.message?.includes('run is active') ? 'RUN_ACTIVE' : 
+                               error.message?.includes('rate_limit') ? 'RATE_LIMIT' :
+                               error.message?.includes('timeout') ? 'TIMEOUT' : 'OTHER';
+            logWarning('ERROR_PATTERN', `Error pattern detected: ${errorPattern}`, {
+                userId,
+                userName,
+                pattern: errorPattern,
+                errorMessage: error.message?.substring(0, 100)
+            }, 'bot.ts');
             
             // Verificar orphan processing states después de error
             if (this.userManager.getStats().activeProcessing > this.userManager.getStats().totalUsers) {

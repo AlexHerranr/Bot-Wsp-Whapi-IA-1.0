@@ -21,6 +21,7 @@ export class ThreadPersistenceService {
 
     // Cache-first strategy: Cache → BD → null
     async getThread(userId: string): Promise<ThreadRecord | null> {
+        const startTime = Date.now();
         // 1. Verificar CACHE primero
         try {
             const clientCache = this.databaseService.getClientCache();
@@ -39,7 +40,8 @@ export class ThreadPersistenceService {
                     
                     // Si cache tiene threadId válido, usarlo directamente
                     if (cachedData.threadId) {
-                        console.info(`[THR_REUSE:cache] ${userId}: Reutilizando thread existente ${cachedData.threadId} del cache`);
+                        const elapsed = Date.now() - startTime;
+                        console.info(`[THR_REUSE:cache] ${userId}: Reutilizando thread existente ${cachedData.threadId} del cache (${elapsed}ms)`);
                         // Cache HIT con thread válido - convertir a ThreadRecord
                         return {
                             threadId: cachedData.threadId,
@@ -66,9 +68,10 @@ export class ThreadPersistenceService {
             
             // Si encontramos en BD, actualizar cache
             if (threadFromBD && threadFromBD.threadId) {
-                console.info(`BD HIT (cache miss) for thread: ${userId}, syncing cache`);
+                const elapsed = Date.now() - startTime;
+                console.info(`BD HIT (cache miss) for thread: ${userId}, syncing cache (${elapsed}ms)`);
                 console.info(`[THREAD_SOURCE:cache] ${userId}: bd:${threadFromBD.tokenCount || 0} cache:0 thread:${threadFromBD.threadId} src:bd_fallback`);
-                console.info(`[THR_REUSE:bd] ${userId}: Reutilizando thread existente ${threadFromBD.threadId} de BD`);
+                console.info(`[THR_REUSE:bd] ${userId}: Reutilizando thread existente ${threadFromBD.threadId} de BD (${elapsed}ms)`);
                 try {
                     const clientCache = this.databaseService.getClientCache();
                     if (clientCache) {
@@ -96,7 +99,8 @@ export class ThreadPersistenceService {
             return threadFromBD;
             
         } catch (error) {
-            console.warn('BD read failed:', error);
+            const elapsed = Date.now() - startTime;
+            console.warn(`BD read failed after ${elapsed}ms:`, error);
             return null; // No thread found - caller will create new
         }
     }
