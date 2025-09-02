@@ -24,6 +24,7 @@ import { IFunctionRegistry } from '../shared/interfaces';
 import { logBotReady, logServerStart, logInfo, logSuccess, logError, logWarning } from '../utils/logging';
 import { trackCache, setCacheSize } from '../utils/logging/collectors';
 import { HotelValidation } from '../plugins/hotel/logic/validation';
+import { ResponseValidator } from './validators/response-validator';
 
 // Simulación de la configuración
 interface AppConfig {
@@ -61,6 +62,7 @@ export class CoreBot {
     private cleanupIntervals: NodeJS.Timeout[] = [];
     private lastError: Record<string, { time: number; error?: string }> = {};
     private hotelValidation: HotelValidation;
+    private responseValidator: ResponseValidator;
 
     constructor(
         config: AppConfig,
@@ -115,6 +117,9 @@ export class CoreBot {
         );
         this.webhookRouter = new WebhookRouter(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.openaiService, this.terminalLog, this.clientDataCache);
         this.hotelValidation = new HotelValidation();
+        
+        // Inicializar response validator
+        this.responseValidator = container.resolve(ResponseValidator);
 
         this.setupMiddleware();
         this.setupRoutes();
@@ -872,7 +877,66 @@ export class CoreBot {
             const hotelContext = null;
             
             // Validation moved to plugin - OpenAI handles it via functions
-            const finalResponse = response;
+            let finalResponse = response;
+            
+            // 10. VALIDACIÓN DE RESPUESTA: Detectar posibles alucinaciones
+            if (finalResponse && finalResponse.trim() !== '') {
+                const validationResult = await this.responseValidator.validateResponse(finalResponse, {
+                    userId,
+                    userName,
+                    chatId,
+                    threadId: processingResult.threadId
+                });
+                
+                if (!validationResult.isValid && validationResult.suggestedAction === 'retry') {
+                    // Intentar corregir la respuesta con una observación interna
+                    logWarning('RESPONSE_VALIDATION_FAILED', 'Respuesta inválida detectada, reintentando', {
+                        userId,
+                        userName,
+                        reason: validationResult.reason,
+                        originalResponsePreview: finalResponse.substring(0, 100)
+                    }, 'bot.ts');
+                    
+                    // Crear mensaje de observación interna
+                    const internalObservation = validationResult.internalObservation || 
+                        'Por favor revisa tu respuesta anterior y corrige cualquier información incorrecta.';
+                    
+                    // Reintentar con observación interna
+                    const retryResult = await this.openaiService.processMessage(
+                        userId,
+                        internalObservation,
+                        chatId,
+                        userName,
+                        processingResult.threadId,
+                        processingResult.finalTokenCount,
+                        undefined,
+                        undefined,
+                        targetAssistantId
+                    );
+                    
+                    if (retryResult.success && retryResult.response) {
+                        // Validar la nueva respuesta
+                        const retryValidation = await this.responseValidator.validateResponse(retryResult.response);
+                        
+                        if (retryValidation.isValid) {
+                            finalResponse = retryResult.response;
+                            logSuccess('RESPONSE_CORRECTED', 'Respuesta corregida exitosamente', {
+                                userId,
+                                userName,
+                                newResponsePreview: finalResponse.substring(0, 100)
+                            }, 'bot.ts');
+                        } else {
+                            // Si aún falla, usar respuesta genérica segura
+                            finalResponse = 'Estoy procesando tu solicitud. Por favor dame un momento para verificar la información correcta.';
+                            logError('RESPONSE_RETRY_FAILED', 'Reintento de corrección falló', {
+                                userId,
+                                userName,
+                                fallbackUsed: true
+                            }, 'bot.ts');
+                        }
+                    }
+                }
+            }
             
             // 11. Enviar respuesta por WhatsApp solo si hay contenido
             if (finalResponse && finalResponse.trim() !== '') {
