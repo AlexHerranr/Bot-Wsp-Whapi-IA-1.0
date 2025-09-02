@@ -206,6 +206,11 @@ export class OpenAIService implements IOpenAIService {
                     isNewThread = true;
                 }
             } else {
+                logInfo('THREAD_NONE_CREATE', 'No existe thread previo, creando nuevo', {
+                    userId,
+                    userName,
+                    chatId
+                }, 'openai.service.ts');
                 threadId = await this.getOrCreateThread(userId, chatId);
                 threadTokenCount = 0; // Thread nuevo empieza en 0
                 isNewThread = true;

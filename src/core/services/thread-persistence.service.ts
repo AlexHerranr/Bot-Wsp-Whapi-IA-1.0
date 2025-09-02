@@ -28,12 +28,18 @@ export class ThreadPersistenceService {
                 const cachedData = clientCache.get(userId);
                 console.info(`CACHE_GET: key=${userId}, found=${!!cachedData}, size=${clientCache.getStats().size}`);
                 if (cachedData) {
+                    // Normalizar threadId undefined a null para consistencia
+                    if (cachedData.threadId === undefined) {
+                        cachedData.threadId = null;
+                    }
+                    
                     console.info(`Cache HIT for thread: ${userId}`);
                     console.info(`CACHE_DEBUG: threadId=${cachedData.threadId}, tokenCount=${cachedData.threadTokenCount}, cachedAt=${cachedData.cachedAt}`);
                     trackCache(true); // Track cache hit
                     
                     // Si cache tiene threadId válido, usarlo directamente
                     if (cachedData.threadId) {
+                        console.info(`[THR_REUSE:cache] ${userId}: Reutilizando thread existente ${cachedData.threadId} del cache`);
                         // Cache HIT con thread válido - convertir a ThreadRecord
                         return {
                             threadId: cachedData.threadId,
@@ -59,9 +65,10 @@ export class ThreadPersistenceService {
             const threadFromBD = await this.databaseService.getThread(userId);
             
             // Si encontramos en BD, actualizar cache
-            if (threadFromBD) {
+            if (threadFromBD && threadFromBD.threadId) {
                 console.info(`BD HIT (cache miss) for thread: ${userId}, syncing cache`);
                 console.info(`[THREAD_SOURCE:cache] ${userId}: bd:${threadFromBD.tokenCount || 0} cache:0 thread:${threadFromBD.threadId} src:bd_fallback`);
+                console.info(`[THR_REUSE:bd] ${userId}: Reutilizando thread existente ${threadFromBD.threadId} de BD`);
                 try {
                     const clientCache = this.databaseService.getClientCache();
                     if (clientCache) {

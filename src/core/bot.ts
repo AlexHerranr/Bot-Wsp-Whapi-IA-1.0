@@ -466,6 +466,20 @@ export class CoreBot {
             // 4. Obtener thread existente (lógica simplificada)
             const existingThread = await this.threadPersistence.getThread(userId);
             let existingThreadId = existingThread?.threadId;
+            
+            if (existingThreadId) {
+                logInfo('THR_EXISTING', `Thread existente encontrado: ${existingThreadId} para ${userId}`, {
+                    userId,
+                    userName,
+                    threadId: existingThreadId,
+                    tokenCount: existingThread.tokenCount || 0
+                }, 'bot.ts');
+            } else {
+                logInfo('THR_NONE', `No se encontró thread existente para ${userId}`, {
+                    userId,
+                    userName
+                }, 'bot.ts');
+            }
 
             // Lógica simplificada: Solo verificar existencia en BD
             // La validación con OpenAI se hace en OpenAIService.processMessage
@@ -746,6 +760,13 @@ export class CoreBot {
                 
                 if (!existingThreadId || existingThreadId !== processingResult.threadId) {
                     // Thread nuevo - crear registro completo
+                    logInfo('THR_NEW', `Creando nuevo thread ${processingResult.threadId} para ${userId}`, {
+                        userId,
+                        userName,
+                        oldThreadId: existingThreadId || 'none',
+                        newThreadId: processingResult.threadId,
+                        reason: !existingThreadId ? 'no_existing_thread' : 'thread_id_changed'
+                    }, 'bot.ts');
                     await this.threadPersistence.setThread(userId, processingResult.threadId, chatId, userName);
                     
                     // Reset tokens a 0 para thread nuevo (evitar herencia de tokens no relacionados)
