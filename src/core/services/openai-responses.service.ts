@@ -44,8 +44,9 @@ export class OpenAIResponsesService implements IOpenAIService {
     private static activeOpenAICalls: number = 0;
     private static readonly MAX_CONCURRENT_CALLS = 75;
     
-    // Instrucciones del sistema (anteriormente en el Assistant)
-    private systemInstructions: string = '';
+    // Instrucciones del sistema o prompt ID
+    private systemInstructions: string | { id: string; version?: string } = '';
+    private usePromptId: boolean = false;
 
     constructor(
         config: OpenAIResponsesServiceConfig,
@@ -78,8 +79,24 @@ export class OpenAIResponsesService implements IOpenAIService {
         this.conversationManager = new ConversationManager(databaseService);
         this.perceptionService = new PerceptionService();
         
-        // Cargar instrucciones del sistema desde variable de entorno o usar default
-        this.systemInstructions = process.env.SYSTEM_INSTRUCTIONS || this.getDefaultInstructions();
+        // Configurar prompt ID o instrucciones
+        if (process.env.OPENAI_PROMPT_ID) {
+            // Usar prompt ID del dashboard
+            this.systemInstructions = {
+                id: process.env.OPENAI_PROMPT_ID,
+                version: process.env.OPENAI_PROMPT_VERSION || '1'
+            };
+            this.usePromptId = true;
+            logInfo('PROMPT_CONFIG', 'Usando prompt ID del dashboard', {
+                promptId: process.env.OPENAI_PROMPT_ID,
+                version: process.env.OPENAI_PROMPT_VERSION || '1'
+            });
+        } else {
+            // Usar instrucciones del sistema inline
+            this.systemInstructions = process.env.SYSTEM_INSTRUCTIONS || this.getDefaultInstructions();
+            this.usePromptId = false;
+            logInfo('PROMPT_CONFIG', 'Usando instrucciones inline');
+        }
     }
     
     private getDefaultInstructions(): string {
@@ -328,9 +345,12 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
     }
     
     // Método para actualizar las instrucciones del sistema
-    updateSystemInstructions(instructions: string): void {
+    updateSystemInstructions(instructions: string | { id: string; version?: string }): void {
         this.systemInstructions = instructions;
-        logInfo('SYSTEM_INSTRUCTIONS_UPDATED', 'Instrucciones del sistema actualizadas');
+        this.usePromptId = typeof instructions === 'object';
+        logInfo('SYSTEM_INSTRUCTIONS_UPDATED', 'Instrucciones del sistema actualizadas', {
+            usePromptId: this.usePromptId
+        });
     }
     
     // Método para resetear una conversación específica

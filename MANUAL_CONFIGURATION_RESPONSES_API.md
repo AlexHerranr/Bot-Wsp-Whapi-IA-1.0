@@ -4,9 +4,13 @@
 
 ### 1. Variables de Entorno en Railway
 
-**NO necesitas cambiar ninguna variable existente**. Solo agregar estas nuevas (opcionales):
+**Agrega estas nuevas variables:**
 
 ```bash
+# 🔴 IMPORTANTE: Tu Prompt ID del dashboard de OpenAI
+OPENAI_PROMPT_ID=pmpt_68b77888dee08196b8eda3b7dd55710c010ad598dbee3811
+OPENAI_PROMPT_VERSION=1
+
 # Configuración del modelo (opcional - por defecto usa gpt-4o)
 OPENAI_MODEL=gpt-4o
 
@@ -15,10 +19,9 @@ MAX_OUTPUT_TOKENS=4096
 
 # Temperatura (opcional - por defecto 0.7)
 TEMPERATURE=0.7
-
-# Instrucciones del sistema (opcional - se puede dejar el prompt actual)
-SYSTEM_INSTRUCTIONS="Tu prompt actual del asistente aquí"
 ```
+
+**Nota:** Si NO configurar `OPENAI_PROMPT_ID`, el sistema usará instrucciones inline con la variable `SYSTEM_INSTRUCTIONS`.
 
 **Variables que se mantienen igual:**
 - `OPENAI_API_KEY` - Tu API key actual
@@ -91,11 +94,15 @@ npm run build && node dist/main-responses.js
 
 ### 4. Configuración en OpenAI Dashboard
 
-**NO necesitas hacer nada en el dashboard de OpenAI**. La Responses API:
-- ✅ No requiere crear asistentes
-- ✅ No requiere configurar prompts en el dashboard
-- ✅ No requiere configurar funciones en el dashboard
-- ✅ Todo se maneja desde el código
+**Ya configuraste el prompt en el dashboard** ✅
+
+El prompt ID que obtuviste (`pmpt_68b77888dee08196b8eda3b7dd55710c010ad598dbee3811`) se usa en la variable de entorno `OPENAI_PROMPT_ID`.
+
+Si necesitas actualizar el prompt:
+1. Ve al dashboard de OpenAI
+2. Edita tu prompt
+3. Publica una nueva versión
+4. Actualiza `OPENAI_PROMPT_VERSION` en Railway si cambió
 
 ### 5. Verificar el Despliegue
 
