@@ -224,9 +224,16 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             await this.conversationManager.addMessage(userId, chatId, 'user', enrichedMessage);
             
             // Obtener funciones disponibles
-            // Por defecto, enviar array vacío para evitar errores
-            // El modelo decidirá automáticamente si necesita usarlas cuando las definamos
-            const functions = this.getFunctionsForRequest();
+            // IMPORTANTE: Si usamos prompt ID, las funciones deben estar definidas en el prompt
+            // No enviar funciones en el request cuando usamos prompt ID
+            const usingPromptId = this.systemInstructions && typeof this.systemInstructions === 'object';
+            const functions = usingPromptId ? [] : this.getFunctionsForRequest();
+            
+            logDebug('FUNCTIONS_DECISION', 'Decisión sobre funciones', {
+                usingPromptId,
+                functionsToSend: functions.length,
+                reason: usingPromptId ? 'Usando prompt ID - funciones definidas en el prompt' : 'Modelo directo - enviando funciones'
+            });
             
             // Log del prompt enviado
             logOpenAIPromptSent(
@@ -358,6 +365,12 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
         
         logDebug('FUNCTIONS_LOADED', `Cargando ${functions.length} funciones para el request`);
         
+        // Log detallado de las funciones
+        logDebug('FUNCTIONS_RAW', 'Funciones del registry', {
+            count: functions.length,
+            sample: functions.length > 0 ? JSON.stringify(functions[0]) : 'none'
+        });
+        
         // Devolver las funciones en formato simple
         // response.service.ts se encargará de formatearlas correctamente
         const validFunctions = functions.filter(fn => {
@@ -371,7 +384,8 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
         });
         
         logDebug('FUNCTIONS_VALIDATED', `${validFunctions.length} funciones válidas para el request`, {
-            functionNames: validFunctions.map(f => f.name)
+            functionNames: validFunctions.map(f => f.name),
+            firstFunction: validFunctions.length > 0 ? JSON.stringify(validFunctions[0]) : 'none'
         });
         
         return validFunctions;

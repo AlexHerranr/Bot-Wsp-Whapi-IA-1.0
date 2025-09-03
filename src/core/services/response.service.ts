@@ -200,6 +200,14 @@ export class ResponseService {
             }
             // Si no hay functions, NO incluir el parámetro tools en absoluto
             
+            // Log completo del request antes de enviar
+            logDebug('FULL_REQUEST', 'Request completo a OpenAI', {
+                hasTools: !!requestParams.tools,
+                toolsCount: requestParams.tools?.length || 0,
+                requestKeys: Object.keys(requestParams),
+                promptId: typeof instructions === 'object' ? instructions.id : 'string-prompt'
+            });
+            
             // Llamar a la API
             const response = await this.openai.responses.create(requestParams);
             
