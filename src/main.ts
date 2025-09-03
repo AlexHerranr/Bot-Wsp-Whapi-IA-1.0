@@ -1,9 +1,9 @@
 // src/main.ts
+// Bot principal con Responses API
 import 'reflect-metadata';
 import 'dotenv/config';
 import { container } from 'tsyringe';
-// ACTUALIZADO: Usar la versión con Responses API sin threads
-import { CoreBotResponses as CoreBot } from './core/bot-responses';
+import { CoreBot } from './core/bot';
 import { FunctionRegistryService } from './core/services/function-registry.service';
 import { HotelPlugin } from './plugins/hotel';
 import { DatabaseService } from './core/services/database.service';
@@ -21,7 +21,7 @@ interface AppConfig {
 
 function loadConfig(): AppConfig {
     const config = {
-        port: parseInt(process.env.PORT || '3010'),
+        port: parseInt(process.env.PORT || '8080'), // Railway usa 8080
         host: process.env.HOST || '0.0.0.0',
         secrets: {
             OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
@@ -53,9 +53,11 @@ function loadConfig(): AppConfig {
         port: config.port,
         host: config.host,
         hasOpenAI: !!config.secrets.OPENAI_API_KEY,
-        hasWhapi: !!config.secrets.WHAPI_TOKEN
-    }, 'main.ts');
+        hasWhapi: !!config.secrets.WHAPI_TOKEN,
+        apiVersion: 'responses' // Indicar que usa nueva API
+    }, 'main-responses.ts');
     console.log(`🌍 Server will start on ${config.host}:${config.port}`);
+    console.log(`🔄 Using OpenAI Responses API (no threads)`);
     
     return config;
 }
@@ -86,8 +88,9 @@ function setupDependencyInjection() {
         services: ['FunctionRegistry', 'DatabaseService'],
         functions: functionRegistry.list(),
         container: 'tsyringe',
-        crmStatus: 'disabled'
-    }, 'main.ts');
+        crmStatus: 'disabled',
+        apiVersion: 'responses'
+    }, 'main-responses.ts');
     
     return { functionRegistry, enabledPlugins };
 }
@@ -96,15 +99,17 @@ async function main() {
     let bot: CoreBot | null = null;
     
     try {
-        console.log('🚀 Starting TeAlquilamos Bot...');
+        console.log('🚀 Starting TeAlquilamos Bot (Responses API Version)...');
         
         // Log técnico de sesión - inicio de aplicación
-        logInfo('APP_START', 'Iniciando TeAlquilamos Bot', {
+        logInfo('APP_START', 'Iniciando TeAlquilamos Bot con Responses API', {
             version: process.env.npm_package_version || '1.0.0',
             nodeVersion: process.version,
             environment: process.env.NODE_ENV || 'development',
-            pid: process.pid
-        }, 'main.ts');
+            pid: process.pid,
+            apiVersion: 'responses',
+            openaiModel: process.env.OPENAI_MODEL || 'gpt-5'
+        }, 'main-responses.ts');
         
         // Load configuration
         const config = loadConfig();
