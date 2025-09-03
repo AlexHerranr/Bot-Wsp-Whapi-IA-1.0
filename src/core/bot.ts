@@ -462,8 +462,8 @@ export class CoreBot {
                 displayName: clientData?.name || null
             });
 
-            // 4. Obtener thread existente (lógica simplificada)
-            const existingThread = await this.threadPersistence.getThread(userId);
+            // 4. Obtener thread existente del usuario
+            const existingThread = await this.databaseService.getThread(userId);
             let existingThreadId = existingThread?.threadId;
 
             // Lógica simplificada: Solo verificar existencia en BD
@@ -737,8 +737,12 @@ export class CoreBot {
                 const immediateThreshold = parseInt(process.env.TOKEN_IMMEDIATE_THRESHOLD || '1000', 10);
                 
                 if (!existingThreadId || existingThreadId !== processingResult.threadId) {
-                    // Thread nuevo - crear registro completo
-                    await this.threadPersistence.setThread(userId, processingResult.threadId, chatId, userName);
+                    // Thread nuevo - guardar en la base de datos
+                    await this.databaseService.saveOrUpdateThread(userId, {
+                        threadId: processingResult.threadId,
+                        chatId: chatId,
+                        userName: userName
+                    });
                     
                     // Reset tokens a 0 para thread nuevo (evitar herencia de tokens no relacionados)
                     try {

@@ -232,9 +232,19 @@ export class ConversationManager {
         const conversation = await this.getOrCreateConversation(userId, chatId);
         const messages = this.getRecentMessages(userId, chatId);
         
+        // Limpiar IDs viejos con formato thread_ que no son válidos para Responses API
+        let cleanPreviousResponseId = conversation.lastResponseId;
+        if (cleanPreviousResponseId && cleanPreviousResponseId.startsWith('thread_')) {
+            logWarning('LEGACY_THREAD_ID', 'Ignorando ID de thread legacy', { 
+                userId,
+                oldId: cleanPreviousResponseId 
+            });
+            cleanPreviousResponseId = null;
+        }
+        
         return {
             conversationId: conversation.conversationId,
-            previousResponseId: conversation.lastResponseId,
+            previousResponseId: cleanPreviousResponseId,
             messageHistory: messages,
             metadata: conversation.metadata
         };

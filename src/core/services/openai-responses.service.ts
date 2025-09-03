@@ -163,10 +163,22 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             // Obtener contexto de conversación
             const context = await this.conversationManager.getConversationContext(userId, chatId);
             
-            // Obtener información del usuario desde la base de datos
-            const userLabels = await this.databaseService?.getClientData?.(userId)
-                .then(data => data?.labels || [])
-                .catch(() => []);
+            // Obtener información del usuario desde el cache o base de datos
+            let userLabels: string[] = [];
+            try {
+                const cache = this.databaseService?.getClientCache();
+                const cachedData = cache?.get(userId);
+                if (cachedData?.labels) {
+                    userLabels = Array.isArray(cachedData.labels) ? cachedData.labels : [];
+                } else {
+                    // Fallback: obtener de la BD
+                    const thread = await this.databaseService?.getThread(userId);
+                    userLabels = thread?.labels || [];
+                }
+            } catch (error) {
+                logWarning('GET_USER_LABELS_ERROR', 'Error obteniendo etiquetas del usuario', { userId });
+                userLabels = [];
+            }
             
             // Extraer las 3 variables del prompt
             let promptVariables: Record<string, string> | undefined;
