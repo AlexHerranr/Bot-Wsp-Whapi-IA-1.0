@@ -293,7 +293,7 @@ export class CoreBotResponses {
                 await this.whatsappService.sendWhatsAppMessage(
                     buffer.chatId,
                     'Lo siento, hubo un error procesando tu mensaje. Por favor intenta nuevamente.',
-                    { isVoiceActive: false, isTyping: false }, // Estado básico del usuario
+                    { lastInputVoice: false }, // Estado básico del usuario
                     false // isQuoteOrPrice
                 );
             }
