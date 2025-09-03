@@ -24,8 +24,8 @@ export class ConversationManager {
     private conversations: Map<string, ConversationState> = new Map();
     private messageHistory: Map<string, MessageEntry[]> = new Map();
     private readonly MAX_MESSAGES_IN_MEMORY = 20;
-    private readonly MAX_TOKEN_COUNT = parseInt(process.env.MAX_CONVERSATION_TOKENS || '100000');
-    private readonly MAX_MESSAGE_COUNT = parseInt(process.env.MAX_CONVERSATION_MESSAGES || '300'); // Límite de mensajes
+    // No limits - let OpenAI handle context window automatically
+    private readonly LOG_LONG_CONVERSATION_THRESHOLD = 100; // Solo para logging
     
     constructor(private databaseService?: DatabaseService) {
         // Cargar conversaciones activas de la BD si está disponible
@@ -149,15 +149,16 @@ export class ConversationManager {
             });
         }
         
-        // Solo logging, sin límites - dejar que OpenAI maneje los límites
-        if (conversation.messageCount > 100) {
-            logInfo('LONG_CONVERSATION', 'Conversación extensa', {
+        // Solo logging informativo para conversaciones largas
+        if (conversation.messageCount === 50 || 
+            conversation.messageCount === 100 || 
+            conversation.messageCount === 200) {
+            logInfo('CONVERSATION_MILESTONE', 'Hito de conversación alcanzado', {
                 userId,
                 chatId,
                 messageCount: conversation.messageCount,
                 tokenCount: conversation.tokenCount,
-                estimatedCost: `$${estimatedCost.toFixed(4)}`,
-                note: 'OpenAI manejará límites automáticamente'
+                estimatedCost: `$${estimatedCost.toFixed(4)}`
             });
         }
         
