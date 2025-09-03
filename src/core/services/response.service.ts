@@ -13,7 +13,8 @@ export interface ResponseServiceConfig {
 
 export interface ConversationContext {
     userId: string;
-    previousResponseId?: string;
+    conversationId?: string; // Para usar Conversations API
+    previousResponseId?: string; // Para encadenar respuestas
     messageHistory?: Array<{
         role: 'user' | 'assistant';
         content: string;
@@ -41,6 +42,7 @@ export class ResponseService {
     private openai: OpenAI;
     private config: Required<ResponseServiceConfig>;
     private functionRegistry?: IFunctionRegistry;
+    private conversationsCache: Map<string, string> = new Map(); // userId:chatId -> conversationId
     
     constructor(
         config: ResponseServiceConfig,
@@ -166,9 +168,19 @@ export class ResponseService {
                 }
             }
             
-            // Agregar previous_response_id si existe
-            if (context.previousResponseId) {
+            // Manejar contexto de conversación
+            if (context.conversationId) {
+                // Usar Conversations API (recomendado)
+                requestParams.conversation = context.conversationId;
+                logInfo('USING_CONVERSATIONS_API', 'Usando Conversations API', {
+                    conversationId: context.conversationId
+                });
+            } else if (context.previousResponseId) {
+                // Usar encadenamiento de respuestas
                 requestParams.previous_response_id = context.previousResponseId;
+                logInfo('USING_RESPONSE_CHAINING', 'Usando encadenamiento de respuestas', {
+                    previousResponseId: context.previousResponseId
+                });
             }
             
             // Agregar funciones si existen
@@ -312,5 +324,52 @@ export class ResponseService {
         }
         
         return results;
+    }
+    
+    /**
+     * Crea una nueva conversación usando la Conversations API
+     */
+    async createConversation(userId: string, chatId: string): Promise<string | null> {
+        try {
+            const response = await this.openai.conversations.create();
+            
+            if (response.id) {
+                const cacheKey = `${userId}:${chatId}`;
+                this.conversationsCache.set(cacheKey, response.id);
+                
+                logInfo('CONVERSATION_CREATED', 'Nueva conversación creada', {
+                    userId,
+                    chatId,
+                    conversationId: response.id
+                });
+                
+                return response.id;
+            }
+            
+            return null;
+        } catch (error) {
+            logError('CONVERSATION_CREATE_ERROR', 'Error creando conversación', {
+                userId,
+                chatId,
+                error: error instanceof Error ? error.message : 'Unknown'
+            });
+            return null;
+        }
+    }
+    
+    /**
+     * Obtiene o crea una conversación para un usuario/chat
+     */
+    async getOrCreateConversation(userId: string, chatId: string): Promise<string | null> {
+        const cacheKey = `${userId}:${chatId}`;
+        
+        // Verificar cache
+        const cached = this.conversationsCache.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
+        
+        // Crear nueva
+        return this.createConversation(userId, chatId);
     }
 }

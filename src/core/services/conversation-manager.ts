@@ -5,6 +5,7 @@ import { logInfo, logError, logWarning } from '../../utils/logging';
 export interface ConversationState {
     userId: string;
     chatId: string;
+    conversationId?: string; // ID de la conversación en OpenAI
     lastResponseId?: string;
     messageCount: number;
     tokenCount: number;
@@ -41,6 +42,7 @@ export class ConversationManager {
                 const state: ConversationState = {
                     userId: conv.user_id,
                     chatId: conv.chat_id,
+                    conversationId: conv.conversation_id,
                     lastResponseId: conv.last_response_id,
                     messageCount: conv.message_count || 0,
                     tokenCount: conv.token_count || 0,

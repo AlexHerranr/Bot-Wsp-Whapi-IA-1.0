@@ -157,10 +157,17 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
                 );
             }
             
+            // Obtener o crear conversación con Conversations API
+            let conversationId = context.conversationId;
+            if (!conversationId && process.env.USE_CONVERSATIONS_API === 'true') {
+                conversationId = await this.responseService.getOrCreateConversation(userId, chatId);
+            }
+            
             // Construir contexto completo
             const conversationContext: ConversationContext = {
                 userId,
-                previousResponseId: context.previousResponseId,
+                conversationId, // Preferir Conversations API
+                previousResponseId: context.previousResponseId, // Fallback
                 messageHistory: context.messageHistory,
                 metadata: {
                     chatId,
