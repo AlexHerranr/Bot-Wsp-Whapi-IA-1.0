@@ -141,52 +141,6 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
         OpenAIResponsesService.activeOpenAICalls++;
         
         try {
-            // Procesar imagen si existe (fallback para modelos que no soportan imágenes)
-            let processedImageText = '';
-            if (imageMessage && imageMessage.imageUrl && this.mediaService) {
-                try {
-                    logInfo('IMAGE_FALLBACK', 'Procesando imagen con MediaService como fallback', {
-                        userId,
-                        imageUrl: imageMessage.imageUrl.substring(0, 50) + '...',
-                        reason: 'GPT-5 mini might not support direct images'
-                    });
-                    
-                    const imageAnalysis = await this.mediaService.analyzeImage(
-                        imageMessage.imageUrl,
-                        userId,
-                        userName
-                    );
-                    
-                    if (imageAnalysis.success && imageAnalysis.result) {
-                        processedImageText = `\n\n[El usuario envió una imagen: ${imageAnalysis.result}]`;
-                        if (imageMessage.caption) {
-                            processedImageText += `\n[Caption: ${imageMessage.caption}]`;
-                        }
-                        
-                        logInfo('IMAGE_PROCESSED', 'Imagen procesada exitosamente', {
-                            userId,
-                            description: imageAnalysis.result.substring(0, 100) + '...',
-                            processingTime: imageAnalysis.metadata?.processingTime
-                        });
-                    }
-                } catch (error) {
-                    logError('IMAGE_PROCESSING_ERROR', 'Error procesando imagen', {
-                        userId,
-                        error: error instanceof Error ? error.message : 'Unknown error'
-                    });
-                    processedImageText = '\n\n[El usuario envió una imagen que no pudo ser procesada]';
-                }
-            } else if (imageMessage && imageMessage.imageUrl && !this.mediaService) {
-                logWarning('IMAGE_PROCESSING_SKIPPED', 'MediaService no disponible para procesar imagen', {
-                    userId,
-                    imageUrl: imageMessage.imageUrl.substring(0, 50) + '...'
-                });
-                processedImageText = '\n\n[El usuario envió una imagen]';
-            }
-            
-            // Combinar mensaje con descripción de imagen si existe
-            const finalMessage = message + processedImageText;
-            
             // Obtener contexto de conversación
             const context = await this.conversationManager.getConversationContext(userId, chatId);
             
@@ -196,7 +150,7 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
                 promptVariables = await this.promptVariablesService.extractVariables(
                     userId,
                     chatId,
-                    finalMessage, // Usar mensaje procesado
+                    message,
                     {
                         userName,
                         ...context.metadata
@@ -225,7 +179,7 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
             };
             
             // Guardar mensaje del usuario
-            await this.conversationManager.addMessage(userId, chatId, 'user', finalMessage);
+            await this.conversationManager.addMessage(userId, chatId, 'user', message);
             
             // Obtener funciones disponibles
             const functions = this.getFunctionsForRequest();
@@ -241,10 +195,10 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
             // Llamar a Responses API
             const result = await this.responseService.createResponse(
                 this.systemInstructions,
-                finalMessage, // Usar mensaje con descripción de imagen
+                message,
                 conversationContext,
                 functions,
-                null // No pasar imagen directamente ya que está procesada
+                imageMessage // Pasar imagen directamente a GPT-5
             );
             
             if (!result.success) {
