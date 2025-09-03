@@ -356,28 +356,10 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
         return lines.join('\n');
     }
     
-    // Métodos de compatibilidad para mantener la interfaz existente
-    
-    async getThreadMessages(threadId: string): Promise<any[]> {
-        // En Responses API no hay threads persistentes
-        // Este método podría devolver el historial desde ConversationManager
-        logWarning('DEPRECATED_METHOD', 'getThreadMessages no es compatible con Responses API');
-        return [];
-    }
-    
-    async createThread(): Promise<string> {
-        // En Responses API no se crean threads explícitamente
-        // Devolvemos un ID único para compatibilidad
-        const fakeThreadId = `resp_thread_${Date.now()}`;
-        logWarning('DEPRECATED_METHOD', 'createThread no es necesario con Responses API');
-        return fakeThreadId;
-    }
-    
-    async deleteThread(threadId: string): Promise<void> {
-        // En Responses API, esto sería resetear la conversación
-        logWarning('DEPRECATED_METHOD', 'deleteThread reemplazado por reset de conversación');
-        // No hacemos nada por ahora
-    }
+    // Métodos eliminados - usar ConversationManager en su lugar
+    // - getThreadMessages() -> conversationManager.getMessageHistory()
+    // - createThread() -> conversationManager.getOrCreateConversation()  
+    // - deleteThread() -> conversationManager.resetConversation()
     
     // Método para limpiar conversaciones inactivas (ejecutar periódicamente)
     async cleanupInactiveConversations(): Promise<void> {
