@@ -84,7 +84,7 @@ export class OpenAIResponsesService implements IOpenAIService {
         this.promptVariablesService = new PromptVariablesService(databaseService);
         
         // Configurar prompt ID o instrucciones
-        if (process.env.OPENAI_PROMPT_ID) {
+        if (process.env.OPENAI_PROMPT_ID && process.env.USE_PROMPT_ID !== 'false') {
             // Usar prompt ID del dashboard
             this.systemInstructions = {
                 id: process.env.OPENAI_PROMPT_ID,
@@ -104,10 +104,28 @@ export class OpenAIResponsesService implements IOpenAIService {
     }
     
     private getDefaultInstructions(): string {
-        return `Eres un asistente de reservas hoteleras para TeAlquilamos. 
-Tu objetivo es ayudar a los clientes con sus reservas, consultas y solicitudes.
-Sé amable, profesional y eficiente. Responde en español a menos que el cliente escriba en otro idioma.
-Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en los resultados.`;
+        return `Eres un asistente virtual para TeAlquilamos, una empresa de alquiler de apartamentos turísticos en Colombia.
+
+INFORMACIÓN DE LA EMPRESA:
+- Apartamentos disponibles: 201, 202, 203, 204
+- Precio base por noche: $150.000 COP
+- Cargo adicional por persona extra: $70.000 COP
+- Capacidad estándar: 4 personas por apartamento
+
+TU FUNCIÓN:
+- Ayudar con consultas sobre disponibilidad
+- Proporcionar información de precios
+- Asistir en el proceso de reserva
+- Responder preguntas generales sobre los apartamentos
+
+INSTRUCCIONES:
+1. Responde siempre en español de manera amigable y profesional
+2. Cuando no tengas información específica, usa las funciones disponibles
+3. Confirma siempre los datos importantes (fechas, número de personas, etc.)
+4. Si el cliente pide disponibilidad, primero pregunta las fechas exactas y número de personas
+5. Menciona los cargos adicionales cuando sean relevantes
+
+Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtener información actualizada.`;
     }
 
     async processMessage(
@@ -144,19 +162,20 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
             // Obtener contexto de conversación
             const context = await this.conversationManager.getConversationContext(userId, chatId);
             
-            // Extraer variables para el prompt si estamos usando prompt ID
-            let promptVariables: Record<string, string> | undefined;
-            if (this.usePromptId) {
-                promptVariables = await this.promptVariablesService.extractVariables(
-                    userId,
-                    chatId,
-                    message,
-                    {
-                        userName,
-                        ...context.metadata
-                    }
-                );
-            }
+            // NO extraer variables - enviar mensaje directo
+            let promptVariables: Record<string, string> | undefined = undefined;
+            // Comentado para evitar variables que ralentizan:
+            // if (this.usePromptId) {
+            //     promptVariables = await this.promptVariablesService.extractVariables(
+            //         userId,
+            //         chatId,
+            //         message,
+            //         {
+            //             userName,
+            //             ...context.metadata
+            //         }
+            //     );
+            // }
             
             // Siempre usar Conversations API (hardcoded)
             let conversationId = context.conversationId;
