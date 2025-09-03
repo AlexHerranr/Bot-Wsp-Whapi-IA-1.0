@@ -5,7 +5,7 @@ import { UserManager } from '../../state/user-state-manager';
 import { MediaService } from '../../services/media.service';
 import { DatabaseService } from '../../services/database.service';
 import { DelayedActivityService } from '../../services/delayed-activity.service';
-import { OpenAIService } from '../../services/openai.service';
+import { IOpenAIService } from '../../../shared/interfaces';
 import { TerminalLog } from '../../utils/terminal-log';
 import { ClientDataCache } from '../../state/client-data-cache';
 import { IWebhookProcessor, ProcessorConfig } from './IWebhookProcessor.interface';
@@ -19,7 +19,7 @@ export abstract class BaseWebhookProcessor implements IWebhookProcessor {
         protected mediaService: MediaService,
         protected databaseService: DatabaseService,
         protected delayedActivityService: DelayedActivityService,
-        protected openaiService: OpenAIService,
+        protected openaiService: IOpenAIService,
         protected terminalLog: TerminalLog,
         protected clientCache: ClientDataCache
     ) {}

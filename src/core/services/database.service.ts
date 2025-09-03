@@ -12,6 +12,7 @@ import { setCacheSize } from '../../utils/logging/collectors';
 interface ConversationRecord {
     user_id: string;
     chat_id: string;
+    conversation_id?: string;
     last_response_id?: string;
     message_count: number;
     token_count: number;
@@ -774,10 +775,7 @@ export class DatabaseService {
     }
 
     // --- Operaciones con Mensajes ---
-    public async saveMessage(openaiThreadId: string, role: 'user' | 'assistant', content: string, metadata?: any): Promise<void> {
-        // Implementación simplificada - sin persistencia de mensajes por ahora
-        // Log técnico removido - solo para sistema de logs interno
-    }
+    // Removido - hay otra implementación de saveMessage más abajo
 
     public async getMessages(openaiThreadId: string, limit?: number): Promise<any[]> {
         // Implementación simplificada - retorna array vacío

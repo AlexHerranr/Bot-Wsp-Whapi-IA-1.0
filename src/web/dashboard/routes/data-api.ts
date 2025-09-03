@@ -125,7 +125,14 @@ router.post('/messages', async (req: any, res: any) => {
         }
         
         // Guardar mensaje (implementación simplificada)
-        await dbService.saveMessage(thread.threadId, role as 'user' | 'assistant', content);
+        await dbService.saveMessage({
+            user_id: thread.chatId,
+            chat_id: thread.threadId,
+            role: role as 'user' | 'assistant',
+            content: content,
+            response_id: null,
+            timestamp: new Date()
+        });
         
         res.json({
             success: true,

@@ -12,6 +12,8 @@ export interface IFunctionRegistry {
   list(): string[];
   getStats(): { totalFunctions: number; availableFunctions: string[]; registrationHistory: number };
   getRegistrationHistory(): Array<{ name: string; source?: string; timestamp: Date }>;
+  getFunction(name: string): { handler: ToolCallFunction } | undefined;
+  getAllFunctions(): Array<{ name: string; handler: ToolCallFunction; description: string; parameters: any }>;
 }
 
 export interface ICacheManager {

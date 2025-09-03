@@ -149,7 +149,7 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
                 promptVariables = await this.promptVariablesService.extractVariables(
                     userId,
                     chatId,
-                    processedMessage,
+                    message,
                     {
                         userName,
                         ...context.metadata
@@ -184,13 +184,12 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
             const functions = this.getFunctionsForRequest();
             
             // Log del prompt enviado
-            logOpenAIPromptSent({
+            logOpenAIPromptSent(
                 userId,
-                messagePreview: message.substring(0, 100),
-                hasPreviousContext: !!context.previousResponseId,
-                functionsCount: functions.length,
-                hasImage: !!imageMessage
-            });
+                conversationId || context.previousResponseId || 'new',
+                message,
+                message.length
+            );
             
             // Llamar a Responses API
             const result = await this.responseService.createResponse(
@@ -251,22 +250,24 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
             
             // Log de uso de tokens
             if (result.usage) {
-                logTokenUsage({
+                logTokenUsage(
                     userId,
-                    inputTokens: result.usage.inputTokens,
-                    outputTokens: result.usage.outputTokens,
-                    totalTokens: result.usage.totalTokens,
-                    responseId: result.responseId
-                });
+                    conversationId || 'no-conversation',
+                    result.usage.inputTokens,
+                    result.usage.outputTokens,
+                    'gpt-5'
+                );
             }
             
             // Log de flujo completo
-            logMessageFlowComplete({
+            logMessageFlowComplete(
                 userId,
-                processingTime: Date.now() - startTime,
-                tokensUsed: result.usage?.totalTokens || 0,
-                hadFunctionCalls: !!result.functionCalls?.length
-            });
+                message.length,
+                finalResponse.length,
+                Date.now() - startTime,
+                result.usage?.totalTokens || 0,
+                result.functionCalls?.length || 0
+            );
             
             return {
                 success: true,
@@ -362,5 +363,10 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
     // Método para resetear una conversación específica
     async resetConversation(userId: string, chatId: string): Promise<void> {
         await this.conversationManager.resetConversation(userId, chatId);
+    }
+    
+    // Implementar método requerido por la interfaz
+    async processWithOpenAI(userId: string, combinedText: string, chatId: string, userName: string): Promise<void> {
+        await this.processMessage(userId, combinedText, chatId, userName);
     }
 }

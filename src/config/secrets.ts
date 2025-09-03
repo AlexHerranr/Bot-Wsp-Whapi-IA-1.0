@@ -140,4 +140,8 @@ export const getSecrets = async (): Promise<AppSecrets> => {
  */
 export const areSecretsLoaded = (): boolean => {
     return cachedSecrets !== null;
-}; 
+};
+
+export function validateSecrets(): any {
+    return getSecrets();
+} 

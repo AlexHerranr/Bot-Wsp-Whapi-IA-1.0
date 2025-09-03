@@ -109,12 +109,9 @@ export class PerceptionService {
                                 text: CAPTIONER_USER_PREFIX
                             },
                             {
-                                type: 'input_image',
-                                image: {
-                                    url: imageUrl,
-                                    detail: 'high' // Alta calidad para OCR
-                                }
-                            },
+                                type: 'input_image' as const,
+                                image: imageUrl
+                            } as any,
                             {
                                 type: 'input_text',
                                 text: 'Recuerda: SOLO JSON válido.'

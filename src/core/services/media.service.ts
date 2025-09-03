@@ -219,12 +219,9 @@ export class MediaService implements IMediaService {
                                 text: 'Analiza esta imagen en el contexto de un hotel. Describe brevemente qué ves, enfocándote en: habitaciones, instalaciones, documentos, o cualquier elemento relevante para consultas hoteleras. Máximo 100 palabras.' 
                             },
                             { 
-                                type: 'input_image', 
-                                image: { 
-                                    url: finalImageUrl,
-                                    detail: 'low'
-                                } 
-                            }
+                                type: 'input_image' as const, 
+                                image: finalImageUrl
+                            } as any
                         ]
                     }],
                     max_output_tokens: 150,

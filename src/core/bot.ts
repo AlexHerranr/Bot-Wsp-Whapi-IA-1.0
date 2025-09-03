@@ -844,9 +844,23 @@ export class CoreBot {
             }
 
             // 7. Guardar mensaje del usuario y respuesta en la base de datos
-            if (processingResult.threadId) {
-                await this.databaseService.saveMessage(processingResult.threadId, 'user', contextualMessage);
-                await this.databaseService.saveMessage(processingResult.threadId, 'assistant', response);
+            if (processingResult.threadId && userId && chatId) {
+                await this.databaseService.saveMessage({
+                    user_id: userId,
+                    chat_id: chatId,
+                    role: 'user',
+                    content: contextualMessage,
+                    response_id: null,
+                    timestamp: new Date()
+                });
+                await this.databaseService.saveMessage({
+                    user_id: userId,
+                    chat_id: chatId,
+                    role: 'assistant',
+                    content: response,
+                    response_id: null,
+                    timestamp: new Date()
+                });
             }
 
             // 8. Clear pending images after successful processing to prevent accumulation

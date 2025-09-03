@@ -243,9 +243,11 @@ export class ResponseService {
                 } else if (output.type === 'tool_call') {
                     // Procesar llamadas a funciones
                     functionCalls.push({
-                        name: output.function.name,
-                        arguments: output.function.arguments,
-                        id: output.id
+                        id: output.id,
+                        function: {
+                            name: output.function.name,
+                            arguments: output.function.arguments
+                        }
                     });
                 }
             }
@@ -284,15 +286,15 @@ export class ResponseService {
         for (const call of functionCalls) {
             try {
                 logInfo('FUNCTION_EXECUTION_START', 'Ejecutando función', {
-                    functionName: call.name,
+                    functionName: call.function.name,
                     userId: context.userId
                 });
                 
-                const fn = this.functionRegistry.getFunction(call.name);
+                const fn = this.functionRegistry.getFunction(call.function.name);
                 if (fn) {
-                    const args = typeof call.arguments === 'string' 
-                        ? JSON.parse(call.arguments) 
-                        : call.arguments;
+                    const args = typeof call.function.arguments === 'string' 
+                        ? JSON.parse(call.function.arguments) 
+                        : call.function.arguments;
                         
                     const result = await fn.handler(args, {
                         userId: context.userId,
@@ -300,26 +302,26 @@ export class ResponseService {
                         userName: context.metadata?.userName || ''
                     });
                     
-                    results[call.id || call.name] = result;
+                    results[call.id || call.function.name] = result;
                     
                     logInfo('FUNCTION_EXECUTION_SUCCESS', 'Función ejecutada exitosamente', {
-                        functionName: call.name,
+                        functionName: call.function.name,
                         userId: context.userId
                     });
                 } else {
                     logWarning('FUNCTION_NOT_FOUND', 'Función no encontrada', {
-                        functionName: call.name,
+                        functionName: call.function.name,
                         userId: context.userId
                     });
                 }
             } catch (error) {
                 logError('FUNCTION_EXECUTION_ERROR', 'Error ejecutando función', {
-                    functionName: call.name,
+                    functionName: call.function.name,
                     userId: context.userId,
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });
                 
-                results[call.id || call.name] = {
+                results[call.id || call.function.name] = {
                     error: error instanceof Error ? error.message : 'Unknown error'
                 };
             }
@@ -333,7 +335,7 @@ export class ResponseService {
      */
     async createConversation(userId: string, chatId: string): Promise<string | null> {
         try {
-            const response = await this.openai.conversations.create();
+            const response = await (this.openai as any).conversations.create();
             
             if (response.id) {
                 const cacheKey = `${userId}:${chatId}`;

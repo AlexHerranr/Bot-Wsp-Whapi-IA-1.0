@@ -123,16 +123,13 @@ export class CoreBotResponses {
         }
 
         this.threadPersistence = new ThreadPersistenceService(
-            this.openaiService,
-            this.databaseService,
-            this.delayedActivityService,
-            this.userManager,
-            this.clientDataCache
+            this.databaseService
         );
         this.bufferManager = new BufferManager(
-            this.userManager, 
-            this.threadPersistence,
-            this.clientDataCache
+            async (userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: any, duringRunMsgId?: string) => {
+                await this.openaiService.processMessage(userId, combinedText, chatId, userName, undefined, undefined, imageMessage, duringRunMsgId);
+            },
+            (userId: string) => this.userManager.getState(userId)
         );
 
         // Crear instancia del Router
@@ -179,7 +176,7 @@ export class CoreBotResponses {
                 res.status(200).send('OK');
                 
                 // Procesar webhook asíncronamente
-                await this.webhookRouter.handleWebhook(req.body);
+                await this.webhookRouter.route(req.body);
             } catch (error) {
                 this.handleError(error, 'webhook');
             }
@@ -188,7 +185,7 @@ export class CoreBotResponses {
         // Stats endpoint
         this.app.get('/stats', (req, res) => {
             res.json({
-                users: this.userManager.getActiveUserCount(),
+                users: this.userManager.getStats().totalUsers,
                 cache: this.clientDataCache.getStats(),
                 buffers: this.bufferManager.getStats(),
                 functions: this.functionRegistry.list(),
@@ -226,9 +223,9 @@ export class CoreBotResponses {
         
         // Mantener los otros trabajos de limpieza existentes
         const bufferCleanupInterval = setInterval(() => {
-            const stats = this.bufferManager.cleanupInactiveBuffers();
-            if (stats.removed > 0) {
-                logInfo('BUFFER_CLEANUP', 'Buffers inactivos limpiados', stats);
+            const removed = this.bufferManager.cleanup();
+            if (removed > 0) {
+                logInfo('BUFFER_CLEANUP', 'Buffers inactivos limpiados', { removed });
             }
         }, 60000); // Cada minuto
         
@@ -258,14 +255,14 @@ export class CoreBotResponses {
             // Iniciar servidor
             return new Promise((resolve) => {
                 this.server.listen(this.config.port, this.config.host, () => {
-                    logServerStart({
+                    logServerStart('Servidor iniciado', {
                         port: this.config.port,
                         host: this.config.host,
                         environment: process.env.NODE_ENV || 'development',
                         apiVersion: 'responses-api-v1'
                     });
                     
-                    logBotReady({
+                    logBotReady('Bot listo para recibir mensajes', {
                         functionsLoaded: this.functionRegistry.list().length,
                         cacheEnabled: true,
                         databaseConnected: this.databaseService.connected

@@ -11,14 +11,17 @@
 OPENAI_PROMPT_ID=pmpt_68b7dbd8b694819386644f198b2165880410e06c7884ad66
 OPENAI_PROMPT_VERSION=1
 
-# Configuración del modelo (opcional - por defecto usa gpt-4o)
-OPENAI_MODEL=gpt-4o
+# Configuración del modelo
+OPENAI_MODEL=gpt-5-mini-2025-08-07
+
+# Usar Conversations API para mantener contexto
+USE_CONVERSATIONS_API=true
 
 # Tokens máximos de salida (opcional - por defecto 4096)
 MAX_OUTPUT_TOKENS=4096
 
-# Temperatura (opcional - por defecto 0.7)
-TEMPERATURE=0.7
+# Temperatura (opcional - por defecto 0.7, no funciona con GPT-5)
+# TEMPERATURE=0.7
 ```
 
 **Nota:** Si NO configurar `OPENAI_PROMPT_ID`, el sistema usará instrucciones inline con la variable `SYSTEM_INSTRUCTIONS`.
@@ -88,8 +91,23 @@ npm start
 ```
 
 **Después (Responses API):**
+
+Tienes dos opciones:
+
+**Opción 1: Usar comando personalizado en Railway (Recomendado)**
 ```bash
-npm run build && node dist/main-responses.js
+node dist/main-responses.js
+```
+En Railway: Settings > Deploy > Start Command
+
+**Opción 2: Modificar package.json (Permanente)**
+Cambia el script `start` en tu package.json:
+```json
+{
+  "scripts": {
+    "start": "node dist/main-responses.js"
+  }
+}
 ```
 
 ### 4. Configuración en OpenAI Dashboard
@@ -190,3 +208,13 @@ Si encuentras problemas:
 - [ ] Deploy realizado en Railway
 - [ ] Health check verificado
 - [ ] Prueba de mensaje enviada
+
+## 🚀 Ventajas de la Nueva Versión
+
+1. **GPT-5 Mini**: Modelo más avanzado y capaz
+2. **Mejor rendimiento**: Respuestas más rápidas
+3. **Imágenes nativas**: GPT-5 procesa imágenes directamente sin servicios intermedios
+4. **Prompt Caching**: Hasta 80% menos latencia y 75% menos costo automáticamente
+5. **Conversations API**: Contexto persistente entre sesiones
+6. **Sin threads huérfanos**: Gestión más confiable del estado
+7. **Logs mejorados**: Tracking detallado de tokens y conversaciones

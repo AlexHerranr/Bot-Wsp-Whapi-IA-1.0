@@ -663,18 +663,14 @@ export class MainWebhookProcessor extends BaseWebhookProcessor {
 
     private async syncManualMessageToOpenAI(userId: string, chatId: string, agentName: string, message: string): Promise<void> {
         try {
-            // Obtener o crear thread para este usuario
-            const threadId = await this.openaiService.getOrCreateThread(userId, chatId);
-
-            // Nota previa para no responder automáticamente
-            await this.openaiService.addSimpleMessage(threadId, 'user', `[Mensaje manual escrito por agente ${agentName} - NO RESPONDER]`);
-            // Mensaje del agente como assistant, solo contexto
-            await this.openaiService.addSimpleMessage(threadId, 'assistant', `[Agente ${agentName}]: ${message}`);
+            // TODO: Implementar sincronización manual con Responses API
+            // En Responses API no hay threads persistentes, así que esta funcionalidad
+            // necesita ser reimplementada de otra manera
+            logWarning('MANUAL_SYNC_DISABLED', 'Sincronización manual temporalmente deshabilitada en Responses API');
             
-            logSuccess('MANUAL_SYNC_SIMPLE', 'Mensaje manual sincronizado con OpenAI [MAIN]', {
+            logSuccess('MANUAL_SYNC_SIMPLE', 'Mensaje manual pendiente de sincronización [MAIN]', {
                 userId,
                 agentName,
-                threadId,
                 messageLength: message.length
             }, 'main-webhook-processor.ts');
             

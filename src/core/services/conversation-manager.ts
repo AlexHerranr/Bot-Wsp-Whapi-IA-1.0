@@ -222,6 +222,7 @@ export class ConversationManager {
     }
     
     async getConversationContext(userId: string, chatId: string): Promise<{
+        conversationId?: string;
         previousResponseId?: string;
         messageHistory: MessageEntry[];
         metadata?: Record<string, any>;
@@ -230,6 +231,7 @@ export class ConversationManager {
         const messages = this.getRecentMessages(userId, chatId);
         
         return {
+            conversationId: conversation.conversationId,
             previousResponseId: conversation.lastResponseId,
             messageHistory: messages,
             metadata: conversation.metadata
