@@ -149,29 +149,16 @@ export class ConversationManager {
             });
         }
         
-        // Verificar si necesita reset por número de mensajes
-        if (conversation.messageCount > this.MAX_MESSAGE_COUNT) {
-            logWarning('MESSAGE_LIMIT_EXCEEDED', 'Límite de mensajes excedido, reseteando conversación', {
+        // Solo logging, sin límites - dejar que OpenAI maneje los límites
+        if (conversation.messageCount > 100) {
+            logInfo('LONG_CONVERSATION', 'Conversación extensa', {
                 userId,
                 chatId,
                 messageCount: conversation.messageCount,
-                limit: this.MAX_MESSAGE_COUNT
+                tokenCount: conversation.tokenCount,
+                estimatedCost: `$${estimatedCost.toFixed(4)}`,
+                note: 'OpenAI manejará límites automáticamente'
             });
-            
-            await this.resetConversation(userId, chatId);
-            return;
-        }
-        
-        // Verificar si necesita reset por tokens
-        if (conversation.tokenCount > this.MAX_TOKEN_COUNT) {
-            logWarning('TOKEN_LIMIT_EXCEEDED', 'Límite de tokens excedido, reseteando conversación', {
-                userId,
-                chatId,
-                tokenCount: conversation.tokenCount
-            });
-            
-            await this.resetConversation(userId, chatId);
-            return;
         }
         
         // Persistir en BD
