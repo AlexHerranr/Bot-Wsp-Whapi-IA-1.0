@@ -96,8 +96,10 @@ export class PerceptionService {
                 maxTokens: maxOutputTokens
             }, 'perception.service.ts');
 
+            // ACTUALIZADO: Las imágenes ahora van directamente a OpenAI principal
+            // Ya no usamos la capa de 4o-mini
             const response = await this.openai.responses.create({
-                model: 'gpt-4o-mini',
+                model: process.env.OPENAI_MODEL || 'gpt-5', // Usar el modelo principal configurado
                 instructions: CAPTIONER_SYSTEM,
                 input: [
                     {

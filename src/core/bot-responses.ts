@@ -1,6 +1,5 @@
 // src/core/bot-responses.ts
-// Versión del bot actualizada para usar Responses API
-
+// Versión actualizada del bot usando Responses API sin threads
 import 'reflect-metadata';
 import express from 'express';
 import http from 'http';
@@ -98,7 +97,7 @@ export class CoreBotResponses {
         this.whatsappService = new WhatsappService(this.openai, this.terminalLog, this.config, this.databaseService, this.mediaManager);
         
         // Function registry passed from main.ts (with plugins already registered)
-        this.functionRegistry = functionRegistry || new FunctionRegistryService();
+        this.functionRegistry = functionRegistry || container.resolve(FunctionRegistryService);
         
         // NUEVO: Usar OpenAIResponsesService en lugar de OpenAIService
         this.openaiService = new OpenAIResponsesService(
@@ -107,194 +106,216 @@ export class CoreBotResponses {
                 assistantId: process.env.OPENAI_ASSISTANT_ID || '', // Por compatibilidad
                 model: 'gpt-5-mini-2025-08-07', // Hardcoded - el modelo real lo define el prompt
                 maxOutputTokens: parseInt(process.env.MAX_OUTPUT_TOKENS || '4096'),
-                temperature: parseFloat(process.env.TEMPERATURE || '0.7')
-            },
-            this.terminalLog,
-            undefined, // CacheManager ya no es necesario
-            this.functionRegistry,
-            this.whatsappService,
-            this.databaseService,
+                temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.7')
+            }, 
+            this.terminalLog, 
+            undefined, 
+            this.functionRegistry, 
+            this.whatsappService, 
+            this.databaseService, 
             this.userManager,
             this.mediaService
         );
-        
-        // Cargar instrucciones del sistema si están disponibles
-        if (process.env.SYSTEM_INSTRUCTIONS) {
-            this.openaiService.updateSystemInstructions(process.env.SYSTEM_INSTRUCTIONS);
-        }
 
-        this.threadPersistence = new ThreadPersistenceService(
-            this.databaseService
-        );
+        // Initialize Thread Persistence Service (aunque ya no se usen threads reales)
+        this.threadPersistence = new ThreadPersistenceService(this.databaseService);
+
         this.bufferManager = new BufferManager(
-            async (userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: any, duringRunMsgId?: string) => {
-                await this.openaiService.processMessage(userId, combinedText, chatId, userName, undefined, undefined, imageMessage, duringRunMsgId);
-            },
+            this.processBufferCallback.bind(this),
             (userId: string) => this.userManager.getState(userId)
         );
-
-        // Crear instancia del Router
         this.webhookRouter = new WebhookRouter(
-            this.bufferManager,
-            this.userManager,
-            this.mediaManager,
-            this.mediaService,
-            this.databaseService,
-            this.delayedActivityService,
-            this.openaiService,
-            this.terminalLog,
+            this.bufferManager, 
+            this.userManager, 
+            this.mediaManager, 
+            this.mediaService, 
+            this.databaseService, 
+            this.delayedActivityService, 
+            this.openaiService, 
+            this.terminalLog, 
             this.clientDataCache
         );
-        
-        // Validation
         this.hotelValidation = new HotelValidation();
 
-        // Register container dependencies
-        container.register('DatabaseService', { useValue: this.databaseService });
-        container.register('HotelValidation', { useValue: this.hotelValidation });
-
+        this.setupMiddleware();
         this.setupRoutes();
-        this.setupCacheMetrics();
-        this.setupCleanupJobs();
     }
 
-    private setupRoutes(): void {
-        this.app.use(express.json());
+    private setupMiddleware() {
+        this.app.use(express.json({ limit: '50mb' }));
+    }
 
-        // Health check
+    private setupRoutes() {
+        // Health check endpoint with detailed status
         this.app.get('/health', (req, res) => {
-            res.json({ 
-                status: 'ok', 
-                timestamp: new Date().toISOString(),
-                version: 'responses-api-v1' // NUEVO: Indicar versión
-            });
-        });
-
-        // Webhook endpoint
-        this.app.post('/webhook', async (req, res) => {
-            try {
-                // Responder inmediatamente a WhatsApp
-                res.status(200).send('OK');
-                
-                // Procesar webhook asíncronamente
-                await this.webhookRouter.route(req.body);
-            } catch (error) {
-                this.handleError(error, 'webhook');
-            }
-        });
-
-        // Stats endpoint
-        this.app.get('/stats', (req, res) => {
-            res.json({
-                users: this.userManager.getStats().totalUsers,
-                cache: this.clientDataCache.getStats(),
-                buffers: this.bufferManager.getStats(),
-                functions: this.functionRegistry.list(),
+            const stats = this.getStats();
+            res.status(200).json({
+                status: 'healthy',
+                timestamp: new Date(),
+                version: process.env.npm_package_version || '1.0.0',
                 uptime: process.uptime(),
-                memory: process.memoryUsage(),
-                version: 'responses-api-v1'
+                apiVersion: 'responses', // Indicar que usa Responses API
+                ...stats
+            });
+        });
+
+        // Main webhook endpoint
+        this.app.post('/hook', async (req, res) => {
+            try {
+                // Respond immediately to acknowledge receipt
+                res.status(200).json({ 
+                    received: true, 
+                    timestamp: new Date().toISOString(),
+                    requestId: req.headers['x-request-id'] || 'unknown'
+                });
+                
+                // Process webhook asynchronously through router
+                this.webhookRouter.route(req.body).catch(error => {
+                    console.error('Error processing webhook:', error);
+                });
+            } catch (error) {
+                console.error('Error in webhook handler:', error);
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        });
+
+        // Cache clearing endpoint
+        this.app.post('/admin/clear-cache', (req, res) => {
+            const { userId } = req.body;
+            
+            if (userId) {
+                this.clientDataCache.delete(userId);
+                this.bufferManager.clearBuffer(userId);
+                res.json({ success: true, message: `Cache cleared for user ${userId}` });
+            } else {
+                res.status(400).json({ error: 'userId required' });
+            }
+        });
+
+        // 404 handler
+        this.app.use((req, res) => {
+            res.status(404).json({ 
+                error: 'Not found',
+                path: req.path,
+                method: req.method
             });
         });
     }
 
-    private setupCacheMetrics(): void {
-        // Actualizar métricas cada 5 segundos
-        const metricsInterval = setInterval(() => {
-            const stats = this.clientDataCache.getStats();
-            setCacheSize(stats.size);
-        }, 5000);
-        
-        this.cleanupIntervals.push(metricsInterval);
-    }
-
-    private setupCleanupJobs(): void {
-        // Limpiar conversaciones inactivas cada hora
-        const conversationCleanupInterval = setInterval(async () => {
-            try {
-                await this.openaiService.cleanupInactiveConversations();
-                logInfo('CLEANUP_SUCCESS', 'Conversaciones inactivas limpiadas');
-            } catch (error) {
-                logError('CLEANUP_ERROR', 'Error limpiando conversaciones', {
-                    error: error instanceof Error ? error.message : 'Unknown'
-                });
-            }
-        }, 60 * 60 * 1000); // Cada hora
-        
-        this.cleanupIntervals.push(conversationCleanupInterval);
-        
-        // Mantener los otros trabajos de limpieza existentes
-        const bufferCleanupInterval = setInterval(() => {
-            const removed = this.bufferManager.cleanup();
-            if (removed > 0) {
-                logInfo('BUFFER_CLEANUP', 'Buffers inactivos limpiados', { removed });
-            }
-        }, 60000); // Cada minuto
-        
-        this.cleanupIntervals.push(bufferCleanupInterval);
-    }
-
-    private handleError(error: unknown, context: string): void {
-        const now = Date.now();
-        const errorKey = `${context}:${error instanceof Error ? error.message : 'unknown'}`;
-        
-        // Evitar spam de logs para el mismo error
-        if (!this.lastError[errorKey] || now - this.lastError[errorKey].time > 60000) {
-            logError('BOT_ERROR', `Error en ${context}`, {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                stack: error instanceof Error ? error.stack : undefined
+    async start() {
+        return new Promise<void>((resolve, reject) => {
+            this.server.listen(this.config.port, this.config.host, () => {
+                console.log(`✅ Server is running on http://${this.config.host}:${this.config.port}`);
+                console.log(`🔄 Using Responses API (no threads)`);
+                
+                logServerStart('Server started successfully', { port: this.config.port });
+                logBotReady('Bot is ready to receive messages', {});
+                
+                // Setup periodic cleanup
+                this.setupCleanupJobs();
+                
+                resolve();
             });
-            this.lastError[errorKey] = { time: now };
-        }
+
+            this.server.on('error', (error) => {
+                console.error('❌ Server failed to start:', error);
+                reject(error);
+            });
+        });
     }
 
-    async start(): Promise<void> {
-        try {
-            // Conectar a la base de datos
-            await this.databaseService.connect();
-            logSuccess('DATABASE_CONNECTED', 'Base de datos conectada');
-
-            // Iniciar servidor
-            return new Promise((resolve) => {
-                this.server.listen(this.config.port, this.config.host, () => {
-                    logServerStart('Servidor iniciado', {
-                        port: this.config.port,
-                        host: this.config.host,
-                        environment: process.env.NODE_ENV || 'development',
-                        apiVersion: 'responses-api-v1'
-                    });
-                    
-                    logBotReady('Bot listo para recibir mensajes', {
-                        functionsLoaded: this.functionRegistry.list().length,
-                        cacheEnabled: true,
-                        databaseConnected: this.databaseService.connected
-                    });
-                    
-                    resolve();
-                });
-            });
-        } catch (error) {
-            logError('STARTUP_ERROR', 'Error iniciando el bot', {
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
-            throw error;
-        }
-    }
-
-    async stop(): Promise<void> {
-        // Limpiar intervalos
-        for (const interval of this.cleanupIntervals) {
-            clearInterval(interval);
-        }
+    async stop() {
+        console.log('🛑 Shutting down server...');
         
-        // Cerrar conexiones
-        await this.databaseService.disconnect();
+        // Clear all intervals
+        this.cleanupIntervals.forEach(interval => clearInterval(interval));
         
-        // Cerrar servidor
-        return new Promise((resolve) => {
+        // Close server
+        return new Promise<void>((resolve) => {
             this.server.close(() => {
-                logInfo('BOT_STOPPED', 'Bot detenido correctamente');
+                console.log('✅ Server stopped successfully');
                 resolve();
             });
         });
+    }
+
+    private setupCleanupJobs() {
+        // Cleanup inactive conversations every 6 hours
+        const conversationCleanup = setInterval(async () => {
+            try {
+                await this.openaiService.cleanupInactiveConversations();
+                logInfo('CONVERSATION_CLEANUP', 'Limpieza de conversaciones inactivas completada');
+            } catch (error) {
+                logError('CONVERSATION_CLEANUP_ERROR', 'Error en limpieza de conversaciones', {
+                    error: error instanceof Error ? error.message : 'Unknown'
+                });
+            }
+        }, 6 * 60 * 60 * 1000); // 6 horas
+
+        this.cleanupIntervals.push(conversationCleanup);
+
+        // Cache stats logging every 30 minutes
+        const cacheStatsInterval = setInterval(() => {
+            const stats = this.clientDataCache.getStats();
+            logInfo('CACHE_STATS', 'Estadísticas de cache', stats);
+            setCacheSize(stats.size);
+        }, 30 * 60 * 1000); // 30 minutos
+
+        this.cleanupIntervals.push(cacheStatsInterval);
+    }
+
+    private async processBufferCallback(userId: string): Promise<void> {
+        const buffer = this.bufferManager.getBuffer(userId);
+        if (!buffer || buffer.messages.length === 0) return;
+
+        try {
+            const chatId = buffer.chatId;
+            const userName = buffer.userName || userId;
+
+            // Combinar mensajes del buffer
+            const combinedText = buffer.messages
+                .filter(msg => typeof msg === 'string')
+                .join('\n\n');
+
+            if (!combinedText.trim()) {
+                console.log(`[BUFFER_SKIP] No hay texto para procesar para ${userId}`);
+                return;
+            }
+
+            // Procesar con Responses API
+            await this.openaiService.processWithOpenAI(userId, combinedText, chatId, userName);
+
+        } catch (error) {
+            console.error(`Error processing buffer for ${userId}:`, error);
+            
+            // Enviar mensaje de error al usuario
+            if (buffer && buffer.chatId) {
+                await this.whatsappService.sendWhatsAppMessage(
+                    buffer.chatId,
+                    'Lo siento, hubo un error procesando tu mensaje. Por favor intenta nuevamente.',
+                    { lastInputVoice: false }, // Estado básico del usuario
+                    false // isQuoteOrPrice
+                );
+            }
+        } finally {
+            // Limpiar buffer
+            this.bufferManager.clearBuffer(userId);
+        }
+    }
+
+    private getStats() {
+        const cacheStats = this.clientDataCache.getStats();
+        const bufferStats = this.bufferManager.getStats();
+        
+        return {
+            cache: cacheStats,
+            activeBuffers: bufferStats.active,
+            totalBuffers: bufferStats.total,
+            memory: {
+                heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
+                heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+                external: Math.round(process.memoryUsage().external / 1024 / 1024) + ' MB'
+            }
+        };
     }
 }
