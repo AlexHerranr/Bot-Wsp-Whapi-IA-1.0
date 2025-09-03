@@ -16,7 +16,50 @@ export class PromptVariablesService {
         message: string,
         metadata?: any
     ): Promise<Record<string, string>> {
-        const variables: Record<string, string> = {};
+        // Variables base del hotel
+        const variables: Record<string, string> = {
+            TELEFONO: metadata?.phoneNumber || userId.replace('@s.whatsapp.net', ''),
+            PRECIO_EXTRAS: "70000",
+            NINOS: "0",
+            PERSONAS: "2",
+            ADULTOS: "2",
+            ROOM_IDS_API: "201,202,203,204",
+            fecha: new Date().toLocaleDateString('es-CO'),
+            precio_alojamiento: "150000",
+            numero_personas: "2",
+            TARIFA_API: "150000",
+            DESCRIPCION_PAGO: "Pago pendiente",
+            numero_apto2: "202",
+            LISTA_APARTAMENTOS: "201, 202, 203, 204",
+            FECHA_SALIDA: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO'),
+            PRECIO_TOTAL: "220000",
+            FECHA_ENTRADA: new Date().toLocaleDateString('es-CO'),
+            tipo_apto: "Estándar",
+            monto: "220000",
+            MONTO_CON_RECARGO: "290000",
+            tipo_apto2: "Premium",
+            numero_noches: "2",
+            APARTAMENTOS: "201, 202, 203, 204",
+            NOMBRE_COMPLETO: metadata?.userName || "Cliente",
+            SALDO_PENDIENTE: "0",
+            precio_extras2: "70000",
+            MONTO: "220000",
+            precio_total2: "290000",
+            fecha_entrada: new Date().toLocaleDateString('es-CO'),
+            precio_extras: "70000",
+            PRECIO_ALOJAMIENTO: "150000",
+            APELLIDO: metadata?.lastName || "",
+            NOMBRE: metadata?.firstName || metadata?.userName || "Cliente",
+            fecha_salida: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('es-CO'),
+            numero_apto: "201",
+            ANTICIPO: "100000",
+            MONTO_ANTICIPO: "100000",
+            precio_total: "220000",
+            precio_alojamiento2: "150000",
+            metodo: "Transferencia",
+            EMAIL: metadata?.email || "cliente@tealquilamos.com",
+            CAPACIDAD_ESTANDAR: "4"
+        };
         
         try {
             // Variables básicas del contexto

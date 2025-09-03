@@ -19,6 +19,11 @@ prisma/migrations/
 .env.*.local
 .env.test
 
+# Test files with API keys
+test-openai-api.ts
+test-openai-api.js
+test-*.local.ts
+
 # Logs (organized structure)
 logs/sessions/current/*.log
 logs/sessions/archived/
