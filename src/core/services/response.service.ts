@@ -61,7 +61,8 @@ export class ResponseService {
         instructions: string | { id: string; version?: string },
         userMessage: string,
         context: ConversationContext,
-        functions?: any[]
+        functions?: any[],
+        imageMessage?: { type: 'image', imageUrl: string, caption: string }
     ): Promise<ResponseResult> {
         const startTime = Date.now();
         
@@ -89,14 +90,41 @@ export class ResponseService {
                 });
             }
             
-            // Agregar mensaje actual
+            // Construir contenido del mensaje actual
+            const messageContent: any[] = [];
+            
+            // Agregar texto si existe
+            if (userMessage && userMessage.trim()) {
+                messageContent.push({
+                    type: 'input_text',
+                    text: userMessage
+                });
+            }
+            
+            // Agregar imagen si existe
+            if (imageMessage) {
+                messageContent.push({
+                    type: 'input_image',
+                    image: {
+                        url: imageMessage.imageUrl,
+                        detail: 'auto' // GPT-5 decidirá el nivel de detalle necesario
+                    }
+                });
+                
+                // Si hay caption, agregarlo como texto adicional
+                if (imageMessage.caption && imageMessage.caption.trim()) {
+                    messageContent.push({
+                        type: 'input_text',
+                        text: `[Caption de la imagen]: ${imageMessage.caption}`
+                    });
+                }
+            }
+            
+            // Agregar mensaje actual con contenido mixto
             input.push({
                 type: 'message',
                 role: 'user',
-                content: [{
-                    type: 'input_text',
-                    text: userMessage
-                }]
+                content: messageContent
             });
             
             // Preparar parámetros de la llamada

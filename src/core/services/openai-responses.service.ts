@@ -6,7 +6,6 @@ import { CacheManager } from '../state/cache-manager';
 import { logInfo, logSuccess, logError, logWarning } from '../../utils/logging';
 import { logOpenAIPromptSent, logTokenUsage, logMessageFlowComplete } from '../../utils/logging/integrations';
 import { DatabaseService } from './database.service';
-import { PerceptionService } from './perception.service';
 import { ResponseService, ConversationContext } from './response.service';
 import { ConversationManager } from './conversation-manager';
 import { PromptVariablesService } from './prompt-variables.service';
@@ -42,7 +41,6 @@ export class OpenAIResponsesService implements IOpenAIService {
     private whatsappService?: any;
     private databaseService?: DatabaseService;
     private userManager?: any;
-    private perceptionService: PerceptionService;
     private static activeOpenAICalls: number = 0;
     private static readonly MAX_CONCURRENT_CALLS = 75;
     
@@ -79,7 +77,6 @@ export class OpenAIResponsesService implements IOpenAIService {
         );
         
         this.conversationManager = new ConversationManager(databaseService);
-        this.perceptionService = new PerceptionService();
         this.promptVariablesService = new PromptVariablesService(databaseService);
         
         // Configurar prompt ID o instrucciones
@@ -140,26 +137,8 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
         OpenAIResponsesService.activeOpenAICalls++;
         
         try {
-            // Procesar imagen si existe
-            let processedMessage = message;
-            if (imageMessage) {
-                const imageAnalysis = await this.perceptionService.analyzePaymentImage(
-                    imageMessage.imageUrl,
-                    userId
-                );
-                
-                if (imageAnalysis.classification !== 'rejected') {
-                    processedMessage = `${imageAnalysis.thread_text}\n\n${message}`;
-                } else {
-                    // Si la imagen fue rechazada, enviar mensaje de rechazo
-                    return {
-                        success: true,
-                        response: 'Por favor, envía solo comprobantes de pago o documentos relacionados con tu reserva. No puedo procesar otro tipo de imágenes.',
-                        processingTime: Date.now() - startTime,
-                        tokensUsed: 0
-                    };
-                }
-            }
+            // Ya no necesitamos procesar la imagen por separado
+            // GPT-5 puede manejar imágenes directamente
             
             // Obtener contexto de conversación
             const context = await this.conversationManager.getConversationContext(userId, chatId);
@@ -192,7 +171,7 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
             };
             
             // Guardar mensaje del usuario
-            await this.conversationManager.addMessage(userId, chatId, 'user', processedMessage);
+            await this.conversationManager.addMessage(userId, chatId, 'user', message);
             
             // Obtener funciones disponibles
             const functions = this.getFunctionsForRequest();
@@ -200,17 +179,19 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
             // Log del prompt enviado
             logOpenAIPromptSent({
                 userId,
-                messagePreview: processedMessage.substring(0, 100),
+                messagePreview: message.substring(0, 100),
                 hasPreviousContext: !!context.previousResponseId,
-                functionsCount: functions.length
+                functionsCount: functions.length,
+                hasImage: !!imageMessage
             });
             
             // Llamar a Responses API
             const result = await this.responseService.createResponse(
                 this.systemInstructions,
-                processedMessage,
+                message,
                 conversationContext,
-                functions
+                functions,
+                imageMessage // Pasar la imagen si existe
             );
             
             if (!result.success) {
