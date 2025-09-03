@@ -3,7 +3,7 @@ import { IOpenAIService, IFunctionRegistry } from '../../shared/interfaces';
 import { FunctionCall } from '../../shared/types';
 import { TerminalLog } from '../utils/terminal-log';
 import { CacheManager } from '../state/cache-manager';
-import { logInfo, logSuccess, logError, logWarning } from '../../utils/logging';
+import { logInfo, logSuccess, logError, logWarning, logDebug } from '../../utils/logging';
 import { logOpenAIPromptSent, logTokenUsage, logMessageFlowComplete } from '../../utils/logging/integrations';
 import { DatabaseService } from './database.service';
 import { ResponseService, ConversationContext } from './response.service';
