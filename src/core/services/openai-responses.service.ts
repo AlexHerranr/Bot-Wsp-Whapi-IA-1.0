@@ -231,7 +231,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             // Log del prompt enviado
             logOpenAIPromptSent(
                 userId,
-                conversationId || context.previousResponseId || 'new',
+                context.previousResponseId || 'new',
                 message,
                 message.length
             );
@@ -297,7 +297,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             if (result.usage) {
                 logTokenUsage(
                     userId,
-                    conversationId || 'no-conversation',
+                    context.previousResponseId || 'no-conversation',
                     result.usage.inputTokens,
                     result.usage.outputTokens,
                     'gpt-5'
