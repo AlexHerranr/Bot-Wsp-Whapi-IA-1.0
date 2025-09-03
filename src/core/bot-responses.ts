@@ -114,7 +114,8 @@ export class CoreBotResponses {
             this.functionRegistry,
             this.whatsappService,
             this.databaseService,
-            this.userManager
+            this.userManager,
+            this.mediaService
         );
         
         // Cargar instrucciones del sistema si están disponibles

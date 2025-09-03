@@ -109,7 +109,7 @@ export class PerceptionService {
                                 text: CAPTIONER_USER_PREFIX
                             },
                             {
-                                type: 'input_image' as const,
+                                type: 'input_image',
                                 image: imageUrl
                             } as any,
                             {

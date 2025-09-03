@@ -105,13 +105,17 @@ export class ResponseService {
             
             // Agregar imagen si existe
             if (imageMessage) {
+                logInfo('IMAGE_PROCESSING', 'Agregando imagen a la solicitud', {
+                    userId: context.userId,
+                    imageUrl: imageMessage.imageUrl.substring(0, 50) + '...',
+                    hasCaption: !!imageMessage.caption,
+                    caption: imageMessage.caption?.substring(0, 50) || 'sin caption'
+                });
+                
                 messageContent.push({
                     type: 'input_image',
-                    image: {
-                        url: imageMessage.imageUrl,
-                        detail: 'auto' // GPT-5 decidirá el nivel de detalle necesario
-                    }
-                });
+                    image: imageMessage.imageUrl
+                } as any);
                 
                 // Si hay caption, agregarlo como texto adicional
                 if (imageMessage.caption && imageMessage.caption.trim()) {

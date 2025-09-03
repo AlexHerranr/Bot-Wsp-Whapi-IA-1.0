@@ -205,6 +205,8 @@ export class MediaService implements IMediaService {
             if (!finalImageUrl || !finalImageUrl.startsWith('http')) {
                 throw new Error('URL de imagen inválida o no disponible');
             }
+            
+            this.terminalLog.info(`[IMAGE_ANALYSIS_START] Iniciando análisis de imagen | Usuario: ${userName || userId} | URL: ${finalImageUrl.substring(0, 50)}...`);
 
             // Use openAIWithRetry for vision API con Responses API
             const visionResponse = await openAIWithRetry(
@@ -219,7 +221,7 @@ export class MediaService implements IMediaService {
                                 text: 'Analiza esta imagen en el contexto de un hotel. Describe brevemente qué ves, enfocándote en: habitaciones, instalaciones, documentos, o cualquier elemento relevante para consultas hoteleras. Máximo 100 palabras.' 
                             },
                             { 
-                                type: 'input_image' as const, 
+                                type: 'input_image',
                                 image: finalImageUrl
                             } as any
                         ]
@@ -242,6 +244,8 @@ export class MediaService implements IMediaService {
                 analysis = outputMessage.content[0].text || 'Imagen recibida';
             }
             const duration = Date.now() - startTime;
+            
+            this.terminalLog.info(`[IMAGE_ANALYSIS_SUCCESS] Análisis completado | Usuario: ${userName || userId} | Duración: ${duration}ms | Tokens: ${visionResponse.usage?.total_tokens || 0} | Resultado: ${analysis.substring(0, 100)}...`);
             
             return {
                 success: true,
