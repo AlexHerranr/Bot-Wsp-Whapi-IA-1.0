@@ -49,6 +49,7 @@ model WhatsApp {
   lastActivity     DateTime
   threadId         String?
   threadTokenCount Int?     @default(0)
+  last_response_id String?
   
   @@map("Chats")
 }
