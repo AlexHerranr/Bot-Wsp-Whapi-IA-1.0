@@ -158,9 +158,9 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
                 );
             }
             
-            // Obtener o crear conversación con Conversations API
+            // Siempre usar Conversations API (hardcoded)
             let conversationId = context.conversationId;
-            if (!conversationId && process.env.USE_CONVERSATIONS_API === 'true') {
+            if (!conversationId) {
                 conversationId = await this.responseService.getOrCreateConversation(userId, chatId);
             }
             

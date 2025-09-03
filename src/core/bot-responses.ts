@@ -105,7 +105,7 @@ export class CoreBotResponses {
             {
                 apiKey: this.config.secrets.OPENAI_API_KEY,
                 assistantId: process.env.OPENAI_ASSISTANT_ID || '', // Por compatibilidad
-                model: process.env.OPENAI_MODEL || 'gpt-4o',
+                model: 'gpt-5-mini-2025-08-07', // Hardcoded - el modelo real lo define el prompt
                 maxOutputTokens: parseInt(process.env.MAX_OUTPUT_TOKENS || '4096'),
                 temperature: parseFloat(process.env.TEMPERATURE || '0.7')
             },

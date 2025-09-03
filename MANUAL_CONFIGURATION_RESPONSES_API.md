@@ -4,27 +4,22 @@
 
 ### 1. Variables de Entorno en Railway
 
-**Agrega estas nuevas variables:**
+**Variables necesarias para la migración:**
 
 ```bash
 # 🔴 IMPORTANTE: Tu Prompt ID del dashboard de OpenAI
 OPENAI_PROMPT_ID=pmpt_68b7dbd8b694819386644f198b2165880410e06c7884ad66
 OPENAI_PROMPT_VERSION=1
 
-# Configuración del modelo
-OPENAI_MODEL=gpt-5-mini-2025-08-07
-
-# Usar Conversations API para mantener contexto
-USE_CONVERSATIONS_API=true
-
 # Tokens máximos de salida (opcional - por defecto 4096)
 MAX_OUTPUT_TOKENS=4096
-
-# Temperatura (opcional - por defecto 0.7, no funciona con GPT-5)
-# TEMPERATURE=0.7
 ```
 
-**Nota:** Si NO configurar `OPENAI_PROMPT_ID`, el sistema usará instrucciones inline con la variable `SYSTEM_INSTRUCTIONS`.
+**Valores hardcodeados en el código (no requieren variables de entorno):**
+- `OPENAI_MODEL=gpt-5-mini-2025-08-07` - Hardcodeado, pero el modelo real lo define el prompt en el playground
+- `USE_CONVERSATIONS_API=true` - Siempre habilitado
+
+**Nota:** Si NO configuras `OPENAI_PROMPT_ID`, el sistema usará instrucciones inline con la variable `SYSTEM_INSTRUCTIONS`.
 
 **Variables que se mantienen igual:**
 - `OPENAI_API_KEY` - Tu API key actual
