@@ -136,6 +136,18 @@ export class ConversationManager {
             avgTokensPerMessage: Math.round(conversation.tokenCount / conversation.messageCount)
         });
         
+        // Verificar si necesita optimización
+        if (conversation.messageCount > 50) {
+            logWarning('LONG_CONVERSATION_DETECTED', 'Conversación larga detectada', {
+                userId,
+                chatId,
+                messageCount: conversation.messageCount,
+                tokenCount: conversation.tokenCount,
+                estimatedCost: `$${estimatedCost.toFixed(4)}`,
+                recommendation: 'Considerar implementar ventana deslizante'
+            });
+        }
+        
         // Verificar si necesita reset por tokens
         if (conversation.tokenCount > this.MAX_TOKEN_COUNT) {
             logWarning('TOKEN_LIMIT_EXCEEDED', 'Límite de tokens excedido, reseteando conversación', {
