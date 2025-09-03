@@ -17,6 +17,7 @@ prisma/migrations/
 .env.production
 .env.staging
 .env.*.local
+.env.test
 
 # Logs (organized structure)
 logs/sessions/current/*.log
