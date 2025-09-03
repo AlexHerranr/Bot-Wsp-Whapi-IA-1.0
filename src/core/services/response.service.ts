@@ -253,9 +253,11 @@ export class ResponseService {
         
         // Calcular uso de tokens
         const usage = response.usage ? {
-            inputTokens: response.usage.input_tokens || 0,
-            outputTokens: response.usage.output_tokens || 0,
-            totalTokens: response.usage.total_tokens || 0
+            inputTokens: response.usage.input_tokens || response.usage.prompt_tokens || 0,
+            outputTokens: response.usage.output_tokens || response.usage.completion_tokens || 0,
+            totalTokens: response.usage.total_tokens || 0,
+            cachedTokens: response.usage.input_tokens_details?.cached_tokens || 0,
+            reasoningTokens: response.usage.output_tokens_details?.reasoning_tokens || 0
         } : undefined;
         
         return {
