@@ -162,20 +162,22 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             // Obtener contexto de conversación
             const context = await this.conversationManager.getConversationContext(userId, chatId);
             
-            // NO extraer variables - enviar mensaje directo
-            let promptVariables: Record<string, string> | undefined = undefined;
-            // Comentado para evitar variables que ralentizan:
-            // if (this.usePromptId) {
-            //     promptVariables = await this.promptVariablesService.extractVariables(
-            //         userId,
-            //         chatId,
-            //         message,
-            //         {
-            //             userName,
-            //             ...context.metadata
-            //         }
-            //     );
-            // }
+            // Extraer variables solo si el prompt las necesita
+            let promptVariables: Record<string, string> | undefined;
+            if (this.usePromptId && process.env.PROMPT_NEEDS_VARIABLES === 'true') {
+                promptVariables = await this.promptVariablesService.extractVariables(
+                    userId,
+                    chatId,
+                    message,
+                    {
+                        userName,
+                        ...context.metadata
+                    }
+                );
+                logInfo('PROMPT_VARIABLES', 'Variables extraídas para el prompt', {
+                    count: Object.keys(promptVariables).length
+                });
+            }
             
             // Siempre usar Conversations API (hardcoded)
             let conversationId = context.conversationId;
