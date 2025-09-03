@@ -1020,13 +1020,25 @@ export class DatabaseService {
     
     async getConversation(userId: string, chatId: string): Promise<ConversationRecord | null> {
         try {
-            const result = await this.prisma.$queryRaw<ConversationRecord[]>`
-                SELECT * FROM Conversations 
-                WHERE user_id = ${userId} AND chat_id = ${chatId}
-                LIMIT 1
-            `;
+            // Usar la tabla WhatsApp existente (Chats)
+            const phoneNumber = userId.replace('@s.whatsapp.net', '');
+            const result = await this.prisma.whatsApp.findUnique({
+                where: { phoneNumber }
+            });
             
-            return result[0] || null;
+            if (!result) return null;
+            
+            // Mapear a ConversationRecord
+            return {
+                user_id: userId,
+                chat_id: chatId,
+                conversation_id: result.threadId || undefined, // Usar threadId como conversation_id
+                last_response_id: result.threadId || undefined,
+                message_count: 0, // No necesitamos esto
+                token_count: result.threadTokenCount || 0,
+                last_activity: result.lastActivity,
+                metadata: {}
+            };
         } catch (error) {
             logError('GET_CONVERSATION_ERROR', 'Error obteniendo conversación', {
                 userId,
@@ -1041,13 +1053,29 @@ export class DatabaseService {
         try {
             const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
             
-            const result = await this.prisma.$queryRaw<ConversationRecord[]>`
-                SELECT * FROM Conversations 
-                WHERE last_activity > ${cutoffTime}
-                ORDER BY last_activity DESC
-            `;
+            // Usar la tabla WhatsApp existente (Chats)
+            const results = await this.prisma.whatsApp.findMany({
+                where: {
+                    lastActivity: {
+                        gt: cutoffTime
+                    }
+                },
+                orderBy: {
+                    lastActivity: 'desc'
+                }
+            });
             
-            return result;
+            // Mapear a ConversationRecord[]
+            return results.map(result => ({
+                user_id: result.phoneNumber + '@s.whatsapp.net',
+                chat_id: result.chatId || '',
+                conversation_id: result.threadId || undefined,
+                last_response_id: result.threadId || undefined,
+                message_count: 0,
+                token_count: result.threadTokenCount || 0,
+                last_activity: result.lastActivity,
+                metadata: {}
+            }));
         } catch (error) {
             logError('GET_RECENT_CONVERSATIONS_ERROR', 'Error obteniendo conversaciones recientes', {
                 hoursBack,
@@ -1059,28 +1087,23 @@ export class DatabaseService {
     
     async updateConversation(conversation: ConversationRecord): Promise<void> {
         try {
-            await this.prisma.$executeRaw`
-                INSERT INTO Conversations (
-                    user_id, chat_id, last_response_id, 
-                    message_count, token_count, last_activity, metadata
-                ) VALUES (
-                    ${conversation.user_id}, ${conversation.chat_id}, ${conversation.last_response_id},
-                    ${conversation.message_count}, ${conversation.token_count}, ${conversation.last_activity},
-                    ${conversation.metadata || {}}::jsonb
-                )
-                ON CONFLICT (user_id, chat_id) DO UPDATE SET
-                    last_response_id = EXCLUDED.last_response_id,
-                    message_count = EXCLUDED.message_count,
-                    token_count = EXCLUDED.token_count,
-                    last_activity = EXCLUDED.last_activity,
-                    metadata = EXCLUDED.metadata,
-                    updated_at = CURRENT_TIMESTAMP
-            `;
+            const phoneNumber = conversation.user_id.replace('@s.whatsapp.net', '');
+            
+            // Actualizar en la tabla WhatsApp existente
+            await this.prisma.whatsApp.update({
+                where: { phoneNumber },
+                data: {
+                    threadId: conversation.last_response_id || conversation.conversation_id,
+                    threadTokenCount: conversation.token_count,
+                    lastActivity: conversation.last_activity
+                }
+            });
             
             logInfo('CONVERSATION_UPDATED', 'Conversación actualizada', {
                 userId: conversation.user_id,
                 chatId: conversation.chat_id,
-                responseId: conversation.last_response_id
+                responseId: conversation.last_response_id,
+                tokenCount: conversation.token_count
             });
         } catch (error) {
             logError('UPDATE_CONVERSATION_ERROR', 'Error actualizando conversación', {
@@ -1093,50 +1116,28 @@ export class DatabaseService {
     }
     
     async saveMessage(message: MessageRecord): Promise<void> {
-        try {
-            await this.prisma.$executeRaw`
-                INSERT INTO ConversationMessages (
-                    user_id, chat_id, response_id, role, content, timestamp
-                ) VALUES (
-                    ${message.user_id}, ${message.chat_id}, ${message.response_id},
-                    ${message.role}, ${message.content}, ${message.timestamp}
-                )
-            `;
-            
-            logInfo('MESSAGE_SAVED', 'Mensaje guardado', {
-                userId: message.user_id,
-                chatId: message.chat_id,
-                role: message.role,
-                responseId: message.response_id
-            });
-        } catch (error) {
-            logError('SAVE_MESSAGE_ERROR', 'Error guardando mensaje', {
-                userId: message.user_id,
-                chatId: message.chat_id,
-                error: error instanceof Error ? error.message : 'Unknown'
-            });
-        }
+        // No necesitamos guardar mensajes individuales
+        // OpenAI maneja el historial internamente con conversation_id
+        logInfo('MESSAGE_SAVE_SKIPPED', 'Guardado de mensaje omitido (manejado por OpenAI)', {
+            userId: message.user_id,
+            role: message.role,
+            responseId: message.response_id
+        });
     }
     
     async resetConversation(userId: string, chatId: string): Promise<void> {
         try {
-            // Resetear conversación
-            await this.prisma.$executeRaw`
-                UPDATE Conversations 
-                SET last_response_id = NULL,
-                    message_count = 0,
-                    token_count = 0,
-                    last_activity = CURRENT_TIMESTAMP,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = ${userId} AND chat_id = ${chatId}
-            `;
+            const phoneNumber = userId.replace('@s.whatsapp.net', '');
             
-            // Opcional: Limpiar mensajes antiguos
-            await this.prisma.$executeRaw`
-                DELETE FROM ConversationMessages
-                WHERE user_id = ${userId} AND chat_id = ${chatId}
-                AND timestamp < CURRENT_TIMESTAMP - INTERVAL '7 days'
-            `;
+            // Resetear conversación en la tabla WhatsApp
+            await this.prisma.whatsApp.update({
+                where: { phoneNumber },
+                data: {
+                    threadId: null,
+                    threadTokenCount: 0,
+                    lastActivity: new Date()
+                }
+            });
             
             logInfo('CONVERSATION_RESET', 'Conversación reseteada', {
                 userId,

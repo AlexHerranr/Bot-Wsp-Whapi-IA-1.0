@@ -147,34 +147,11 @@ Una vez desplegado, verifica:
 
 ### 6. Migración de Base de Datos
 
-**IMPORTANTE:** La nueva versión requiere tablas adicionales para gestionar conversaciones:
+**BUENAS NOTICIAS:** No se requieren nuevas tablas. La nueva versión reutiliza la tabla existente `WhatsApp` (Chats):
 
-```sql
--- Crear tabla de conversaciones
-CREATE TABLE IF NOT EXISTS Conversations (
-    user_id VARCHAR(255) NOT NULL,
-    chat_id VARCHAR(255) NOT NULL,
-    conversation_id VARCHAR(255),
-    last_response_id VARCHAR(255),
-    message_count INTEGER DEFAULT 0,
-    token_count INTEGER DEFAULT 0,
-    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    metadata JSONB,
-    PRIMARY KEY (user_id, chat_id)
-);
-
--- Crear tabla de mensajes
-CREATE TABLE IF NOT EXISTS ConversationMessages (
-    id SERIAL PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    chat_id VARCHAR(255) NOT NULL,
-    response_id VARCHAR(255),
-    role VARCHAR(50) NOT NULL,
-    content TEXT NOT NULL,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_conversation_messages (user_id, chat_id, timestamp)
-);
-```
+- El campo `threadId` ahora almacena el `conversation_id` o `response_id` de la Responses API
+- El campo `threadTokenCount` sigue acumulando los tokens utilizados
+- No necesitas ejecutar ninguna migración SQL
 
 ### 7. Rollback (Si es Necesario)
 
