@@ -182,17 +182,20 @@ export class ResponseService {
             // IMPORTANTE: Solo incluir tools si hay funciones disponibles
             // NO enviar array vacío - la API espera que si tools existe, tenga elementos válidos
             if (functions && functions.length > 0) {
-                // Mapear al formato correcto de la API
+                // Formatear las funciones al formato correcto de la API
                 requestParams.tools = functions.map(fn => ({
-                    name: fn.name || fn.function?.name,
-                    description: fn.description || fn.function?.description || '',
-                    parameters: fn.parameters || fn.function?.parameters || {}
+                    type: "function",
+                    function: {
+                        name: fn.name,
+                        description: fn.description || '',
+                        parameters: fn.parameters || {}
+                    }
                 }));
                 requestParams.tool_choice = 'auto';
                 
                 logDebug('TOOLS_PARAM', 'Enviando tools', { 
                     count: functions.length,
-                    tools: requestParams.tools.map(t => t.name)
+                    tools: requestParams.tools.map(t => t.function.name)
                 });
             }
             // Si no hay functions, NO incluir el parámetro tools en absoluto

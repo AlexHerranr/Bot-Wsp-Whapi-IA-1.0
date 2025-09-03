@@ -358,31 +358,23 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
         
         logDebug('FUNCTIONS_LOADED', `Cargando ${functions.length} funciones para el request`);
         
-        // Convertir al formato correcto de tools para Responses API
-        const tools = functions.map(fn => {
-            // Validar que la función tenga los campos requeridos
+        // Devolver las funciones en formato simple
+        // response.service.ts se encargará de formatearlas correctamente
+        const validFunctions = functions.filter(fn => {
             if (!fn.name) {
                 logWarning('FUNCTION_MISSING_NAME', 'Función sin nombre, ignorando', {
                     function: JSON.stringify(fn)
                 });
-                return null;
+                return false;
             }
-            
-            return {
-                type: "function",
-                function: {
-                    name: fn.name,
-                    description: fn.description || "",
-                    parameters: fn.parameters || {}
-                }
-            };
-        }).filter(tool => tool !== null);
-        
-        logDebug('TOOLS_FORMATTED', `${tools.length} tools formateadas correctamente`, {
-            sample: tools.length > 0 ? JSON.stringify(tools[0]) : 'none'
+            return true;
         });
         
-        return tools;
+        logDebug('FUNCTIONS_VALIDATED', `${validFunctions.length} funciones válidas para el request`, {
+            functionNames: validFunctions.map(f => f.name)
+        });
+        
+        return validFunctions;
     }
     
     private formatFunctionResults(results: Record<string, any>): string {
