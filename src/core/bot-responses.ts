@@ -283,7 +283,6 @@ export class CoreBotResponses {
             logInfo('BUFFER_TO_AI', 'Enviando buffer a OpenAI', {
                 userId,
                 chatId,
-                messageCount: buffer.messages.length,
                 textLength: combinedText.length
             });
 

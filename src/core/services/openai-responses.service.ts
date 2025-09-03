@@ -10,6 +10,7 @@ import { ResponseService, ConversationContext } from './response.service';
 import { ConversationManager } from './conversation-manager';
 import { PromptVariablesService } from './prompt-variables.service';
 import { MediaService } from './media.service';
+import { ThreadPersistenceService } from './thread-persistence.service';
 
 export interface OpenAIResponsesServiceConfig {
     apiKey: string;
