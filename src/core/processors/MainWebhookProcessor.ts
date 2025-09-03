@@ -124,6 +124,7 @@ export class MainWebhookProcessor extends BaseWebhookProcessor {
                 type: webhookType,
                 processor: 'main'
             }, 'main-webhook-processor.ts');
+            
             return;
         }
 
@@ -319,6 +320,8 @@ export class MainWebhookProcessor extends BaseWebhookProcessor {
                 );
                 
                 // Solo enriquecer si necesita labels (names ya vienen del webhook)
+                // NOTA: Los labels NO vienen en el webhook de mensajes, se obtienen mediante
+                // llamada a la API de WhatsApp (/chats/{chatId}) en enrichUserFromWhapi
                 const hasNoLabels = !(clientData as any).labels;
                 shouldEnrichAsync = hasNoLabels;
             } else {
@@ -686,4 +689,6 @@ export class MainWebhookProcessor extends BaseWebhookProcessor {
             });
         }
     }
+
+
 }

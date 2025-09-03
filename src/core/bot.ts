@@ -24,6 +24,7 @@ import { IFunctionRegistry } from '../shared/interfaces';
 import { logBotReady, logServerStart, logInfo, logSuccess, logError, logWarning } from '../utils/logging';
 import { trackCache, setCacheSize } from '../utils/logging/collectors';
 import { HotelValidation } from '../plugins/hotel/logic/validation';
+import { ResponseValidator } from './validators/response-validator';
 
 // Simulación de la configuración
 interface AppConfig {
@@ -59,8 +60,9 @@ export class CoreBot {
     // private hotelPlugin: HotelPlugin; // Moved to main.ts
     private functionRegistry: IFunctionRegistry;
     private cleanupIntervals: NodeJS.Timeout[] = [];
-    private lastError: Record<string, { time: number }> = {};
+    private lastError: Record<string, { time: number; error?: string }> = {};
     private hotelValidation: HotelValidation;
+    private responseValidator: ResponseValidator;
 
     constructor(
         config: AppConfig,
@@ -115,6 +117,9 @@ export class CoreBot {
         );
         this.webhookRouter = new WebhookRouter(this.bufferManager, this.userManager, this.mediaManager, this.mediaService, this.databaseService, this.delayedActivityService, this.openaiService, this.terminalLog, this.clientDataCache);
         this.hotelValidation = new HotelValidation();
+        
+        // Inicializar response validator
+        this.responseValidator = container.resolve(ResponseValidator);
 
         this.setupMiddleware();
         this.setupRoutes();
@@ -466,6 +471,20 @@ export class CoreBot {
             // 4. Obtener thread existente (lógica simplificada)
             const existingThread = await this.threadPersistence.getThread(userId);
             let existingThreadId = existingThread?.threadId;
+            
+            if (existingThreadId) {
+                logInfo('THR_EXISTING', `Thread existente encontrado: ${existingThreadId} para ${userId}`, {
+                    userId,
+                    userName,
+                    threadId: existingThreadId,
+                    tokenCount: existingThread.tokenCount || 0
+                }, 'bot.ts');
+            } else {
+                logInfo('THR_NONE', `No se encontró thread existente para ${userId}`, {
+                    userId,
+                    userName
+                }, 'bot.ts');
+            }
 
             // Lógica simplificada: Solo verificar existencia en BD
             // La validación con OpenAI se hace en OpenAIService.processMessage
@@ -533,34 +552,16 @@ export class CoreBot {
                 }
             }
 
-            // Enviar indicador de estado apropiado antes de procesar
+            // REMOVIDO: No enviar presencia antes del procesamiento
+            // La presencia se enviará justo antes de enviar el mensaje real
             let userState = this.userManager.getOrCreateState(userId);
-            try {
-                if (userState.lastInputVoice) {
-                    // Si el último input fue voz, mostrar "grabando"
-                    await this.whatsappService.sendRecordingIndicator(chatId);
-                    logInfo('INDICATOR_SENT', 'Indicador de grabación enviado exitosamente', { 
-                        userId, 
-                        userName, 
-                        chatId,
-                        indicatorType: 'recording',
-                        success: true
-                    }, 'bot.ts');
-                } else {
-                    // Evitar indicador de escritura largo antes del run de OpenAI para no simular escritura durante toda la latencia
-                    // El indicador se envía justo antes de cada chunk en WhatsappService
-                }
-            } catch (indicatorError) {
-                // No bloquear el procesamiento si falla el indicador
-                logWarning('INDICATOR_FAILED', 'Error enviando indicador de presencia', {
-                    userId,
-                    userName,
-                    chatId,
-                    indicatorType: userState.lastInputVoice ? 'recording' : 'typing',
-                    error: indicatorError instanceof Error ? indicatorError.message : String(indicatorError),
-                    success: false
-                });
-            }
+            logInfo('PRESENCE_DELAYED', 'Presencia diferida hasta tener respuesta lista', {
+                userId,
+                userName,
+                chatId,
+                inputType: userState.lastInputVoice ? 'voice' : 'text',
+                reason: 'avoid_stuck_presence'
+            }, 'bot.ts');
 
             // Log técnico: inicio de run OpenAI
             logInfo('OPENAI_RUN_START', 'Iniciando run de OpenAI', {
@@ -739,6 +740,13 @@ export class CoreBot {
                 
                 if (!existingThreadId || existingThreadId !== processingResult.threadId) {
                     // Thread nuevo - crear registro completo
+                    logInfo('THR_NEW', `Creando nuevo thread ${processingResult.threadId} para ${userId}`, {
+                        userId,
+                        userName,
+                        oldThreadId: existingThreadId || 'none',
+                        newThreadId: processingResult.threadId,
+                        reason: !existingThreadId ? 'no_existing_thread' : 'thread_id_changed'
+                    }, 'bot.ts');
                     await this.threadPersistence.setThread(userId, processingResult.threadId, chatId, userName);
                     
                     // Reset tokens a 0 para thread nuevo (evitar herencia de tokens no relacionados)
@@ -857,7 +865,8 @@ export class CoreBot {
                     userId,
                     userName,
                     imageCount: pendingImages.length,
-                    reason: 'successful_processing'
+                    reason: 'successful_processing',
+                    processingTimeMs: processingResult.processingTime
                 }, 'bot.ts');
             }
 
@@ -868,7 +877,66 @@ export class CoreBot {
             const hotelContext = null;
             
             // Validation moved to plugin - OpenAI handles it via functions
-            const finalResponse = response;
+            let finalResponse = response;
+            
+            // 10. VALIDACIÓN DE RESPUESTA: Detectar posibles alucinaciones
+            if (finalResponse && finalResponse.trim() !== '') {
+                const validationResult = await this.responseValidator.validateResponse(finalResponse, {
+                    userId,
+                    userName,
+                    chatId,
+                    threadId: processingResult.threadId
+                });
+                
+                if (!validationResult.isValid && validationResult.suggestedAction === 'retry') {
+                    // Intentar corregir la respuesta con una observación interna
+                    logWarning('RESPONSE_VALIDATION_FAILED', 'Respuesta inválida detectada, reintentando', {
+                        userId,
+                        userName,
+                        reason: validationResult.reason,
+                        originalResponsePreview: finalResponse.substring(0, 100)
+                    }, 'bot.ts');
+                    
+                    // Crear mensaje de observación interna
+                    const internalObservation = validationResult.internalObservation || 
+                        'Por favor revisa tu respuesta anterior y corrige cualquier información incorrecta.';
+                    
+                    // Reintentar con observación interna
+                    const retryResult = await this.openaiService.processMessage(
+                        userId,
+                        internalObservation,
+                        chatId,
+                        userName,
+                        processingResult.threadId,
+                        processingResult.finalTokenCount,
+                        undefined,
+                        undefined,
+                        targetAssistantId
+                    );
+                    
+                    if (retryResult.success && retryResult.response) {
+                        // Validar la nueva respuesta
+                        const retryValidation = await this.responseValidator.validateResponse(retryResult.response);
+                        
+                        if (retryValidation.isValid) {
+                            finalResponse = retryResult.response;
+                            logSuccess('RESPONSE_CORRECTED', 'Respuesta corregida exitosamente', {
+                                userId,
+                                userName,
+                                newResponsePreview: finalResponse.substring(0, 100)
+                            }, 'bot.ts');
+                        } else {
+                            // Si aún falla, usar respuesta genérica segura
+                            finalResponse = 'Estoy procesando tu solicitud. Por favor dame un momento para verificar la información correcta.';
+                            logError('RESPONSE_RETRY_FAILED', 'Reintento de corrección falló', {
+                                userId,
+                                userName,
+                                fallbackUsed: true
+                            }, 'bot.ts');
+                        }
+                    }
+                }
+            }
             
             // 11. Enviar respuesta por WhatsApp solo si hay contenido
             if (finalResponse && finalResponse.trim() !== '') {
@@ -1075,10 +1143,21 @@ export class CoreBot {
             this.bufferManager.releaseRun(userId);
             
             // Mark recent error to prevent secondary buffer processing
-            this.lastError[userId] = { time: Date.now() };
+            this.lastError[userId] = { time: Date.now(), error: error.message };
             
             // Also mark error in buffer manager for timer extension
             this.bufferManager.markRecentError(userId);
+            
+            // Log error pattern for monitoring
+            const errorPattern = error.message?.includes('run is active') ? 'RUN_ACTIVE' : 
+                               error.message?.includes('rate_limit') ? 'RATE_LIMIT' :
+                               error.message?.includes('timeout') ? 'TIMEOUT' : 'OTHER';
+            logWarning('ERROR_PATTERN', `Error pattern detected: ${errorPattern}`, {
+                userId,
+                userName,
+                pattern: errorPattern,
+                errorMessage: error.message?.substring(0, 100)
+            }, 'bot.ts');
             
             // Verificar orphan processing states después de error
             if (this.userManager.getStats().activeProcessing > this.userManager.getStats().totalUsers) {

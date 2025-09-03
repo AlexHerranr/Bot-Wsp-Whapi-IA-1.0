@@ -98,7 +98,7 @@ export class DatabaseService {
     // --- Operaciones con Threads ---
     public async saveOrUpdateThread(userId: string, threadData: Partial<ThreadRecord>): Promise<ThreadRecord> {
         const threadRecord: ThreadRecord = {
-            threadId: threadData.threadId || '',
+            threadId: threadData.threadId || null,
             chatId: threadData.chatId || '',
             userName: threadData.userName,
             lastActivity: new Date(),
@@ -372,7 +372,7 @@ export class DatabaseService {
                 // OPTIMIZADO: Enriquecimiento automático deshabilitado - se hace via hook externo
                 // Solo usar datos del cliente actual sin enriquecer automáticamente
                 const result = {
-                    threadId: client.threadId || '',
+                    threadId: client.threadId || null,
                     chatId: client.chatId || '',
                     userName: client.userName,
                     lastActivity: client.lastActivity,
@@ -957,6 +957,13 @@ export class DatabaseService {
 
             const chatInfo = await response.json() as any;
             const labels = (chatInfo as any).labels || [];
+            
+            logInfo('WHAPI_CHAT_INFO', `Información del chat obtenida para ${phoneNumber}`, {
+                phoneNumber,
+                hasLabels: labels.length > 0,
+                labelsCount: labels.length,
+                labelNames: labels.map((l: any) => l?.name || l).slice(0, 5) // Primeros 5 labels
+            }, MOD);
 
             // Solo procesar labels - names ya vienen del webhook
             if (labels.length > 0) {

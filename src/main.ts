@@ -7,6 +7,8 @@ import { FunctionRegistryService } from './core/services/function-registry.servi
 import { HotelPlugin } from './plugins/hotel';
 import { DatabaseService } from './core/services/database.service';
 import { logInfo } from './utils/logging';
+import { ResponseValidator } from './core/validators/response-validator';
+import { ApartmentCacheService } from './plugins/hotel/services/apartment-cache.service';
 
 interface AppConfig {
     port: number;
@@ -60,7 +62,7 @@ function loadConfig(): AppConfig {
 }
 
 function setupDependencyInjection() {
-    console.log('🔧 DI ✓ 5 services, 1 function');
+    console.log('🔧 DI ✓ 4 services, 1 function');
     
     // Register Function Registry as singleton
     const functionRegistry = new FunctionRegistryService();
@@ -69,6 +71,13 @@ function setupDependencyInjection() {
     // Register Database Service
     const databaseService = new DatabaseService();
     container.registerInstance('DatabaseService', databaseService);
+    
+    // Register Apartment Cache Service (singleton)
+    const apartmentCacheService = ApartmentCacheService.getInstance();
+    container.registerInstance('ApartmentCacheService', apartmentCacheService);
+    
+    // Register Response Validator
+    container.register(ResponseValidator, { useClass: ResponseValidator });
     
     
     // Register plugins conditionally
@@ -81,8 +90,8 @@ function setupDependencyInjection() {
     }
     
     // Log técnico consolidado
-    logInfo('DI_COMPLETED', 'DI ✓ 2 services, 1 function (CRM jobs deshabilitados)', {
-        services: ['FunctionRegistry', 'DatabaseService'],
+    logInfo('DI_COMPLETED', 'DI ✓ 4 services, 1 function (CRM jobs deshabilitados)', {
+        services: ['FunctionRegistry', 'DatabaseService', 'ApartmentCacheService', 'ResponseValidator'],
         functions: functionRegistry.list(),
         container: 'tsyringe',
         crmStatus: 'disabled'
@@ -114,6 +123,21 @@ async function main() {
         
         // Create and start bot
         bot = new CoreBot(config, functionRegistry);
+        
+        // Initialize apartment cache for hotel plugin
+        try {
+            // Usar la instancia registrada en el contenedor
+            const apartmentCacheService = container.resolve('ApartmentCacheService') as ApartmentCacheService;
+            await apartmentCacheService.initialize();
+            logInfo('APARTMENT_CACHE_INIT', 'Caché de apartamentos inicializado exitosamente', {
+                stats: apartmentCacheService.getStats()
+            }, 'main.ts');
+        } catch (error) {
+            console.error('⚠️ Error inicializando caché de apartamentos:', error);
+            logInfo('APARTMENT_CACHE_ERROR', 'Error al inicializar caché de apartamentos', {
+                error: error instanceof Error ? error.message : 'Unknown error'
+            }, 'main.ts');
+        }
         
         // Setup graceful shutdown
         const handleShutdown = async (signal: string) => {

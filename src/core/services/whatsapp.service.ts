@@ -196,7 +196,7 @@ export class WhatsappService {
             }
         } else {
             // Si llega aquí, se envía como texto (no resetea flag de voz)
-            const textResult = await this.sendTextMessage(chatId, actualMessage, isQuoteOrPrice, finalQuotedId, enableHumanTiming);
+            const textResult = await this.sendTextMessage(chatId, actualMessage, isQuoteOrPrice, finalQuotedId, enableHumanTiming, userState);
             result = { success: textResult.success, sentAsVoice: false, messageIds: textResult.messageIds };
         }
 
@@ -273,8 +273,12 @@ export class WhatsappService {
             });
 
             // PASO 3: TIMING HUMANO - Usar duración del audio como delay natural
-            if (i === 0 || voiceChunks.length > 1) {  // Presencia en primero y si >1 chunk (natural)
-                
+            const maxDelayMs = 8000; // Cap máximo 8s por seguridad  
+            const naturalDelayMs = Math.min(audioDurationMs, maxDelayMs);
+            const finalDelayMs = enableHumanTiming ? naturalDelayMs : 0;
+            
+            // PRESENCIA MEJORADA: Solo enviar si hay delay
+            if (finalDelayMs > 0 && (i === 0 || voiceChunks.length > 1)) {
                 // Enviar presencia "grabando..." por la duración del audio
                 await this.sendRecordingIndicator(chatId);
                 logInfo('PRESENCE_CHUNK_VOICE', `🎙️ch${i+1}/${voiceChunks.length}:${audioDurationMs}ms`, { 
@@ -285,11 +289,6 @@ export class WhatsappService {
                     chunkLength: chunk.length
                 });
                 
-                // Delay = duración del audio (natural) o instantáneo para Operations
-                const maxDelayMs = 8000; // Cap máximo 8s por seguridad  
-                const naturalDelayMs = Math.min(audioDurationMs, maxDelayMs);
-                const finalDelayMs = enableHumanTiming ? naturalDelayMs : 0;
-                
                 await Promise.race([
                     new Promise(resolve => setTimeout(resolve, finalDelayMs)),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Voice chunk delay timeout')), maxDelayMs + 1000))
@@ -299,17 +298,13 @@ export class WhatsappService {
                     error: err.message 
                 }));
             } else {
-                // Para chunks secundarios sin delay extra, solo presencia original
-                await this.sendRecordingIndicator(chatId);
+                logInfo('VOICE_PRESENCE_SKIP', 'Presencia de voz omitida - envío instantáneo', {
+                    chatId,
+                    chunkIndex: i + 1,
+                    reason: !enableHumanTiming ? 'operations_chat' : 'secondary_chunk'
+                });
             }
-            
-            logInfo('INDICATOR_SENT', 'Indicador de grabación enviado exitosamente', {
-                userId: shortUserId,
-                chatId,
-                indicatorType: 'recording',
-                part: i + 1,
-                totalParts: voiceChunks.length
-            }, 'whatsapp.service.ts');
+
 
             const payload: any = { to: chatId, media: audioDataUrl };
             if (i === 0 && quotedMessageId) {
@@ -420,13 +415,25 @@ export class WhatsappService {
         return { success: true, messageIds: collectedIds };
     }
 
-    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string, enableHumanTiming: boolean = true): Promise<{ success: boolean; messageIds: string[] }> {
+    private async sendTextMessage(chatId: string, message: string, isQuoteOrPrice: boolean = false, quotedMessageId?: string, enableHumanTiming: boolean = true, userState?: any): Promise<{ success: boolean; messageIds: string[] }> {
         // CRÍTICO: Verificar si ya se envió como voz para prevenir duplicados
         if (this.mediaManager.isBotSentContent(chatId, message)) {
             logInfo('DUPLICATE_PREVENTED', 'Texto skipped - ya enviado como voz', { 
                 chatId, messagePreview: message.substring(0, 100) 
             });
             return { success: true, messageIds: [] }; // Skip pero success=true
+        }
+
+        // Detectar si el mensaje contiene enlaces
+        const hasLinks = this.containsLinks(message);
+        if (hasLinks) {
+            logInfo('LINKS_DETECTED', 'Mensaje con enlaces detectado - envío inmediato', {
+                chatId,
+                messageLength: message.length,
+                reason: 'contains_urls'
+            });
+            // Desactivar timing humano para mensajes con enlaces
+            enableHumanTiming = false;
         }
 
         // Regla simple: si hay párrafos separados por doble salto de línea, SIEMPRE enviar por párrafos.
@@ -470,18 +477,41 @@ export class WhatsappService {
                 hasQuoted: i === 0 && !!quotedMessageId
             }, 'whatsapp.service.ts');
             
-            // TIMING HUMANO: Calcular delay variable por chunk (o instantáneo para Operations)
-            const delay = enableHumanTiming ? this.calculateHumanDelayForChunk(chunk.length, 'text') : 0;
+            // TIMING HUMANO: Calcular delay variable por chunk (o instantáneo para Operations o enlaces)
+            const delay = enableHumanTiming && !hasLinks ? this.calculateHumanDelayForChunk(chunk.length, 'text') : 0;
             
-            // Envía presencia inmediatamente antes del chunk
-            await this.sendTypingIndicator(chatId);
-            logInfo('PRESENCE_CHUNK_TEXT', `✍️ch${i+1}/${chunks.length}:${delay}ms`, { 
-                chatId, 
-                chunkIndex: i + 1, 
-                totalChunks: chunks.length, 
-                chunkLength: chunk.length,
-                delay 
-            });
+            // PRESENCIA MEJORADA: Solo enviar si hay delay (evita presencia que se queda pegada)
+            if (delay > 0) {
+                // Envía presencia apropiada basada en el origen del mensaje
+                if (userState?.lastInputVoice) {
+                    // Si el input original fue voz, mantener indicador de grabando
+                    await this.sendRecordingIndicator(chatId);
+                    logInfo('PRESENCE_CHUNK_TEXT', `🎙️ch${i+1}/${chunks.length}:${delay}ms (origen: voz)`, { 
+                        chatId, 
+                        chunkIndex: i + 1, 
+                        totalChunks: chunks.length, 
+                        chunkLength: chunk.length,
+                        delay,
+                        originalInputType: 'voice'
+                    });
+                } else {
+                    // Para mensajes de texto normales, enviar indicador de escribiendo
+                    await this.sendTypingIndicator(chatId);
+                    logInfo('PRESENCE_CHUNK_TEXT', `✍️ch${i+1}/${chunks.length}:${delay}ms`, { 
+                        chatId, 
+                        chunkIndex: i + 1, 
+                        totalChunks: chunks.length, 
+                        chunkLength: chunk.length,
+                        delay 
+                    });
+                }
+            } else {
+                logInfo('PRESENCE_SKIP', 'Presencia omitida - envío instantáneo', {
+                    chatId,
+                    chunkIndex: i + 1,
+                    reason: hasLinks ? 'contains_links' : 'operations_chat'
+                });
+            }
             
             // NUEVO: Delay humano variable por chunk con timeout defensivo
             await Promise.race([
@@ -522,9 +552,13 @@ export class WhatsappService {
             }
 
             const attemptStart = Date.now();
-            // Mantener typing vivo durante reintentos o latencias largas
+            // Mantener presencia viva durante reintentos o latencias largas
             const keepTyping = setInterval(() => {
-                this.sendTypingIndicator(chatId).catch(() => {});
+                if (userState?.lastInputVoice) {
+                    this.sendRecordingIndicator(chatId).catch(() => {});
+                } else {
+                    this.sendTypingIndicator(chatId).catch(() => {});
+                }
             }, 15000);
 
             let response: Response;
@@ -948,9 +982,21 @@ export class WhatsappService {
         logInfo('HUMAN_DELAY_CHUNK', `${mode}:${chunkLength}ch=${delay}ms`, { 
             mode, 
             chunkLength, 
-delay 
+            delay 
         });
         return delay;
+    }
+
+    /**
+     * Detecta si el mensaje contiene enlaces URL
+     */
+    private containsLinks(message: string): boolean {
+        // Patrón para detectar URLs comunes
+        const urlPattern = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gi;
+        const wwwPattern = /www\.[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/gi;
+        const shortLinkPattern = /bit\.ly|tinyurl\.com|goo\.gl|short\.link|wa\.me/gi;
+        
+        return urlPattern.test(message) || wwwPattern.test(message) || shortLinkPattern.test(message);
     }
 }
 

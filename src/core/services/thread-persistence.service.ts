@@ -7,7 +7,7 @@ import { injectable } from 'tsyringe';
 import { setCacheSize, trackCache } from '../../utils/logging/collectors';
 
 interface ThreadRecord {
-    threadId: string;
+    threadId: string | null;
     chatId: string;
     userName?: string;
     lastActivity: Date;
@@ -21,6 +21,7 @@ export class ThreadPersistenceService {
 
     // Cache-first strategy: Cache → BD → null
     async getThread(userId: string): Promise<ThreadRecord | null> {
+        const startTime = Date.now();
         // 1. Verificar CACHE primero
         try {
             const clientCache = this.databaseService.getClientCache();
@@ -28,12 +29,19 @@ export class ThreadPersistenceService {
                 const cachedData = clientCache.get(userId);
                 console.info(`CACHE_GET: key=${userId}, found=${!!cachedData}, size=${clientCache.getStats().size}`);
                 if (cachedData) {
+                    // Normalizar threadId undefined a null para consistencia
+                    if (cachedData.threadId === undefined) {
+                        cachedData.threadId = null;
+                    }
+                    
                     console.info(`Cache HIT for thread: ${userId}`);
                     console.info(`CACHE_DEBUG: threadId=${cachedData.threadId}, tokenCount=${cachedData.threadTokenCount}, cachedAt=${cachedData.cachedAt}`);
                     trackCache(true); // Track cache hit
                     
                     // Si cache tiene threadId válido, usarlo directamente
                     if (cachedData.threadId) {
+                        const elapsed = Date.now() - startTime;
+                        console.info(`[THR_REUSE:cache] ${userId}: Reutilizando thread existente ${cachedData.threadId} del cache (${elapsed}ms)`);
                         // Cache HIT con thread válido - convertir a ThreadRecord
                         return {
                             threadId: cachedData.threadId,
@@ -59,9 +67,11 @@ export class ThreadPersistenceService {
             const threadFromBD = await this.databaseService.getThread(userId);
             
             // Si encontramos en BD, actualizar cache
-            if (threadFromBD) {
-                console.info(`BD HIT (cache miss) for thread: ${userId}, syncing cache`);
+            if (threadFromBD && threadFromBD.threadId) {
+                const elapsed = Date.now() - startTime;
+                console.info(`BD HIT (cache miss) for thread: ${userId}, syncing cache (${elapsed}ms)`);
                 console.info(`[THREAD_SOURCE:cache] ${userId}: bd:${threadFromBD.tokenCount || 0} cache:0 thread:${threadFromBD.threadId} src:bd_fallback`);
+                console.info(`[THR_REUSE:bd] ${userId}: Reutilizando thread existente ${threadFromBD.threadId} de BD (${elapsed}ms)`);
                 try {
                     const clientCache = this.databaseService.getClientCache();
                     if (clientCache) {
@@ -89,7 +99,8 @@ export class ThreadPersistenceService {
             return threadFromBD;
             
         } catch (error) {
-            console.warn('BD read failed:', error);
+            const elapsed = Date.now() - startTime;
+            console.warn(`BD read failed after ${elapsed}ms:`, error);
             return null; // No thread found - caller will create new
         }
     }
@@ -106,7 +117,7 @@ export class ThreadPersistenceService {
                     userName: userName || null,
                     labels: [],
                     chatId: chatId || null,
-                    threadId: undefined,
+                    threadId: null,
                     lastActivity: new Date(),
                     cachedAt: new Date(),
                     threadTokenCount: 0

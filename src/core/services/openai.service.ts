@@ -30,6 +30,7 @@ export interface ProcessingResult {
     threadId?: string;
     runId?: string;
     threadTokenCount?: number;
+    finalTokenCount?: number;
 }
 
 export class OpenAIService implements IOpenAIService {
@@ -206,6 +207,11 @@ export class OpenAIService implements IOpenAIService {
                     isNewThread = true;
                 }
             } else {
+                logInfo('THREAD_NONE_CREATE', 'No existe thread previo, creando nuevo', {
+                    userId,
+                    userName,
+                    chatId
+                }, 'openai.service.ts');
                 threadId = await this.getOrCreateThread(userId, chatId);
                 threadTokenCount = 0; // Thread nuevo empieza en 0
                 isNewThread = true;
@@ -406,13 +412,14 @@ export class OpenAIService implements IOpenAIService {
             }
 
             // 🔧 NUEVO: Log compacto de tokens y flow completo
+            let finalTokenCount = threadTokenCount || 0;
             if (runResult.tokensUsed) {
                 // CRÍTICO: Si es thread nuevo o cambió threadId, usar 0 como base, sino usar threadTokenCount de BD
                 const baseTokenCount = isNewThread ? 0 : (threadTokenCount || 0);
                 logTokenUsage(userId, threadId, baseTokenCount, runResult.tokensUsed, runResult.modelUsed || 'unknown');
                 
                 // TOKEN SUMMARY LOG - Información completa de fuentes
-                const finalTokenCount = baseTokenCount + runResult.tokensUsed;
+                finalTokenCount = baseTokenCount + runResult.tokensUsed;
                 const source = existingThreadId ? (existingThreadId === threadId ? 'cache_hit' : 'thread_changed') : 'new_thread';
                 console.info(`[TOKEN_SUMMARY:openai] ${userId}: bd:${existingTokenCount || 0} cache:${threadTokenCount || 0} run:+${runResult.tokensUsed} total:${finalTokenCount} src:${source}`);
             }
@@ -458,6 +465,7 @@ export class OpenAIService implements IOpenAIService {
                 threadId,
                 runId: runResult.runId,
                 threadTokenCount: threadTokenCount, // Incluir el token count del thread
+                finalTokenCount: finalTokenCount, // Token count final después del run
                 functionCalls: runResult.functionCalls // NUEVO: Incluir function calls para detectar attachments
             };
 
