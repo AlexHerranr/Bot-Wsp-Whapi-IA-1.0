@@ -199,17 +199,12 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 });
             }
             
-            // Siempre usar Conversations API (hardcoded)
-            let conversationId = context.conversationId;
-            if (!conversationId) {
-                conversationId = await this.responseService.getOrCreateConversation(userId, chatId);
-            }
+            // No usar conversations API - solo previous_response_id
             
             // Construir contexto completo
             const conversationContext: ConversationContext = {
                 userId,
-                conversationId, // Preferir Conversations API
-                previousResponseId: context.previousResponseId, // Fallback
+                previousResponseId: context.previousResponseId,
                 messageHistory: context.messageHistory,
                 metadata: {
                     chatId,
@@ -323,8 +318,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 processingTime: Date.now() - startTime,
                 tokensUsed: result.usage?.totalTokens,
                 responseId: result.responseId,
-                conversationId: conversationId,
-                tokenCount: (await this.conversationManager.getOrCreateConversation(userId, chatId)).tokenCount
+                tokenCount: result.usage?.totalTokens || 0
             };
             
         } catch (error) {
@@ -345,15 +339,9 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
     }
     
     private getFunctionsForRequest(): any[] {
-        // TEMPORAL: Desactivar functions hasta resolver el error
-        if (process.env.DISABLE_FUNCTIONS === 'true') {
-            logInfo('FUNCTIONS_DISABLED', 'Functions deshabilitadas temporalmente');
-            return [];
-        }
-        
         // Si no hay functionRegistry, devolver array vacío
         if (!this.functionRegistry) {
-            logDebug('FUNCTIONS_REGISTRY', 'FunctionRegistry no configurado, enviando tools vacío');
+            logDebug('FUNCTIONS_REGISTRY', 'FunctionRegistry no configurado, no enviar tools');
             return [];
         }
         

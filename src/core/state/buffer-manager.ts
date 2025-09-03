@@ -86,7 +86,7 @@ export class BufferManager implements IBufferManager {
         const preview20Words = currentCombined.split(' ').slice(0, 20).join(' ') + (currentCombined.split(' ').length > 20 ? '...' : '');
         
         // Log técnico para adición de mensaje con estado actual del buffer
-        logInfo('BUFFER_STATE_ADD', 'Mensaje agregado, estado actual buffer', {
+        logDebug('BUFFER_STATE_ADD', 'Mensaje agregado, estado actual buffer', {
             userId,
             userName: buffer.userName || 'Usuario',
             currentMsgs: buffer.messages.length,
@@ -465,7 +465,7 @@ export class BufferManager implements IBufferManager {
             timeoutMs = isOperations ? 1000 : 5000;  // Operations: 1s, Main: 5s (usar BUFFER_DELAY_MS)
         }
         
-        logInfo('BUFFER_TIMEOUT_DYNAMIC', 'Timeout configurado por processor', {
+        logDebug('BUFFER_TIMEOUT_DYNAMIC', 'Timeout configurado por processor', {
             userId,
             triggerType,
             isOperations,

@@ -13,7 +13,6 @@ export interface ResponseServiceConfig {
 
 export interface ConversationContext {
     userId: string;
-    conversationId?: string; // Para usar Conversations API
     previousResponseId?: string; // Para encadenar respuestas
     messageHistory?: Array<{
         role: 'user' | 'assistant';
@@ -172,54 +171,31 @@ export class ResponseService {
                 }
             }
             
-            // Manejar contexto de conversación
-            if (context.conversationId) {
-                // Usar Conversations API (recomendado)
-                requestParams.conversation = context.conversationId;
-                logInfo('USING_CONVERSATIONS_API', 'Usando Conversations API', {
-                    conversationId: context.conversationId
-                });
-            } else if (context.previousResponseId) {
-                // Usar encadenamiento de respuestas
+            // Usar previous_response_id para mantener contexto
+            if (context.previousResponseId) {
                 requestParams.previous_response_id = context.previousResponseId;
-                logInfo('USING_RESPONSE_CHAINING', 'Usando encadenamiento de respuestas', {
-                    previousResponseId: context.previousResponseId
+                logInfo('STATE_CHAINING', 'Encadenando respuesta previa', {
+                    previousId: context.previousResponseId
                 });
             }
             
-            // Agregar funciones si existen
+            // IMPORTANTE: Solo incluir tools si hay funciones disponibles
+            // NO enviar array vacío - la API espera que si tools existe, tenga elementos válidos
             if (functions && functions.length > 0) {
-                // Validar formato de functions
-                const validTools = functions.filter(f => {
-                    const isValid = f && f.type === 'function' && f.function && f.function.name;
-                    if (!isValid) {
-                        logWarning('INVALID_TOOL_FORMAT', 'Tool con formato inválido', {
-                            tool: JSON.stringify(f),
-                            hasType: !!f?.type,
-                            hasFunction: !!f?.function,
-                            hasName: !!f?.function?.name
-                        });
-                    }
-                    return isValid;
-                });
+                // Mapear al formato correcto de la API
+                requestParams.tools = functions.map(fn => ({
+                    name: fn.name || fn.function?.name,
+                    description: fn.description || fn.function?.description || '',
+                    parameters: fn.parameters || fn.function?.parameters || {}
+                }));
+                requestParams.tool_choice = 'auto';
                 
-                if (validTools.length === 0) {
-                    logWarning('NO_VALID_TOOLS', 'Ninguna tool válida después de filtrado', {
-                        originalCount: functions.length
-                    });
-                    requestParams.tools = [];
-                } else {
-                    requestParams.tools = validTools;
-                    requestParams.tool_choice = 'auto';
-                    logInfo('TOOLS_INCLUDED', `Incluyendo ${validTools.length} tools válidas en request`, {
-                        toolNames: validTools.map(t => t.function.name)
-                    });
-                }
-            } else {
-                // Explícitamente enviar array vacío si no hay functions
-                requestParams.tools = [];
-                logDebug('NO_TOOLS', 'No hay tools para incluir');
+                logDebug('TOOLS_PARAM', 'Enviando tools', { 
+                    count: functions.length,
+                    tools: requestParams.tools.map(t => t.name)
+                });
             }
+            // Si no hay functions, NO incluir el parámetro tools en absoluto
             
             // Llamar a la API
             const response = await this.openai.responses.create(requestParams);
@@ -359,50 +335,6 @@ export class ResponseService {
         return results;
     }
     
-    /**
-     * Crea una nueva conversación usando la Conversations API
-     */
-    async createConversation(userId: string, chatId: string): Promise<string | null> {
-        try {
-            const response = await (this.openai as any).conversations.create();
-            
-            if (response.id) {
-                const cacheKey = `${userId}:${chatId}`;
-                this.conversationsCache.set(cacheKey, response.id);
-                
-                logInfo('CONVERSATION_CREATED', 'Nueva conversación creada', {
-                    userId,
-                    chatId,
-                    conversationId: response.id
-                });
-                
-                return response.id;
-            }
-            
-            return null;
-        } catch (error) {
-            logError('CONVERSATION_CREATE_ERROR', 'Error creando conversación', {
-                userId,
-                chatId,
-                error: error instanceof Error ? error.message : 'Unknown'
-            });
-            return null;
-        }
-    }
-    
-    /**
-     * Obtiene o crea una conversación para un usuario/chat
-     */
-    async getOrCreateConversation(userId: string, chatId: string): Promise<string | null> {
-        const cacheKey = `${userId}:${chatId}`;
-        
-        // Verificar cache
-        const cached = this.conversationsCache.get(cacheKey);
-        if (cached) {
-            return cached;
-        }
-        
-        // Crear nueva
-        return this.createConversation(userId, chatId);
-    }
+    // Métodos de conversación eliminados - la API no tiene conversations.create()
+    // El estado se mantiene con store: true y previous_response_id
 }
