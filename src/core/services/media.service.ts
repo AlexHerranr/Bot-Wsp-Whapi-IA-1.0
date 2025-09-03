@@ -211,7 +211,7 @@ export class MediaService implements IMediaService {
             // Use openAIWithRetry for vision API con Responses API
             const visionResponse = await openAIWithRetry(
                 () => this.openai.responses.create({
-                    model: process.env.IMAGE_ANALYSIS_MODEL || 'gpt-4o-mini',
+                    model: process.env.OPENAI_MODEL || 'gpt-5', // ACTUALIZADO: Usar modelo principal en lugar de 4o-mini
                     input: [{
                         type: 'message',
                         role: 'user',
@@ -254,7 +254,7 @@ export class MediaService implements IMediaService {
                 metadata: {
                     processingTime: duration,
                     tokensUsed: visionResponse.usage?.total_tokens || null,
-                    model: process.env.IMAGE_ANALYSIS_MODEL || 'gpt-4o-mini'
+                    model: process.env.OPENAI_MODEL || 'gpt-5'
                 }
             };
 

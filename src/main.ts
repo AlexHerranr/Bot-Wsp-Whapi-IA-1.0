@@ -2,7 +2,8 @@
 import 'reflect-metadata';
 import 'dotenv/config';
 import { container } from 'tsyringe';
-import { CoreBot } from './core/bot';
+// ACTUALIZADO: Usar la versión con Responses API sin threads
+import { CoreBotResponses as CoreBot } from './core/bot-responses';
 import { FunctionRegistryService } from './core/services/function-registry.service';
 import { HotelPlugin } from './plugins/hotel';
 import { DatabaseService } from './core/services/database.service';

@@ -26,9 +26,9 @@ export interface ProcessingResult {
     functionCalls?: FunctionCall[];
     processingTime: number;
     tokensUsed?: number;
-    threadId?: string; // Ahora será el response_id
-    runId?: string; // Ya no se usa con Responses API
-    threadTokenCount?: number;
+    responseId?: string; // ID de la respuesta
+    conversationId?: string; // ID de la conversación (si usa Conversations API)
+    tokenCount?: number;
 }
 
 export class OpenAIResponsesService implements IOpenAIService {
@@ -276,8 +276,9 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
                 functionCalls: result.functionCalls,
                 processingTime: Date.now() - startTime,
                 tokensUsed: result.usage?.totalTokens,
-                threadId: result.responseId, // Para compatibilidad
-                threadTokenCount: (await this.conversationManager.getOrCreateConversation(userId, chatId)).tokenCount
+                responseId: result.responseId,
+                conversationId: conversationId,
+                tokenCount: (await this.conversationManager.getOrCreateConversation(userId, chatId)).tokenCount
             };
             
         } catch (error) {
