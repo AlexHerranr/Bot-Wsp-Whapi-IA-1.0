@@ -18,7 +18,7 @@ import { DelayedActivityService } from './services/delayed-activity.service';
 import { FunctionRegistryService } from './services/function-registry.service';
 import { OpenAIResponsesService } from './services/openai-responses.service'; // NUEVO
 import { ProcessingResult } from '../shared/interfaces';
-import { ThreadPersistenceService } from './services/thread-persistence.service';
+
 import { WebhookRouter } from './processors/WebhookRouter';
 import { TerminalLog } from './utils/terminal-log';
 import { IFunctionRegistry } from '../shared/interfaces';
@@ -55,7 +55,7 @@ export class CoreBotResponses {
     private mediaService: MediaService;
     private whatsappService: WhatsappService;
     private openaiService: OpenAIResponsesService; // ACTUALIZADO
-    private threadPersistence: ThreadPersistenceService;
+
     private webhookRouter: WebhookRouter;
     private functionRegistry: IFunctionRegistry;
     private cleanupIntervals: NodeJS.Timeout[] = [];
@@ -118,8 +118,7 @@ export class CoreBotResponses {
             this.mediaService
         );
 
-        // Initialize Thread Persistence Service (aunque ya no se usen threads reales)
-        this.threadPersistence = new ThreadPersistenceService(this.databaseService);
+
 
         this.bufferManager = new BufferManager(
             this.processBufferCallback.bind(this),

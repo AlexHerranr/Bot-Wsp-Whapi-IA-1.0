@@ -16,7 +16,7 @@ import { DatabaseService } from './services/database.service';
 import { DelayedActivityService } from './services/delayed-activity.service';
 import { FunctionRegistryService } from './services/function-registry.service';
 import { OpenAIService } from './services/openai.service';
-import { ThreadPersistenceService } from './services/thread-persistence.service';
+
 import { WebhookRouter } from './processors/WebhookRouter';
 import { TerminalLog } from './utils/terminal-log';
 // import { HotelPlugin } from '../plugins/hotel/hotel.plugin'; // Moved to main.ts
@@ -54,7 +54,7 @@ export class CoreBot {
     private mediaService: MediaService;
     private whatsappService: WhatsappService;
     private openaiService: OpenAIService;
-    private threadPersistence: ThreadPersistenceService;
+
     private webhookRouter: WebhookRouter;
     // private hotelPlugin: HotelPlugin; // Moved to main.ts
     private functionRegistry: IFunctionRegistry;
@@ -106,8 +106,7 @@ export class CoreBot {
             assistantId: process.env.ASSISTANT_ID || process.env.OPENAI_ASSISTANT_ID || 'asst_default'
         }, this.terminalLog, undefined, this.functionRegistry, this.whatsappService, this.databaseService, this.userManager);
 
-        // Initialize Thread Persistence Service
-        this.threadPersistence = new ThreadPersistenceService(this.databaseService);
+
 
         this.bufferManager = new BufferManager(
             this.processBufferCallback.bind(this),

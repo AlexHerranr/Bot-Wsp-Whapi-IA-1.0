@@ -10,7 +10,7 @@ import { ResponseService, ConversationContext } from './response.service';
 import { ConversationManager } from './conversation-manager';
 import { PromptVariablesService } from './prompt-variables.service';
 import { MediaService } from './media.service';
-import { ThreadPersistenceService } from './thread-persistence.service';
+
 
 export interface OpenAIResponsesServiceConfig {
     apiKey: string;
@@ -163,9 +163,10 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             // Obtener contexto de conversación
             const context = await this.conversationManager.getConversationContext(userId, chatId);
             
-            // Obtener información del usuario para contexto
-            const threadPersistence = new ThreadPersistenceService(this.databaseService!);
-            const userThread = await threadPersistence.getThread(userId);
+            // Obtener información del usuario desde la base de datos
+            const userLabels = await this.databaseService?.getClientData?.(userId)
+                .then(data => data?.labels || [])
+                .catch(() => []);
             
             // Extraer las 3 variables del prompt
             let promptVariables: Record<string, string> | undefined;
@@ -176,7 +177,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                     message,
                     {
                         userName,
-                        labels: userThread?.labels || [],
+                        labels: userLabels,
                         ...context.metadata
                     }
                 );
