@@ -307,11 +307,12 @@ export class CoreBotResponses {
 
     private getStats() {
         const cacheStats = this.clientDataCache.getStats();
-        const activeBuffers = this.bufferManager.getActiveBuffersCount();
+        const bufferStats = this.bufferManager.getStats();
         
         return {
             cache: cacheStats,
-            activeBuffers,
+            activeBuffers: bufferStats.active,
+            totalBuffers: bufferStats.total,
             memory: {
                 heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
                 heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
