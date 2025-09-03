@@ -126,6 +126,16 @@ export class ConversationManager {
         conversation.tokenCount += tokensUsed;
         conversation.lastActivity = new Date();
         
+        // Log de métricas para monitoreo
+        const estimatedCost = (conversation.tokenCount / 1000) * 0.0015; // Ajustar según modelo
+        logInfo('CONVERSATION_METRICS', 'Métricas de conversación actualizadas', {
+            userId,
+            messageCount: conversation.messageCount,
+            totalTokens: conversation.tokenCount,
+            estimatedCost: `$${estimatedCost.toFixed(4)}`,
+            avgTokensPerMessage: Math.round(conversation.tokenCount / conversation.messageCount)
+        });
+        
         // Verificar si necesita reset por tokens
         if (conversation.tokenCount > this.MAX_TOKEN_COUNT) {
             logWarning('TOKEN_LIMIT_EXCEEDED', 'Límite de tokens excedido, reseteando conversación', {
