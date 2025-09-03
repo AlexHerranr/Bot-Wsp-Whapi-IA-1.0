@@ -189,11 +189,23 @@ export class ResponseService {
             
             // Agregar funciones si existen
             if (functions && functions.length > 0) {
-                requestParams.tools = functions.map(fn => ({
-                    type: 'function',
-                    function: fn
-                }));
-                requestParams.tool_choice = 'auto';
+                // Validar formato de functions
+                const isValidFormat = functions.every(f => f.type === 'function' && f.function?.name);
+                
+                if (!isValidFormat) {
+                    logWarning('INVALID_FUNCTION_FORMAT', 'Formato de functions inválido', {
+                        sample: JSON.stringify(functions[0])
+                    });
+                    // No enviar functions mal formateadas
+                    requestParams.tools = [];
+                } else {
+                    requestParams.tools = functions;
+                    requestParams.tool_choice = 'auto';
+                    logDebug('FUNCTIONS_INCLUDED', `Incluyendo ${functions.length} funciones en request`);
+                }
+            } else {
+                // Explícitamente enviar array vacío si no hay functions
+                requestParams.tools = [];
             }
             
             // Llamar a la API
