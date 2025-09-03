@@ -345,6 +345,12 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
     }
     
     private getFunctionsForRequest(): any[] {
+        // TEMPORAL: Desactivar functions hasta resolver el error
+        if (process.env.DISABLE_FUNCTIONS === 'true') {
+            logInfo('FUNCTIONS_DISABLED', 'Functions deshabilitadas temporalmente');
+            return [];
+        }
+        
         // Si no hay functionRegistry, devolver array vacío
         if (!this.functionRegistry) {
             logDebug('FUNCTIONS_REGISTRY', 'FunctionRegistry no configurado, enviando tools vacío');
@@ -362,14 +368,30 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
         logDebug('FUNCTIONS_LOADED', `Cargando ${functions.length} funciones para el request`);
         
         // Convertir al formato correcto de tools para Responses API
-        return functions.map(fn => ({
-            type: "function",
-            function: {
-                name: fn.name,
-                description: fn.description,
-                parameters: fn.parameters
+        const tools = functions.map(fn => {
+            // Validar que la función tenga los campos requeridos
+            if (!fn.name) {
+                logWarning('FUNCTION_MISSING_NAME', 'Función sin nombre, ignorando', {
+                    function: JSON.stringify(fn)
+                });
+                return null;
             }
-        }));
+            
+            return {
+                type: "function",
+                function: {
+                    name: fn.name,
+                    description: fn.description || "",
+                    parameters: fn.parameters || {}
+                }
+            };
+        }).filter(tool => tool !== null);
+        
+        logDebug('TOOLS_FORMATTED', `${tools.length} tools formateadas correctamente`, {
+            sample: tools.length > 0 ? JSON.stringify(tools[0]) : 'none'
+        });
+        
+        return tools;
     }
     
     private formatFunctionResults(results: Record<string, any>): string {

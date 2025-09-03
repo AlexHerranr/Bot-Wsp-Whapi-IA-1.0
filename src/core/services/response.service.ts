@@ -190,22 +190,35 @@ export class ResponseService {
             // Agregar funciones si existen
             if (functions && functions.length > 0) {
                 // Validar formato de functions
-                const isValidFormat = functions.every(f => f.type === 'function' && f.function?.name);
+                const validTools = functions.filter(f => {
+                    const isValid = f && f.type === 'function' && f.function && f.function.name;
+                    if (!isValid) {
+                        logWarning('INVALID_TOOL_FORMAT', 'Tool con formato inválido', {
+                            tool: JSON.stringify(f),
+                            hasType: !!f?.type,
+                            hasFunction: !!f?.function,
+                            hasName: !!f?.function?.name
+                        });
+                    }
+                    return isValid;
+                });
                 
-                if (!isValidFormat) {
-                    logWarning('INVALID_FUNCTION_FORMAT', 'Formato de functions inválido', {
-                        sample: JSON.stringify(functions[0])
+                if (validTools.length === 0) {
+                    logWarning('NO_VALID_TOOLS', 'Ninguna tool válida después de filtrado', {
+                        originalCount: functions.length
                     });
-                    // No enviar functions mal formateadas
                     requestParams.tools = [];
                 } else {
-                    requestParams.tools = functions;
+                    requestParams.tools = validTools;
                     requestParams.tool_choice = 'auto';
-                    logDebug('FUNCTIONS_INCLUDED', `Incluyendo ${functions.length} funciones en request`);
+                    logInfo('TOOLS_INCLUDED', `Incluyendo ${validTools.length} tools válidas en request`, {
+                        toolNames: validTools.map(t => t.function.name)
+                    });
                 }
             } else {
                 // Explícitamente enviar array vacío si no hay functions
                 requestParams.tools = [];
+                logDebug('NO_TOOLS', 'No hay tools para incluir');
             }
             
             // Llamar a la API
