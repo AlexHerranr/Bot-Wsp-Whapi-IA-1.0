@@ -20,6 +20,7 @@ export interface ConversationContext {
         timestamp: number;
     }>;
     metadata?: Record<string, any>;
+    promptVariables?: Record<string, string>;
 }
 
 export interface ResponseResult {
@@ -116,6 +117,11 @@ export class ResponseService {
                     id: instructions.id,
                     version: instructions.version || '1'
                 };
+                
+                // Agregar variables si existen
+                if (context.promptVariables && Object.keys(context.promptVariables).length > 0) {
+                    requestParams.prompt.variables = context.promptVariables;
+                }
             }
             
             // Agregar previous_response_id si existe

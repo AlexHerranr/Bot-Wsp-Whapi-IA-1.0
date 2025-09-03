@@ -8,7 +8,7 @@
 
 ```bash
 # 🔴 IMPORTANTE: Tu Prompt ID del dashboard de OpenAI
-OPENAI_PROMPT_ID=pmpt_68b77888dee08196b8eda3b7dd55710c010ad598dbee3811
+OPENAI_PROMPT_ID=pmpt_68b7dbd8b694819386644f198b2165880410e06c7884ad66
 OPENAI_PROMPT_VERSION=1
 
 # Configuración del modelo (opcional - por defecto usa gpt-4o)

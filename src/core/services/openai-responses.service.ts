@@ -9,6 +9,7 @@ import { DatabaseService } from './database.service';
 import { PerceptionService } from './perception.service';
 import { ResponseService, ConversationContext } from './response.service';
 import { ConversationManager } from './conversation-manager';
+import { PromptVariablesService } from './prompt-variables.service';
 
 export interface OpenAIResponsesServiceConfig {
     apiKey: string;
@@ -33,6 +34,7 @@ export interface ProcessingResult {
 export class OpenAIResponsesService implements IOpenAIService {
     private responseService: ResponseService;
     private conversationManager: ConversationManager;
+    private promptVariablesService: PromptVariablesService;
     private config: OpenAIResponsesServiceConfig;
     private log: TerminalLog;
     private cache?: CacheManager;
@@ -78,6 +80,7 @@ export class OpenAIResponsesService implements IOpenAIService {
         
         this.conversationManager = new ConversationManager(databaseService);
         this.perceptionService = new PerceptionService();
+        this.promptVariablesService = new PromptVariablesService(databaseService);
         
         // Configurar prompt ID o instrucciones
         if (process.env.OPENAI_PROMPT_ID) {
@@ -161,6 +164,20 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
             // Obtener contexto de conversación
             const context = await this.conversationManager.getConversationContext(userId, chatId);
             
+            // Extraer variables para el prompt si estamos usando prompt ID
+            let promptVariables: Record<string, string> | undefined;
+            if (this.usePromptId) {
+                promptVariables = await this.promptVariablesService.extractVariables(
+                    userId,
+                    chatId,
+                    processedMessage,
+                    {
+                        userName,
+                        ...context.metadata
+                    }
+                );
+            }
+            
             // Construir contexto completo
             const conversationContext: ConversationContext = {
                 userId,
@@ -170,7 +187,8 @@ Cuando uses funciones, asegúrate de proporcionar respuestas claras basadas en l
                     chatId,
                     userName,
                     ...context.metadata
-                }
+                },
+                promptVariables
             };
             
             // Guardar mensaje del usuario
