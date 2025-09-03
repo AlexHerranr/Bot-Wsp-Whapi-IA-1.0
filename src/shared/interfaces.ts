@@ -58,6 +58,29 @@ export interface IMediaService {
 
 export interface IOpenAIService {
   processWithOpenAI(userId: string, combinedText: string, chatId: string, userName: string): Promise<void>;
+  processMessage(
+    userId: string, 
+    message: string, 
+    chatId: string, 
+    userName: string, 
+    existingThreadId?: string, 
+    existingTokenCount?: number, 
+    imageMessage?: { type: 'image', imageUrl: string, caption: string }, 
+    duringRunMsgId?: string, 
+    assistantId?: string
+  ): Promise<ProcessingResult>;
+}
+
+export interface ProcessingResult {
+  success: boolean;
+  response?: string;
+  error?: string;
+  functionCalls?: any[];
+  processingTime: number;
+  tokensUsed?: number;
+  responseId?: string;
+  conversationId?: string;
+  tokenCount?: number;
 }
 
 export interface IWebhookProcessor {

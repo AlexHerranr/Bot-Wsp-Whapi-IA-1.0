@@ -17,6 +17,7 @@ import { DatabaseService } from './services/database.service';
 import { DelayedActivityService } from './services/delayed-activity.service';
 import { FunctionRegistryService } from './services/function-registry.service';
 import { OpenAIResponsesService } from './services/openai-responses.service'; // NUEVO
+import { ProcessingResult } from '../shared/interfaces';
 import { ThreadPersistenceService } from './services/thread-persistence.service';
 import { WebhookRouter } from './processors/WebhookRouter';
 import { TerminalLog } from './utils/terminal-log';
@@ -264,34 +265,62 @@ export class CoreBotResponses {
         this.cleanupIntervals.push(cacheStatsInterval);
     }
 
-    private async processBufferCallback(userId: string): Promise<void> {
-        const buffer = this.bufferManager.getBuffer(userId);
-        if (!buffer || buffer.messages.length === 0) return;
-
+    private async processBufferCallback(
+        userId: string, 
+        combinedText: string, 
+        chatId: string, 
+        userName: string, 
+        imageMessage?: { type: 'image', imageUrl: string, caption: string }, 
+        duringRunMsgId?: string
+    ): Promise<void> {
         try {
-            const chatId = buffer.chatId;
-            const userName = buffer.userName || userId;
-
-            // Combinar mensajes del buffer
-            const combinedText = buffer.messages
-                .filter(msg => typeof msg === 'string')
-                .join('\n\n');
 
             if (!combinedText.trim()) {
-                console.log(`[BUFFER_SKIP] No hay texto para procesar para ${userId}`);
+                logInfo('BUFFER_SKIP', 'No hay texto para procesar', { userId });
                 return;
             }
 
+            logInfo('BUFFER_TO_AI', 'Enviando buffer a OpenAI', {
+                userId,
+                chatId,
+                messageCount: buffer.messages.length,
+                textLength: combinedText.length
+            });
+
             // Procesar con Responses API
-            await this.openaiService.processWithOpenAI(userId, combinedText, chatId, userName);
+            const result = await this.openaiService.processMessage(
+                userId, 
+                combinedText, 
+                chatId, 
+                userName,
+                null, // existingThreadId (no usado)
+                0,    // existingTokenCount
+                imageMessage, // imageMessage si existe
+                duringRunMsgId // para citación
+            );
+
+            if (!result.success) {
+                logError('OPENAI_PROCESS_FAILED', 'Error procesando mensaje con OpenAI', {
+                    userId,
+                    error: result.error
+                });
+                throw new Error(result.error || 'Error desconocido en OpenAI');
+            }
+
+            logInfo('BUFFER_PROCESSED', 'Buffer procesado exitosamente', {
+                userId,
+                responseLength: result.response?.length || 0,
+                tokensUsed: result.tokensUsed,
+                processingTime: result.processingTime
+            });
 
         } catch (error) {
             console.error(`Error processing buffer for ${userId}:`, error);
             
             // Enviar mensaje de error al usuario
-            if (buffer && buffer.chatId) {
+            if (chatId) {
                 await this.whatsappService.sendWhatsAppMessage(
-                    buffer.chatId,
+                    chatId,
                     'Lo siento, hubo un error procesando tu mensaje. Por favor intenta nuevamente.',
                     { lastInputVoice: false }, // Estado básico del usuario
                     false // isQuoteOrPrice
