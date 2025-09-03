@@ -208,8 +208,8 @@ export class CoreBotResponses {
                 console.log(`✅ Server is running on http://${this.config.host}:${this.config.port}`);
                 console.log(`🔄 Using Responses API (no threads)`);
                 
-                logServerStart(this.config.port);
-                logBotReady();
+                logServerStart('Server started successfully', { port: this.config.port });
+                logBotReady('Bot is ready to receive messages', {});
                 
                 // Setup periodic cleanup
                 this.setupCleanupJobs();
@@ -290,12 +290,10 @@ export class CoreBotResponses {
             
             // Enviar mensaje de error al usuario
             if (buffer && buffer.chatId) {
-                await this.whatsappService.sendMessage(
+                await this.whatsappService.sendWhatsAppMessage(
                     buffer.chatId,
                     'Lo siento, hubo un error procesando tu mensaje. Por favor intenta nuevamente.',
-                    null,
-                    [],
-                    true
+                    { isVoiceActive: false, isTyping: false } // Estado básico del usuario
                 );
             }
         } finally {
