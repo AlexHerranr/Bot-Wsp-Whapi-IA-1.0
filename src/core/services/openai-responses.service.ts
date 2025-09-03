@@ -225,8 +225,10 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             // Guardar mensaje del usuario
             await this.conversationManager.addMessage(userId, chatId, 'user', enrichedMessage);
             
-            // Obtener funciones disponibles (solo si están habilitadas)
-            const functions = this.shouldIncludeFunctions() ? this.getFunctionsForRequest() : [];
+            // Obtener funciones disponibles
+            // Por defecto, enviar array vacío para evitar errores
+            // El modelo decidirá automáticamente si necesita usarlas cuando las definamos
+            const functions = this.getFunctionsForRequest();
             
             // Log del prompt enviado
             logOpenAIPromptSent(
@@ -342,21 +344,22 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
         }
     }
     
-    private shouldIncludeFunctions(): boolean {
-        // Por defecto NO incluir functions a menos que:
-        // 1. Esté explícitamente habilitado en el env
-        // 2. O el mensaje contenga palabras clave que sugieran necesidad de functions
-        
-        const enableFunctions = process.env.ENABLE_OPENAI_FUNCTIONS === 'true';
-        
-        // Por ahora, solo enviar si está explícitamente habilitado
-        return enableFunctions;
-    }
-    
     private getFunctionsForRequest(): any[] {
-        if (!this.functionRegistry) return [];
+        // Si no hay functionRegistry, devolver array vacío
+        if (!this.functionRegistry) {
+            logDebug('FUNCTIONS_REGISTRY', 'FunctionRegistry no configurado, enviando tools vacío');
+            return [];
+        }
         
         const functions = this.functionRegistry.getAllFunctions();
+        
+        // Si no hay funciones definidas, devolver array vacío
+        if (!functions || functions.length === 0) {
+            logDebug('FUNCTIONS_EMPTY', 'No hay funciones definidas en el registry');
+            return [];
+        }
+        
+        logDebug('FUNCTIONS_LOADED', `Cargando ${functions.length} funciones para el request`);
         
         // Convertir al formato correcto de tools para Responses API
         return functions.map(fn => ({
