@@ -347,11 +347,14 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
         
         const functions = this.functionRegistry.getAllFunctions();
         
-        // Convertir al formato de Responses API
+        // Convertir al formato correcto de tools para Responses API
         return functions.map(fn => ({
-            name: fn.name,
-            description: fn.description,
-            parameters: fn.parameters
+            type: "function",
+            function: {
+                name: fn.name,
+                description: fn.description,
+                parameters: fn.parameters
+            }
         }));
     }
     
