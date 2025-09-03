@@ -88,13 +88,16 @@ export class OpenAIResponsesService implements IOpenAIService {
         if (process.env.OPENAI_PROMPT_ID && process.env.USE_PROMPT_ID !== 'false') {
             // Usar prompt ID del dashboard
             this.systemInstructions = {
-                id: process.env.OPENAI_PROMPT_ID,
-                version: process.env.OPENAI_PROMPT_VERSION || '1'
+                id: process.env.OPENAI_PROMPT_ID
             };
+            // Solo agregar version si está definida
+            if (process.env.OPENAI_PROMPT_VERSION) {
+                (this.systemInstructions as any).version = process.env.OPENAI_PROMPT_VERSION;
+            }
             this.usePromptId = true;
             logInfo('PROMPT_CONFIG', 'Usando prompt ID del dashboard', {
                 promptId: process.env.OPENAI_PROMPT_ID,
-                version: process.env.OPENAI_PROMPT_VERSION || '1'
+                version: process.env.OPENAI_PROMPT_VERSION || 'default'
             });
         } else {
             // Usar instrucciones del sistema inline
