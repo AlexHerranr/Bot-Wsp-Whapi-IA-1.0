@@ -100,13 +100,27 @@ export class ResponseService {
             });
             
             // Preparar parámetros de la llamada
+            // Preparar parámetros base
             const requestParams: any = {
-                model: this.config.model,
                 input: input,
                 max_output_tokens: this.config.maxOutputTokens,
-                temperature: this.config.temperature,
                 store: true, // Almacenar para poder referenciar después
             };
+            
+            // Solo agregar model si no usamos prompt ID
+            if (typeof instructions === 'string') {
+                requestParams.model = this.config.model;
+                // Temperature solo para modelos que la soportan
+                const noTempModels = ['o1', 'o3', 'gpt-5'];
+                const isNoTempModel = noTempModels.some(m => 
+                    this.config.model.toLowerCase().includes(m)
+                );
+                
+                if (!isNoTempModel) {
+                    requestParams.temperature = this.config.temperature;
+                }
+            }
+            // Si usamos prompt ID, el modelo viene del prompt
             
             // Configurar instrucciones o prompt
             if (typeof instructions === 'string') {

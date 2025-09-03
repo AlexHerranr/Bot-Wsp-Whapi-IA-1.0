@@ -1,7 +1,7 @@
 // test-new-prompt.js
 // Test del nuevo prompt con variables
 
-const OPENAI_API_KEY = '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';
+const OPENAI_API_KEY = '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';
 const PROMPT_ID = 'pmpt_68b7dbd8b694819386644f198b2165880410e06c7884ad66';
 
 async function testNewPrompt() {
@@ -88,8 +88,7 @@ async function testNewPrompt() {
                         text: userMessage
                     }]
                 }],
-                max_output_tokens: 1000,
-                temperature: 0.7
+                max_output_tokens: 1000
             })
         });
         
