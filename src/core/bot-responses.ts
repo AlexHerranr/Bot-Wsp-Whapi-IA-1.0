@@ -170,7 +170,7 @@ export class CoreBotResponses {
                 });
                 
                 // Process webhook asynchronously through router
-                this.webhookRouter.process(req.body).catch(error => {
+                this.webhookRouter.route(req.body).catch(error => {
                     console.error('Error processing webhook:', error);
                 });
             } catch (error) {
@@ -184,7 +184,7 @@ export class CoreBotResponses {
             const { userId } = req.body;
             
             if (userId) {
-                this.clientDataCache.clear(userId);
+                this.clientDataCache.delete(userId);
                 this.bufferManager.clearBuffer(userId);
                 res.json({ success: true, message: `Cache cleared for user ${userId}` });
             } else {
@@ -266,17 +266,15 @@ export class CoreBotResponses {
 
     private async processBufferCallback(userId: string): Promise<void> {
         const buffer = this.bufferManager.getBuffer(userId);
-        if (!buffer || buffer.length === 0) return;
+        if (!buffer || buffer.messages.length === 0) return;
 
         try {
-            const latestMessage = buffer[buffer.length - 1];
-            const chatId = latestMessage.chat;
-            const userName = latestMessage.from.name || userId;
+            const chatId = buffer.chatId;
+            const userName = buffer.userName || userId;
 
             // Combinar mensajes del buffer
-            const combinedText = buffer
-                .filter(msg => msg.type === 'text')
-                .map(msg => msg.text?.body || '')
+            const combinedText = buffer.messages
+                .filter(msg => typeof msg === 'string')
                 .join('\n\n');
 
             if (!combinedText.trim()) {
@@ -291,12 +289,13 @@ export class CoreBotResponses {
             console.error(`Error processing buffer for ${userId}:`, error);
             
             // Enviar mensaje de error al usuario
-            const buffer = this.bufferManager.getBuffer(userId);
-            if (buffer && buffer.length > 0) {
-                const latestMessage = buffer[buffer.length - 1];
-                await this.whatsappService.sendErrorMessage(
-                    latestMessage.chat,
-                    'Lo siento, hubo un error procesando tu mensaje. Por favor intenta nuevamente.'
+            if (buffer && buffer.chatId) {
+                await this.whatsappService.sendMessage(
+                    buffer.chatId,
+                    'Lo siento, hubo un error procesando tu mensaje. Por favor intenta nuevamente.',
+                    null,
+                    [],
+                    true
                 );
             }
         } finally {
