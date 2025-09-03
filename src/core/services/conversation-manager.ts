@@ -57,9 +57,11 @@ export class ConversationManager {
                 count: this.conversations.size
             });
         } catch (error) {
-            logError('CONVERSATIONS_LOAD_ERROR', 'Error cargando conversaciones', {
+            // No es crítico si falla la carga inicial
+            logWarning('CONVERSATIONS_LOAD_ERROR', 'No se pudieron cargar conversaciones previas (no crítico)', {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
+            // El servicio puede continuar funcionando sin conversaciones previas
         }
     }
     
