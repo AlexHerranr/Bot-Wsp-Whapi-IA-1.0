@@ -166,25 +166,24 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             const threadPersistence = new ThreadPersistenceService(this.databaseService!);
             const userThread = await threadPersistence.getThread(userId);
             
-            // Variables del prompt - deshabilitadas hasta que se definan en el dashboard
+            // Extraer las 3 variables del prompt
             let promptVariables: Record<string, string> | undefined;
-            // TODO: Habilitar cuando las variables estén definidas en el prompt
-            // if (this.usePromptId && process.env.PROMPT_HAS_VARIABLES === 'true') {
-            //     promptVariables = await this.promptVariablesService.extractVariables(
-            //         userId,
-            //         chatId,
-            //         message,
-            //         {
-            //             userName,
-            //             labels: userThread?.labels || [],
-            //             ...context.metadata
-            //         }
-            //     );
-            //     logInfo('PROMPT_VARIABLES', 'Variables para el prompt', {
-            //         count: Object.keys(promptVariables).length,
-            //         variables: promptVariables
-            //     });
-            // }
+            if (this.usePromptId) {
+                promptVariables = await this.promptVariablesService.extractVariables(
+                    userId,
+                    chatId,
+                    message,
+                    {
+                        userName,
+                        labels: userThread?.labels || [],
+                        ...context.metadata
+                    }
+                );
+                logInfo('PROMPT_VARIABLES', 'Variables para el prompt', {
+                    count: Object.keys(promptVariables).length,
+                    variables: promptVariables
+                });
+            }
             
             // Siempre usar Conversations API (hardcoded)
             let conversationId = context.conversationId;
@@ -206,21 +205,8 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 promptVariables
             };
             
-            // Enriquecer el mensaje con contexto si no usamos variables
-            let enrichedMessage = message;
-            if (!promptVariables || Object.keys(promptVariables).length === 0) {
-                const now = new Date();
-                const fechaHora = now.toLocaleString('es-CO', {
-                    timeZone: 'America/Bogota',
-                    dateStyle: 'long',
-                    timeStyle: 'short'
-                });
-                
-                const userInfo = userName !== userId ? ` (Usuario: ${userName})` : '';
-                const labelInfo = userThread?.labels?.length ? ` [${userThread.labels.join(', ')}]` : '';
-                
-                enrichedMessage = `[${fechaHora}]${userInfo}${labelInfo}\n${message}`;
-            }
+            // Usar mensaje original cuando tenemos variables (el contexto va en las variables)
+            const enrichedMessage = message;
             
             // Guardar mensaje del usuario
             await this.conversationManager.addMessage(userId, chatId, 'user', enrichedMessage);

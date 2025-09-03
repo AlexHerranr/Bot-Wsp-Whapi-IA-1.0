@@ -24,22 +24,22 @@ export class PromptVariablesService {
             
             // 1. Fecha y hora actual (Colombia)
             const now = new Date();
-            variables.FECHA_HORA_ACTUAL = now.toLocaleString('es-CO', {
+            variables.fecha_hora = now.toLocaleString('es-CO', {
                 timeZone: 'America/Bogota',
                 dateStyle: 'full',
                 timeStyle: 'short'
             });
             
             // 2. Nombre del usuario
-            variables.NOMBRE_USUARIO = metadata?.userName || metadata?.name || 'Cliente';
+            variables.nombre_usuario = metadata?.userName || metadata?.name || 'Cliente';
             
             // 3. Etiquetas del usuario (si existen)
             if (metadata?.labels && Array.isArray(metadata.labels)) {
-                variables.ETIQUETAS_USUARIO = metadata.labels.join(', ');
+                variables.etiquetas = metadata.labels.join(', ');
             } else if (metadata?.labels && typeof metadata.labels === 'string') {
-                variables.ETIQUETAS_USUARIO = metadata.labels;
+                variables.etiquetas = metadata.labels;
             } else {
-                variables.ETIQUETAS_USUARIO = '';
+                variables.etiquetas = 'Sin etiquetas';
             }
             
             logInfo('PROMPT_VARIABLES_EXTRACTED', 'Variables esenciales extraídas', {
