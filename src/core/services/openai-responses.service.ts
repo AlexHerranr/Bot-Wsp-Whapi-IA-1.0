@@ -162,22 +162,29 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             // Obtener contexto de conversación
             const context = await this.conversationManager.getConversationContext(userId, chatId);
             
-            // Extraer variables solo si el prompt las necesita
+            // Obtener información del usuario para contexto
+            const threadPersistence = new ThreadPersistenceService(this.databaseService!);
+            const userThread = await threadPersistence.getThread(userId);
+            
+            // Variables del prompt - deshabilitadas hasta que se definan en el dashboard
             let promptVariables: Record<string, string> | undefined;
-            if (this.usePromptId && process.env.PROMPT_NEEDS_VARIABLES === 'true') {
-                promptVariables = await this.promptVariablesService.extractVariables(
-                    userId,
-                    chatId,
-                    message,
-                    {
-                        userName,
-                        ...context.metadata
-                    }
-                );
-                logInfo('PROMPT_VARIABLES', 'Variables extraídas para el prompt', {
-                    count: Object.keys(promptVariables).length
-                });
-            }
+            // TODO: Habilitar cuando las variables estén definidas en el prompt
+            // if (this.usePromptId && process.env.PROMPT_HAS_VARIABLES === 'true') {
+            //     promptVariables = await this.promptVariablesService.extractVariables(
+            //         userId,
+            //         chatId,
+            //         message,
+            //         {
+            //             userName,
+            //             labels: userThread?.labels || [],
+            //             ...context.metadata
+            //         }
+            //     );
+            //     logInfo('PROMPT_VARIABLES', 'Variables para el prompt', {
+            //         count: Object.keys(promptVariables).length,
+            //         variables: promptVariables
+            //     });
+            // }
             
             // Siempre usar Conversations API (hardcoded)
             let conversationId = context.conversationId;
@@ -199,8 +206,24 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 promptVariables
             };
             
+            // Enriquecer el mensaje con contexto si no usamos variables
+            let enrichedMessage = message;
+            if (!promptVariables || Object.keys(promptVariables).length === 0) {
+                const now = new Date();
+                const fechaHora = now.toLocaleString('es-CO', {
+                    timeZone: 'America/Bogota',
+                    dateStyle: 'long',
+                    timeStyle: 'short'
+                });
+                
+                const userInfo = userName !== userId ? ` (Usuario: ${userName})` : '';
+                const labelInfo = userThread?.labels?.length ? ` [${userThread.labels.join(', ')}]` : '';
+                
+                enrichedMessage = `[${fechaHora}]${userInfo}${labelInfo}\n${message}`;
+            }
+            
             // Guardar mensaje del usuario
-            await this.conversationManager.addMessage(userId, chatId, 'user', message);
+            await this.conversationManager.addMessage(userId, chatId, 'user', enrichedMessage);
             
             // Obtener funciones disponibles
             const functions = this.getFunctionsForRequest();
@@ -216,7 +239,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             // Llamar a Responses API
             const result = await this.responseService.createResponse(
                 this.systemInstructions,
-                message,
+                enrichedMessage, // Usar mensaje enriquecido
                 conversationContext,
                 functions,
                 imageMessage // Pasar imagen directamente a GPT-5

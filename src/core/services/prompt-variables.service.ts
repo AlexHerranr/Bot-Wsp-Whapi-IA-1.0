@@ -20,37 +20,32 @@ export class PromptVariablesService {
         const variables: Record<string, string> = {};
         
         try {
-            // Variables básicas del contexto
-            variables.TELEFONO = userId.replace('@s.whatsapp.net', '');
-            variables.FECHA_ACTUAL = new Date().toLocaleDateString('es-CO');
-            variables.HORA_ACTUAL = new Date().toLocaleTimeString('es-CO');
+            // Solo las 3 variables esenciales que se envían con cada mensaje
             
-            // Extraer nombre si está disponible
-            if (metadata?.userName) {
-                variables.NOMBRE_COMPLETO = metadata.userName;
-                const [nombre, ...apellidoParts] = metadata.userName.split(' ');
-                variables.NOMBRE = nombre || '';
-                variables.APELLIDO = apellidoParts.join(' ') || '';
+            // 1. Fecha y hora actual (Colombia)
+            const now = new Date();
+            variables.FECHA_HORA_ACTUAL = now.toLocaleString('es-CO', {
+                timeZone: 'America/Bogota',
+                dateStyle: 'full',
+                timeStyle: 'short'
+            });
+            
+            // 2. Nombre del usuario
+            variables.NOMBRE_USUARIO = metadata?.userName || metadata?.name || 'Cliente';
+            
+            // 3. Etiquetas del usuario (si existen)
+            if (metadata?.labels && Array.isArray(metadata.labels)) {
+                variables.ETIQUETAS_USUARIO = metadata.labels.join(', ');
+            } else if (metadata?.labels && typeof metadata.labels === 'string') {
+                variables.ETIQUETAS_USUARIO = metadata.labels;
+            } else {
+                variables.ETIQUETAS_USUARIO = '';
             }
             
-            // Email del metadata si existe
-            if (metadata?.email) {
-                variables.EMAIL = metadata.email;
-            }
-            
-            // Si hay una reserva activa en el contexto
-            if (metadata?.bookingId) {
-                const bookingVars = await this.getBookingVariables(metadata.bookingId);
-                Object.assign(variables, bookingVars);
-            }
-            
-            // Variables por defecto para evitar errores
-            this.setDefaultVariables(variables);
-            
-            logInfo('PROMPT_VARIABLES_EXTRACTED', 'Variables extraídas para el prompt', {
+            logInfo('PROMPT_VARIABLES_EXTRACTED', 'Variables esenciales extraídas', {
                 userId,
                 variableCount: Object.keys(variables).length,
-                hasBooking: !!metadata?.bookingId
+                variables: variables
             });
             
         } catch (error) {
