@@ -24,7 +24,8 @@ export class ConversationManager {
     private conversations: Map<string, ConversationState> = new Map();
     private messageHistory: Map<string, MessageEntry[]> = new Map();
     private readonly MAX_MESSAGES_IN_MEMORY = 20;
-    private readonly MAX_TOKEN_COUNT = 100000; // Límite de tokens por conversación
+    private readonly MAX_TOKEN_COUNT = parseInt(process.env.MAX_CONVERSATION_TOKENS || '100000');
+    private readonly MAX_MESSAGE_COUNT = parseInt(process.env.MAX_CONVERSATION_MESSAGES || '300'); // Límite de mensajes
     
     constructor(private databaseService?: DatabaseService) {
         // Cargar conversaciones activas de la BD si está disponible
@@ -146,6 +147,19 @@ export class ConversationManager {
                 estimatedCost: `$${estimatedCost.toFixed(4)}`,
                 recommendation: 'Considerar implementar ventana deslizante'
             });
+        }
+        
+        // Verificar si necesita reset por número de mensajes
+        if (conversation.messageCount > this.MAX_MESSAGE_COUNT) {
+            logWarning('MESSAGE_LIMIT_EXCEEDED', 'Límite de mensajes excedido, reseteando conversación', {
+                userId,
+                chatId,
+                messageCount: conversation.messageCount,
+                limit: this.MAX_MESSAGE_COUNT
+            });
+            
+            await this.resetConversation(userId, chatId);
+            return;
         }
         
         // Verificar si necesita reset por tokens
