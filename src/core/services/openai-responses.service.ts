@@ -218,8 +218,9 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                     chatId,
                     userName,
                     ...context.metadata
-                },
-                promptVariables
+                }
+                // NO incluir promptVariables - el prompt no las necesita
+                // promptVariables
             };
             
             // Usar mensaje original cuando tenemos variables (el contexto va en las variables)
