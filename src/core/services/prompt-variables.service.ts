@@ -22,6 +22,9 @@ export class PromptVariablesService {
         try {
             // Solo las 3 variables esenciales que se envían con cada mensaje
             
+            // COMENTADO: Tu prompt actual no espera estas variables
+            // Solo descomenta si actualizas el prompt para incluirlas
+            /*
             // 1. Fecha y hora actual (Colombia)
             const now = new Date();
             variables.fecha_hora = now.toLocaleString('es-CO', {
@@ -41,6 +44,14 @@ export class PromptVariablesService {
             } else {
                 variables.etiquetas = 'Sin etiquetas';
             }
+            */
+            
+            // Variable fecha que SÍ espera el prompt actual
+            const now = new Date();
+            variables.fecha = now.toLocaleString('es-CO', {
+                timeZone: 'America/Bogota',
+                dateStyle: 'short'
+            });
             
             logInfo('PROMPT_VARIABLES_EXTRACTED', 'Variables esenciales extraídas', {
                 userId,
