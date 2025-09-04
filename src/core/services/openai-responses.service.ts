@@ -185,7 +185,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             
             // Extraer las 3 variables del prompt
             let promptVariables: Record<string, string> | undefined;
-            if (this.usePromptId) {
+            if (this.usePromptId && process.env.PROMPT_NEEDS_VARIABLES === 'true') {
                 promptVariables = await this.promptVariablesService.extractVariables(
                     userId,
                     chatId,
@@ -199,6 +199,10 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 logInfo('PROMPT_VARIABLES', 'Variables para el prompt', {
                     count: Object.keys(promptVariables).length,
                     variables: promptVariables
+                });
+            } else if (this.usePromptId) {
+                logInfo('PROMPT_VARIABLES_DISABLED', 'Variables deshabilitadas para el prompt', {
+                    reason: 'PROMPT_NEEDS_VARIABLES no está configurado'
                 });
             }
             
