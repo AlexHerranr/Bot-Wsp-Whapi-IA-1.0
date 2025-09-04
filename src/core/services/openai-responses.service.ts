@@ -183,9 +183,10 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 userLabels = [];
             }
             
-            // Extraer las 3 variables del prompt
+            // Extraer las variables del prompt
             let promptVariables: Record<string, string> | undefined;
-            if (this.usePromptId && process.env.PROMPT_NEEDS_VARIABLES === 'true') {
+            if (this.usePromptId) {
+                // SIEMPRE enviar variables cuando usamos prompt ID
                 promptVariables = await this.promptVariablesService.extractVariables(
                     userId,
                     chatId,
@@ -196,13 +197,10 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                         ...context.metadata
                     }
                 );
-                logInfo('PROMPT_VARIABLES', 'Variables para el prompt', {
+                logInfo('PROMPT_VARIABLES', 'Variables extraídas para el prompt', {
                     count: Object.keys(promptVariables).length,
-                    variables: promptVariables
-                });
-            } else if (this.usePromptId) {
-                logInfo('PROMPT_VARIABLES_DISABLED', 'Variables deshabilitadas para el prompt', {
-                    reason: 'PROMPT_NEEDS_VARIABLES no está configurado'
+                    variableNames: Object.keys(promptVariables).slice(0, 10), // Mostrar solo las primeras 10
+                    hasBookingVars: !!promptVariables.ADULTOS
                 });
             }
             
