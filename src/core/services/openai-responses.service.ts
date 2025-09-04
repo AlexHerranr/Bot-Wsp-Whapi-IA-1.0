@@ -183,10 +183,12 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 userLabels = [];
             }
             
-            // Extraer las variables del prompt
-            let promptVariables: Record<string, string> | undefined;
+            // NO ENVIAR VARIABLES - El prompt no las necesita
+            let promptVariables: Record<string, string> | undefined = undefined;
+            
+            // Si en el futuro necesitas variables, descomenta este código:
+            /*
             if (this.usePromptId) {
-                // SIEMPRE enviar variables cuando usamos prompt ID
                 promptVariables = await this.promptVariablesService.extractVariables(
                     userId,
                     chatId,
@@ -199,10 +201,11 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 );
                 logInfo('PROMPT_VARIABLES', 'Variables extraídas para el prompt', {
                     count: Object.keys(promptVariables).length,
-                    variableNames: Object.keys(promptVariables).slice(0, 10), // Mostrar solo las primeras 10
+                    variableNames: Object.keys(promptVariables).slice(0, 10),
                     hasBookingVars: !!promptVariables.ADULTOS
                 });
             }
+            */
             
             // No usar conversations API - solo previous_response_id
             
