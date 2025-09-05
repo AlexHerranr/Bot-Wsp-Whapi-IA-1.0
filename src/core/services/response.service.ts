@@ -62,7 +62,8 @@ export class ResponseService {
         userMessage: string,
         context: ConversationContext,
         functions?: any[],
-        imageMessage?: { type: 'image', imageUrl: string, caption: string }
+        imageMessage?: { type: 'image', imageUrl: string, caption: string },
+        functionOutputs?: Array<{call_id: string, output: any}>
     ): Promise<ResponseResult> {
         const startTime = Date.now();
         
@@ -70,25 +71,41 @@ export class ResponseService {
             logInfo('RESPONSE_API_START', 'Iniciando llamada a Responses API', {
                 userId: context.userId,
                 hasPreviousResponse: !!context.previousResponseId,
-                functionsCount: functions?.length || 0
+                functionsCount: functions?.length || 0,
+                hasFunctionOutputs: !!functionOutputs?.length
             });
             
             // Construir el input
-            const input: any[] = [];
+            let input: any[] = [];
             
-            // Agregar historial si existe
-            if (context.messageHistory && context.messageHistory.length > 0) {
-                context.messageHistory.forEach(msg => {
-                    input.push({
-                        type: 'message',
-                        role: msg.role,
-                        content: [{
-                            type: msg.role === 'user' ? 'input_text' : 'output_text',
-                            text: msg.content
-                        }]
-                    });
+            // Si hay function outputs, usarlos como input
+            if (functionOutputs && functionOutputs.length > 0) {
+                input = functionOutputs.map(fo => ({
+                    type: "tool_output",
+                    call_id: fo.call_id,
+                    output: typeof fo.output === 'string' ? fo.output : JSON.stringify(fo.output)
+                }));
+                
+                logDebug('FUNCTION_OUTPUTS_INPUT', 'Input con function outputs construido', {
+                    outputsCount: functionOutputs.length,
+                    callIds: functionOutputs.map(fo => fo.call_id)
                 });
             }
+            // Si no hay function outputs, construir input normal
+            else {
+                // Agregar historial si existe
+                if (context.messageHistory && context.messageHistory.length > 0) {
+                    context.messageHistory.forEach(msg => {
+                        input.push({
+                            type: 'message',
+                            role: msg.role,
+                            content: [{
+                                type: msg.role === 'user' ? 'input_text' : 'output_text',
+                                text: msg.content
+                            }]
+                        });
+                    });
+                }
             
             // Construir contenido del mensaje actual
             const messageContent: any[] = [];
@@ -124,12 +141,13 @@ export class ResponseService {
                 }
             }
             
-            // Agregar mensaje actual con contenido mixto
-            input.push({
-                type: 'message',
-                role: 'user',
-                content: messageContent
-            });
+                // Agregar mensaje actual con contenido mixto solo si no estamos enviando function outputs
+                input.push({
+                    type: 'message',
+                    role: 'user',
+                    content: messageContent
+                });
+            }
             
             // Preparar parámetros de la llamada
             // Preparar parámetros base
@@ -323,8 +341,8 @@ export class ResponseService {
     async executeFunctionCalls(
         functionCalls: FunctionCall[],
         context: ConversationContext
-    ): Promise<Record<string, any>> {
-        const results: Record<string, any> = {};
+    ): Promise<Array<{call_id: string, output: any}>> {
+        const results: Array<{call_id: string, output: any}> = [];
         
         if (!this.functionRegistry) {
             logWarning('FUNCTION_REGISTRY_MISSING', 'No hay registro de funciones disponible');
@@ -335,6 +353,7 @@ export class ResponseService {
             try {
                 logInfo('FUNCTION_EXECUTION_START', 'Ejecutando función', {
                     functionName: call.function.name,
+                    callId: call.id,
                     userId: context.userId
                 });
                 
@@ -350,10 +369,14 @@ export class ResponseService {
                         userName: context.metadata?.userName || ''
                     });
                     
-                    results[call.id || call.function.name] = result;
+                    results.push({
+                        call_id: call.id,
+                        output: result
+                    });
                     
                     logInfo('FUNCTION_EXECUTION_SUCCESS', 'Función ejecutada exitosamente', {
                         functionName: call.function.name,
+                        callId: call.id,
                         userId: context.userId
                     });
                 } else {
@@ -361,17 +384,24 @@ export class ResponseService {
                         functionName: call.function.name,
                         userId: context.userId
                     });
+                    
+                    results.push({
+                        call_id: call.id,
+                        output: { error: `Function ${call.function.name} not found` }
+                    });
                 }
             } catch (error) {
                 logError('FUNCTION_EXECUTION_ERROR', 'Error ejecutando función', {
                     functionName: call.function.name,
+                    callId: call.id,
                     userId: context.userId,
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });
                 
-                results[call.id || call.function.name] = {
-                    error: error instanceof Error ? error.message : 'Unknown error'
-                };
+                results.push({
+                    call_id: call.id,
+                    output: { error: error instanceof Error ? error.message : 'Unknown error' }
+                });
             }
         }
         

@@ -282,23 +282,22 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                     results: functionResults.length
                 });
                 
-                // Crear mensaje con resultados de funciones
-                const functionResultsMessage = this.formatFunctionResults(functionResults);
-                
                 logInfo('FUNCTION_FOLLOWUP', 'Enviando resultados a OpenAI', {
                     userId,
-                    messageLength: functionResultsMessage.length
+                    functionOutputsCount: functionResults.length
                 });
                 
-                // Hacer una segunda llamada con los resultados
+                // Hacer una segunda llamada con los resultados de las funciones
                 const followUpResult = await this.responseService.createResponse(
                     this.systemInstructions,
-                    functionResultsMessage,
+                    '', // No enviar mensaje, solo function outputs
                     {
                         ...conversationContext,
                         previousResponseId: result.responseId
                     },
-                    [] // No enviar funciones en el follow-up
+                    [], // No enviar funciones en el follow-up
+                    undefined, // No hay imagen
+                    functionResults // Enviar los outputs de las funciones
                 );
                 
                 if (followUpResult.success && followUpResult.content) {
@@ -437,19 +436,6 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
         return validFunctions;
     }
     
-    private formatFunctionResults(results: Record<string, any>): string {
-        const lines = ['Resultados de las funciones ejecutadas:'];
-        
-        for (const [functionId, result] of Object.entries(results)) {
-            if (result.error) {
-                lines.push(`- ${functionId}: Error - ${result.error}`);
-            } else {
-                lines.push(`- ${functionId}: ${JSON.stringify(result)}`);
-            }
-        }
-        
-        return lines.join('\n');
-    }
     
     // Métodos eliminados - usar ConversationManager en su lugar
     // - getThreadMessages() -> conversationManager.getMessageHistory()
