@@ -230,12 +230,12 @@ export class ResponseService {
             input = this.deduplicateInput(input);
             requestParams.input = input;
             
-            // Log del input completo para debugging
-            logDebug('INPUT_TO_OPENAI', 'Input completo enviado a OpenAI', {
+            // Log del input completo para debugging (recomendado por experto)
+            logDebug('INPUT_SENT', 'Input completo enviado a OpenAI', {
                 inputItems: input.length,
-                inputTypes: input.map(item => item.type).join(', '),
-                inputPreview: JSON.stringify(input, null, 2).substring(0, 500) + '...'
+                inputTypes: input.map(item => item.type).join(', ')
             });
+            logDebug('INPUT_PREVIEW', JSON.stringify(input, null, 2));
             
             // Log completo del request antes de enviar
             logDebug('FULL_REQUEST', 'Request completo a OpenAI', {
@@ -265,14 +265,12 @@ export class ResponseService {
         } catch (error) {
             const processingTime = Date.now() - startTime;
             
-            // Log más detallado del error
+            // Log más detallado del error (recomendado por experto)
             console.error('RESPONSE_API_ERROR DETALLE:', error);
             
-            logError('RESPONSE_API_ERROR', 'Error al llamar Responses API', {
+            logError('API_ERROR', 'Error en llamada a Responses API', {
                 userId: context.userId,
                 error: error instanceof Error ? error.message : 'Unknown error',
-                errorName: error instanceof Error ? error.name : 'Unknown',
-                errorStack: error instanceof Error ? error.stack?.split('\n')[0] : 'No stack',
                 processingTime
             });
             
@@ -424,48 +422,26 @@ export class ResponseService {
     
     
     /**
-     * Deduplica items en el input basándose en id o call_id
-     * para evitar el error "Duplicate item found with id"
-     * ESTRATEGIA: Solo remover items con IDs duplicados reales (function_calls, reasoning)
-     * NO tocar messages sin ID explícito
+     * Deduplica items en el input basándose en id, call_id o hash de contenido
+     * Implementación recomendada por experto para ser completamente robusta
      */
     private deduplicateInput(input: any[]): any[] {
         const seen = new Set<string>();
-        const uniqueItems: any[] = [];
-        let duplicatesRemoved = 0;
-        
-        for (const item of input) {
-            // Solo deduplicar items que tienen ID explícito
-            const itemId = item.id || item.call_id;
+        return input.filter(item => {
+            // Generar clave única: ID explícito o hash del contenido
+            const key = item.id || item.call_id || JSON.stringify(item.content || item.arguments || item);
             
-            if (itemId) {
-                if (seen.has(itemId)) {
-                    // Item con ID duplicado - omitir
-                    logWarning('DUPLICATE_REMOVED', 'Item con ID duplicado omitido', {
-                        type: item.type,
-                        id: itemId.substring(0, 30) + '...',
-                        name: item.name
-                    });
-                    duplicatesRemoved++;
-                    continue;
-                }
-                seen.add(itemId);
+            if (seen.has(key)) {
+                logWarning('DUPLICATE_REMOVED', 'Item duplicado removido', {
+                    type: item.type,
+                    key: key.substring(0, 20) + '...'
+                });
+                return false;
             }
             
-            // Incluir item (único o sin ID)
-            uniqueItems.push(item);
-        }
-        
-        // Log resumen solo si se removieron duplicados
-        if (duplicatesRemoved > 0) {
-            logInfo('INPUT_DEDUPLICATED', 'Items con IDs duplicados removidos', {
-                originalCount: input.length,
-                uniqueCount: uniqueItems.length,
-                duplicatesRemoved
-            });
-        }
-        
-        return uniqueItems;
+            seen.add(key);
+            return true;
+        });
     }
     
     
