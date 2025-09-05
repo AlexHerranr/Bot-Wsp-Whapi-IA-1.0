@@ -251,6 +251,17 @@ export class ResponseService {
     private processResponse(response: any, startTime: number): ResponseResult {
         const processingTime = Date.now() - startTime;
         
+        // Log para debug
+        logDebug('RESPONSE_STRUCTURE', 'Estructura de respuesta recibida', {
+            hasOutput: !!response.output,
+            outputLength: response.output?.length || 0,
+            firstOutput: response.output?.[0] ? {
+                type: response.output[0].type,
+                hasContent: !!response.output[0].content,
+                contentLength: response.output[0].content?.length || 0
+            } : null
+        });
+        
         // Extraer contenido de texto
         let content = '';
         const functionCalls: FunctionCall[] = [];
@@ -259,7 +270,7 @@ export class ResponseService {
             for (const output of response.output) {
                 if (output.type === 'message' && output.content) {
                     for (const contentItem of output.content) {
-                        if (contentItem.type === 'output_text') {
+                        if (contentItem.type === 'text' || contentItem.type === 'output_text') {
                             content += contentItem.text + '\n';
                         }
                     }
@@ -284,6 +295,14 @@ export class ResponseService {
             cachedTokens: response.usage.input_tokens_details?.cached_tokens || 0,
             reasoningTokens: response.usage.output_tokens_details?.reasoning_tokens || 0
         } : undefined;
+        
+        // Log del contenido extraído
+        logDebug('EXTRACTED_CONTENT', 'Contenido extraído de la respuesta', {
+            contentLength: content.length,
+            trimmedLength: content.trim().length,
+            first100: content.substring(0, 100),
+            functionCallsCount: functionCalls.length
+        });
         
         return {
             success: true,
