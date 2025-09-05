@@ -288,18 +288,19 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 });
                 
                 // Hacer una segunda llamada con los resultados de las funciones
-                // ESTRATEGIA SIMPLE: NO usar previous_response_id, construir input manualmente
+                // ESTRATEGIA SIMPLE: Usar previous_response_id SIN previousOutputItems
+                // Dejar que OpenAI maneje automáticamente el historial
                 const followUpResult = await this.responseService.createResponse(
                     this.systemInstructions,
                     '', // No enviar mensaje, solo function outputs
                     {
                         ...conversationContext,
-                        previousResponseId: undefined // NO usar previous_response_id para evitar conflictos
+                        previousResponseId: result.responseId // Mantener historial automáticamente
                     },
                     [], // No enviar funciones en el follow-up
                     undefined, // No hay imagen
                     functionResults, // Enviar los outputs de las funciones
-                    result.outputItems // Incluir items anteriores manualmente
+                    undefined // NO enviar previousOutputItems - previous_response_id maneja el contexto
                 );
                 
                 if (followUpResult.success && followUpResult.content) {
