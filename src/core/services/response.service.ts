@@ -165,10 +165,13 @@ export class ResponseService {
                     version: instructions.version || '1'
                 };
                 
-                // Agregar variables si existen
+                // NO ENVIAR VARIABLES - El prompt no las necesita
+                // Comentado temporalmente hasta que se actualice el prompt
+                /*
                 if (context.promptVariables && Object.keys(context.promptVariables).length > 0) {
                     requestParams.prompt.variables = context.promptVariables;
                 }
+                */
             }
             
             // Usar previous_response_id para mantener contexto
