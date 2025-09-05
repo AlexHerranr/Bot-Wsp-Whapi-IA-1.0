@@ -238,7 +238,8 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 usingPromptId,
                 functionsInCode: this.getFunctionsForRequest().length,
                 functionsSent: functions.length,
-                reason: usingPromptId ? 'Funciones definidas en el prompt del dashboard' : 'Enviando funciones desde el código'
+                reason: usingPromptId ? 'Funciones definidas en el prompt del dashboard' : 'Enviando funciones desde el código',
+                timestamp: new Date().toISOString()
             });
             
             // Log del prompt enviado
