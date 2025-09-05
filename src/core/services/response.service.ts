@@ -80,31 +80,23 @@ export class ResponseService {
             // Construir el input
             let input: any[] = [];
             
-            // Si hay function outputs, incluir items anteriores y outputs
+            // Si hay function outputs, SOLO incluir los outputs
+            // NO incluir previousOutputItems cuando se usa previous_response_id
             if (functionOutputs && functionOutputs.length > 0) {
-                // Primero incluir todos los items anteriores (reasoning, function calls, etc)
-                if (previousOutputItems && previousOutputItems.length > 0) {
-                    input = [...previousOutputItems];
-                }
-                
-                // Luego agregar los function outputs
+                // Solo agregar los function outputs
                 const outputs = functionOutputs.map(fo => ({
                     type: "function_call_output",
                     call_id: fo.call_id,
                     output: typeof fo.output === 'string' ? fo.output : JSON.stringify(fo.output)
                 }));
                 
-                input.push(...outputs);
+                input = outputs; // Solo function outputs, NO previousOutputItems
                 
-                // Deduplicar input para evitar error "Duplicate item found with id"
-                input = this.deduplicateInput(input);
-                
-                logDebug('FUNCTION_OUTPUTS_INPUT', 'Input con function outputs construido', {
-                    previousItemsCount: previousOutputItems?.length || 0,
+                logDebug('FUNCTION_OUTPUTS_INPUT', 'Input con solo function outputs construido', {
                     outputsCount: functionOutputs.length,
                     totalItems: input.length,
                     callIds: functionOutputs.map(fo => fo.call_id),
-                    deduplicated: true
+                    note: 'previous_response_id maneja el contexto automáticamente'
                 });
             }
             // Si no hay function outputs, construir input normal
@@ -432,9 +424,10 @@ export class ResponseService {
     
     
     /**
-     * Deduplica items en el input basándose en id, call_id o hash de contenido
+     * Deduplica items en el input basándose en id o call_id
      * para evitar el error "Duplicate item found with id"
-     * ESTRATEGIA: Solo remover duplicados reales, mantener todos los items únicos necesarios
+     * ESTRATEGIA: Solo remover items con IDs duplicados reales (function_calls, reasoning)
+     * NO tocar messages sin ID explícito
      */
     private deduplicateInput(input: any[]): any[] {
         const seen = new Set<string>();
@@ -442,30 +435,30 @@ export class ResponseService {
         let duplicatesRemoved = 0;
         
         for (const item of input) {
-            // Generar clave única para el item
-            let key = item.id || item.call_id;
-            if (!key) {
-                // Para items sin ID, usar hash del contenido
-                key = JSON.stringify(item.content || item.arguments || item.summary || item);
+            // Solo deduplicar items que tienen ID explícito
+            const itemId = item.id || item.call_id;
+            
+            if (itemId) {
+                if (seen.has(itemId)) {
+                    // Item con ID duplicado - omitir
+                    logWarning('DUPLICATE_REMOVED', 'Item con ID duplicado omitido', {
+                        type: item.type,
+                        id: itemId.substring(0, 30) + '...',
+                        name: item.name
+                    });
+                    duplicatesRemoved++;
+                    continue;
+                }
+                seen.add(itemId);
             }
             
-            if (seen.has(key)) {
-                // Item duplicado - omitir
-                logWarning('DUPLICATE_REMOVED', 'Item duplicado omitido', {
-                    type: item.type,
-                    keyPreview: key.substring(0, 20) + '...'
-                });
-                duplicatesRemoved++;
-                continue;
-            }
-            
-            seen.add(key);
+            // Incluir item (único o sin ID)
             uniqueItems.push(item);
         }
         
         // Log resumen solo si se removieron duplicados
         if (duplicatesRemoved > 0) {
-            logInfo('INPUT_DEDUPLICATED', 'Input deduplicado exitosamente', {
+            logInfo('INPUT_DEDUPLICATED', 'Items con IDs duplicados removidos', {
                 originalCount: input.length,
                 uniqueCount: uniqueItems.length,
                 duplicatesRemoved
