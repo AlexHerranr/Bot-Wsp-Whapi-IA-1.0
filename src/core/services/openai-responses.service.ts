@@ -288,6 +288,19 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 });
                 
                 // Hacer una segunda llamada con los resultados de las funciones
+                // IMPORTANTE: Filtrar function_calls de outputItems para evitar duplicados
+                const filteredOutputItems = result.outputItems?.filter(item => 
+                    item.type !== 'function_call'
+                ) || [];
+                
+                logInfo('FUNCTION_CALL_FILTER', 'Filtrando function calls de outputItems para evitar duplicados', {
+                    userId,
+                    originalItems: result.outputItems?.length || 0,
+                    filteredItems: filteredOutputItems.length,
+                    functionCallsRemoved: (result.outputItems?.length || 0) - filteredOutputItems.length,
+                    itemTypes: result.outputItems?.map(item => item.type).join(', ') || 'none'
+                });
+                
                 const followUpResult = await this.responseService.createResponse(
                     this.systemInstructions,
                     '', // No enviar mensaje, solo function outputs
@@ -298,7 +311,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                     [], // No enviar funciones en el follow-up
                     undefined, // No hay imagen
                     functionResults, // Enviar los outputs de las funciones
-                    result.outputItems // Pasar todos los items anteriores para mantener contexto
+                    filteredOutputItems // Solo pasar reasoning y messages, NO function_calls
                 );
                 
                 if (followUpResult.success && followUpResult.content) {
