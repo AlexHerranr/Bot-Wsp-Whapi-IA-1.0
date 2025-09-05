@@ -233,9 +233,15 @@ export class ResponseService {
             
         } catch (error) {
             const processingTime = Date.now() - startTime;
+            
+            // Log más detallado del error
+            console.error('RESPONSE_API_ERROR DETALLE:', error);
+            
             logError('RESPONSE_API_ERROR', 'Error al llamar Responses API', {
                 userId: context.userId,
                 error: error instanceof Error ? error.message : 'Unknown error',
+                errorName: error instanceof Error ? error.name : 'Unknown',
+                errorStack: error instanceof Error ? error.stack?.split('\n')[0] : 'No stack',
                 processingTime
             });
             
