@@ -201,6 +201,12 @@ export class BufferManager implements IBufferManager {
 
         // Crear nuevo timer con delay dinámico
         buffer.timer = setTimeout(() => {
+            logInfo('BUFFER_TIMEOUT', 'Timer disparado, procesando buffer', {
+                userId,
+                userName: buffer.userName || 'Usuario',
+                messageCount: buffer.messages.length,
+                delay
+            });
             this.processBuffer(userId);
         }, delay);
 
