@@ -269,7 +269,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 logInfo('FUNCTION_CALLS_DETECTED', 'Detectadas llamadas a funciones', {
                     userId,
                     count: result.functionCalls.length,
-                    functions: result.functionCalls.map(fc => fc.name)
+                    functions: result.functionCalls.map(fc => fc.function.name)
                 });
                 
                 const functionResults = await this.responseService.executeFunctionCalls(
@@ -329,7 +329,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                     userId,
                     responseLength: finalResponse.length,
                     preview: finalResponse.substring(0, 100),
-                    hasFunctions: functionCalls.length > 0
+                    hasFunctions: result.functionCalls?.length > 0
                 });
                 
                 await this.whatsappService.sendWhatsAppMessage(
