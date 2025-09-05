@@ -224,11 +224,14 @@ export class ResponseService {
             });
             
             // LOG CRÍTICO: Verificar el request final
-            logWarning('PROMPT_VARS_DEBUG_5', 'REQUEST FINAL ANTES DE ENVIAR', {
-                requestParams: JSON.stringify(requestParams, null, 2),
-                promptSection: JSON.stringify(requestParams.prompt, null, 2),
-                hasPromptVariables: requestParams.prompt && 'variables' in requestParams.prompt
-            });
+            console.error('=== CRITICAL DEBUG: REQUEST FINAL ===');
+            console.error('Prompt section:', JSON.stringify(requestParams.prompt, null, 2));
+            console.error('Has variables?', requestParams.prompt && 'variables' in requestParams.prompt);
+            console.error('Full request keys:', Object.keys(requestParams));
+            if (requestParams.prompt && requestParams.prompt.variables) {
+                console.error('VARIABLES FOUND:', Object.keys(requestParams.prompt.variables));
+            }
+            console.error('=================================');
             
             // Llamar a la API
             const response = await this.openai.responses.create(requestParams);
