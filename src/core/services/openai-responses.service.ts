@@ -230,13 +230,15 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             await this.conversationManager.addMessage(userId, chatId, 'user', enrichedMessage);
             
             // Obtener funciones disponibles
-            // SIEMPRE enviar funciones, incluso con prompt ID
-            const functions = this.getFunctionsForRequest();
+            // Si usamos prompt ID, NO enviar funciones (están definidas en el prompt)
+            const usingPromptId = this.systemInstructions && typeof this.systemInstructions === 'object';
+            const functions = usingPromptId ? [] : this.getFunctionsForRequest();
             
-            logInfo('FUNCTIONS_TO_SEND', 'Funciones disponibles para enviar', {
-                functionsCount: functions.length,
-                functionNames: functions.map(f => f.name),
-                usingPromptId: this.systemInstructions && typeof this.systemInstructions === 'object'
+            logInfo('FUNCTIONS_CONFIG', 'Configuración de funciones', {
+                usingPromptId,
+                functionsInCode: this.getFunctionsForRequest().length,
+                functionsSent: functions.length,
+                reason: usingPromptId ? 'Funciones definidas en el prompt del dashboard' : 'Enviando funciones desde el código'
             });
             
             // Log del prompt enviado
