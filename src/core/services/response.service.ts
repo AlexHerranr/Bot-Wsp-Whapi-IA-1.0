@@ -35,6 +35,7 @@ export interface ResponseResult {
         totalTokens: number;
     };
     processingTime: number;
+    outputItems?: any[]; // Items de output completos para mantener contexto
 }
 
 export class ResponseService {
@@ -63,7 +64,8 @@ export class ResponseService {
         context: ConversationContext,
         functions?: any[],
         imageMessage?: { type: 'image', imageUrl: string, caption: string },
-        functionOutputs?: Array<{call_id: string, output: any}>
+        functionOutputs?: Array<{call_id: string, output: any}>,
+        previousOutputItems?: any[]
     ): Promise<ResponseResult> {
         const startTime = Date.now();
         
@@ -78,16 +80,26 @@ export class ResponseService {
             // Construir el input
             let input: any[] = [];
             
-            // Si hay function outputs, usarlos como input
+            // Si hay function outputs, incluir items anteriores y outputs
             if (functionOutputs && functionOutputs.length > 0) {
-                input = functionOutputs.map(fo => ({
-                    type: "tool_output",
+                // Primero incluir todos los items anteriores (reasoning, function calls, etc)
+                if (previousOutputItems && previousOutputItems.length > 0) {
+                    input = [...previousOutputItems];
+                }
+                
+                // Luego agregar los function outputs
+                const outputs = functionOutputs.map(fo => ({
+                    type: "function_call_output",
                     call_id: fo.call_id,
                     output: typeof fo.output === 'string' ? fo.output : JSON.stringify(fo.output)
                 }));
                 
+                input.push(...outputs);
+                
                 logDebug('FUNCTION_OUTPUTS_INPUT', 'Input con function outputs construido', {
+                    previousItemsCount: previousOutputItems?.length || 0,
                     outputsCount: functionOutputs.length,
+                    totalItems: input.length,
                     callIds: functionOutputs.map(fo => fo.call_id)
                 });
             }
@@ -298,13 +310,13 @@ export class ResponseService {
                             content += contentItem.text + '\n';
                         }
                     }
-                } else if (output.type === 'tool_call') {
+                } else if (output.type === 'function_call') {
                     // Procesar llamadas a funciones
                     functionCalls.push({
-                        id: output.id,
+                        id: output.call_id,
                         function: {
-                            name: output.function.name,
-                            arguments: output.function.arguments
+                            name: output.name,
+                            arguments: output.arguments
                         }
                     });
                 }
@@ -334,7 +346,8 @@ export class ResponseService {
             content: content.trim(),
             functionCalls: functionCalls.length > 0 ? functionCalls : undefined,
             usage,
-            processingTime
+            processingTime,
+            outputItems: response.output // Guardar todos los items para mantener contexto
         };
     }
     

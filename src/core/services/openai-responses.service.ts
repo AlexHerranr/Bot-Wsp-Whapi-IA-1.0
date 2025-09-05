@@ -297,7 +297,8 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                     },
                     [], // No enviar funciones en el follow-up
                     undefined, // No hay imagen
-                    functionResults // Enviar los outputs de las funciones
+                    functionResults, // Enviar los outputs de las funciones
+                    result.outputItems // Pasar todos los items anteriores para mantener contexto
                 );
                 
                 if (followUpResult.success && followUpResult.content) {
