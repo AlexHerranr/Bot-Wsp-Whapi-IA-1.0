@@ -230,15 +230,13 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             await this.conversationManager.addMessage(userId, chatId, 'user', enrichedMessage);
             
             // Obtener funciones disponibles
-            // IMPORTANTE: Si usamos prompt ID, las funciones deben estar definidas en el prompt
-            // No enviar funciones en el request cuando usamos prompt ID
-            const usingPromptId = this.systemInstructions && typeof this.systemInstructions === 'object';
-            const functions = usingPromptId ? [] : this.getFunctionsForRequest();
+            // SIEMPRE enviar funciones, incluso con prompt ID
+            const functions = this.getFunctionsForRequest();
             
-            logDebug('FUNCTIONS_DECISION', 'Decisión sobre funciones', {
-                usingPromptId,
-                functionsToSend: functions.length,
-                reason: usingPromptId ? 'Usando prompt ID - funciones definidas en el prompt' : 'Modelo directo - enviando funciones'
+            logInfo('FUNCTIONS_TO_SEND', 'Funciones disponibles para enviar', {
+                functionsCount: functions.length,
+                functionNames: functions.map(f => f.name),
+                usingPromptId: this.systemInstructions && typeof this.systemInstructions === 'object'
             });
             
             // Log del prompt enviado
@@ -265,13 +263,29 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             // Procesar function calls si existen
             let finalResponse = result.content || '';
             if (result.functionCalls && result.functionCalls.length > 0) {
+                logInfo('FUNCTION_CALLS_DETECTED', 'Detectadas llamadas a funciones', {
+                    userId,
+                    count: result.functionCalls.length,
+                    functions: result.functionCalls.map(fc => fc.name)
+                });
+                
                 const functionResults = await this.responseService.executeFunctionCalls(
                     result.functionCalls,
                     conversationContext
                 );
                 
+                logInfo('FUNCTION_EXECUTION_COMPLETE', 'Funciones ejecutadas', {
+                    userId,
+                    results: functionResults.length
+                });
+                
                 // Crear mensaje con resultados de funciones
                 const functionResultsMessage = this.formatFunctionResults(functionResults);
+                
+                logInfo('FUNCTION_FOLLOWUP', 'Enviando resultados a OpenAI', {
+                    userId,
+                    messageLength: functionResultsMessage.length
+                });
                 
                 // Hacer una segunda llamada con los resultados
                 const followUpResult = await this.responseService.createResponse(
