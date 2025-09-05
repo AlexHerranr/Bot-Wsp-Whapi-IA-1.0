@@ -743,7 +743,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
 
         case 'OPENAI_PROMPT':
             const promptLen = details?.length || 0;
-            const threadIdPrompt = details?.threadId ? truncateId(details.threadId) : 'none';
+            const responseIdPrompt = details?.threadId || details?.responseId ? truncateId(details.threadId || details.responseId) : 'none';
             let content = details?.fullContent || details?.preview || '';
             // Extraer contexto clave y compactar
             const horaMatch = content.match(/Hora actual: [^\n]+/) || [''];
@@ -758,19 +758,15 @@ function formatCompactRailwayLog(category: string, message: string, details: any
                 msgMatch[0].replace('Mensaje del cliente:', '').trim().substring(0, 60)
             ].filter(Boolean).join('|').replace(/\n/g, ' ');
             
-            // Determinar si es un thread o response ID
-            const idPrefix = details?.threadId?.startsWith('resp_') ? 'resp' : details?.threadId?.startsWith('thread_') ? 'thread' : 'ctx';
-            return `${timestamp} [OPENAI_PROMPT:${source}] ${userId}: ${idPrefix}:${threadIdPrompt} len:${promptLen} content:"${compactContent}"`;
+            return `${timestamp} [OPENAI_PROMPT:${source}] ${userId}: ctx:${responseIdPrompt} len:${promptLen} content:"${compactContent}"`;
 
         case 'TOKENS_METRIC':
             const tokensIn = details?.tokensIn || details?.inputTokens || 0;
             const tokensOut = details?.tokensOut || details?.outputTokens || details?.tokensUsed || 0;
             const tokensTotal = details?.totalTokens || (tokensIn + tokensOut);
             const model = details?.model || 'unknown';
-            const threadIdToken = details?.threadId ? truncateId(details.threadId) : 'none';
-            // Determinar si es un thread o response ID
-            const idPrefixToken = details?.threadId?.startsWith('resp_') ? 'resp' : details?.threadId?.startsWith('thread_') ? 'thread' : 'ctx';
-            return `${timestamp} [TOKENS_METRIC:${source}] ${userId}: in:${tokensIn} out:${tokensOut} total:${tokensTotal} model:${model} ${idPrefixToken}:${threadIdToken}`;
+            const responseIdToken = details?.threadId || details?.responseId ? truncateId(details.threadId || details.responseId) : 'none';
+            return `${timestamp} [TOKENS_METRIC:${source}] ${userId}: in:${tokensIn} out:${tokensOut} total:${tokensTotal} model:${model} ctx:${responseIdToken}`;
 
         case 'LATENCY_METRIC':
             const openaiLat = details?.openaiLatency || details?.openaiTime || 0;
