@@ -1032,8 +1032,8 @@ export class DatabaseService {
             return {
                 user_id: userId,
                 chat_id: chatId,
-                conversation_id: result.threadId || undefined, // Usar threadId como conversation_id
-                last_response_id: result.threadId || undefined,
+                conversation_id: result.last_response_id || result.threadId || undefined,
+                last_response_id: result.last_response_id || result.threadId || undefined,
                 message_count: 0, // No necesitamos esto
                 token_count: result.threadTokenCount || 0,
                 last_activity: result.lastActivity,
@@ -1069,8 +1069,8 @@ export class DatabaseService {
             return results.map(result => ({
                 user_id: result.phoneNumber + '@s.whatsapp.net',
                 chat_id: result.chatId || '',
-                conversation_id: result.threadId || undefined,
-                last_response_id: result.threadId || undefined,
+                conversation_id: result.last_response_id || result.threadId || undefined,
+                last_response_id: result.last_response_id || result.threadId || undefined,
                 message_count: 0,
                 token_count: result.threadTokenCount || 0,
                 last_activity: result.lastActivity,
@@ -1089,13 +1089,21 @@ export class DatabaseService {
         try {
             const phoneNumber = conversation.user_id.replace('@s.whatsapp.net', '');
             
-            // Actualizar en la tabla WhatsApp existente
-            await this.prisma.whatsApp.update({
+            // Usar upsert para crear si no existe o actualizar si existe
+            await this.prisma.whatsApp.upsert({
                 where: { phoneNumber },
-                data: {
-                    threadId: conversation.last_response_id || conversation.conversation_id,
+                update: {
+                    last_response_id: conversation.last_response_id || conversation.conversation_id,
                     threadTokenCount: conversation.token_count,
                     lastActivity: conversation.last_activity
+                },
+                create: {
+                    phoneNumber,
+                    chatId: conversation.chat_id,
+                    last_response_id: conversation.last_response_id || conversation.conversation_id,
+                    threadTokenCount: conversation.token_count,
+                    lastActivity: conversation.last_activity,
+                    name: phoneNumber // Nombre temporal
                 }
             });
             
