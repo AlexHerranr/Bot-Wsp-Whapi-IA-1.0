@@ -2,7 +2,7 @@
 import { MessageBuffer } from '../../shared/types';
 import { IBufferManager } from '../../shared/interfaces';
 import { BUFFER_DELAY_MS, MAX_BUFFER_MESSAGES } from '../utils/constants';
-import { logInfo, logSuccess, logWarning, logDebug } from '../../utils/logging';
+import { logInfo, logSuccess, logWarning, logDebug, logError } from '../../utils/logging';
 
 // Log del valor real de BUFFER_DELAY_MS al iniciar
 logInfo('BUFFER_CONFIG', 'Configuración de buffer timing', {
@@ -16,11 +16,15 @@ export class BufferManager implements IBufferManager {
     private buffers: Map<string, MessageBuffer> = new Map();
     private activeRuns: Map<string, boolean> = new Map(); // Flag simple para evitar concurrent runs per user/thread
     private activeRunTimestamps: Map<string, number> = new Map(); // Timestamps para timeout de seguridad
+    private stuckBufferChecker: NodeJS.Timer | null = null;
 
     constructor(
         private processCallback: (userId: string, combinedText: string, chatId: string, userName: string, imageMessage?: { type: 'image', imageUrl: string, caption: string }, duringRunMsgId?: string) => Promise<void>,
         private getUserState?: (userId: string) => { isTyping: boolean; isRecording: boolean; lastActivity?: number } | undefined
-    ) {}
+    ) {
+        // Iniciar verificación periódica de buffers atascados
+        this.startStuckBufferChecker();
+    }
 
     public addMessage(userId: string, messageText: string, chatId: string, userName: string, quotedMessageId?: string, currentMessageId?: string): void {
         let buffer = this.buffers.get(userId);
@@ -205,9 +209,24 @@ export class BufferManager implements IBufferManager {
                 userId,
                 userName: buffer.userName || 'Usuario',
                 messageCount: buffer.messages.length,
-                delay
+                delay,
+                reason: reason
             });
-            this.processBuffer(userId);
+            // Asegurar que el buffer se procese incluso si hay problemas
+            try {
+                this.processBuffer(userId);
+            } catch (error) {
+                logError('BUFFER_PROCESS_CRASH', 'Error crítico procesando buffer', {
+                    userId,
+                    error: error instanceof Error ? error.message : String(error),
+                    messageCount: buffer.messages.length
+                });
+                // Limpiar el buffer para evitar bloqueo permanente
+                if (buffer.timer) {
+                    clearTimeout(buffer.timer);
+                    buffer.timer = null;
+                }
+            }
         }, delay);
 
         buffer.lastActivity = Date.now();
@@ -307,7 +326,11 @@ export class BufferManager implements IBufferManager {
             // Proceder directamente al procesamiento - saltear checks de actividad
         } else {
             // Chequeo de actividad: Si usuario está activamente escribiendo/grabando, esperar
-            if (this.getUserState) {
+            // PERO con un límite de tiempo para evitar bloqueos indefinidos
+            const timeSinceLastMessage = Date.now() - buffer.lastActivity;
+            const maxWaitForTyping = 10000; // 10 segundos máximo de espera
+            
+            if (this.getUserState && timeSinceLastMessage < maxWaitForTyping) {
                 const userState = this.getUserState(userId);
                 if (userState?.isTyping || userState?.isRecording) {
                     logInfo('BUFFER_DELAYED_USER_ACTIVE', 'Usuario activo, extendiendo buffer', {
@@ -315,11 +338,19 @@ export class BufferManager implements IBufferManager {
                         userName: buffer.userName,
                         isTyping: userState.isTyping,
                         isRecording: userState.isRecording,
-                        messageCount: buffer.messages.length
+                        messageCount: buffer.messages.length,
+                        timeSinceLastMessage: Math.round(timeSinceLastMessage / 1000) + 's'
                     }, 'buffer-manager.ts');
                     this.setOrExtendTimer(userId, 'activity'); // Re-extender mientras activo
                     return;
                 }
+            } else if (timeSinceLastMessage >= maxWaitForTyping) {
+                logInfo('BUFFER_FORCE_PROCESS', 'Procesando buffer por timeout máximo de espera', {
+                    userId,
+                    userName: buffer.userName,
+                    messageCount: buffer.messages.length,
+                    waitedFor: Math.round(timeSinceLastMessage / 1000) + 's'
+                });
             }
         }
 
@@ -535,5 +566,32 @@ export class BufferManager implements IBufferManager {
             active: this.buffers.size,
             total: this.buffers.size
         };
+    }
+
+    private startStuckBufferChecker(): void {
+        // Verificar cada 30 segundos por buffers atascados
+        this.stuckBufferChecker = setInterval(() => {
+            const now = Date.now();
+            const maxStuckTime = 30000; // 30 segundos
+            
+            for (const [userId, buffer] of this.buffers.entries()) {
+                if (buffer.messages.length > 0) {
+                    const timeSinceLastActivity = now - buffer.lastActivity;
+                    
+                    if (timeSinceLastActivity > maxStuckTime) {
+                        logWarning('BUFFER_STUCK_DETECTED', 'Buffer atascado detectado, forzando procesamiento', {
+                            userId,
+                            userName: buffer.userName,
+                            messageCount: buffer.messages.length,
+                            stuckFor: Math.round(timeSinceLastActivity / 1000) + 's',
+                            hasTimer: !!buffer.timer
+                        });
+                        
+                        // Forzar procesamiento
+                        this.processBuffer(userId);
+                    }
+                }
+            }
+        }, 30000) as any; // Cada 30 segundos
     }
 }
