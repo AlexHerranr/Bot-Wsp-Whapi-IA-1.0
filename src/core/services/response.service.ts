@@ -96,11 +96,18 @@ export class ResponseService {
                 
                 input.push(...outputs);
                 
+                // Deduplicar input para evitar error "Duplicate item found with id"
+                input = this.deduplicateInput(input);
+                
+                // Filtrar items según tipo de modelo para evitar truncamiento
+                input = this.filterItemsForModel(input, this.config.model);
+                
                 logDebug('FUNCTION_OUTPUTS_INPUT', 'Input con function outputs construido', {
                     previousItemsCount: previousOutputItems?.length || 0,
                     outputsCount: functionOutputs.length,
                     totalItems: input.length,
-                    callIds: functionOutputs.map(fo => fo.call_id)
+                    callIds: functionOutputs.map(fo => fo.call_id),
+                    deduplicated: true
                 });
             }
             // Si no hay function outputs, construir input normal
@@ -173,15 +180,7 @@ export class ResponseService {
             // Solo agregar model si no usamos prompt ID
             if (typeof instructions === 'string') {
                 requestParams.model = this.config.model;
-                // Temperature solo para modelos que la soportan
-                const noTempModels = ['o1', 'o3', 'gpt-5'];
-                const isNoTempModel = noTempModels.some(m => 
-                    this.config.model.toLowerCase().includes(m)
-                );
-                
-                if (!isNoTempModel) {
-                    requestParams.temperature = this.config.temperature;
-                }
+                // Temperature se configurará en adjustParametersForModel
             }
             // Si usamos prompt ID, el modelo viene del prompt
             
@@ -235,6 +234,12 @@ export class ResponseService {
                 });
             }
             // Si no hay functions, NO incluir el parámetro tools en absoluto
+            
+            // Ajustar parámetros según tipo de modelo (razonador vs estándar)
+            const modelToUse = typeof instructions === 'string' ? this.config.model : 'prompt-based';
+            if (typeof instructions === 'string') {
+                this.adjustParametersForModel(requestParams, modelToUse);
+            }
             
             // Log completo del request antes de enviar
             logDebug('FULL_REQUEST', 'Request completo a OpenAI', {
@@ -419,6 +424,156 @@ export class ResponseService {
         }
         
         return results;
+    }
+    
+    /**
+     * Detecta si el modelo es de tipo razonador (o1, o3, gpt-5, etc.)
+     */
+    private isReasoningModel(model: string): boolean {
+        const reasoningModels = ['o1', 'o1-mini', 'o1-preview', 'o3', 'o3-mini', 'gpt-5'];
+        return reasoningModels.some(m => model.toLowerCase().includes(m.toLowerCase()));
+    }
+    
+    /**
+     * Deduplica items en el input basándose en id o call_id
+     * para evitar el error "Duplicate item found with id"
+     * Maneja function calls, messages, reasoning items y otros tipos
+     */
+    private deduplicateInput(input: any[]): any[] {
+        const seenIds = new Set<string>();
+        const uniqueItems: any[] = [];
+        const duplicatesFound: string[] = [];
+        
+        for (const item of input) {
+            let itemKey: string | null = null;
+            
+            // Para reasoning items, usar tanto id como hash del contenido
+            if (item.type === 'reasoning') {
+                const contentHash = JSON.stringify(item.content || item.summary || '');
+                itemKey = item.id ? `${item.id}_${contentHash}` : contentHash;
+            }
+            // Para function calls y otros items con ID
+            else if (item.id || item.call_id) {
+                itemKey = item.id || item.call_id;
+            }
+            // Para messages, usar role + content hash si no tienen ID
+            else if (item.type === 'message' && !item.id) {
+                const contentStr = JSON.stringify(item.content || '');
+                itemKey = `msg_${item.role}_${contentStr}`;
+            }
+            
+            if (itemKey) {
+                if (seenIds.has(itemKey)) {
+                    duplicatesFound.push(itemKey);
+                    logWarning('DUPLICATE_ITEM_REMOVED', 'Item duplicado encontrado y removido', {
+                        id: itemKey,
+                        type: item.type,
+                        role: item.role
+                    });
+                    continue; // Skip duplicate
+                }
+                seenIds.add(itemKey);
+            }
+            
+            // Incluir items únicos o sin ID
+            uniqueItems.push(item);
+        }
+        
+        // Log resumen si se removieron duplicados
+        if (duplicatesFound.length > 0) {
+            logInfo('INPUT_DEDUPLICATED', 'Input deduplicado exitosamente', {
+                originalCount: input.length,
+                uniqueCount: uniqueItems.length,
+                duplicatesRemoved: duplicatesFound.length,
+                duplicateIds: duplicatesFound
+            });
+        }
+        
+        return uniqueItems;
+    }
+    
+    /**
+     * Ajusta parámetros según el tipo de modelo para evitar truncamiento
+     */
+    private adjustParametersForModel(params: any, model: string): any {
+        const isReasoning = this.isReasoningModel(model);
+        
+        // Para modelos razonadores
+        if (isReasoning) {
+            // NO enviar temperature a modelos razonadores
+            delete params.temperature;
+            
+            // Aumentar límites para modelos razonadores
+            params.max_output_tokens = Math.max(params.max_output_tokens || 4096, 8192);
+            
+            // Configurar truncation para contextos más largos
+            params.truncation = {
+                type: 'auto',
+                max_tokens: 120000 // Contexto más amplio para reasoning
+            };
+            
+            logDebug('REASONING_MODEL_CONFIG', 'Configuración para modelo razonador', {
+                model,
+                maxOutputTokens: params.max_output_tokens,
+                truncationMaxTokens: params.truncation.max_tokens
+            });
+        }
+        // Para modelos no razonadores
+        else {
+            // Mantener temperature si está configurada
+            if (this.config.temperature !== undefined) {
+                params.temperature = this.config.temperature;
+            }
+            
+            // Límites estándar
+            params.max_output_tokens = params.max_output_tokens || this.config.maxOutputTokens;
+            
+            // Configurar truncation para contextos estándar
+            params.truncation = {
+                type: 'auto',
+                max_tokens: 32000 // Contexto estándar
+            };
+            
+            logDebug('STANDARD_MODEL_CONFIG', 'Configuración para modelo estándar', {
+                model,
+                temperature: params.temperature,
+                maxOutputTokens: params.max_output_tokens,
+                truncationMaxTokens: params.truncation.max_tokens
+            });
+        }
+        
+        return params;
+    }
+    
+    /**
+     * Filtra items según el tipo de modelo para evitar truncamiento
+     */
+    private filterItemsForModel(items: any[], model: string): any[] {
+        const isReasoning = this.isReasoningModel(model);
+        
+        if (isReasoning) {
+            // Para modelos razonadores: MANTENER todos los items, especialmente reasoning
+            logDebug('REASONING_MODEL_FILTER', 'Manteniendo todos los items para modelo razonador', {
+                model,
+                totalItems: items.length,
+                reasoningItems: items.filter(i => i.type === 'reasoning').length
+            });
+            return items;
+        } else {
+            // Para modelos no razonadores: filtrar reasoning items si existen
+            const filteredItems = items.filter(item => item.type !== 'reasoning');
+            
+            if (filteredItems.length < items.length) {
+                logDebug('STANDARD_MODEL_FILTER', 'Filtrando reasoning items para modelo estándar', {
+                    model,
+                    originalItems: items.length,
+                    filteredItems: filteredItems.length,
+                    reasoningItemsRemoved: items.length - filteredItems.length
+                });
+            }
+            
+            return filteredItems;
+        }
     }
     
     // Métodos de conversación eliminados - la API no tiene conversations.create()
