@@ -266,11 +266,11 @@ export class ConversationManager {
             cleanPreviousResponseId = null;
         }
         
-        // También limpiar si el último mensaje fue hace más de 30 minutos
+        // También limpiar si el último mensaje fue hace más de 5 minutos
         // para evitar referencias a respuestas con funciones pendientes
         const timeSinceLastActivity = Date.now() - conversation.lastActivity.getTime();
-        const thirtyMinutes = 30 * 60 * 1000;
-        if (cleanPreviousResponseId && timeSinceLastActivity > thirtyMinutes) {
+        const fiveMinutes = 5 * 60 * 1000;
+        if (cleanPreviousResponseId && timeSinceLastActivity > fiveMinutes) {
             logWarning('STALE_RESPONSE_ID', 'Limpiando response ID antiguo para evitar funciones pendientes', { 
                 userId,
                 oldId: cleanPreviousResponseId,
