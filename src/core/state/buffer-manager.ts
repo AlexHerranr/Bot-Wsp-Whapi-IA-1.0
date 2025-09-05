@@ -54,15 +54,28 @@ export class BufferManager implements IBufferManager {
         
         // CITACIÓN AUTO: Marcar mensaje para citación si hay run activo
         if (this.activeRuns.get(userId)) {
-            buffer.duringRunMsgId = currentMessageId || 'auto-during-run'; // Usa ID del mensaje actual para citación durante run
-            logInfo('CITACION_AUTO_MARK', 'Mensaje marcado para citación auto durante run', { 
-                userId, 
-                userName,
-                duringRunMsgId: buffer.duringRunMsgId,
-                messagePreview: messageText.substring(0, 80),
-                hasRealId: !!currentMessageId,
-                reason: 'active_run_detected'
-            });
+            // Verificar si el run está atascado (más de 60 segundos)
+            const runTimestamp = this.activeRunTimestamps.get(userId);
+            if (runTimestamp && Date.now() - runTimestamp > 60000) {
+                logWarning('STALE_RUN_DETECTED', 'Run activo detectado por más de 60s, liberando', {
+                    userId,
+                    userName,
+                    stuckFor: Math.round((Date.now() - runTimestamp) / 1000) + 's'
+                });
+                this.activeRuns.delete(userId);
+                this.activeRunTimestamps.delete(userId);
+            } else {
+                buffer.duringRunMsgId = currentMessageId || 'auto-during-run'; // Usa ID del mensaje actual para citación durante run
+                logInfo('CITACION_AUTO_MARK', 'Mensaje marcado para citación auto durante run', { 
+                    userId, 
+                    userName,
+                    duringRunMsgId: buffer.duringRunMsgId,
+                    messagePreview: messageText.substring(0, 80),
+                    hasRealId: !!currentMessageId,
+                    reason: 'active_run_detected',
+                    runAge: runTimestamp ? Math.round((Date.now() - runTimestamp) / 1000) + 's' : 'unknown'
+                });
+            }
         }
         
         // Marcar como voice si el mensaje contiene audio
@@ -161,6 +174,21 @@ export class BufferManager implements IBufferManager {
         
         // Solo establecer/extender timer si hay contenido real en el buffer
         if (buffer.messages.length > 0 || buffer.pendingImage) {
+            // Verificar si hay un run activo atascado
+            if (this.activeRuns.get(userId)) {
+                const runTimestamp = this.activeRunTimestamps.get(userId);
+                if (runTimestamp && Date.now() - runTimestamp > 30000) {
+                    logWarning('TYPING_WITH_STALE_RUN', 'Usuario escribiendo con run atascado', {
+                        userId,
+                        userName: buffer.userName || 'Usuario',
+                        runAge: Math.round((Date.now() - runTimestamp) / 1000) + 's',
+                        messageCount: buffer.messages.length
+                    });
+                    // NO extender el timer si hay un run atascado
+                    return;
+                }
+            }
+            
             // Sistema unificado: usar timer de 5s para extender mientras hay actividad
             this.setOrExtendTimer(userId, 'typing_recording');
             logDebug('BUFFER_EXTEND_ACTIVITY', 'Timer extendido por actividad', {
