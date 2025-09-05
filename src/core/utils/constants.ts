@@ -3,8 +3,8 @@ export const CHAT_INFO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 // ELIMINADO: CONTEXT_CACHE_TTL - context injection moved to external N8N flows
 export const PRECOMPUTED_CACHE_TTL = 1 * 60 * 1000; // 1 minuto
 
-// Buffer timing constants - Sistema unificado de 5s (configurable vía env)
-export const BUFFER_DELAY_MS = parseInt(process.env.BUFFER_DELAY_MS || '5000', 10); // 5s unificado para todos los eventos
+// Buffer timing constants - Sistema reducido a 3s para respuestas más rápidas
+export const BUFFER_DELAY_MS = parseInt(process.env.BUFFER_DELAY_MS || '3000', 10); // 3s por defecto para mejor UX
 
 // Message processing limits
 export const MAX_MESSAGE_LENGTH = 5000;

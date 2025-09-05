@@ -137,6 +137,7 @@ export class ResponseService {
                 input: input,
                 max_output_tokens: this.config.maxOutputTokens,
                 store: true, // Almacenar para poder referenciar después
+                truncation: 'auto' // Truncar automáticamente cuando se acerque al límite
             };
             
             // Solo agregar model si no usamos prompt ID

@@ -47,6 +47,7 @@ export interface MessageBuffer {
     chatId: string;
     userName: string;
     lastActivity: number;
+    firstMessageTime?: number; // Tiempo del primer mensaje para timeout absoluto
     timer: NodeJS.Timeout | null;
     isVoice?: boolean;
     pendingImage?: { type: 'image', imageUrl: string, caption: string } | null;

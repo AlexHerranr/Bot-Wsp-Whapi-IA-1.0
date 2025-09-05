@@ -29,12 +29,23 @@ export class BufferManager implements IBufferManager {
     public addMessage(userId: string, messageText: string, chatId: string, userName: string, quotedMessageId?: string, currentMessageId?: string): void {
         let buffer = this.buffers.get(userId);
         if (!buffer) {
-            buffer = { messages: [], chatId, userName, lastActivity: Date.now(), timer: null } as any;
+            buffer = { 
+                messages: [], 
+                chatId, 
+                userName, 
+                lastActivity: Date.now(), 
+                firstMessageTime: Date.now(), // Registrar tiempo del primer mensaje
+                timer: null 
+            } as any;
             this.buffers.set(userId, buffer);
             logInfo('BUFFER_CREATED', 'Buffer creado para mensaje', { userId, userName, reason: 'new_message' }, 'buffer-manager.ts');
         } else {
             if (userName && userName !== 'Usuario') buffer.userName = userName;
             if (chatId && !buffer.chatId) buffer.chatId = chatId;
+            // Si el buffer estaba vacío, actualizar firstMessageTime
+            if (buffer.messages.length === 0 && !buffer.pendingImage) {
+                buffer.firstMessageTime = Date.now();
+            }
             // SIMPLIFICADO: quotedMessageId eliminado - solo duringRunMsgId
         }
 
@@ -202,7 +213,7 @@ export class BufferManager implements IBufferManager {
     }
 
     // Método unificado: "Last event wins" - cancela timer anterior y establece nuevo timer
-    private setOrExtendTimer(userId: string, reason: string = 'message'): void {
+    private setOrExtendTimer(userId: string, reason: string = 'message', customDelay?: number): void {
         const buffer = this.buffers.get(userId);
         if (!buffer) return;
 
@@ -214,7 +225,10 @@ export class BufferManager implements IBufferManager {
         const isVoiceContext = buffer.isVoice || reason === 'voice' || reason === 'activity';
         let delay: number;
         
-        if (isVoiceContext) {
+        // Si se proporciona un delay personalizado, usarlo
+        if (customDelay !== undefined) {
+            delay = customDelay;
+        } else if (isVoiceContext) {
             delay = isOperations ? 1000 : 3000;  // Operations: 1s, Main: 3s para voz
         } else {
             delay = isOperations ? 1000 : BUFFER_DELAY_MS;  // Operations: 1s, Main: 5s para texto
@@ -353,32 +367,52 @@ export class BufferManager implements IBufferManager {
             });
             // Proceder directamente al procesamiento - saltear checks de actividad
         } else {
-            // Chequeo de actividad: Si usuario está activamente escribiendo/grabando, esperar
-            // PERO con un límite de tiempo para evitar bloqueos indefinidos
-            const timeSinceLastMessage = Date.now() - buffer.lastActivity;
-            const maxWaitForTyping = 10000; // 10 segundos máximo de espera
+            // NUEVO: Verificar timeout absoluto desde el primer mensaje
+            const firstMessageTime = buffer.firstMessageTime || buffer.lastActivity;
+            const totalWaitTime = Date.now() - firstMessageTime;
+            const ABSOLUTE_MAX_WAIT = 10000; // 10 segundos máximo absoluto
             
-            if (this.getUserState && timeSinceLastMessage < maxWaitForTyping) {
-                const userState = this.getUserState(userId);
-                if (userState?.isTyping || userState?.isRecording) {
-                    logInfo('BUFFER_DELAYED_USER_ACTIVE', 'Usuario activo, extendiendo buffer', {
-                        userId,
-                        userName: buffer.userName,
-                        isTyping: userState.isTyping,
-                        isRecording: userState.isRecording,
-                        messageCount: buffer.messages.length,
-                        timeSinceLastMessage: Math.round(timeSinceLastMessage / 1000) + 's'
-                    }, 'buffer-manager.ts');
-                    this.setOrExtendTimer(userId, 'activity'); // Re-extender mientras activo
-                    return;
-                }
-            } else if (timeSinceLastMessage >= maxWaitForTyping) {
-                logInfo('BUFFER_FORCE_PROCESS', 'Procesando buffer por timeout máximo de espera', {
+            // Si hay 3 o más mensajes, procesar inmediatamente
+            if (buffer.messages.length >= 3) {
+                logInfo('BUFFER_MESSAGE_LIMIT', 'Procesando por límite de mensajes', {
+                    userId,
+                    userName: buffer.userName,
+                    messageCount: buffer.messages.length
+                });
+                // Continuar con el procesamiento
+            } else if (totalWaitTime >= ABSOLUTE_MAX_WAIT) {
+                logWarning('BUFFER_ABSOLUTE_TIMEOUT', 'Procesando por timeout absoluto', {
                     userId,
                     userName: buffer.userName,
                     messageCount: buffer.messages.length,
-                    waitedFor: Math.round(timeSinceLastMessage / 1000) + 's'
+                    totalWaitTime: Math.round(totalWaitTime / 1000) + 's',
+                    isTyping: this.getUserState ? this.getUserState(userId)?.isTyping : 'unknown'
                 });
+                // Continuar con el procesamiento
+            } else {
+                // Chequeo de actividad: Si usuario está activamente escribiendo/grabando, esperar
+                // PERO con un límite de tiempo para evitar bloqueos indefinidos
+                const timeSinceLastMessage = Date.now() - buffer.lastActivity;
+                const maxWaitForTyping = 5000; // 5 segundos máximo de espera por typing
+                
+                if (this.getUserState && timeSinceLastMessage < maxWaitForTyping && totalWaitTime < ABSOLUTE_MAX_WAIT) {
+                    const userState = this.getUserState(userId);
+                    if (userState?.isTyping || userState?.isRecording) {
+                        logInfo('BUFFER_DELAYED_USER_ACTIVE', 'Usuario activo, extendiendo buffer', {
+                            userId,
+                            userName: buffer.userName,
+                            isTyping: userState.isTyping,
+                            isRecording: userState.isRecording,
+                            messageCount: buffer.messages.length,
+                            timeSinceLastMessage: Math.round(timeSinceLastMessage / 1000) + 's',
+                            totalWaitTime: Math.round(totalWaitTime / 1000) + 's'
+                        }, 'buffer-manager.ts');
+                        // Calcular tiempo restante hasta timeout absoluto
+                        const remainingTime = Math.min(ABSOLUTE_MAX_WAIT - totalWaitTime, 2000); // Max 2s de extensión
+                        this.setOrExtendTimer(userId, 'activity', remainingTime); 
+                        return;
+                    }
+                }
             }
         }
 
@@ -404,6 +438,7 @@ export class BufferManager implements IBufferManager {
         buffer.messages = [];
         buffer.pendingImage = null;
         buffer.isVoice = false; // Reset voice flag
+        buffer.firstMessageTime = undefined; // Reset tiempo del primer mensaje
         if (buffer.timer) {
             clearTimeout(buffer.timer);
             buffer.timer = null;
