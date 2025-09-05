@@ -165,6 +165,13 @@ export class ResponseService {
                     version: instructions.version || '1'
                 };
                 
+                logWarning('PROMPT_VARS_DEBUG_3', 'Antes de chequear promptVariables', {
+                    contextHasPromptVariables: 'promptVariables' in context,
+                    promptVariablesValue: context.promptVariables,
+                    promptVariablesType: typeof context.promptVariables,
+                    contextKeys: Object.keys(context)
+                });
+                
                 // NO ENVIAR VARIABLES - El prompt no las necesita
                 // Comentado temporalmente hasta que se actualice el prompt
                 /*
@@ -172,6 +179,11 @@ export class ResponseService {
                     requestParams.prompt.variables = context.promptVariables;
                 }
                 */
+                
+                logWarning('PROMPT_VARS_DEBUG_4', 'Después de comentar asignación', {
+                    requestParamsPrompt: requestParams.prompt,
+                    hasVariables: 'variables' in requestParams.prompt
+                });
             }
             
             // Usar previous_response_id para mantener contexto
@@ -209,6 +221,13 @@ export class ResponseService {
                 toolsCount: requestParams.tools?.length || 0,
                 requestKeys: Object.keys(requestParams),
                 promptId: typeof instructions === 'object' ? instructions.id : 'string-prompt'
+            });
+            
+            // LOG CRÍTICO: Verificar el request final
+            logWarning('PROMPT_VARS_DEBUG_5', 'REQUEST FINAL ANTES DE ENVIAR', {
+                requestParams: JSON.stringify(requestParams, null, 2),
+                promptSection: JSON.stringify(requestParams.prompt, null, 2),
+                hasPromptVariables: requestParams.prompt && 'variables' in requestParams.prompt
             });
             
             // Llamar a la API
