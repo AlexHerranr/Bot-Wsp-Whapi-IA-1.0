@@ -306,6 +306,16 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 result.responseId
             );
             
+            // IMPORTANTE: Enviar respuesta a WhatsApp
+            if (this.whatsappService && finalResponse) {
+                await this.whatsappService.sendWhatsAppMessage(
+                    chatId,
+                    finalResponse,
+                    { lastInputVoice: false }, // TODO: Obtener del contexto si fue audio
+                    false // isQuoteOrPrice
+                );
+            }
+            
             // Log de uso de tokens
             if (result.usage) {
                 logTokenUsage(

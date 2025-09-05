@@ -286,7 +286,8 @@ export class CoreBot {
             });
 
             // Procesar con Responses API
-            const result = await this.openaiService.processMessage(
+            // NOTA: processMessage envía directamente la respuesta a WhatsApp
+            await this.openaiService.processMessage(
                 userId, 
                 combinedText, 
                 chatId, 
@@ -297,19 +298,9 @@ export class CoreBot {
                 duringRunMsgId // para citación
             );
 
-            if (!result.success) {
-                logError('OPENAI_PROCESS_FAILED', 'Error procesando mensaje con OpenAI', {
-                    userId,
-                    error: result.error
-                });
-                throw new Error(result.error || 'Error desconocido en OpenAI');
-            }
-
             logInfo('BUFFER_PROCESSED', 'Buffer procesado exitosamente', {
                 userId,
-                responseLength: result.response?.length || 0,
-                tokensUsed: result.tokensUsed,
-                processingTime: result.processingTime
+                chatId
             });
 
         } catch (error) {
