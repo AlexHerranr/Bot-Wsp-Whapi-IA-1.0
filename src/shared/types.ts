@@ -56,6 +56,7 @@ export interface MessageBuffer {
 // Registro de Threads en Persistencia
 export interface ThreadRecord {
     threadId: string;
+    lastResponseId?: string;
     chatId: string;
     userName?: string;
     lastActivity: Date;

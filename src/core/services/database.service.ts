@@ -116,10 +116,11 @@ export class DatabaseService {
         await this.prisma.$disconnect();
     }
 
-    // --- Operaciones con Threads ---
+    // --- Operaciones con Respuestas (anteriormente Threads) ---
     public async saveOrUpdateThread(userId: string, threadData: Partial<ThreadRecord>): Promise<ThreadRecord> {
         const threadRecord: ThreadRecord = {
-            threadId: threadData.threadId || '',
+            threadId: threadData.threadId || threadData.lastResponseId || '',
+            lastResponseId: threadData.lastResponseId || threadData.threadId || '',
             chatId: threadData.chatId || '',
             userName: threadData.userName,
             lastActivity: new Date(),
@@ -133,7 +134,8 @@ export class DatabaseService {
                 const labelsString = labels.length > 0 ? labels.join('/') : null;
                 
                 const clientViewData = {
-                    threadId: threadData.threadId,
+                    threadId: threadData.threadId || threadData.lastResponseId,
+                    last_response_id: threadData.lastResponseId || threadData.threadId,
                     chatId: threadData.chatId,
                     userName: threadData.userName,
                     labels: labelsString,
@@ -393,7 +395,8 @@ export class DatabaseService {
                 // OPTIMIZADO: Enriquecimiento automático deshabilitado - se hace via hook externo
                 // Solo usar datos del cliente actual sin enriquecer automáticamente
                 const result = {
-                    threadId: client.threadId || '',
+                    threadId: client.threadId || client.last_response_id || '',
+                    lastResponseId: client.last_response_id || client.threadId || '',
                     chatId: client.chatId || '',
                     userName: client.userName,
                     lastActivity: client.lastActivity,
