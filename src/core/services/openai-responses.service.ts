@@ -308,12 +308,25 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             
             // IMPORTANTE: Enviar respuesta a WhatsApp
             if (this.whatsappService && finalResponse) {
+                logInfo('BOT_RESPONSE', 'Enviando respuesta del bot', {
+                    userId,
+                    responseLength: finalResponse.length,
+                    preview: finalResponse.substring(0, 100),
+                    hasFunctions: functionCalls.length > 0
+                });
+                
                 await this.whatsappService.sendWhatsAppMessage(
-                    chatId,
+                    chatId, 
                     finalResponse,
                     { lastInputVoice: false }, // TODO: Obtener del contexto si fue audio
                     false // isQuoteOrPrice
                 );
+            } else {
+                logWarning('NO_RESPONSE', 'No hay respuesta para enviar', {
+                    userId,
+                    hasWhatsappService: !!this.whatsappService,
+                    hasFinalResponse: !!finalResponse
+                });
             }
             
             // Log de uso de tokens
