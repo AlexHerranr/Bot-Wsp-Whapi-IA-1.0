@@ -41,7 +41,6 @@ export class ResponseService {
     private openai: OpenAI;
     private config: Required<ResponseServiceConfig>;
     private functionRegistry?: IFunctionRegistry;
-    private conversationsCache: Map<string, string> = new Map(); // userId:chatId -> conversationId
     
     constructor(
         config: ResponseServiceConfig,
