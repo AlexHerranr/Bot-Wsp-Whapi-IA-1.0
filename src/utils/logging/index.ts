@@ -743,7 +743,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
 
         case 'OPENAI_PROMPT':
             const promptLen = details?.length || 0;
-            const threadIdPrompt = details?.threadId ? truncateId(details.threadId, 'th_') : 'none';
+            const threadIdPrompt = details?.threadId ? truncateId(details.threadId) : 'none';
             let content = details?.fullContent || details?.preview || '';
             // Extraer contexto clave y compactar
             const horaMatch = content.match(/Hora actual: [^\n]+/) || [''];
@@ -758,15 +758,19 @@ function formatCompactRailwayLog(category: string, message: string, details: any
                 msgMatch[0].replace('Mensaje del cliente:', '').trim().substring(0, 60)
             ].filter(Boolean).join('|').replace(/\n/g, ' ');
             
-            return `${timestamp} [OPENAI_PROMPT:${source}] ${userId}: thread:${threadIdPrompt} len:${promptLen} content:"${compactContent}"`;
+            // Determinar si es un thread o response ID
+            const idPrefix = details?.threadId?.startsWith('resp_') ? 'resp' : details?.threadId?.startsWith('thread_') ? 'thread' : 'ctx';
+            return `${timestamp} [OPENAI_PROMPT:${source}] ${userId}: ${idPrefix}:${threadIdPrompt} len:${promptLen} content:"${compactContent}"`;
 
         case 'TOKENS_METRIC':
             const tokensIn = details?.tokensIn || details?.inputTokens || 0;
             const tokensOut = details?.tokensOut || details?.outputTokens || details?.tokensUsed || 0;
             const tokensTotal = details?.totalTokens || (tokensIn + tokensOut);
             const model = details?.model || 'unknown';
-            const threadIdToken = details?.threadId ? truncateId(details.threadId, 'th_') : 'none';
-            return `${timestamp} [TOKENS_METRIC:${source}] ${userId}: in:${tokensIn} out:${tokensOut} total:${tokensTotal} model:${model} thread:${threadIdToken}`;
+            const threadIdToken = details?.threadId ? truncateId(details.threadId) : 'none';
+            // Determinar si es un thread o response ID
+            const idPrefixToken = details?.threadId?.startsWith('resp_') ? 'resp' : details?.threadId?.startsWith('thread_') ? 'thread' : 'ctx';
+            return `${timestamp} [TOKENS_METRIC:${source}] ${userId}: in:${tokensIn} out:${tokensOut} total:${tokensTotal} model:${model} ${idPrefixToken}:${threadIdToken}`;
 
         case 'LATENCY_METRIC':
             const openaiLat = details?.openaiLatency || details?.openaiTime || 0;
@@ -808,7 +812,7 @@ function formatCompactRailwayLog(category: string, message: string, details: any
             return `${timestamp} [BUFFER_METRIC:${source}] sys: active:${activeBuffers} merged:${mergedBuffers} abandoned:${abandonedBuffers} voice:${voiceMessages} text:${textMessages}`;
 
         case 'THREAD_METRIC':
-            const threadIdMetric = details?.threadId ? truncateId(details.threadId, 'th_') : 'none';
+            const threadIdMetric = details?.threadId ? truncateId(details.threadId) : 'none';
             const msgCountThread = details?.messageCount || details?.messages || 0;
             const tokenCountThread = details?.tokenCount || details?.tokens || 0;
             const reused = details?.reused || details?.wasReused || false;
