@@ -288,18 +288,18 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 });
                 
                 // Hacer una segunda llamada con los resultados de las funciones
-                // ESTRATEGIA: Incluir TODO (function_call + function_call_output) y dejar que deduplicateInput maneje duplicados
+                // ESTRATEGIA SIMPLE: NO usar previous_response_id, construir input manualmente
                 const followUpResult = await this.responseService.createResponse(
                     this.systemInstructions,
                     '', // No enviar mensaje, solo function outputs
                     {
                         ...conversationContext,
-                        previousResponseId: result.responseId
+                        previousResponseId: undefined // NO usar previous_response_id para evitar conflictos
                     },
                     [], // No enviar funciones en el follow-up
                     undefined, // No hay imagen
                     functionResults, // Enviar los outputs de las funciones
-                    result.outputItems // Incluir TODOS los items anteriores - deduplicateInput maneja duplicados
+                    result.outputItems // Incluir items anteriores manualmente
                 );
                 
                 if (followUpResult.success && followUpResult.content) {
