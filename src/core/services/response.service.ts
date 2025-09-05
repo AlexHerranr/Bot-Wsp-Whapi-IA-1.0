@@ -438,14 +438,33 @@ export class ResponseService {
      * Deduplica items en el input basándose en id o call_id
      * para evitar el error "Duplicate item found with id"
      * Maneja function calls, messages, reasoning items y otros tipos
+     * CLAVE: Cuando hay function_call_output, NO incluir el function_call original
      */
     private deduplicateInput(input: any[]): any[] {
         const seenIds = new Set<string>();
         const uniqueItems: any[] = [];
         const duplicatesFound: string[] = [];
+        const functionOutputCallIds = new Set<string>();
+        
+        // Primero, identificar todos los call_ids que tienen outputs
+        for (const item of input) {
+            if (item.type === 'function_call_output' && item.call_id) {
+                functionOutputCallIds.add(item.call_id);
+            }
+        }
         
         for (const item of input) {
             let itemKey: string | null = null;
+            
+            // Si es un function_call y ya tiene output, NO incluirlo (esto previene duplicados)
+            if (item.type === 'function_call' && item.call_id && functionOutputCallIds.has(item.call_id)) {
+                logWarning('FUNCTION_CALL_REMOVED', 'Function call removido porque ya tiene output', {
+                    id: item.id || item.call_id,
+                    call_id: item.call_id,
+                    name: item.name
+                });
+                continue;
+            }
             
             // Para reasoning items, usar tanto id como hash del contenido
             if (item.type === 'reasoning') {
@@ -479,12 +498,13 @@ export class ResponseService {
             uniqueItems.push(item);
         }
         
-        // Log resumen si se removieron duplicados
-        if (duplicatesFound.length > 0) {
+        // Log resumen si se removieron duplicados o function calls con outputs
+        if (duplicatesFound.length > 0 || functionOutputCallIds.size > 0) {
             logInfo('INPUT_DEDUPLICATED', 'Input deduplicado exitosamente', {
                 originalCount: input.length,
                 uniqueCount: uniqueItems.length,
                 duplicatesRemoved: duplicatesFound.length,
+                functionCallsWithOutputsRemoved: functionOutputCallIds.size,
                 duplicateIds: duplicatesFound
             });
         }
