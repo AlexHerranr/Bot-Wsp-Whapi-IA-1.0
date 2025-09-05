@@ -161,16 +161,12 @@ export class ResponseService {
             } else {
                 // Usar prompt ID del dashboard
                 requestParams.prompt = {
-                    id: instructions.id,
-                    version: instructions.version || '1'
+                    id: instructions.id
                 };
-                
-                logWarning('PROMPT_VARS_DEBUG_3', 'Antes de chequear promptVariables', {
-                    contextHasPromptVariables: 'promptVariables' in context,
-                    promptVariablesValue: context.promptVariables,
-                    promptVariablesType: typeof context.promptVariables,
-                    contextKeys: Object.keys(context)
-                });
+                // Si hay version especificada, usarla
+                if (instructions.version) {
+                    requestParams.prompt.version = instructions.version;
+                }
                 
                 // NO ENVIAR VARIABLES - El prompt no las necesita
                 // Comentado temporalmente hasta que se actualice el prompt
@@ -179,11 +175,6 @@ export class ResponseService {
                     requestParams.prompt.variables = context.promptVariables;
                 }
                 */
-                
-                logWarning('PROMPT_VARS_DEBUG_4', 'Después de comentar asignación', {
-                    requestParamsPrompt: requestParams.prompt,
-                    hasVariables: 'variables' in requestParams.prompt
-                });
             }
             
             // Usar previous_response_id para mantener contexto
@@ -223,15 +214,6 @@ export class ResponseService {
                 promptId: typeof instructions === 'object' ? instructions.id : 'string-prompt'
             });
             
-            // LOG CRÍTICO: Verificar el request final
-            console.error('=== CRITICAL DEBUG: REQUEST FINAL ===');
-            console.error('Prompt section:', JSON.stringify(requestParams.prompt, null, 2));
-            console.error('Has variables?', requestParams.prompt && 'variables' in requestParams.prompt);
-            console.error('Full request keys:', Object.keys(requestParams));
-            if (requestParams.prompt && requestParams.prompt.variables) {
-                console.error('VARIABLES FOUND:', Object.keys(requestParams.prompt.variables));
-            }
-            console.error('=================================');
             
             // Llamar a la API
             const response = await this.openai.responses.create(requestParams);

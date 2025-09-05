@@ -186,12 +186,6 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             // NO ENVIAR VARIABLES - El prompt no las necesita
             let promptVariables: Record<string, string> | undefined = undefined;
             
-            logWarning('PROMPT_VARS_DEBUG_1', 'Estado inicial de promptVariables', {
-                promptVariables,
-                isUndefined: promptVariables === undefined,
-                typeOf: typeof promptVariables
-            });
-            
             // Si en el futuro necesitas variables, descomenta este código:
             /*
             if (this.usePromptId) {
@@ -228,12 +222,6 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 // NO incluir promptVariables - el prompt no las necesita
                 // promptVariables
             };
-            
-            logWarning('PROMPT_VARS_DEBUG_2', 'ConversationContext construido', {
-                hasPromptVariables: 'promptVariables' in conversationContext,
-                contextKeys: Object.keys(conversationContext),
-                promptVariablesValue: (conversationContext as any).promptVariables
-            });
             
             // Usar mensaje original cuando tenemos variables (el contexto va en las variables)
             const enrichedMessage = message;
