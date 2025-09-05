@@ -168,7 +168,6 @@ export class ResponseService {
             // Preparar parámetros de la llamada
             // Preparar parámetros base
             const requestParams: any = {
-                input: input,
                 max_output_tokens: this.config.maxOutputTokens,
                 store: true, // Almacenar para poder referenciar después
                 truncation: 'auto' // Truncar automáticamente cuando se acerque al límite
@@ -234,6 +233,10 @@ export class ResponseService {
             
             // Configurar truncation automática para cualquier modelo
             requestParams.truncation = 'auto';
+            
+            // APLICAR DEDUPLICACIÓN SIEMPRE (no solo cuando hay functionOutputs)
+            input = this.deduplicateInput(input);
+            requestParams.input = input;
             
             // Log del input completo para debugging
             logDebug('INPUT_TO_OPENAI', 'Input completo enviado a OpenAI', {
