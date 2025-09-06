@@ -251,18 +251,17 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             );
             
             // Llamar a Responses API
-            // SOLUCIÓN DEL EXPERTO: Reset context para nuevos mensajes de usuario
-            // Evita function calls pendientes que causan "No tool output found"
-            const finalContext = {
-                ...conversationContext,
-                previousResponseId: undefined // Siempre empezar limpio para mensajes nuevos del usuario
-            };
+            // PATRÓN CORRECTO DEL EXPERTO: Usar previous_response_id para memoria conversacional
+            // Solo usar last_completed_response_id (no responses pendientes)
+            const finalContext = conversationContext;
             
-            logInfo('CONTEXT_CLEAN_START', 'Iniciando turno limpio para mensaje de usuario', {
-                userId,
-                hadPreviousResponse: !!conversationContext.previousResponseId,
-                reason: 'evitar_function_calls_pendientes_segun_experto'
-            });
+            if (conversationContext.previousResponseId) {
+                logInfo('USING_PREVIOUS_RESPONSE', 'Usando previous_response_id para memoria conversacional', {
+                    userId,
+                    previousResponseId: conversationContext.previousResponseId,
+                    note: 'patrón_recomendado_por_experto'
+                });
+            }
             
             const result = await this.responseService.createResponse(
                 this.systemInstructions,
@@ -320,18 +319,28 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                     }))
                 });
                 
-                // UNA SOLA llamada de continuación con prompt_id + previous_response_id
+                // PATRÓN CORRECTO DEL EXPERTO: Opción B para Responses API
+                // Crear nuevo response con previous_response_id del response que está en requires_action
+                // Y enviar function_call_outputs correlacionados por call_id
+                
+                logInfo('EXPERT_PATTERN_B', 'Usando patrón B del experto para tool outputs', {
+                    userId,
+                    responseIdInRequiresAction: result.responseId,
+                    functionOutputsCount: functionResults.length,
+                    callIds: functionResults.map(fr => fr.call_id)
+                });
+                
                 const followUpResult = await this.responseService.createResponse(
-                    this.systemInstructions, // ✅ Prompt ID para instrucciones consistentes
+                    this.systemInstructions, // ✅ Re-enviar instrucciones (no persisten según experto)
                     '', // No mensaje nuevo
                     {
                         ...conversationContext,
-                        previousResponseId: result.responseId // ✅ Memoria conversacional (incluye function_calls automáticamente)
+                        previousResponseId: result.responseId // ✅ Response en requires_action
                     },
                     [], // No tools en continuación
                     undefined, // No imagen
-                    functionResults, // ✅ Solo function_call_outputs
-                    [] // ✅ Array vacío - previous_response_id maneja function_calls
+                    functionResults, // ✅ function_call_outputs con call_id exactos
+                    [] // ✅ Array vacío - input se construye solo con function_call_outputs
                 );
                 
                 if (followUpResult.success && followUpResult.content) {

@@ -399,7 +399,9 @@ export class ResponseService {
                         callId: call.id,
                         userId: context.userId,
                         resultPreview: JSON.stringify(result).substring(0, 200) + '...',
-                        resultType: typeof result
+                        resultType: typeof result,
+                        outputCallId: call.id, // Log crítico del experto: verificar call_id exacto
+                        outputString: typeof result === 'string' ? 'YES' : 'NO'
                     });
                 } else {
                     logWarning('FUNCTION_NOT_FOUND', 'Función no encontrada', {
