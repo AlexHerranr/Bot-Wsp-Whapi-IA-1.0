@@ -288,18 +288,18 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 });
                 
                 // Hacer una segunda llamada con los resultados de las funciones
-                // IMPLEMENTACIÓN RECOMENDADA POR EXPERTO: previous_response_id + array vacío
+                // IMPLEMENTACIÓN BASADA EN FOROS: RE-ENVIAR INSTRUCTIONS + previous_response_id
                 const followUpResult = await this.responseService.createResponse(
-                    this.systemInstructions,
+                    this.systemInstructions, // ✅ RE-ENVIAR INSTRUCTIONS (foros: no se arrastran automáticamente)
                     '', // No enviar mensaje, solo function outputs
                     {
                         ...conversationContext,
-                        previousResponseId: result.responseId // OpenAI maneja historial automáticamente
+                        previousResponseId: result.responseId // ✅ Cursor simple para historial
                     },
                     [], // No enviar funciones en el follow-up
                     undefined, // No hay imagen
                     functionResults, // Enviar los outputs de las funciones
-                    [] // Array vacío - evitar doble historial (previous_response_id ya incluye todo)
+                    [] // ✅ Array vacío - previous_response_id maneja todo el contexto
                 );
                 
                 if (followUpResult.success && followUpResult.content) {
