@@ -251,26 +251,18 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             );
             
             // Llamar a Responses API
-            // MANEJO DE FUNCTION CALLS PENDIENTES: Si hay previous_response_id, verificar si tiene function calls pendientes
-            let finalContext = conversationContext;
-            if (conversationContext.previousResponseId) {
-                logInfo('CHECKING_PENDING_CALLS', 'Verificando function calls pendientes', {
-                    userId,
-                    previousResponseId: conversationContext.previousResponseId,
-                    newMessage: enrichedMessage.substring(0, 50) + '...'
-                });
-                
-                // Para mensajes nuevos del usuario, iniciar conversación limpia para evitar function calls pendientes
-                finalContext = {
-                    ...conversationContext,
-                    previousResponseId: undefined // Reset para nuevo turno del usuario
-                };
-                
-                logInfo('CONTEXT_RESET', 'Context reseteado para nuevo turno de usuario', {
-                    userId,
-                    reason: 'evitar_function_calls_pendientes'
-                });
-            }
+            // SOLUCIÓN DEL EXPERTO: Reset context para nuevos mensajes de usuario
+            // Evita function calls pendientes que causan "No tool output found"
+            const finalContext = {
+                ...conversationContext,
+                previousResponseId: undefined // Siempre empezar limpio para mensajes nuevos del usuario
+            };
+            
+            logInfo('CONTEXT_CLEAN_START', 'Iniciando turno limpio para mensaje de usuario', {
+                userId,
+                hadPreviousResponse: !!conversationContext.previousResponseId,
+                reason: 'evitar_function_calls_pendientes_segun_experto'
+            });
             
             const result = await this.responseService.createResponse(
                 this.systemInstructions,

@@ -407,9 +407,13 @@ export class ResponseService {
                         userId: context.userId
                     });
                     
+                    // SIEMPRE devolver output (incluso para errores) - recomendación del experto
                     results.push({
                         call_id: call.id,
-                        output: { error: `Function ${call.function.name} not found` }
+                        output: JSON.stringify({ 
+                            ok: false, 
+                            error: `Function ${call.function.name} not found` 
+                        })
                     });
                 }
             } catch (error) {
@@ -420,9 +424,13 @@ export class ResponseService {
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });
                 
+                // SIEMPRE devolver output string (incluso para errores) - recomendación del experto
                 results.push({
                     call_id: call.id,
-                    output: { error: error instanceof Error ? error.message : 'Unknown error' }
+                    output: JSON.stringify({ 
+                        ok: false, 
+                        error: error instanceof Error ? error.message : 'Unknown error' 
+                    })
                 });
             }
         }
