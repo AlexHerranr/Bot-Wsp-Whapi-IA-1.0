@@ -251,18 +251,21 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             );
             
             // Llamar a Responses API
-            // SOLUCIÓN DEFINITIVA DEL EXPERTO: Solo usar previous_response_id para COMPLETED responses
-            // Para nuevos mensajes del usuario, iniciar turno limpio (evita function calls pendientes)
-            const finalContext = {
-                ...conversationContext,
-                previousResponseId: undefined // Siempre turno limpio para mensajes nuevos del usuario
-            };
+            // PATRÓN CORRECTO DEL EXPERTO: Usar previous_response_id SOLO si es COMPLETED
+            // El conversationContext.previousResponseId debería ser siempre lastCompletedResponseId
+            const finalContext = conversationContext;
             
-            logInfo('CLEAN_USER_TURN', 'Iniciando turno limpio para mensaje de usuario', {
-                userId,
-                hadPreviousResponse: !!conversationContext.previousResponseId,
-                reason: 'evitar_function_calls_pendientes_definitivo'
-            });
+            if (conversationContext.previousResponseId) {
+                logInfo('USING_LAST_COMPLETED_RESPONSE', 'Usando lastCompletedResponseId para memoria conversacional', {
+                    userId,
+                    lastCompletedResponseId: conversationContext.previousResponseId,
+                    note: 'patrón_experto_dos_cursores'
+                });
+            } else {
+                logInfo('NEW_CONVERSATION_START', 'Iniciando nueva conversación sin historial', {
+                    userId
+                });
+            }
             
             const result = await this.responseService.createResponse(
                 this.systemInstructions,
@@ -347,49 +350,46 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 if (followUpResult.success && followUpResult.content) {
                     finalResponse = followUpResult.content;
                     
+                    // ACTUALIZAR CURSOR COMPLETED (recomendación del experto)
+                    await this.conversationManager.updateConversation(
+                        userId,
+                        chatId,
+                        followUpResult.responseId, // ESTE es el response COMPLETED
+                        followUpResult.usage?.totalTokens || 0
+                    );
+                    
                     logInfo('FUNCTION_CALLING_SUCCESS', 'Function calling completado exitosamente', {
                         userId,
-                        finalResponseLength: finalResponse.length
+                        finalResponseLength: finalResponse.length,
+                        completedResponseId: followUpResult.responseId
                     });
+                    
+                    // Ya actualizamos la conversación con el response completed
                 } else {
                     logError('FUNCTION_CALLING_FAILED', 'Error en function calling follow-up', {
                         userId,
                         error: followUpResult.error
                     });
+                    
+                    // No actualizar cursor si function calling falló
                 }
             }
             
-            // Actualizar conversación - SOLO guardar response IDs COMPLETED (sin function calls pendientes)
-            let responseIdToSave = result.responseId;
-            
-            // Si hubo function calling exitoso, usar el response final (completed)
-            if (result.functionCalls && result.functionCalls.length > 0) {
-                // Solo actualizar si function calling fue exitoso
-                if (finalResponse && finalResponse.length > 0) {
-                    responseIdToSave = followUpResult?.responseId || result.responseId;
-                    logInfo('COMPLETED_RESPONSE_SAVED', 'Guardando response ID completed', {
-                        userId,
-                        completedResponseId: responseIdToSave,
-                        hadFunctionCalls: true
-                    });
-                } else {
-                    // Function calling falló - no guardar response ID para evitar pendientes
-                    logInfo('INCOMPLETE_RESPONSE_NOT_SAVED', 'No guardando response con function calls pendientes', {
-                        userId,
-                        incompleteResponseId: result.responseId
-                    });
-                    responseIdToSave = null; // No guardar
-                }
-            }
-            
-            if (responseIdToSave) {
+            // Para responses sin function calling, actualizar conversación normalmente
+            if (!result.functionCalls || result.functionCalls.length === 0) {
                 await this.conversationManager.updateConversation(
                     userId,
                     chatId,
-                    responseIdToSave,
+                    result.responseId, // Response simple ya está completed
                     result.usage?.totalTokens || 0
                 );
+                
+                logInfo('NORMAL_RESPONSE_COMPLETED', 'Response normal completed y guardado', {
+                    userId,
+                    completedResponseId: result.responseId
+                });
             }
+            // Nota: Para function calling, la conversación se actualiza arriba con followUpResult.responseId
             
             // Guardar respuesta del asistente
             await this.conversationManager.addMessage(
