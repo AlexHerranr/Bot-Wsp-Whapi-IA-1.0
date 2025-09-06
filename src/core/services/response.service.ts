@@ -372,7 +372,8 @@ export class ResponseService {
                 logInfo('FUNCTION_EXECUTION_START', 'Ejecutando función', {
                     functionName: call.function.name,
                     callId: call.id,
-                    userId: context.userId
+                    userId: context.userId,
+                    arguments: call.function.arguments
                 });
                 
                 const fn = this.functionRegistry.getFunction(call.function.name);
@@ -395,7 +396,9 @@ export class ResponseService {
                     logInfo('FUNCTION_EXECUTION_SUCCESS', 'Función ejecutada exitosamente', {
                         functionName: call.function.name,
                         callId: call.id,
-                        userId: context.userId
+                        userId: context.userId,
+                        resultPreview: JSON.stringify(result).substring(0, 200) + '...',
+                        resultType: typeof result
                     });
                 } else {
                     logWarning('FUNCTION_NOT_FOUND', 'Función no encontrada', {
