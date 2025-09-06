@@ -92,10 +92,16 @@ export class ResponseService {
                 
                 input = outputs; // Solo function outputs, NO previousOutputItems
                 
-                logDebug('FUNCTION_OUTPUTS_INPUT', 'Input con solo function outputs construido', {
+                logInfo('FUNCTION_OUTPUTS_INPUT', 'Input con solo function outputs construido', {
+                    userId: context.userId,
                     outputsCount: functionOutputs.length,
                     totalItems: input.length,
                     callIds: functionOutputs.map(fo => fo.call_id),
+                    detailedOutputs: outputs.map(output => ({
+                        type: output.type,
+                        call_id: output.call_id,
+                        outputLength: output.output.length
+                    })),
                     note: 'previous_response_id maneja el contexto automáticamente'
                 });
             }

@@ -294,8 +294,17 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 logInfo('FUNCTION_CONTINUATION', 'Continuando response con solo tool outputs', {
                     userId,
                     functionOutputs: functionResults.length,
-                    totalItems: continuationInput.length,
+                    callIds: functionResults.map(fr => fr.call_id),
                     note: 'previous_response_id incluye automáticamente function_calls'
+                });
+                
+                // Debug: Log exacto de lo que se envía
+                logInfo('FUNCTION_OUTPUTS_DETAIL', 'Detalle de function outputs enviados', {
+                    userId,
+                    outputs: functionResults.map(fr => ({
+                        call_id: fr.call_id,
+                        outputPreview: JSON.stringify(fr.output).substring(0, 100) + '...'
+                    }))
                 });
                 
                 // UNA SOLA llamada de continuación con prompt_id + previous_response_id
