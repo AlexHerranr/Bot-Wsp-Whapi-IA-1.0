@@ -204,7 +204,8 @@ export class ResponseService {
             if (context.previousResponseId) {
                 requestParams.previous_response_id = context.previousResponseId;
                 logInfo('STATE_CHAINING', 'Encadenando respuesta previa', {
-                    previousId: context.previousResponseId
+                    previousId: context.previousResponseId,
+                    hasFunctionOutputs: !!(functionOutputs && functionOutputs.length > 0)
                 });
             }
             
