@@ -263,7 +263,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 throw new Error(result.error || 'Error desconocido en Responses API');
             }
             
-            // Procesar function calls si existen
+            // Procesar function calls si existen - PATRÓN CORRECTO RESPONSES API
             let finalResponse = result.content || '';
             if (result.functionCalls && result.functionCalls.length > 0) {
                 logInfo('FUNCTION_CALLS_DETECTED', 'Detectadas llamadas a funciones', {
@@ -272,6 +272,7 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                     functions: result.functionCalls.map(fc => fc.function.name)
                 });
                 
+                // Ejecutar funciones
                 const functionResults = await this.responseService.executeFunctionCalls(
                     result.functionCalls,
                     conversationContext
@@ -282,28 +283,47 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                     results: functionResults.length
                 });
                 
-                logInfo('FUNCTION_FOLLOWUP', 'Enviando resultados a OpenAI', {
+                // PATRÓN CORRECTO RESPONSES API: Solo enviar function_call_outputs
+                // previous_response_id incluye automáticamente los function_calls originales
+                const continuationInput = functionResults.map(fr => ({
+                    type: "function_call_output",
+                    call_id: fr.call_id,
+                    output: typeof fr.output === 'string' ? fr.output : JSON.stringify(fr.output)
+                }));
+                
+                logInfo('FUNCTION_CONTINUATION', 'Continuando response con solo tool outputs', {
                     userId,
-                    functionOutputsCount: functionResults.length
+                    functionOutputs: functionResults.length,
+                    totalItems: continuationInput.length,
+                    note: 'previous_response_id incluye automáticamente function_calls'
                 });
                 
-                // Hacer una segunda llamada con los resultados de las funciones
-                // IMPLEMENTACIÓN BASADA EN FOROS: RE-ENVIAR INSTRUCTIONS + previous_response_id
+                // UNA SOLA llamada de continuación con prompt_id + previous_response_id
                 const followUpResult = await this.responseService.createResponse(
-                    this.systemInstructions, // ✅ RE-ENVIAR INSTRUCTIONS (foros: no se arrastran automáticamente)
-                    '', // No enviar mensaje, solo function outputs
+                    this.systemInstructions, // ✅ Prompt ID para instrucciones consistentes
+                    '', // No mensaje nuevo
                     {
                         ...conversationContext,
-                        previousResponseId: result.responseId // ✅ Cursor simple para historial
+                        previousResponseId: result.responseId // ✅ Memoria conversacional (incluye function_calls automáticamente)
                     },
-                    [], // No enviar funciones en el follow-up
-                    undefined, // No hay imagen
-                    functionResults, // Enviar los outputs de las funciones
-                    [] // ✅ Array vacío - previous_response_id maneja todo el contexto
+                    [], // No tools en continuación
+                    undefined, // No imagen
+                    functionResults, // ✅ Solo function_call_outputs
+                    [] // ✅ Array vacío - previous_response_id maneja function_calls
                 );
                 
                 if (followUpResult.success && followUpResult.content) {
                     finalResponse = followUpResult.content;
+                    
+                    logInfo('FUNCTION_CALLING_SUCCESS', 'Function calling completado exitosamente', {
+                        userId,
+                        finalResponseLength: finalResponse.length
+                    });
+                } else {
+                    logError('FUNCTION_CALLING_FAILED', 'Error en function calling follow-up', {
+                        userId,
+                        error: followUpResult.error
+                    });
                 }
             }
             
