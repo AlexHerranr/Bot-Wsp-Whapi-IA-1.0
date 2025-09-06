@@ -251,17 +251,18 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
             );
             
             // Llamar a Responses API
-            // PATRÓN CORRECTO DEL EXPERTO: Usar previous_response_id para memoria conversacional
-            // Solo usar last_completed_response_id (no responses pendientes)
-            const finalContext = conversationContext;
+            // SOLUCIÓN DEFINITIVA DEL EXPERTO: Solo usar previous_response_id para COMPLETED responses
+            // Para nuevos mensajes del usuario, iniciar turno limpio (evita function calls pendientes)
+            const finalContext = {
+                ...conversationContext,
+                previousResponseId: undefined // Siempre turno limpio para mensajes nuevos del usuario
+            };
             
-            if (conversationContext.previousResponseId) {
-                logInfo('USING_PREVIOUS_RESPONSE', 'Usando previous_response_id para memoria conversacional', {
-                    userId,
-                    previousResponseId: conversationContext.previousResponseId,
-                    note: 'patrón_recomendado_por_experto'
-                });
-            }
+            logInfo('CLEAN_USER_TURN', 'Iniciando turno limpio para mensaje de usuario', {
+                userId,
+                hadPreviousResponse: !!conversationContext.previousResponseId,
+                reason: 'evitar_function_calls_pendientes_definitivo'
+            });
             
             const result = await this.responseService.createResponse(
                 this.systemInstructions,
@@ -358,13 +359,37 @@ Tienes acceso a funciones para consultar disponibilidad, crear reservas y obtene
                 }
             }
             
-            // Actualizar conversación
-            await this.conversationManager.updateConversation(
-                userId,
-                chatId,
-                result.responseId,
-                result.usage?.totalTokens || 0
-            );
+            // Actualizar conversación - SOLO guardar response IDs COMPLETED (sin function calls pendientes)
+            let responseIdToSave = result.responseId;
+            
+            // Si hubo function calling exitoso, usar el response final (completed)
+            if (result.functionCalls && result.functionCalls.length > 0) {
+                // Solo actualizar si function calling fue exitoso
+                if (finalResponse && finalResponse.length > 0) {
+                    responseIdToSave = followUpResult?.responseId || result.responseId;
+                    logInfo('COMPLETED_RESPONSE_SAVED', 'Guardando response ID completed', {
+                        userId,
+                        completedResponseId: responseIdToSave,
+                        hadFunctionCalls: true
+                    });
+                } else {
+                    // Function calling falló - no guardar response ID para evitar pendientes
+                    logInfo('INCOMPLETE_RESPONSE_NOT_SAVED', 'No guardando response con function calls pendientes', {
+                        userId,
+                        incompleteResponseId: result.responseId
+                    });
+                    responseIdToSave = null; // No guardar
+                }
+            }
+            
+            if (responseIdToSave) {
+                await this.conversationManager.updateConversation(
+                    userId,
+                    chatId,
+                    responseIdToSave,
+                    result.usage?.totalTokens || 0
+                );
+            }
             
             // Guardar respuesta del asistente
             await this.conversationManager.addMessage(
